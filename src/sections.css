@@ -1986,3 +1986,22 @@ details.accord-panel.pm-fold { padding: 0; }
 .gov-nav { flex-wrap: wrap; overflow-x: visible; position: static; backdrop-filter: none; }
 .gov-nav-link { min-height: 40px; padding: 0 12px; font-size: 12.5px; white-space: normal; text-align: left; }
 @media (max-width: 700px) { .gov-nav-link { flex: 1 1 calc(50% - 8px); } }
+/* The programme editor: a compact fold to write a proposal, then the saved proposals as cards closed by default. */
+.program-new { margin: 0 0 12px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--panel-2); }
+.program-new > summary { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; align-items: center; padding: 12px 14px; cursor: pointer; min-height: 44px; list-style: none; }
+.program-new > summary::-webkit-details-marker { display: none; }
+.program-new > summary::after { content: '＋'; color: var(--gold-light); font-weight: 900; }
+.program-new[open] > summary::after { content: '－'; }
+.program-new > summary small { color: var(--ink-2); margin-left: auto; }
+.program-new .program-form { padding: 0 14px 14px; }
+.program-saved-title { margin: 6px 0 8px; font: 800 14px/1.2 Manrope, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+details.program-proposal { padding: 0; gap: 0; display: block; }
+.program-proposal-head { display: flex; gap: 10px; align-items: center; padding: 12px 14px; cursor: pointer; list-style: none; min-height: 52px; flex-wrap: wrap; }
+.program-proposal-head::-webkit-details-marker { display: none; }
+.program-proposal-title { display: grid; gap: 2px; min-width: 0; flex: 1 1 200px; }
+.program-proposal-title strong { overflow-wrap: anywhere; }
+.program-proposal-title small { display: flex; gap: 6px; align-items: center; color: var(--ink-3); font-size: 12px; }
+.program-proposal-head .program-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.program-proposal-head::after { content: '▾'; color: var(--ink-2); margin-left: auto; transition: transform .15s ease; }
+details[open].program-proposal > .program-proposal-head::after { transform: rotate(180deg); }
+.program-proposal-body { display: grid; gap: 8px; padding: 0 14px 14px; }

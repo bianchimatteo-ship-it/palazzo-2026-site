@@ -47,12 +47,14 @@ function normalise(input, previous = null) {
   };
 }
 
+// A new proposal goes on top of the list (priority 1: the one just written is the first the player sees); `placeProposal` shifts the others down by one.
+export const placeProposal = (game, proposal) => [proposal, ...proposalsOf(game).sort((a, b) => a.priority - b.priority).map((item, i) => ({ ...item, priority: i + 2 }))];
 export function createProposal(game, input, { week = 0, date = null } = {}) {
   const list = proposalsOf(game);
   if (list.length >= PROPOSAL_LIMIT) throw new Error(`Un programma leggibile ha al massimo ${PROPOSAL_LIMIT} proposte: elimina o unisci quelle meno importanti.`);
   const made = normalise(input);
   const id = `prop-${week}-${made.area}-${list.length + 1}-${(list.reduce((n, item) => Math.max(n, Number(String(item.id).split('-').at(-1)) || 0), 0)) + 1}`;
-  return { ...made, id, status: 'bozza', priority: list.length + 1, linkedPromiseId: null, createdWeek: week, createdOn: date, history: [{ week, text: 'Proposta scritta' }] };
+  return { ...made, id, status: 'bozza', priority: 1, linkedPromiseId: null, createdWeek: week, createdOn: date, history: [{ week, text: 'Proposta scritta' }] };
 }
 export function updateProposal(game, id, input, { week = 0 } = {}) {
   const previous = proposalsOf(game).find(item => item.id === id);

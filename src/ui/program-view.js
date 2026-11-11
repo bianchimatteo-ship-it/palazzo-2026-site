@@ -98,8 +98,10 @@ function proposalCard(view, item, index, count) {
   const linkForm = item.linked
     ? `<form data-proposal-link-form data-proposal-id="${esc(item.id)}"><input type="hidden" name="promise" value=""><button type="submit" class="ghost-button">Scollega la promessa</button></form>`
     : item.linkable.length ? `<form data-proposal-link-form data-proposal-id="${esc(item.id)}" class="program-link-form"><label>Collega a una tua promessa<select name="promise">${options(item.linkable.map(promise => [promise.id, `${promise.label}: ${promise.intervention}`]))}</select></label><button type="submit" class="ghost-button">Collega</button></form>` : '<small class="program-link-none">Nessuna tua promessa aperta in quest’area da collegare: la proposta resta una pagina del programma.</small>';
-  return `<article class="program-proposal state-${esc(item.status)}" data-proposal="${esc(item.id)}">
-    <header><div><strong><span class="program-priority" aria-label="Priorità ${item.priority}">${item.priority}</span> ${esc(item.title)}</strong><small>${glyph(spec?.icon ?? 'target', 14)} ${esc(spec?.label ?? item.area)} · ${esc(TERRITORIES[item.territory] ?? '')}${item.municipality || item.region ? ` (${esc([item.municipality, item.region].filter(Boolean).join(', '))})` : ''}</small></div><div class="program-badges">${badge(item.status === 'pubblicata' ? 'Pubblicata' : 'Bozza', item.status === 'pubblicata' ? 'info' : 'neutral')}${badge(coverLabel, coverTone)}</div></header>
+  // Closed by default: the preview is the title, the area and the state; opened, the card shows problem, objective, measures, cost and financing, deadline, territory, state and the links to promises and bills.
+  const place = `${esc(TERRITORIES[item.territory] ?? '')}${item.municipality || item.region ? ` (${esc([item.municipality, item.region].filter(Boolean).join(', '))})` : ''}`;
+  return `<details class="program-proposal state-${esc(item.status)}" data-proposal="${esc(item.id)}"><summary class="program-proposal-head"><span class="program-priority" aria-label="Priorità ${item.priority}">${item.priority}</span><span class="program-proposal-title"><strong>${esc(item.title)}</strong><small>${glyph(spec?.icon ?? 'target', 14)} ${esc(spec?.label ?? item.area)} · ${esc(item.status === 'pubblicata' ? 'Pubblicata' : 'Bozza')}</small></span><span class="program-badges">${badge(item.status === 'pubblicata' ? 'Pubblicata' : 'Bozza', item.status === 'pubblicata' ? 'info' : 'neutral')}${badge(coverLabel, coverTone)}</span></summary>
+    <div class="program-proposal-body"><p class="program-where"><b>Territorio</b> ${place}</p>
     ${item.problem ? `<p class="program-problem"><b>Problema</b> ${esc(item.problem)}</p>` : ''}<p><b>Obiettivo</b> ${esc(item.objective)}</p>
     <ul class="program-measure-list">${item.measures.map(measure => `<li><b>${esc(INSTRUMENT_KINDS[measure.instrument]?.label ?? measure.instrument)}</b> ${esc(measure.text)}</li>`).join('')}</ul>
     <div class="program-meta"><span>Costo ~${num(item.cost, 1)} mld</span><span>${esc(FINANCING[item.financing]?.label ?? item.financing)}</span><span>${esc(DEADLINES[item.deadlineWeeks] ?? '')}</span>${item.indicator !== null ? `<span>Indicatore dell’area: ${num(item.indicator, 0)}/100</span>` : ''}</div>
@@ -110,15 +112,17 @@ function proposalCard(view, item, index, count) {
       <details class="program-modify"><summary class="ghost-button">Modifica</summary><form data-proposal-edit-form data-proposal-id="${esc(item.id)}">${proposalFields(view, item)}<button type="submit" class="primary-button">Salva le modifiche</button></form></details>
       ${item.status === 'pubblicata' && !item.billId ? `<button type="button" class="ghost-button" data-proposal-bill="${esc(item.id)}" title="Un disegno di legge vero: commissione, emendamenti, voti. Non diventa legge da solo e non è una promessa.">Presenta come disegno di legge</button>` : item.billId ? '<small class="program-link-none">Presentata come disegno di legge</small>' : ''}
       <button type="button" class="ghost-button" data-proposal-delete="${esc(item.id)}">Elimina</button></div>
-    ${linkForm}</article>`;
+    ${linkForm}</div></details>`;
 }
 function editorCard(view) {
   const info = view.proposals;
   if (!info) return '';
   const list = info.list;
-  const body = `${list.length ? `<div class="program-list">${list.map((item, index) => proposalCard(view, item, index, list.length)).join('')}</div>` : '<p class="sx-empty">Il programma è vuoto: scrivi la prima proposta qui sotto. Una proposta è una pagina del programma, non ancora una promessa.</p>'}
-    <details class="program-new"${list.length ? '' : ' open'}><summary class="ghost-button">Scrivi una nuova proposta (${list.length}/${info.limit})</summary>
-      <form class="program-form" data-proposal-form>${proposalFields(view)}<button type="submit" class="primary-button">${glyph('target', 16)} Aggiungi al programma</button></form></details>
+  // 1. the section to write a new proposal (compact: a fold, closed when there are proposals — it closes by itself after one is added); 2. the saved proposals below, each a card closed by default.
+  const form = `<details class="program-new" data-program-new${list.length ? '' : ' open'}><summary class="program-new-summary"><span class="section-kicker">SCRIVI UNA NUOVA PROPOSTA</span><small>${list.length}/${info.limit} nel programma</small></summary>
+      <form class="program-form" data-proposal-form>${proposalFields(view)}<button type="submit" class="primary-button">${glyph('target', 16)} Aggiungi al programma</button></form></details>`;
+  const saved = list.length ? `<h3 class="program-saved-title">Le tue proposte (${list.length})</h3><div class="program-list" data-program-saved>${list.map((item, index) => proposalCard(view, item, index, list.length)).join('')}</div>` : '<p class="sx-empty">Il programma è vuoto: scrivi la prima proposta qui sopra. Una proposta è una pagina del programma, non ancora una promessa.</p>';
+  const body = `${form}${saved}
     <p class="sx-note">Le proposte pubblicate danno credibilità se la copertura regge e la tolgono se non c’è: gli avversari la attaccano nei dibattiti e la proposta entra nei comizi. Le bozze non contano. Una proposta si collega a una promessa solo se ce n’è una tua nella stessa area: la promessa resta separata e la verifica il gioco.</p>`;
   return card({ kicker: 'PROGRAMMA', title: 'L’editor del programma', body });
 }

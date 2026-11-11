@@ -126,12 +126,22 @@ const screenWall = (x, y, w, h, uid, label, count) => `<g class="st-screens">${A
 
 function studioFaccia(scene, uid, crowd) {
   const members = ['giocatore', 'rivale', 'conduttore'].map(role => scene.cast.find(item => item.role === role));
-  const last = member => String(member?.name ?? '').split(' ').slice(-1)[0];
-  const lectern = (x, color, name) => `<g class="st-desk"><rect x="${x - 78}" y="248" width="156" height="52" rx="5" fill="#26333f"/><rect x="${x - 78}" y="248" width="156" height="6" rx="3" fill="#8fb4c6"/><rect x="${x - 70}" y="262" width="140" height="28" rx="3" fill="${color}" opacity=".9"/></g>`;
+  // The name of the candidate on the coloured panel of the lectern: the whole name on one line when it fits, otherwise first names above and surname below (centred, white on a dark outline so it reads on the blue and on the orange), every line compressed rather than cut.
+  const plate = (x, name) => {
+    const words = String(name ?? '').trim().split(/\s+/).filter(Boolean);
+    if (!words.length) return '';
+    const room = 128, size = 11.5, fits = text => text.length * size * 0.62 <= room;
+    const full = words.join(' ');
+    const lines = fits(full) || words.length < 2 ? [full] : [words.slice(0, -1).join(' '), words.at(-1)];
+    const rows = lines.length === 1 ? [[full, 281]] : [[lines[0], 272.5], [lines[1], 284.5]];
+    const fontSize = lines.length === 1 ? size : 10.4;
+    return rows.map(([text, y]) => `<text class="st-lectern-name" x="${x}" y="${y}" text-anchor="middle" font-size="${fontSize}" font-weight="800" letter-spacing=".3" fill="#fff" stroke="#0b1218" stroke-width="2.2" paint-order="stroke" stroke-linejoin="round"${text.length * fontSize * 0.62 > room ? ` textLength="${room}" lengthAdjust="spacingAndGlyphs"` : ''}>${esc(text)}</text>`).join('');
+  };
+  const lectern = (x, color, name) => `<g class="st-desk"><rect x="${x - 78}" y="248" width="156" height="52" rx="5" fill="#26333f"/><rect x="${x - 78}" y="248" width="156" height="6" rx="3" fill="#8fb4c6"/><rect x="${x - 70}" y="262" width="140" height="28" rx="3" fill="${color}" opacity=".9"/>${plate(x, name)}</g>`;
   const back = `${studioFloor(uid, FORMAT_LOOK.faccia, [[128, 300, 150], [512, 300, 150], [320, 270, 120]])}${screenWall(70, 26, 500, 84, uid, '', 3)}`
     + `<text x="320" y="58" text-anchor="middle" font-size="19" font-weight="900" letter-spacing="3" fill="#f0d68a">${esc(scene.show?.name ? scene.show.name.toUpperCase() : 'FACCIA A FACCIA')}</text><text x="320" y="84" text-anchor="middle" font-size="11" font-weight="700" fill="#cfe7f1">${esc(scene.topic.label)}</text>`
     + `<path d="M0 196H640" stroke="#58a3c4" stroke-opacity=".25"/>${rigLights([40, 150, 260, 380, 490, 600])}`;
-  const front = `${lectern(128, '#2f6fa8', last(members[0]))}${lectern(512, '#c05a2c', last(members[1]))}<g class="st-desk"><rect x="${320 - 52}" y="230" width="104" height="44" rx="5" fill="#33414d"/><rect x="${320 - 52}" y="230" width="104" height="5" rx="2.5" fill="#d9bd7e"/></g>${cameraRig(46, true)}${cameraRig(594, false, true)}`;
+  const front = `${lectern(128, '#2f6fa8', members[0]?.name)}${lectern(512, '#c05a2c', members[1]?.name)}<g class="st-desk"><rect x="${320 - 52}" y="230" width="104" height="44" rx="5" fill="#33414d"/><rect x="${320 - 52}" y="230" width="104" height="5" rx="2.5" fill="#d9bd7e"/></g>${cameraRig(46, true)}${cameraRig(594, false, true)}`;
   const audience = `<g class="st-crowd is-${crowd}" data-crowd>${crowdSvg(`${scene.seed}|aud`, [[236, 0.34, 28], [226, 0.3, 30]], { x0: 14, x1: 626 })}</g>`;
   return { back, front, audience };
 }

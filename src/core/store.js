@@ -18,7 +18,7 @@ import { abandonRally } from './rally-scene.js?v=20261110-24';
 import { answerRivalMove, rivalPulse, rivalsView } from './rival-life-engine.js?v=20261110-24';
 import { abandonChallenge as abandonChallengeRun, challengeView as challengeViewOf, recordVerdict as recordChallengeVerdict, startChallenge as startChallengeRun, tickChallenge } from './challenge-engine.js?v=20261110-24';
 import { tickerFor } from './studio-lines.js?v=20261110-24';
-import { assessProposal, createProposal, linkProposal as linkProposalTo, moveProposals, programPreview as programPreviewOf, proposalContext, proposalCredibility, proposalsOf, removeProposals, setProposalState as setProposalStateOf, updateProposal as updateProposalOf, linkableTo, FINANCING, TERRITORIES, DEADLINES, PROPOSAL_LIMIT } from './program-proposals.js?v=20261110-24';
+import { assessProposal, createProposal, placeProposal, linkProposal as linkProposalTo, moveProposals, programPreview as programPreviewOf, proposalContext, proposalCredibility, proposalsOf, removeProposals, setProposalState as setProposalStateOf, updateProposal as updateProposalOf, linkableTo, FINANCING, TERRITORIES, DEADLINES, PROPOSAL_LIMIT } from './program-proposals.js?v=20261110-24';
 import { accordPromises, areaIndicator as areaIndicatorOf, fiscalRoom, credibility as baseProgramCredibility, derivePriorities, makePromise as makeProgramPromise, modifyPromise as modifyProgramPromise, negotiatePromise as negotiateProgramPromise, promisesOf, rivalProgram, setPromisePriority as setProgramPromisePriority, tickPromises, topicOfArea, withdrawPromise as withdrawProgramPromise } from './program-engine.js?v=20261110-24';
 import { advanceDays, formatDate } from './time.js?v=20261110-24';
 import { CALENDAR_RULES } from './calendar-planner.js?v=20261110-24';
@@ -4463,7 +4463,7 @@ export const store = {
     const week = state.game.week.index, date = state.clock.currentDate;
     const proposal = createProposal(state.game, input, { week, date });
     const game = deepCopy(state.game);
-    game.proposals = [...proposalsOf(game), proposal];
+    game.proposals = placeProposal(game, proposal);
     state = { ...state, game, ui: { ...state.ui, toast: `Proposta aggiunta al programma: ${proposal.title}` } };
     persist(); emit();
     return proposal;

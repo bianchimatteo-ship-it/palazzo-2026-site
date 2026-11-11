@@ -45,7 +45,8 @@ assert.ok(hurt.suggestion.includes('sanita'), 'Le proposte pubblicate entrano ne
 // reorder: priority is the order, never outside the list
 store.moveProposal(bad.id, -1);
 assert.deepEqual(store.programView().proposals.list.map(item => item.priority), [1, 2, 3]);
-assert.deepEqual(store.programView().proposals.list.map(item => item.id), [draft.id, bad.id, dirty.id], 'La proposta salita di un posto passa davanti alla precedente.');
+// (a new proposal goes on top: the list is the newest first, [bad, dirty, draft]; «bad» moved up one place passes in front of «dirty»)
+assert.deepEqual(store.programView().proposals.list.map(item => item.id), [bad.id, dirty.id, draft.id], 'La proposta salita di un posto passa davanti alla precedente; l’ultima scritta parte in cima.');
 const order = store.programView().proposals.list.map(item => item.id);
 store.moveProposal(order[0], -1);
 assert.deepEqual(store.programView().proposals.list.map(item => item.id), order, 'Spostare la prima verso l’alto non fa nulla.');
