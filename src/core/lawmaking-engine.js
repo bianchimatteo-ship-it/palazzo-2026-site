@@ -5,11 +5,11 @@
 // it needs or puts the question of confidence; the bills of the opposition often never reach the floor. The player sits
 // in one Chamber: speaks, amends and casts a personal vote on every bill there — and the vote has consequences.
 // Everything here is simulation (source: simulation); the groups of the real XIX legislature keep their real reference.
-import { DATA_SOURCES } from '../data/schema.js?v=20261112-3';
-import { AREA_BY_ID, DECREE_RULES, FINANCING, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261112-3';
-import { amendLawPolicy, campOfAxis, cohesiveShare, confidenceBallotMissing, directiveOf, governingGroupIds, groupDirectiveEffect, groupProfile, parliamentInternals, playerSeatedOn } from './parliament-engine.js?v=20261112-3';
-import { openLocalFloors, playerVotesIn } from './local-engine.js?v=20261112-3';
-import { groupLine, splitGroupVote } from './vote-engine.js?v=20261112-3';
+import { DATA_SOURCES } from '../data/schema.js?v=20261112-8';
+import { AREA_BY_ID, DECREE_RULES, FINANCING, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261112-8';
+import { amendLawPolicy, campOfAxis, cohesiveShare, confidenceBallotMissing, directiveOf, governingGroupIds, groupDirectiveEffect, groupProfile, parliamentInternals, playerSeatedOn } from './parliament-engine.js?v=20261112-8';
+import { openLocalFloors, playerVotesIn } from './local-engine.js?v=20261112-8';
+import { groupLine, splitGroupVote } from './vote-engine.js?v=20261112-8';
 
 const { getGroup, allGroups, record, replaceLaw, demandFor, contentAffinity, setRelation } = parliamentInternals;
 const SIM = DATA_SOURCES.SIMULATION;
@@ -584,6 +584,28 @@ function actContent(inst, act) {
 }
 const lawSummary = law => law.summary ?? law.description ?? `${KIND_LABELS[law.kind] ?? 'Proposta di legge'} presentato da ${law.sponsor?.label ?? 'un gruppo parlamentare'}.`;
 
+// Who puts the measure forward, said only as far as the data prove it: the institution (the Government, the Giunta, the committee), the parliamentary or council group, the party the group belongs to when
+// the data tie them, and the first signatory when it is the player. The institution is never taken for the party that leads it, and nothing is attributed without a link in the data.
+function proposerParts({ sponsor = null, own = false, groups = [], parties = [], playerGroupId = null, plural = 'parlamentare' }) {
+  const groupOf = id => groups.find(item => (item.groupId ?? item.id) === id) ?? null;
+  const groupName = group => group?.officialName ?? group?.label ?? null;
+  const partyName = id => id ? parties.find(item => item.id === id)?.label ?? null : null;
+  const parts = [];
+  const mine = groupName(groupOf(playerGroupId));
+  if (own || sponsor?.kind === 'player' || /^Tu\b/.test(String(sponsor?.label ?? ''))) {
+    parts.push({ role: 'signatory', value: String(sponsor?.label ?? '').startsWith('Tu,') ? sponsor.label : 'Tu' });
+    if (mine) parts.push({ role: `group-${plural}`, value: mine });
+    return parts;
+  }
+  const kind = sponsor?.kind ?? null;
+  if (['governo', 'executive', 'budget', 'commissione'].includes(kind)) { parts.push({ role: 'institution', value: sponsor.label }); return parts; }
+  const group = groupOf(sponsor?.groupId);
+  const party = partyName(group?.partyId ?? sponsor?.partyId);
+  if (group) { parts.push({ role: `group-${plural}`, value: groupName(group) }); if (party && party !== groupName(group)) parts.push({ role: 'party', value: party }); }
+  else if (sponsor?.label) parts.push({ role: party ? 'party' : 'proposer', value: sponsor.label });
+  return parts;
+}
+
 // Every open vote, in the order in which it opened. `voteId` is the id the vote will have once counted (the key the Aula uses to remember what was followed).
 export function openVotesOf(state) {
   if (!state?.game || state.game.status === 'ended') return [];
@@ -598,7 +620,7 @@ export function openVotesOf(state) {
       out.push({
         id: `law:${law.id}`, scope: 'nazionale', own, lawId: law.id, assembly: chamber, assemblyName: FLOOR_ASSEMBLIES[chamber].name, place: '', president: FLOOR_ASSEMBLIES[chamber].president, hall: FLOOR_ASSEMBLIES[chamber].hall,
         title: law.title, kindLabel: KIND_LABELS[law.kind] ?? 'Proposta di legge', reading: law.stage === 'final-vote' ? 'Votazione finale' : 'Prima votazione', summary: lawSummary(law), content: lawContent(law),
-        proposer: own ? 'Tu (primo firmatario)' : law.sponsor?.label ?? 'Un gruppo parlamentare', confidence: Boolean(law.confidence), openedAt: law.floor.openedAt ?? null,
+        proposer: own ? 'Tu (primo firmatario)' : law.sponsor?.label ?? 'Un gruppo parlamentare', proposerParts: proposerParts({ sponsor: law.sponsor, own, groups: parliament.chambers?.[chamber]?.groups ?? [], parties: state.world?.parties ?? [], playerGroupId: parliament.player.groupId }), confidence: Boolean(law.confidence), openedAt: law.floor.openedAt ?? null,
         line: law.floor.line ?? (group ? lineOf(groupSupport(parliament, law, group, { world: state.world })) : 'astenuto'), intention: BALLOTS[law.pendingPlayerVote] ? law.pendingPlayerVote : null,
         voteId: `${law.id}-${chamber}-${(law.votes ?? []).length + 1}`, floorKey: law.floor.key
       });
@@ -610,7 +632,7 @@ export function openVotesOf(state) {
       out.push({
         id: `fiducia:${government.id}`, scope: 'fiducia', governmentId: government.id, assembly: chamber, assemblyName: FLOOR_ASSEMBLIES[chamber]?.name ?? 'Parlamento', place: '', president: FLOOR_ASSEMBLIES[chamber]?.president ?? 'Il Presidente', hall: FLOOR_ASSEMBLIES[chamber]?.hall ?? '',
         title: `Fiducia al ${government.name}`, kindLabel: 'Voto di fiducia', reading: 'Chiama nominale', summary: government.status === 'crisis' ? 'Il governo è in crisi e torna alle Camere: senza la fiducia, cade.' : 'Il nuovo governo si presenta alle Camere e chiede la fiducia.',
-        content: [row('Governo', government.name), row('Il tuo gruppo', inside ? 'Fa parte della maggioranza che lo sostiene' : 'È all’opposizione')].filter(Boolean), proposer: government.name, confidence: true,
+        content: [row('Governo', government.name), row('Il tuo gruppo', inside ? 'Fa parte della maggioranza che lo sostiene' : 'È all’opposizione')].filter(Boolean), proposer: government.name, proposerParts: [{ role: 'institution', value: government.name }], confidence: true,
         openedAt: government.confidenceRequestedAt, line: inside ? 'favorevole' : 'contrario', intention: null, voteId: null, floorKey: `fiducia|${government.id}`, deferred: true
       });
     }
@@ -623,7 +645,7 @@ export function openVotesOf(state) {
       out.push({
         id: `local:${inst.id}|${act.id}`, scope: 'locale', own: act.sponsor?.kind === 'player' || act.kind === 'player', instId: inst.id, actId: act.id, assembly: inst.kind, assemblyName: spec.name, place: inst.name ?? '', president: spec.president, hall: spec.hall, committee,
         title: act.title, kindLabel: act.label ?? 'Atto', reading: committee ? 'Voto in commissione' : act.secondCall ? 'Seconda convocazione' : act.firstReadingAt ? 'Seconda deliberazione' : 'Votazione in aula', summary: `${act.label ?? 'Atto'} presentato da ${act.sponsor?.label ?? 'un gruppo'}${AREA_BY_ID[act.area] ? `: ${AREA_BY_ID[act.area].label.toLowerCase()}` : ''}.`, content: actContent(inst, act),
-        proposer: act.sponsor?.label ?? 'Un gruppo consiliare', confidence: act.kind === 'sfiducia', openedAt: act.floor.openedAt ?? null, line: act.floor.line ?? 'astenuto', intention: BALLOTS[act.pendingPlayerVote] ? act.pendingPlayerVote : null,
+        proposer: act.sponsor?.label ?? 'Un gruppo consiliare', proposerParts: proposerParts({ sponsor: act.sponsor, own: act.sponsor?.kind === 'player' || act.kind === 'player', groups: inst.groups ?? [], parties: state.world?.parties ?? [], playerGroupId: inst.playerGroupId, plural: 'consiliare' }), confidence: act.kind === 'sfiducia', openedAt: act.floor.openedAt ?? null, line: act.floor.line ?? 'astenuto', intention: BALLOTS[act.pendingPlayerVote] ? act.pendingPlayerVote : null,
         voteId: committee ? null : `local:${inst.id}|${act.id}`, floorKey: act.floor.key
       });
     }

@@ -5,7 +5,7 @@
 //     the phrase book (src/data/i18n/en-*.js): exact phrases, phrases with numbers (`#`) or free parts (`{}`), and the numbers, currency and dates in English form.
 //     Proper names (people, parties, places, official denominations) are never in the phrase book: they stay as they are. A phrase that is not in the book stays Italian, never wrong.
 // Nothing here touches a career: the language is a view of the same data.
-import { saveSetting } from './settings.js?v=20261112-3';
+import { saveSetting } from './settings.js?v=20261112-8';
 
 export const LANGUAGES = Object.freeze([['it', 'Italiano', 'it-IT'], ['en', 'English', 'en-GB']]);
 const SETTINGS_KEY = 'politicando.settings.v1';
@@ -390,6 +390,26 @@ export function translateTree(root) {
   working = true;
   try { translateNode(root); } finally { working = false; }
 }
+// Back to Italian: what was translated in place goes back to its source (the text and the attributes remembered above).
+function restoreNode(node) {
+  if (node.nodeType === Node.TEXT_NODE) { const memo = originals.get(node); if (memo && memo.shown === node.nodeValue) node.nodeValue = memo.source; return; }
+  if (node.nodeType !== Node.ELEMENT_NODE) return;
+  const memo = attributeOriginals.get(node);
+  if (memo) for (const [name, item] of Object.entries(memo)) if (node.getAttribute(name) === item.shown) node.setAttribute(name, item.source);
+  for (const child of node.childNodes) restoreNode(child);
+}
+// A window the interface keeps OUTSIDE the container (the sitting of a vote, the Aula) follows the language at once, in both directions: translated when it turns English, restored when it turns Italian.
+function refreshOutside() {
+  const body = watched?.ownerDocument?.body ?? null;
+  if (!body) return;
+  working = true;
+  try {
+    for (const child of body.children) {
+      if (child === watched || child.contains?.(watched) || SKIP.has(child.tagName)) continue;
+      if (language === 'en' && book) translateNode(child); else restoreNode(child);
+    }
+  } finally { working = false; }
+}
 let observer = null, outsideObserver = null;
 // Keeps a container translated while the interface redraws it: every inserted node is translated as it arrives.
 export function watchTree(root) {
@@ -435,7 +455,7 @@ export function watchTree(root) {
 let loading = null;
 export function loadBook() {
   if (book?.loaded) return Promise.resolve(book);
-  loading ??= import('../data/i18n/index.js?v=20261112-3').then(module => { module.install(installBook); book.loaded = true; return book; });
+  loading ??= import('../data/i18n/index.js?v=20261112-8').then(module => { module.install(installBook); book.loaded = true; return book; });
   return loading;
 }
 // The title of the page (the tab) is read by people and by assistive technology: it follows the language like the rest (the Italian one is kept to go back to).
@@ -454,5 +474,6 @@ export async function setLanguage(next, { scope = null } = {}) {
   apply();
   applyTitle();
   for (const listener of listeners) listener(language);
+  refreshOutside();
   return language;
 }

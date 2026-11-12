@@ -1,16 +1,16 @@
 // Main menu, how-to-play, settings, save slots and the end-of-week report.
-import { renderTutorialInvite } from './tutorial.js?v=20261112-3';
-import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261112-3';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261112-3';
-import { formatDate } from '../core/time.js?v=20261112-3';
-import { illustration } from './illustrations.js?v=20261112-3';
-import { glyph } from './visuals.js?v=20261112-3';
-import { identityMark, identityVars } from './party-identity.js?v=20261112-3';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261112-3';
-import { hallView } from './hall-view.js?v=20261112-3';
-import { renderLogoCatalog } from './logo-catalog.js?v=20261112-3';
-import { esc, signed } from './charts.js?v=20261112-3';
-import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261112-3';
+import { renderTutorialInvite } from './tutorial.js?v=20261112-8';
+import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261112-8';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261112-8';
+import { formatDate } from '../core/time.js?v=20261112-8';
+import { illustration } from './illustrations.js?v=20261112-8';
+import { glyph } from './visuals.js?v=20261112-8';
+import { identityMark, identityVars } from './party-identity.js?v=20261112-8';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261112-8';
+import { hallView } from './hall-view.js?v=20261112-8';
+import { renderLogoCatalog } from './logo-catalog.js?v=20261112-8';
+import { esc, signed } from './charts.js?v=20261112-8';
+import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261112-8';
 
 const when = iso => { try { return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); } catch { return ''; } };
 // The actions of the opening screen, in order of importance: starting a career and resuming one are the two main ones (drawn apart, below); then what concerns the
@@ -317,10 +317,15 @@ export function renderWeeklyReport(state) {
   const poll = state.world?.polls?.at(-1);
   const row = player ? poll?.results?.find(item => item.partyId === player.id) : null;
   const consensus = row && poll.week >= report.week ? `<article class="report-metric ${row.delta >= 0 ? 'up' : 'down'} report-consensus"><header><span>Consenso di ${esc(player.label)}</span><strong>${signed(row.delta)}</strong></header>${(poll.why ?? []).slice(0, 4).map(entry => `<small>${esc(entry.label)} <b>${signed(entry.delta)}</b></small>`).join('') || '<small>Variazione dentro il margine d’errore</small>'}</article>` : '';
-  return `<div class="modal-backdrop report-backdrop" data-report-close><section class="report-modal" role="dialog" aria-modal="true" aria-labelledby="report-title">
-    <span class="section-kicker">RESOCONTO · SETTIMANA ${report.week}</span><h2 id="report-title">Com’è andata la settimana</h2>
-    ${cards || consensus ? `<div class="report-metrics">${consensus}${cards}</div>` : '<p class="quiet-copy">Settimana stabile: nessun indicatore personale si è mosso.</p>'}
-    <ul class="report-lines">${report.lines.slice(0, 8).map(line => `<li>${esc(line)}</li>`).join('')}</ul>
-    <footer><span>${game.inbox.length} decisioni in agenda${urgent ? ` · ${urgent} urgenti` : ''}</span><button class="primary-button" data-report-close>Continua</button></footer>
+  // the lines of the week told by kind (the money, what the diary decided without the player, what asks for a decision): the text is the same, the kind only gives the line its mark
+  const kindOfLine = line => /^(Entrate|Bilancio|Spesa|Fondi)/i.test(line) ? 'money' : /^Senza una tua decisione/i.test(line) ? 'auto' : /^Nuova decisione|^Urgente/i.test(line) ? 'ask' : 'plain';
+  const lines = report.lines.slice(0, 8);
+  return `<div class="modal-backdrop report-backdrop" data-report-close><section class="report-modal weekly-report" role="dialog" aria-modal="true" aria-labelledby="report-title">
+    <header class="weekly-head"><span class="section-kicker">RESOCONTO · SETTIMANA ${report.week}</span><h2 id="report-title">Com’è andata la settimana</h2></header>
+    <div class="weekly-body" tabindex="0">
+      ${cards || consensus ? `<div class="report-metrics">${consensus}${cards}</div>` : '<p class="quiet-copy">Settimana stabile: nessun indicatore personale si è mosso.</p>'}
+      ${lines.length ? `<h3 class="weekly-sub">I fatti della settimana</h3><ul class="report-lines weekly-lines">${lines.map(line => { const tagged = /^(Senza una tua decisione|Nuova decisione): (.*)$/s.exec(line); return `<li class="weekly-line weekly-${kindOfLine(line)}">${tagged ? `<span class="weekly-tag">${esc(tagged[1])}</span> <span>${esc(tagged[2])}</span>` : esc(line)}</li>`; }).join('')}</ul>` : ''}
+    </div>
+    <footer class="weekly-foot"><span>${game.inbox.length} decisioni in agenda${urgent ? ` · ${urgent} urgenti` : ''}</span><button class="primary-button" data-report-close>Continua</button></footer>
   </section></div>`;
 }

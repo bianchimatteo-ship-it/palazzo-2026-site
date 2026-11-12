@@ -39,8 +39,15 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   const sitting = await evaluate(`({ assembly: document.querySelector('[data-floor-assembly-name]').textContent, upper: getComputedStyle(document.querySelector('[data-floor-assembly-name]')).textTransform, size: parseFloat(getComputedStyle(document.querySelector('[data-floor-assembly-name]')).fontSize), title: document.querySelector('#floor-title').textContent, content: document.querySelectorAll('.floor-content div').length, mode: document.querySelector('.floor-overlay').dataset.floorMode })`);
   assert.equal(sitting.assembly.toLowerCase(), open.assemblyName.toLowerCase(), 'L’assemblea è scritta per esteso.'); assert.ok(sitting.size >= 20 && sitting.upper === 'uppercase', `E in grande, maiuscolo (${sitting.size}px).`);
   assert.equal(sitting.title, open.title); assert.ok(sitting.content >= 1, 'Il contenuto del provvedimento si legge.'); assert.equal(sitting.mode, 'diretta');
-  await wait(() => evaluate(`document.querySelector('.floor-overlay')?.dataset.floorPhase === 'voto'`), 20000);
-  assert.ok(await evaluate(`/Presidente/.test(document.querySelector('.floor-said').textContent)`), 'Il Presidente apre la seduta.');
+  // the sitting opens WHOLE: all the President's words and the ballot are there the moment the window opens, with the animation on (no word appears later, nothing has to be waited for)
+  assert.equal(await evaluate(`document.querySelector('.floor-overlay')?.dataset.floorPhase`), 'voto', 'La scheda è disponibile subito.');
+  assert.ok(await evaluate(`document.querySelectorAll('.floor-said li').length`) >= 3, 'Le tre battute del Presidente sono tutte visibili subito.');
+  assert.equal(await evaluate(`document.querySelector('[data-floor-ballot]').hidden`), false, 'La scheda Favorevole/Contrario/Astenuto è già aperta.');
+  assert.equal(await has('[data-floor-skip]'), false, 'Nessun «Vai al voto»: non c’è nulla da saltare.');
+  assert.ok(/Presidente/.test(await evaluate(`document.querySelector('.floor-said').textContent`)), 'Il Presidente apre la seduta.');
+  const proposers = await evaluate(`[...document.querySelectorAll('.floor-proposers dt')].map(item => item.textContent)`);
+  assert.ok(proposers.length >= 1 && proposers.every(label => /Proponente|Gruppo|Partito|Primo firmatario/.test(label)), `Il proponente è indicato con il suo ruolo (${proposers.join(', ')}).`);
+  assert.equal(proposers.length, open.proposerParts.length, 'Una riga per ogni relazione verificata, senza dati inventati.');
   assert.equal(await evaluate(`document.querySelector('[data-floor-confirm]').disabled`), true, 'Senza una scelta il voto non si conferma.');
   assert.equal(await evaluate(`document.querySelectorAll('[data-floor-choice]').length`), 3, 'Tre scelte.');
   assert.deepEqual(await evaluate(`[...document.querySelectorAll('[data-floor-choice]')].map(b => b.dataset.floorChoice)`), ['favorevole', 'contrario', 'astenuto']);

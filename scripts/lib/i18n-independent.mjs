@@ -57,7 +57,7 @@ export function createIndependentDetector({ extraNames = [] } = {}) {
   const names = realProperNames(extraNames);
   const lexicon = new Set([...italian].filter(w => w.length >= 3 && !english.has(w)));
   // words of the lexicon that are ordinary English too (a loanword, a name) never flag
-  const ENGLISH_OK = new Set('idea slogan slogans accuse indicate voucher rush era asl rail serve emerge mon tue wed thu fri sat sun pie vda lom taa ven fvg lig emr tos umb mar laz abr mol cam pug bas cal sic sar app mail email online offline login logout account password username web wifi sms pdf zip png json url http https api ios android google apple instagram facebook youtube tiktok radio sport welfare budget leader dossier summit premier team staff social media video audio file smartphone pop rock jazz menu bar hub meme blog chat link'.split(' '));
+  const ENGLISH_OK = new Set('idea slogan slogans accuse indicate parole medico voucher rush era asl rail serve emerge mon tue wed thu fri sat sun pie vda lom taa ven fvg lig emr tos umb mar laz abr mol cam pug bas cal sic sar app mail email online offline login logout account password username web wifi sms pdf zip png json url http https api ios android google apple instagram facebook youtube tiktok radio sport welfare budget leader dossier summit premier team staff social media video audio file smartphone pop rock jazz menu bar hub meme blog chat link'.split(' '));
   const fold = t => t.replace(/[’']/g, "'").toLowerCase();
   const stripNames = text => {
     // whole names (n-grams up to 8 words) removed first, any case

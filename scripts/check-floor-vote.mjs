@@ -21,6 +21,32 @@ const run = async (level, seed, check) => {
 };
 const sum = vote => Number(vote.yes) + Number(vote.against) + Number(vote.abstain) + Number(vote.absent ?? 0);
 
+// ---------- 0. who proposes: the data prove it, nothing is invented ----------
+{
+  const ROLES = new Set(['institution', 'group-parlamentare', 'group-consiliare', 'party', 'signatory', 'proposer']);
+  const seen = new Set();
+  for (const [level, seed] of [['deputato', 'p1'], ['comunale', 'p2'], ['deputato', 'p3']]) {
+    await run(level, seed, async ({ store, untilOpen }) => {
+      for (let round = 0; round < 6; round++) {
+        const open = (() => { try { return untilOpen(level === 'comunale' ? 'locale' : 'nazionale', 30); } catch { return []; } })();
+        for (const vote of open) {
+          assert.ok(Array.isArray(vote.proposerParts) && vote.proposerParts.length >= 1, `${vote.title}: il proponente è indicato`);
+          for (const part of vote.proposerParts) { assert.ok(ROLES.has(part.role) && part.value, `${vote.title}: ruolo e nome`); seen.add(part.role); }
+          const roles = vote.proposerParts.map(part => part.role);
+          if (roles.includes('institution')) assert.equal(roles.length, 1, 'Un’istituzione (Governo, Giunta, commissione) non viene confusa con il partito che la guida');
+          if (roles.includes('party')) assert.ok(roles.some(role => role.startsWith('group-')) || roles.length === 1, 'Il partito compare solo con il suo gruppo o come unico dato');
+          if (vote.own) assert.equal(roles[0], 'signatory', 'Se la proposta è del giocatore, è lui il primo firmatario');
+          if (!vote.own) assert.ok(!roles.includes('signatory'), 'Il primo firmatario è il giocatore soltanto quando lo è davvero');
+          if (vote.scope === 'fiducia') assert.deepEqual(roles, ['institution']);
+          store.castOpenVote(vote.id, 'astenuto', { mode: 'simulata' });
+        }
+        store.advance(7);
+      }
+    });
+  }
+  assert.ok(seen.size >= 2, `proponenti di tipo diverso incontrati: ${[...seen].join(', ')}`);
+}
+
 // ---------- 1. the Chamber ----------
 for (const [level, seed] of [['deputato', 'f1'], ['senatore', 'f2']]) {
   await run(level, seed, async ({ store, untilOpen }) => {

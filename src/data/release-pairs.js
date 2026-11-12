@@ -1,14 +1,18 @@
 // English phrase-book pairs of the last release pass (data/i18n/en-ui-8.js reads `ALL_PAIRS`): the guided programme editor, the days of the Quirinale and the rule on the parties, the government room, the live
 // votes of the assemblies, the party headquarters, the TV name plates and the tutorial. Format as in the phrase-book: [Italian as shown, English]; `#` a number, `{}` a free part.
-import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261112-3';
-import { DEBATE_PAIRS } from './debate-choices.js?v=20261112-3';
-import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261112-3';
-import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261112-3';
+import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261112-8';
+import { DEBATE_PAIRS } from './debate-choices.js?v=20261112-8';
+import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261112-8';
+import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261112-8';
+import { ALL_PAIRS as TOPIC_PAIRS } from './activity-scene-topics.js?v=20261112-8';
+import { LAW_TERM_PAIRS } from './law-terms.js?v=20261112-8';
 export const ALL_PAIRS = [
   ...GUEST_PAIRS,
   ...DEBATE_PAIRS,
   ...APPROACH_PAIRS,
   ...MOVE_PAIRS,
+  ...TOPIC_PAIRS,
+  ...LAW_TERM_PAIRS,
   // ---- the guided programme editor ----
   // ---- the open votes (the player's own ballot) ----
   ['Congresso — Forza delle aree: Si misura il peso di ogni area: iscritti, quadri, comitati, risorse.', 'Congress — Strength of the areas: The weight of each area is measured: members, cadres, committees, resources.'],
@@ -247,5 +251,21 @@ export const ALL_PAIRS = [
   ['media di più istituti (nessun margine d’errore unico).', 'average of several pollsters (no single margin of error).'],
   ['Sono mostrate solo le forze presenti nella fonte, con “Altri” come nella fonte.', 'Only the forces in the source are shown, with “Others” as in the source.'],
   ['La barra tratteggiata è una stima simulata del tuo partito, fuori dal totale reale.', 'The dashed bar is a simulated estimate for your party, outside the real total.'],
-  ['Dalla prossima settimana i sondaggi sono simulati e reagiscono alla tua carriera.', 'From next week the polls are simulated and react to your career.']
+  ['Dalla prossima settimana i sondaggi sono simulati e reagiscono alla tua carriera.', 'From next week the polls are simulated and react to your career.'],
+  ['I fatti della settimana', 'What happened this week'],
+  ['Apri il barometro', 'Open the barometer'],
+  ['Chiudi il barometro', 'Close the barometer'],
+  ['Proponente istituzionale', 'Institutional proposer'],
+  ['Gruppo parlamentare proponente', 'Proposing parliamentary group'],
+  ['Gruppo consiliare proponente', 'Proposing council group'],
+  ['Partito di riferimento', 'Party of reference'],
+  ['Primo firmatario', 'First signatory'],
+  ['Proponente', 'Proposer'],
+  ['{}: il testo è presentato dal {}.', '{1}: the text is presented by the {2}.'],
+  ['{}: il testo è presentato dalla {}.', '{1}: the text is presented by the {2}.'],
+  ['{}: il testo è presentato da te, primo firmatario.', '{1}: the text is presented by you, as first signatory.'],
+  ['Senza una tua decisione', 'Without a decision from you'],
+  ['Nuova decisione', 'New decision'],
+  ['Dottori commercialisti', 'Chartered accountants'],
+  ['Arti', 'Arts'],
 ];

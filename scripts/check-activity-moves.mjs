@@ -50,7 +50,7 @@ assert.ok(GUARANTEE_MOVES.length >= 4 && EXTRA_Q1.length >= 3);
 for (const [key, map] of Object.entries(APPROACH_FUNCTIONS)) for (const approach of ACTIVITY_SCENES[key].approaches) assert.ok(FUNCTIONS[map[approach.id]], `${key}/${approach.id}: l’approccio ha una funzione`);
 
 // ---------- 2. the variety ----------
-const make = (sceneKey, seed, extra = {}) => createActivityScene({ id: `t-${seed}`, seed, sceneKey, activityId: extra.activityId ?? ACTIVITY_SCENES[sceneKey].activityIds[0], player: { name: 'Anna Verdi', tag: 'Deputata · Prova' }, playerAvatar: null, stats: { competence: 60, charisma: 60, reputation: 60 }, ...extra });
+const make = (sceneKey, seed, extra = {}) => createActivityScene({ id: `t-${seed}`, seed, sceneKey, activityId: extra.activityId ?? ACTIVITY_SCENES[sceneKey].activityIds[0], refs: extra.situation?.promise ? { promise: 'Più medici di base' } : {}, player: { name: 'Anna Verdi', tag: 'Deputata · Prova' }, playerAvatar: null, stats: { competence: 60, charisma: 60, reputation: 60 }, ...extra });
 const FULL = { promise: true, prior: true, govern: true, funds: true, capital: true, party: true };
 const first = choices => choices.find(choice => !choice[2])[0];
 const optionsAt = (scene, nodeId) => { const s = { ...scene, nodeId }; return activityNode(s).choices; };
@@ -105,32 +105,34 @@ for (const key of KEYS) {
 {
   const clone = (scene, patch) => ({ ...JSON.parse(JSON.stringify(scene)), ...patch });
   const score = (scene, id) => chooseInScene(scene, id).history.at(-1).score;
-  const findScene = (sceneKey, nodeId, ids, extra = {}) => { for (let i = 0; i < 200; i++) { const scene = { ...make(sceneKey, `dev-${i}`, extra), nodeId }; const offered = optionsAt(scene, nodeId).map(choice => choice[0]); if (ids.every(id => offered.includes(id))) return scene; } throw new Error(`nessuna scena offre ${ids}`); };
+  const idOfFn = (scene, nodeId, fn) => optionsAt(scene, nodeId).find(choice => choice[3] === FUNCTIONS[fn].detail[0] && !choice[2])?.[0] ?? null;
+  const findScene = (sceneKey, nodeId, fns, extra = {}) => { for (let i = 0; i < 300; i++) { const scene = { ...make(sceneKey, `dev-${i}`, { activityId: undefined, ...extra }), nodeId }; if (fns.every(fn => idOfFn(scene, nodeId, fn))) return scene; } throw new Error(`nessuna scena offre ${fns}`); };
   // a promise or an announcement is worth more after the facts have been gathered than before (same scene, only what the player knows differs)
-  for (const [sceneKey, id] of [['associazioni', 'a-scritto'], ['associazioni', 'a-pubblico'], ['cantiere', 'w-crono'], ['redazione', 'r-annuncio']]) {
-    const scene = findScene(sceneKey, 'q3', [id], { situation: FULL });
+  for (const [sceneKey, fn] of [['associazioni', 'propose'], ['cantiere', 'propose'], ['redazione', 'announce'], ['commissione', 'propose']]) {
+    const scene = findScene(sceneKey, 'q3', [fn], { situation: FULL }), id = idOfFn(scene, 'q3', fn);
     const knows = clone(scene, { tally: { ...scene.tally, k: 2 } }), ignorant = clone(scene, { tally: { ...scene.tally, k: 0 } });
-    assert.ok(score(knows, id) >= score(ignorant, id) + 8, `${id}: con i dati vale di più (${score(knows, id)} contro ${score(ignorant, id)})`);
+    assert.ok(score(knows, id) >= score(ignorant, id) + 8, `${sceneKey}/${fn}: con i dati vale di più (${score(knows, id)} contro ${score(ignorant, id)})`);
   }
   // mediating is worth more when the tone has risen, challenging is worth less
-  const calm = findScene('sede', 'q2', ['p-correnti', 'p-polemica'], { situation: FULL });
+  const calm = findScene('sede', 'q2', ['mediate', 'contest'], { situation: FULL, prefer: 'linea' });
   const heated = clone(calm, { tally: { ...calm.tally, tension: 3 } });
-  assert.ok(score(heated, 'p-correnti') > score(calm, 'p-correnti') + 8, 'mediare vale di più quando i toni sono alti');
-  assert.ok(score(heated, 'p-polemica') < score(calm, 'p-polemica') - 4, 'contestare vale meno quando i toni sono già alti');
-  // what was already done is pushed aside: a function used before comes after the others
-  const once = findScene('associazioni', 'q2', ['a-progetto'], { situation: FULL });
+  const mediate = idOfFn(calm, 'q2', 'mediate'), contest = idOfFn(calm, 'q2', 'contest');
+  assert.ok(score(heated, mediate) > score(calm, mediate) + 8, 'mediare vale di più quando i toni sono alti');
+  assert.ok(score(heated, contest) < score(calm, contest) - 4, 'contestare vale meno quando i toni sono già alti');
+  // what was already done is pushed after the moves not yet tried (the subject keeps its own moves first)
+  const once = findScene('associazioni', 'q2', ['data', 'probe', 'verify'], { situation: FULL });
   const done = clone(once, { history: [{ node: 'q1', choice: 'x', fn: 'data', score: 60, band: 'mid', why: [], k: 0, said: 'x', reaction: 'x' }] });
-  assert.ok(!optionsAt(done, 'q2').some(choice => choice[0] === 'a-progetto'), 'chi ha già chiesto i dati trova altro da fare');
+  const order = optionsAt(done, 'q2').map(choice => choice[3]);
+  assert.ok(order.indexOf(FUNCTIONS.data.detail[0]) === -1 || order.indexOf(FUNCTIONS.data.detail[0]) > order.indexOf(FUNCTIONS.probe.detail[0]), 'chi ha già chiesto i dati prova prima le altre strade');
   // after a bad move, setting things straight is worth more
-  const stumbled = clone(once, { history: [{ node: 'q1', choice: 'x', fn: 'listen', score: 30, band: 'bad', why: [], k: 0, said: 'x', reaction: 'x' }] });
-  const clarify = findScene('associazioni', 'q2', ['a-ruolo'], { situation: FULL });
-  const clarifyAfter = clone(clarify, { history: stumbled.history });
-  assert.ok(optionsAt(clarifyAfter, 'q2').some(choice => choice[0] === 'a-ruolo'), 'il chiarimento resta tra le mosse dopo un passo falso');
-  assert.ok(score(clarifyAfter, 'a-ruolo') > score(clarify, 'a-ruolo') + 4, 'dopo un passo falso chiarire aiuta');
+  const clarify = findScene('sede', 'q2', ['clarify'], { situation: FULL, prefer: 'linea' });
+  const clarifyAfter = clone(clarify, { history: [{ node: 'q1', choice: 'x', fn: 'listen', score: 30, band: 'bad', why: [], k: 0, said: 'x', reaction: 'x' }] });
+  assert.ok(idOfFn(clarifyAfter, 'q2', 'clarify'), 'il chiarimento resta tra le mosse dopo un passo falso');
+  assert.ok(score(clarifyAfter, idOfFn(clarifyAfter, 'q2', 'clarify')) > score(clarify, idOfFn(clarify, 'q2', 'clarify')) + 4, 'dopo un passo falso chiarire aiuta');
   // the opposition cannot command the offices
-  const gov = findScene('associazioni', 'q2', ['a-bandi'], { situation: { ...FULL, govern: true } });
+  const gov = findScene('associazioni', 'q2', ['involve'], { situation: { ...FULL, govern: true }, prefer: 'scuola' });
   const opp = clone(gov, { flags: { ...gov.flags, govern: false, opp: true } });
-  assert.ok(score(gov, 'a-bandi') > score(opp, 'a-bandi') + 5, 'chi governa coinvolge gli uffici con più effetto di chi è all’opposizione');
+  assert.ok(score(gov, idOfFn(gov, 'q2', 'involve')) > score(opp, idOfFn(opp, 'q2', 'involve')) + 5, 'chi governa coinvolge gli uffici con più effetto di chi è all’opposizione');
   // the tone of the next moment follows how the last one went
   const good = clone(calm, { nodeId: 'q3', history: [{ node: 'q2', choice: 'x', fn: 'data', score: 80, band: 'good', why: [], k: 1, said: 'x', reaction: 'x' }] }), bad = clone(good, { history: [{ ...good.history[0], band: 'bad', score: 20 }] }), hot = clone(good, { tally: { ...good.tally, tension: 3 } });
   assert.notEqual(activityNode(good).text, activityNode(bad).text); assert.notEqual(activityNode(good).text, activityNode(hot).text); assert.notEqual(activityNode(bad).text, activityNode(hot).text);

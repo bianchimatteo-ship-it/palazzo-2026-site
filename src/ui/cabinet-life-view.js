@@ -1,10 +1,10 @@
 // The team of the Government (cabinet-life-engine.js): each minister with the grade of the last evaluation, competence, loyalty, bond with the Prime Minister, ambition and pressure; what waits for the
 // Prime Minister (requests, conflicts, the cabinet meeting) with its buttons; the latest decisions. Read only for whoever is not the Prime Minister: the page then tells what is going on.
-import { GRADE_LABELS, cabinetView } from '../core/cabinet-life-engine.js?v=20261112-3';
-import { esc } from './charts.js?v=20261112-3';
-import { glyph } from './visuals.js?v=20261112-3';
-import { avatarSvg } from './avatar-svg.js?v=20261112-3';
-import { defaultAvatarFor } from '../core/avatar.js?v=20261112-3';
+import { GRADE_LABELS, cabinetView } from '../core/cabinet-life-engine.js?v=20261112-8';
+import { esc } from './charts.js?v=20261112-8';
+import { glyph } from './visuals.js?v=20261112-8';
+import { avatarSvg } from './avatar-svg.js?v=20261112-8';
+import { defaultAvatarFor } from '../core/avatar.js?v=20261112-8';
 
 const meter = (value, tone = '') => `<b class="cl-meter ${tone}" role="img" aria-label="${esc(String(Math.round(value ?? 0)))}"><i style="width:${Math.max(0, Math.min(100, Number(value) || 0))}%"></i></b>`;
 const gradeChip = grade => grade ? `<span class="cl-grade grade-${esc(grade)}">${esc(GRADE_LABELS[grade])}</span>` : '<span class="cl-grade grade-none">Non ancora valutato</span>';

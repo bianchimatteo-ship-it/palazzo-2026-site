@@ -1,10 +1,15 @@
 // The sitting of an OPEN vote (core/lawmaking-engine.js `openVotesOf`): the assembly, the measure (title, description, content, proposer), the President who opens the vote, and the player's own ballot —
 // Favorevole, Contrario or Astenuto, chosen and then confirmed. Nothing is counted before the confirmation: the window has no result to show until then. Two ways to attend, one resolution:
-//   «SEGUI IN DIRETTA»  the President's words come one after the other, the player votes, and the count is then followed seat by seat in the Aula (ui/aula-view.js);
+//   «SEGUI IN DIRETTA»  the sitting opens whole (the President's words and the ballot at once), the player votes, and the count is then followed seat by seat in the Aula (ui/aula-view.js);
 //   «SIMULA VOTAZIONE»  the same sitting in short: the player votes, and the result is shown at the end.
 // The window can be left at any moment before the confirmation (the vote stays open, and so does the way chosen to attend it). Loaded only when a vote is open.
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const BALLOT_LABELS = Object.freeze({ favorevole: 'Favorevole', contrario: 'Contrario', astenuto: 'Astenuto' });
+// Who proposes, by what the data prove (core/lawmaking-engine.js `proposerParts`): the institution, the group, the party it belongs to, the first signatory.
+const PROPOSER_LABELS = Object.freeze({ institution: 'Proponente istituzionale', 'group-parlamentare': 'Gruppo parlamentare proponente', 'group-consiliare': 'Gruppo consiliare proponente', party: 'Partito di riferimento', signatory: 'Primo firmatario', proposer: 'Proponente' });
+const partsOf = vote => (vote.proposerParts?.length ? vote.proposerParts : [{ role: 'proposer', value: vote.proposer }]).filter(item => item.value);
+const proposerLine = vote => { const first = partsOf(vote)[0]; return `<span>${esc(PROPOSER_LABELS[first?.role] ?? PROPOSER_LABELS.proposer)}:</span> <b>${esc(first?.value ?? vote.proposer)}</b>`; };
+const proposerBlock = vote => `<dl class="floor-proposers">${partsOf(vote).map(item => `<div><dt>${esc(PROPOSER_LABELS[item.role] ?? PROPOSER_LABELS.proposer)}</dt><dd>${esc(item.value)}</dd></div>`).join('')}</dl>`;
 const LINE_LABELS = Object.freeze({ favorevole: 'a favore', contrario: 'contro', astenuto: 'per l’astensione' });
 
 // The notice of an open vote, with the two ways to attend it: on Home, in the bill's card, in the act's card. It names the measure and the assembly; it never tells a result (there is none yet).
@@ -12,7 +17,7 @@ export function floorOffer(vote, { mode = null, compact = false } = {}) {
   const resume = mode ? `<small data-floor-resume>${mode === 'diretta' ? 'Avevi scelto la diretta: la seduta riprende dal tuo voto.' : 'Avevi scelto la simulazione: manca solo il tuo voto.'}</small>` : '';
   const text = compact ? '' : `<small>${esc(vote.summary)}</small>`;
   return `<section class="floor-offer${compact ? ' is-compact' : ''}" data-floor-offer="${esc(vote.id)}" data-floor-scope="${esc(vote.scope)}" aria-label="Votazione aperta">
-    <div><span class="section-kicker"><span>Votazione aperta</span> · <span>${esc(vote.reading)}</span></span><b class="floor-where"><span>${esc(vote.assemblyName)}</span>${vote.place ? ` · <span>${esc(vote.place)}</span>` : ''}</b><strong>${esc(vote.title)}</strong>${text}<small class="floor-meta"><span>${esc(vote.kindLabel)}</span> · <span>Proponente:</span> <b>${esc(vote.proposer)}</b></small><small>L’Aula attende il tuo voto: Favorevole, Contrario o Astenuto. La settimana non si chiude finché non hai votato.</small>${resume}</div>
+    <div><span class="section-kicker"><span>Votazione aperta</span> · <span>${esc(vote.reading)}</span></span><b class="floor-where"><span>${esc(vote.assemblyName)}</span>${vote.place ? ` · <span>${esc(vote.place)}</span>` : ''}</b><strong>${esc(vote.title)}</strong>${text}<small class="floor-meta"><span>${esc(vote.kindLabel)}</span> · ${proposerLine(vote)}</small><small>L’Aula attende il tuo voto: Favorevole, Contrario o Astenuto. La settimana non si chiude finché non hai votato.</small>${resume}</div>
     <div class="floor-offer-actions">${vote.deferred ? '' : `<button type="button" class="primary-button floor-live" data-floor-open="${esc(vote.id)}" data-floor-mode="diretta">SEGUI IN DIRETTA</button>`}<button type="button" class="${vote.deferred ? 'primary-button floor-live' : 'secondary-button'}" data-floor-open="${esc(vote.id)}" data-floor-mode="simulata">${vote.deferred ? 'ESPRIMI IL TUO VOTO' : 'SIMULA VOTAZIONE'}</button></div>
   </section>`;
 }
@@ -33,9 +38,11 @@ export function closeFloor() {
 }
 function onKey(event) { if (event.key === 'Escape' && current && current.root.dataset.floorPhase !== 'conteggio') { event.stopPropagation(); const done = current.onClose; closeFloor(); done?.(); } }
 
+// «presentato dal governo», «dalla commissione», «da Tu…»: the article joins the preposition (a name of the data keeps its own capital).
+const presentedBy = name => /^Il /.test(name) ? `dal ${name.slice(3)}` : /^La /.test(name) ? `dalla ${name.slice(3)}` : /^Governo /.test(name) ? `dal ${name}` : /^Tu\b/.test(name) ? 'da te, primo firmatario' : `da ${name}`;
 const presidentLines = vote => [
   `${vote.president} apre la seduta: all’ordine del giorno la votazione di «${vote.title}».`,
-  `${vote.president}: il testo è presentato da ${vote.proposer}.`,
+  `${vote.president}: il testo è presentato ${presentedBy(vote.proposer)}.`,
   vote.confidence && vote.scope !== 'fiducia' ? `${vote.president}: sul provvedimento è posta la questione di fiducia.` : '',
   `${vote.president}: dichiaro aperta la votazione. Ciascuno esprima il proprio voto.`
 ].filter(Boolean);
@@ -67,7 +74,7 @@ export function openFloor(vote, { mode = 'simulata', motion = 'full', cast, aula
   const content = vote.content.length ? `<dl class="floor-content">${vote.content.map(item => `<div><dt>${esc(item.label)}</dt><dd>${esc(item.value)}</dd></div>`).join('')}</dl>` : '';
   const choices = Object.entries(BALLOT_LABELS).map(([id, label]) => `<button type="button" class="floor-choice is-${id}" data-floor-choice="${id}" aria-pressed="false">${label}</button>`).join('');
   root.innerHTML = `<div class="aula-window floor-window"><header><div><span class="section-kicker"><span>${live ? 'In diretta' : vote.deferred ? 'Voto di fiducia' : 'Votazione simulata'}</span> · <span>${esc(vote.reading)}</span></span><p class="floor-assembly" data-floor-assembly-name>${esc(vote.assemblyName)}</p><small>${esc(vote.hall)}${vote.place ? ` · ${esc(vote.place)}` : ''}</small></div><button type="button" class="ghost-button" data-floor-close>Chiudi</button></header>
-    <section class="floor-text"><span class="floor-kind">${esc(vote.kindLabel)}</span><h2 id="floor-title">${esc(vote.title)}</h2><p class="floor-summary">${esc(vote.summary)}</p>${content}<p class="floor-proposer"><span>Proponente:</span> <b>${esc(vote.proposer)}</b></p></section>
+    <section class="floor-text"><span class="floor-kind">${esc(vote.kindLabel)}</span><h2 id="floor-title">${esc(vote.title)}</h2><p class="floor-summary">${esc(vote.summary)}</p>${content}${proposerBlock(vote)}</section>
     <ol class="aula-said floor-said" aria-live="polite"></ol>
     <section class="floor-ballot" data-floor-ballot hidden><h3>IL TUO VOTO</h3><p>Voti di persona: scegli e conferma. L’astensione è un voto espresso, non un’assenza.</p><div class="floor-choices" role="group" aria-label="Il tuo voto">${choices}</div><p class="floor-hint" data-floor-hint>Il tuo gruppo è orientato a votare ${esc(LINE_LABELS[vote.line] ?? vote.line)}: la scelta resta tua.</p><div class="floor-confirm"><button type="button" class="primary-button" data-floor-confirm disabled>CONFERMA IL VOTO</button><small data-floor-picked>Nessun voto scelto.</small></div></section>
     <section class="floor-result" data-floor-result hidden></section></div>`;
@@ -76,7 +83,7 @@ export function openFloor(vote, { mode = 'simulata', motion = 'full', cast, aula
   current = { root, timers: [], onClose };
   const said = root.querySelector('.floor-said'), ballot = root.querySelector('[data-floor-ballot]'), confirm = root.querySelector('[data-floor-confirm]'), picked = root.querySelector('[data-floor-picked]');
   const lines = presidentLines(vote);
-  const openBallot = () => { const skip = root.querySelector('[data-floor-skip]'); if (skip) skip.hidden = true; ballot.hidden = false; root.dataset.floorPhase = 'voto'; if (vote.intention) pick(vote.intention, true); (root.querySelector('.floor-choice[aria-pressed="true"]') ?? root.querySelector('.floor-choice'))?.focus?.({ preventScroll: true }); };
+  const openBallot = () => { ballot.hidden = false; root.dataset.floorPhase = 'voto'; if (vote.intention) pick(vote.intention, true); (root.querySelector('.floor-choice[aria-pressed="true"]') ?? root.querySelector('.floor-choice'))?.focus?.({ preventScroll: true }); };
   const say = index => { const li = document.createElement('li'); li.textContent = lines[index]; said.appendChild(li); };
   let choice = null;
   function pick(id, quiet = false) {
@@ -87,14 +94,10 @@ export function openFloor(vote, { mode = 'simulata', motion = 'full', cast, aula
     picked.textContent = quiet ? `La tua intenzione di voto: ${BALLOT_LABELS[id]}. Confermala o cambiala.` : `Hai scelto: ${BALLOT_LABELS[id]}. Puoi cambiare finché non confermi.`;
     root.dataset.floorPicked = id;
   }
-  // The live sitting: the President speaks, then the ballot. Simulated (or with the motion off): everything at once.
-  const paced = live && motion === 'full' && !globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-  if (paced) { lines.forEach((_, index) => current.timers.push(setTimeout(() => say(index), 500 + index * 1500))); current.timers.push(setTimeout(openBallot, 500 + lines.length * 1500)); }
-  else { lines.forEach((_, index) => say(index)); openBallot(); }
+  // The sitting opens whole: the three words of the President are all there at once and the ballot is ready — choose and confirm without waiting. What is followed seat by seat is the count that comes after.
+  lines.forEach((_, index) => say(index)); openBallot();
   root.addEventListener('click', event => {
     if (event.target.closest('[data-floor-close]') || (event.target === root && root.dataset.floorPhase !== 'conteggio')) { const done = current?.onClose; closeFloor(); done?.(); return; }
-    // «Vai al voto»: the President's words can be skipped, the ballot cannot.
-    if (event.target.closest('[data-floor-skip]')) { for (const id of current.timers) clearTimeout(id); current.timers = []; said.innerHTML = ''; lines.forEach((_, index) => say(index)); openBallot(); event.target.closest('[data-floor-skip]').hidden = true; return; }
     const option = event.target.closest('[data-floor-choice]');
     if (option) { pick(option.dataset.floorChoice); return; }
     if (event.target.closest('[data-floor-confirm]') && choice && root.dataset.floorPhase === 'voto') {
@@ -120,7 +123,5 @@ export function openFloor(vote, { mode = 'simulata', motion = 'full', cast, aula
     }
     if (event.target.closest('[data-floor-review]') && current?.aula && review) { const aula = current.aula, done = current.onClose; current.onClose = null; closeFloor(); review(aula, done); }
   });
-  if (paced) { const skip = document.createElement('button'); skip.type = 'button'; skip.className = 'ghost-button'; skip.dataset.floorSkip = ''; skip.textContent = 'Vai al voto'; skip.classList.add('floor-skip'); said.before(skip); }
-  root.querySelector('[data-floor-close]')?.focus?.({ preventScroll: true });
   return true;
 }

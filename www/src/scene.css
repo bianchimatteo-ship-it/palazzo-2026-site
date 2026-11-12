@@ -207,3 +207,9 @@ html[data-scene-motion="full"] .cm-protest .cm-arm { animation: st-arms .45s eas
 .scene-reaction[data-reaction="dissenso"], .scene-reaction[data-reaction="protesta"] { background: #f7dfdc; color: #8a2a1f; }
 .scene-reaction[data-reaction="perplessita"], .scene-reaction[data-reaction="garanzie"] { background: #f6ecd1; color: #6b4c05; }
 .scene-reaction[data-reaction="compromesso"] { background: #dde8f6; color: #1f3f73; }
+
+/* who proposes the measure: the institution, the group, the party, the first signatory — one small line each */
+.floor-proposers { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px 14px; margin: 8px 0 0; }
+.floor-proposers div { min-width: 0; }
+.floor-proposers dt { font-size: .72rem; letter-spacing: .04em; text-transform: uppercase; color: var(--muted, #9aa4a0); }
+.floor-proposers dd { margin: 1px 0 0; font-weight: 700; overflow-wrap: anywhere; }

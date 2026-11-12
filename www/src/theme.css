@@ -1367,3 +1367,41 @@ html[data-ui-motion="off"] .language-gate-button { transition: none; }
 @media (min-width: 761px) { .avatar-preview { position: sticky; top: 10px; align-self: start; } }
 /* On a phone the tabs of a destination wrap to a second line instead of hiding the last ones behind a scroll nobody sees: every page of the destination stays one tap away. */
 @media (max-width: 520px) { .section-subnav { flex-wrap: wrap; overflow-x: visible; row-gap: 0; } .subnav-tab { min-height: 44px; padding: 0 14px; } }
+
+/* The weekly report: a fixed head, a body that scrolls, a foot that never leaves the screen. One uniform language: panels of single-column rows, hairlines between them, small text that rarely wraps. */
+.weekly-report { display: flex; flex-direction: column; overflow: hidden; padding: 0; max-height: min(calc(100dvh - 40px), 760px); }
+.weekly-head { flex: none; padding: 16px 22px 10px; border-bottom: 1px solid var(--line); }
+.weekly-head h2 { margin: 2px 0 0; font-size: 20px; }
+.weekly-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 14px 22px 10px; -webkit-overflow-scrolling: touch; display: grid; gap: 14px; align-content: start; }
+.weekly-body:focus-visible { outline: 2px solid var(--accent, #d8b45a); outline-offset: -2px; }
+.weekly-report .report-metrics, .weekly-lines { display: block; margin: 0; padding: 0; list-style: none; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); }
+.weekly-report .report-metric { padding: 9px 12px 9px 11px; border: 0; border-bottom: 1px solid var(--line); border-left: 3px solid var(--line-strong); border-radius: 0; background: transparent; }
+.weekly-report .report-metric:last-child { border-bottom: 0; }
+.weekly-report .report-metric:first-child { border-top-left-radius: 9px; }
+.weekly-report .report-metric:last-child { border-bottom-left-radius: 9px; }
+.weekly-report .report-metric.up { border-left-color: var(--good); }
+.weekly-report .report-metric.down { border-left-color: var(--critical); }
+.weekly-report .report-metric header { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin: 0 0 2px; }
+.weekly-report .report-metric header span { font-size: 14px; font-weight: 700; min-width: 0; }
+.weekly-report .report-metric header strong { font-size: 16px; flex: none; }
+.weekly-report .report-metric small { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin: 1px 0 0; font-size: 12px; line-height: 1.35; color: var(--ink-2); }
+.weekly-report .report-metric small b { flex: none; }
+.weekly-sub { margin: 4px 0 -6px; font: 700 11px/1.2 Manrope, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.weekly-line { display: block; padding: 8px 12px; border-bottom: 1px solid var(--line); font-size: 12.5px; line-height: 1.4; color: var(--ink-2); }
+.weekly-line:last-child { border-bottom: 0; }
+.weekly-money { color: var(--ink); }
+.weekly-tag { display: inline-block; margin-right: 8px; font: 700 10.5px/1.4 Manrope, sans-serif; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.weekly-ask .weekly-tag { color: var(--critical-ink); }
+.weekly-foot { flex: none; padding: 12px 22px calc(14px + env(safe-area-inset-bottom)); background: var(--panel); border-top: 1px solid var(--line-strong); box-shadow: 0 -10px 18px -12px rgba(0,0,0,.6); }
+.weekly-foot .primary-button { min-height: 44px; min-width: 140px; }
+@media (max-width: 640px) {
+  .weekly-report { max-height: 100dvh; height: 100dvh; }
+  .weekly-head { padding: calc(12px + env(safe-area-inset-top)) 16px 8px; }
+  .weekly-head h2 { font-size: 19px; }
+  .weekly-body { padding: 12px 14px 8px; gap: 12px; }
+  .report-backdrop:has(.weekly-report) { padding: 0; }
+  .weekly-foot { padding: 10px 16px calc(12px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: 1fr; gap: 6px; }
+  .weekly-foot span { font-size: 12px; text-align: center; }
+  .weekly-foot .primary-button { width: 100%; }
+}
+@media (max-height: 520px) and (orientation: landscape) { .weekly-head { padding-top: 8px; } .weekly-foot { padding-top: 8px; padding-bottom: calc(8px + env(safe-area-inset-bottom)); display: flex; } .weekly-foot .primary-button { width: auto; } }

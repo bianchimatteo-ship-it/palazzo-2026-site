@@ -1,8 +1,8 @@
-import { campaignScope } from '../core/campaign-engine.js?v=20261112-3';
-import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261112-3';
-import { formatDate } from '../core/time.js?v=20261112-3';
-import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261112-3';
-import { distinctSeries, sparkline } from './charts.js?v=20261112-3';
+import { campaignScope } from '../core/campaign-engine.js?v=20261112-8';
+import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261112-8';
+import { formatDate } from '../core/time.js?v=20261112-8';
+import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261112-8';
+import { distinctSeries, sparkline } from './charts.js?v=20261112-8';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export const pct = (value, digits = 1) => value === null || value === undefined ? '—' : `${Number(value).toLocaleString('it-IT', { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;
@@ -67,11 +67,22 @@ export function barometer(state, world, poll, parties) {
     statTile('Gradimento del governo', executive ? pct(executive.approval, 0) : inOffice ? 'Non rilevato' : 'Nessun governo', executive && Number.isFinite(executiveOf(previous)) ? Math.round((executive.approval - executiveOf(previous)) * 10) / 10 : null, history(executiveOf), poll.government ? 'Legato alla stabilità della maggioranza' : poll.executive ? `${poll.executive.label} · simulazione` : inOffice ? 'La fonte reale del primo sondaggio non lo misura: dal prossimo sondaggio (simulato)' : 'Si misura quando un governo è in carica', false),
     statTile('Indecisi', pct(poll.undecided, 0), previous ? Math.round((poll.undecided - previous.undecided) * 10) / 10 : 0, history(item => item.undecided), 'Fuori dal totale dei voti validi', false)
   ].join('');
-  return `<section class="poll-hero" style="--hero-accent:${esc(player?.color ?? 'var(--party-accent)')}">
-    <div class="poll-hero-main">${player ? emblem({ label: player.label, abbreviation: player.abbreviation, color: player.color, logo: parties.logo?.(player.id) }, 'lg') : `<span class="poll-hero-icon">${glyph('chart', 30)}</span>`}<div><span class="section-kicker">BAROMETRO POLITICO · SETTIMANA ${poll.week}</span>${headline}${component}<small>${pollSourceLine(poll)}</small></div></div>
-    ${tiles ? `<div class="poll-tiles">${tiles}</div>` : ''}
-    <div class="poll-tiles secondary">${personal}</div>
-  </section>`;
+  // The barometer is closed until the player opens it (what he decides is kept by the interface, `data-remember`, through every redraw): closed it is one line — the party, its share and the change since the
+  // last poll — and open it holds everything: national and territorial figures, personal and government approval, the undecided, the source and the margin of error.
+  const change = value => `${value > 0 ? '+' : value < 0 ? '−' : '±'}${Math.abs(Number(value) || 0).toLocaleString('it-IT', { maximumFractionDigits: 1 })}%`;
+  const summaryLine = player
+    ? `<span>${esc(player.label)}</span> <span>al ${pct(playerRow?.share)}</span> <span>(${change(playerRow?.delta ?? 0)})</span>`
+    : `<span>Gradimento personale</span> <span>al ${pct(poll.personal.approval, 0)}</span> <span>(${change(previous ? Math.round((poll.personal.approval - previous.personal.approval) * 10) / 10 : 0)})</span>`;
+  const mark = player ? emblem({ label: player.label, abbreviation: player.abbreviation, color: player.color, logo: parties.logo?.(player.id) }, 'sm') : `<span class="poll-hero-icon poll-hero-icon-sm">${glyph('chart', 20)}</span>`;
+  return `<details class="poll-hero poll-barometer" data-remember="polls-barometer" style="--hero-accent:${esc(player?.color ?? 'var(--party-accent)')}">
+    <summary class="poll-barometer-summary">${mark}<span class="poll-sum-text"><span class="section-kicker">BAROMETRO POLITICO · SETTIMANA ${poll.week}</span><strong class="poll-sum-line">${summaryLine}</strong></span><span class="poll-sum-toggle"><span class="poll-sum-open">Apri il barometro</span><span class="poll-sum-close">Chiudi il barometro</span><i class="poll-sum-chevron" aria-hidden="true"></i></span></summary>
+    <div class="poll-hero-body">
+    <div class="poll-hero-main">${player ? emblem({ label: player.label, abbreviation: player.abbreviation, color: player.color, logo: parties.logo?.(player.id) }, 'lg') : `<span class="poll-hero-icon">${glyph('chart', 30)}</span>`}<div>${headline}${component}<small>${pollSourceLine(poll)}</small></div></div>
+      ${tiles ? `<div class="poll-tiles">${tiles}</div>` : ''}
+      <div class="poll-tiles secondary">${personal}</div>
+
+    </div>
+  </details>`;
 }
 
 // The poll as published: the forces it measures, then "Altri" as a separate row. In the first (real) poll the player's

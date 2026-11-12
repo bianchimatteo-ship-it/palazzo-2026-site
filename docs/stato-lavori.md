@@ -160,6 +160,17 @@ Branch `test/ambiente-privato`. Che cosa è cambiato, dove, e come si verifica:
 - **Traduzioni.** Sondaggi: titolo, variazione, margine e note sono pezzi separati con frasi proprie («al #%», «rispetto al sondaggio precedente», «margine d’errore ±# punti»…). `check-activity-i18n` passa tutti i testi delle scene (36.000+) dal libro delle frasi e dal rilevatore indipendente; `check-i18n-release` gioca ogni momento di ogni incontro in inglese e cambia lingua a metà scena.
 - **Resta da fare.** Il comizio ha scelte proprie ma non il catalogo per funzione; le prove su dispositivo Android reale non sono state fatte.
 
+## Rifinitura finale — temi delle scene, votazioni, resoconto, barometro (nota di lavoro)
+
+- **Scene: stesso tema dall'inizio alla fine.** `data/activity-scene-topics.js` dà a ognuno dei 49 temi dei sette incontri (cittadini, associazioni, cantiere, riunione di partito, commissione, intervista, Consiglio dei ministri) le sue mosse per il secondo e il terzo momento (3–4 per momento, funzioni diverse); le mosse generiche del tipo di incontro restano solo se adatte (`ONLY`: ognuna legata a un tema compare solo lì). Promesse del programma e notizie del diario vengono citate solo se riguardano il tema (area di politica della promessa, parole della notizia); un impegno aperto riporta «Rendi conto di quanto promesso» solo sullo stesso tema. Dibattiti, talk show e comizi erano già per tema (`debate-choices.js`, opzioni del comizio dalle questioni del territorio e dalle promesse): verificati, non cambiati. Test: `check-scene-topics`.
+- **Votazione.** Le battute del Presidente e la scheda sono visibili subito (nessuna comparsa progressiva, nessun «Vai al voto»); il conteggio resta progressivo. Il proponente è dato per ruoli verificabili (`proposerParts` in `lawmaking-engine.js`): istituzione (Governo, Giunta, commissione), gruppo, partito solo se il gruppo lo lega, primo firmatario solo se è il giocatore; l'istituzione non è mai confusa col partito che la guida. Il conteggio non cambia.
+- **Resoconto settimanale.** Testata fissa, corpo che scorre, piede con «Continua» sempre in vista (safe area inclusa); un solo elenco uniforme di righe, senza schede a più colonne.
+- **Barometro.** Chiuso al primo accesso, una riga «Partito al 12,3% (+0,1%)»; aperto mostra tutto, una sola intestazione e un solo logo; stato conservato (`data-remember`), tastiera con Invio/Spazio.
+- **Lingua.** Cambiare lingua con una finestra fuori dal contenitore aperta (votazione, Aula) ora la traduce o la riporta all'italiano subito (`refreshOutside` in `i18n.js`).
+- **Instagram.** Nessuna modifica al codice: protezioni esistenti verificate e test aggiunti (doppio clic, ospite, pulsante spento fino al ritorno dal profilo).
+- **Test nuovi.** `check-scene-topics`, `check-qa-ui` (sei risoluzioni, IT/EN).
+- **Non fatto/da sapere.** Il deploy su Test richiede `wrangler.test.local.jsonc` e le credenziali locali, assenti in questo ambiente.
+
 ## Milestone precedente — fondazione partito, consenso, fiducia, direttiva (completata)
 Vedi la cronologia git (commit `7fbae22`, `8842e95`).
 

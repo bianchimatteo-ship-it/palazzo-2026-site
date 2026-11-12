@@ -530,6 +530,27 @@ const HOUR = 3600000;
   assert.equal(game().finance.ledger.filter(item => item.label === 'Community Instagram').length, 1, 'Una riga nel registro finanziario.');
   assert.equal(both.filter(result => result.ok).length >= 1, true);
   assert.equal(local.sqlite.prepare("SELECT COUNT(*) AS n FROM reward_community WHERE user_id = (SELECT id FROM users WHERE username = 'social.cinque')").get().n, 1);
+  // a double click on the same device (two claims at once from one service), a guest as well: one credit; and the button is spent while the request is on its way
+  const token6 = await register('social.sei');
+  const D = make('S7', 'social.sei', token6); activate('S7'); const f6 = game().resources.funds; D.service.visitCommunity('instagram');
+  const twice = await Promise.all([D.service.claimCommunity('instagram'), D.service.claimCommunity('instagram'), D.service.claimCommunity('instagram')]);
+  assert.equal(game().resources.funds, f6 + 1500, 'Un doppio (triplo) clic sullo stesso dispositivo: +1.500 € una volta sola.');
+  assert.equal(game().finance.ledger.filter(item => item.label === 'Community Instagram').length, 1, 'Una sola riga nello storico.'); assert.ok(twice.filter(result => result.ok).length >= 1);
+  assert.equal((await D.service.claimCommunity('instagram')).reason, 'già-riscossa', 'Ripetuto dopo: già riscossa.');
+  const guestTwice = mk('I9', null, null, {}); guestTwice.service = createRewardsService({ store, journal: guestTwice.journal, username: () => null, env: { now: () => 0, wall: () => vt, visible: () => true, playing: () => true, lease: createStorageLease(memoryStorage(), { tabId: 'I9', wall: () => vt }), storage: memoryStorage() } });
+  activate('I9'); game().resources.politicalCapital = 20; const fg = game().resources.funds; guestTwice.service.visitCommunity('instagram');
+  await Promise.all([guestTwice.service.claimCommunity('instagram'), guestTwice.service.claimCommunity('instagram')]);
+  assert.equal(game().resources.funds, fg + 1500, 'Un ospite che clicca due volte: una riscossione.');
+  assert.equal((await guestTwice.service.claimCommunity('instagram')).reason, 'già-riscossa');
+  // the page: no claim before the profile was opened from the game; spent while waiting; spent once claimed
+  const fresh = mk('I10', null, null, {}); fresh.service = createRewardsService({ store, journal: fresh.journal, username: () => null, env: { now: () => 0, wall: () => vt, visible: () => true, playing: () => true, lease: createStorageLease(memoryStorage(), { tabId: 'I10', wall: () => vt }), storage: memoryStorage() } });
+  const claimButton = html => /<button[^>]*data-community-claim\s([^>]*)>/.exec(html)?.[1] ?? null;
+  assert.match(claimButton(renderRewardsPage(store.getState(), { ...fresh.service.snapshot(), playing: true })) ?? '', /disabled/, 'Prima di aprire il profilo il pulsante è spento.');
+  fresh.service.visitCommunity('instagram');
+  assert.doesNotMatch(claimButton(renderRewardsPage(store.getState(), { ...fresh.service.snapshot(), playing: true })) ?? '', /disabled/, 'Dopo il ritorno dal profilo si può dichiarare e riscuotere.');
+  fresh.journal.setCommunity(fresh.journal.scope(null), 'instagram', { state: 'claiming' });
+  assert.match(claimButton(renderRewardsPage(store.getState(), { ...fresh.service.snapshot(), playing: true })) ?? '', /disabled/, 'In attesa della risposta il pulsante è spento: niente secondo invio.');
+  assert.match(renderRewardsPage(store.getState(), { ...fresh.service.snapshot(), playing: true }), /non controlliamo il tuo account Instagram|in attesa/, 'La pagina è trasparente: autodichiarazione, nessun controllo.');
   // no automatic verification, no credentials: nothing was fetched from the social network, the page asks for nothing
   assert.ok(!calls.some(url => /instagram/i.test(url)), 'Nessuna richiesta a Instagram: nessuna verifica automatica del follow.');
   globalThis.fetch = realFetch;

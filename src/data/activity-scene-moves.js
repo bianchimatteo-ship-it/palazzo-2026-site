@@ -106,10 +106,10 @@ export const MOVES = Object.freeze({
     q3: [
       M('w-crono', 'propose', 'competence', 'Fai rivedere il cronoprogramma: prima i lavori critici', 'Have the schedule revised: the critical works first'),
       M('w-carte', 'data', 'competence', 'Richiedi la documentazione tecnica prima di decidere', 'Ask for the technical documents before deciding'),
-      M('w-tavolo', 'table', 'reputation', 'Apri un tavolo tecnico con impresa, uffici e residenti', 'Open a technical table with contractor, offices and residents', 'capital'),
+      M('w-tavolo', 'table', 'reputation', 'Apri un tavolo tecnico con impresa e uffici', 'Open a technical table with the contractor and the offices', 'capital'),
       M('w-spesa', 'fund', 'competence', 'Autorizza una spesa per accelerare i lavori critici', 'Authorise spending to speed up the critical works', 'funds govern'),
       M('w-data', 'announce', 'charisma', 'Annuncia ai cittadini la nuova data di consegna', 'Announce the new delivery date to the citizens', 'govern'),
-      M('w-pazienza', 'own', 'reputation', 'Riconosci il ritardo e chiedi pazienza ai residenti', 'Acknowledge the delay and ask residents for patience')
+      M('w-pazienza', 'own', 'reputation', 'Riconosci il ritardo e chiedi pazienza a chi aspetta', 'Acknowledge the delay and ask for patience from those who are waiting')
     ]
   },
   sede: {

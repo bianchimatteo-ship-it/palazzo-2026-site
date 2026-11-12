@@ -6,14 +6,15 @@
 // activity is applied ONCE, by the store, when the scene ends.
 // Deterministic: the family of topics, the names and the small variations come from the seed of the scene (and from what the player met lately: the same family is not drawn again in a row).
 // Loaded on demand (it is not in the first screen): it registers itself in scene-engine.js and stage-script.js when imported.
-import { AVATAR_OPTIONS, EXTRA_NAMES, F, M, defaultAvatarFor, genderOf, normalizeAvatar, roleGender } from './avatar.js?v=20261112-3';
-import { personName, registerSceneKind } from './scene-engine.js?v=20261112-3';
-import { SPEAK_GESTURES, LISTEN_GESTURES, pickGesture, registerStageScript, stagePose } from './stage-script.js?v=20261112-3';
-import { ACTIVITY_SCENES, ACTIVITY_SCENE_UI } from '../data/activity-scene-lines.js?v=20261112-3';
-import { STAKES } from '../data/activity-scene-stakes.js?v=20261112-3';
-import { BODIES, CITIZEN_GUESTS, CITIZENS, GUESTS, HEADINGS, REFS } from '../data/activity-scene-guests.js?v=20261112-3';
-import { APPROACH_LABELS } from '../data/activity-scene-approaches.js?v=20261112-3';
-import { APPROACH_FUNCTIONS, COMMITMENTS, COMMITMENT_TEXT, CONSEQUENCE_LINES, EXTRA_Q1, FUNCTIONS, FUND_COST, GUARANTEE_MOVES, MOVES, OUTCOME_KINDS, REACTION_LINES, REACTION_TYPES, STAGE_TEXT, WHY_LINES } from '../data/activity-scene-moves.js?v=20261112-3';
+import { AVATAR_OPTIONS, EXTRA_NAMES, F, M, defaultAvatarFor, genderOf, normalizeAvatar, roleGender } from './avatar.js?v=20261112-8';
+import { personName, registerSceneKind } from './scene-engine.js?v=20261112-8';
+import { SPEAK_GESTURES, LISTEN_GESTURES, pickGesture, registerStageScript, stagePose } from './stage-script.js?v=20261112-8';
+import { ACTIVITY_SCENES, ACTIVITY_SCENE_UI } from '../data/activity-scene-lines.js?v=20261112-8';
+import { STAKES } from '../data/activity-scene-stakes.js?v=20261112-8';
+import { BODIES, CITIZEN_GUESTS, CITIZENS, GUESTS, HEADINGS, REFS } from '../data/activity-scene-guests.js?v=20261112-8';
+import { APPROACH_LABELS } from '../data/activity-scene-approaches.js?v=20261112-8';
+import { ONLY, TOPIC_KIND, TOPIC_MOVES, areasOf, newsFits } from '../data/activity-scene-topics.js?v=20261112-8';
+import { APPROACH_FUNCTIONS, COMMITMENTS, COMMITMENT_TEXT, CONSEQUENCE_LINES, EXTRA_Q1, FUNCTIONS, FUND_COST, GUARANTEE_MOVES, MOVES, OUTCOME_KINDS, REACTION_LINES, REACTION_TYPES, STAGE_TEXT, WHY_LINES } from '../data/activity-scene-moves.js?v=20261112-8';
 
 export { ACTIVITY_SCENES, ACTIVITY_SCENE_UI };
 export const SCENE_KIND = 'attivita';
@@ -83,7 +84,7 @@ export function pickRef(sceneKey, seed, refs = {}) {
   const type = available[hashOf(`${seed}|riferimento`) % available.length];
   return { type, value: String(refs[type]).trim(), text: REFS[type][sceneKey][0].replace('{}', String(refs[type]).trim()) };
 }
-export function createActivityScene({ id, seed, sceneKey, activityId, target = null, variant = 'default', player, playerAvatar, stats = {}, recent = [], prefer = null, date = null, party = null, refs = {}, pool = [], situation = {} }) {
+export function createActivityScene({ id, seed, sceneKey, activityId, target = null, variant = 'default', player, playerAvatar, stats = {}, recent = [], prefer = null, date = null, party = null, refs = {}, pool = [], situation = {}, promises = null, news = null, priorFamilies = null }) {
   const spec = ACTIVITY_SCENES[sceneKey];
   if (!spec) throw new Error('Scena non riconosciuta.');
   const family = pickFamily(spec, seed, recent, prefer);
@@ -97,13 +98,19 @@ export function createActivityScene({ id, seed, sceneKey, activityId, target = n
     character('ospite2', 'ospite', spec.cast[1], seed, used, { roleLabel: roles[1]?.[0] ?? null, partyLabel: partyOf(2) })
   ];
   const bodyLabel = AFFILIATION[sceneKey] === 'party' && party?.label ? party.label : heading?.body[0] ?? BODIES[sceneKey]?.[0] ?? '';
-  const ref = pickRef(sceneKey, seed, { ...refs, party: AFFILIATION[sceneKey] === 'party' || refs.party ? (refs.party ?? party?.label ?? '') : '' });
+  // What the career holds is quoted only when it is about the subject of the encounter: a promise of the programme whose policy area is the family's, a headline of the diary that speaks of it. A scene made
+  // without the lists (a test, an old call) keeps the plain values it is given.
+  const kindName = sceneKey === 'associazioni' && activityId === 'cittadini' ? 'cittadini' : sceneKey;
+  const areas = areasOf(kindName, family.id);
+  const promiseRef = Array.isArray(promises) ? promises.find(item => areas.includes('*') || areas.includes(item.area))?.label ?? '' : refs.promise ?? '';
+  const newsRef = Array.isArray(news) ? news.find(item => newsFits(family.id, item)) ?? '' : refs.news ?? '';
+  const ref = pickRef(sceneKey, seed, { ...refs, promise: promiseRef, news: newsRef, party: AFFILIATION[sceneKey] === 'party' || refs.party ? (refs.party ?? party?.label ?? '') : '' });
   return {
     id, kind: SCENE_KIND, sceneKey, activityId, target, variant: spec.intro[variant] ? variant : 'default', setting: sceneKey === 'associazioni' && activityId === 'cittadini' ? CITIZENS_SETTING : spec.setting, seed, date, status: 'active', nodeId: 'apertura', cast,
     topic: { id: family.id, label: family.label[0] }, place: { label: (sceneKey === 'associazioni' && activityId === 'cittadini' ? CITIZENS.place : spec.place)[0] }, familyId: family.id, bodyLabel, heading: heading ? { kicker: heading.kicker[0], title: heading.title[0], banner: heading.banner[0] } : null, partyLabel: party?.label ?? '', ref: ref ? { type: ref.type, text: ref.text } : null,
     context: { stats: { competence: stats.competence ?? 50, charisma: stats.charisma ?? 50, reputation: stats.reputation ?? 50 } },
     // what the encounter knows of the situation of the player when it starts (kept in the scene: a saved scene resumed later offers the same moves) and what has happened in it so far
-    flags: { promise: Boolean(situation.promise), prior: Boolean(situation.prior), govern: Boolean(situation.govern), opp: Boolean(situation.opp), funds: situation.funds !== false, capital: situation.capital !== false, party: Boolean(situation.party), local: Boolean(situation.local) },
+    flags: { promise: Boolean(promiseRef), prior: Array.isArray(priorFamilies) ? priorFamilies.includes(family.id) : Boolean(situation.prior), govern: Boolean(situation.govern), opp: Boolean(situation.opp), funds: situation.funds !== false, capital: situation.capital !== false, party: Boolean(situation.party), local: Boolean(situation.local) },
     tally: { k: 0, tension: 0, trust: 0, guarantee: false, asked: false },
     audience: { mood: 50, history: [] }, history: [], outcome: null
   };
@@ -118,7 +125,7 @@ export function sceneSituation({ sceneKey, activityId, sit, game, activity, refs
   const week = game?.week?.index ?? 0, cost = activity?.cost ?? {};
   const key = sceneKey === 'associazioni' && activityId === 'cittadini' ? 'cittadini' : sceneKey;
   return {
-    promise: Boolean(refs.promise), prior: (game?.flags?.sceneLog ?? []).some(entry => entry.key === sceneKey && (entry.commits ?? []).some(commit => commit.due > week)),
+    promise: Boolean(refs.promise), prior: false,
     govern: Boolean(sit?.role?.head || sit?.role?.assessor || sit?.premier || sit?.minister), opp: Boolean(sit?.oppositionLocal),
     funds: (game?.resources?.funds ?? 0) - (cost.funds ?? 0) >= (FUND_COST[key] ?? 0), capital: (game?.resources?.politicalCapital ?? 0) - (cost.capital ?? 0) >= 1,
     party: Boolean(game?.party), local: Boolean(sit?.role?.local)
@@ -134,12 +141,15 @@ function movesAt(scene, stage) {
     const wanted = EXTRA_Q1.filter(move => move.when && tagsOk(move, flags)), always = EXTRA_Q1.filter(move => !move.when);
     return [...base, ...(wanted.length ? wanted.slice(0, 2) : always.slice(0, 1))].map(wrap);
   }
-  const pool = (stage === 'q4' ? GUARANTEE_MOVES : MOVES[kindOf(scene)]?.[stage] ?? []).filter(move => tagsOk(move, flags));
-  const fresh = pool.filter(move => !used.includes(move.fn));
+  // the moments of decision are about the subject: the moves of the topic first (the state of the building, the survey, the works diary, the amendment, the headline…), then the moves of the kind of
+  // encounter that fit any subject (the ones bound to another subject are never offered)
+  const topicOf = (list, family) => list?.[family]?.[stage] ?? [];
+  const specific = stage === 'q4' ? [] : topicOf(TOPIC_MOVES[TOPIC_KIND[kindOf(scene)]], scene.familyId).map((move, index) => ({ ...move, id: `t-${kindOf(scene)}-${scene.familyId}-${stage}-${index}` })).filter(move => tagsOk(move, flags));
+  const general = (stage === 'q4' ? GUARANTEE_MOVES : MOVES[kindOf(scene)]?.[stage] ?? []).filter(move => tagsOk(move, flags) && (!ONLY[move.id] || ONLY[move.id].includes(scene.familyId)));
   const order = list => [...list].sort((a, b) => hashOf(`${scene.seed}|${stage}|${a.id}`) - hashOf(`${scene.seed}|${stage}|${b.id}`));
-  // functions not used yet first; never two moves of the same function in one moment
+  const fresh = list => list.filter(move => !used.includes(move.fn));
   const out = [];
-  for (const move of [...order(fresh), ...order(pool.filter(move => !fresh.includes(move)))]) if (!out.some(item => item.fn === move.fn)) out.push(move);
+  for (const move of [...order(fresh(specific)), ...order(specific.filter(move => used.includes(move.fn))), ...order(fresh(general)), ...order(general.filter(move => used.includes(move.fn)))]) if (!out.some(item => item.fn === move.fn)) out.push(move);
   // an informed player sees one more way out at the moment of the decision
   const count = stage === 'q3' && scene.tally.k >= 1 ? 5 : 4;
   return out.slice(0, count).map(wrap);
@@ -169,9 +179,9 @@ function sequence(scene, move) {
 }
 function judge(scene, move, stage) {
   const stat = scene.context.stats[move.stat] ?? 50;
-  const offered = movesAt(scene, stage), order = offered.map(item => item.id);
-  const best = order[hashOf(`${scene.seed}|${scene.familyId}|${stage}|migliore`) % order.length];
-  const second = order[(order.indexOf(best) + 1 + hashOf(`${scene.seed}|${stage}|secondo`) % 2) % order.length];
+  // the right move of the moment and the half-right one are drawn from the seed by the identity of the first four moves (the fifth, which an informed player sees, never changes who they are)
+  const ranked = movesAt(scene, stage).slice(0, 4).map(item => item.id).sort((a, b) => hashOf(`${scene.seed}|${scene.familyId}|${stage}|migliore|${a}`) - hashOf(`${scene.seed}|${scene.familyId}|${stage}|migliore|${b}`));
+  const best = ranked[0], second = ranked[1];
   const fit = move.id === best ? 12 : move.id === second ? 4 : -3;
   const noise = (unit(`${scene.seed}|${stage}|${move.id}`) - 0.5) * 6;
   const seq = sequence(scene, move);
