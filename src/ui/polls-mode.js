@@ -1,8 +1,8 @@
-import { campaignScope } from '../core/campaign-engine.js?v=20261111-3';
-import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261111-3';
-import { formatDate } from '../core/time.js?v=20261111-3';
-import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261111-3';
-import { distinctSeries, sparkline } from './charts.js?v=20261111-3';
+import { campaignScope } from '../core/campaign-engine.js?v=20261112-3';
+import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261112-3';
+import { formatDate } from '../core/time.js?v=20261112-3';
+import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261112-3';
+import { distinctSeries, sparkline } from './charts.js?v=20261112-3';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export const pct = (value, digits = 1) => value === null || value === undefined ? '—' : `${Number(value).toLocaleString('it-IT', { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;
@@ -52,7 +52,7 @@ export function barometer(state, world, poll, parties) {
   const history = key => world.polls.slice(-12).map(item => key(item));
   const playerRow = player ? poll.results.find(row => row.partyId === player.id) : null;
   const headline = player
-    ? `<h2>${esc(player.label)} al ${pct(playerRow?.share)}</h2><p>${deltaChip(playerRow?.delta ?? 0, true)} rispetto al sondaggio precedente · ${poll.margin ? `margine d’errore ±${String(poll.margin).replace('.', ',')} punti` : playerRow?.simulated ? 'il tuo partito non è nella fonte reale: stima iniziale simulata' : 'media di più sondaggi reali'}${playerRow?.internal ? ' · non ancora rilevato dagli istituti: stima interna simulata' : ''}</p>`
+    ? `<h2><span>${esc(player.label)}</span> <span>al ${pct(playerRow?.share)}</span></h2><p>${deltaChip(playerRow?.delta ?? 0, true)} <span>rispetto al sondaggio precedente</span> · ${poll.margin ? `<span>margine d’errore ±${String(poll.margin).replace('.', ',')} punti</span>` : playerRow?.simulated ? '<span>il tuo partito non è nella fonte reale: stima iniziale simulata</span>' : '<span>media di più sondaggi reali</span>'}${playerRow?.internal ? ' · <span>non ancora rilevato dagli istituti: stima interna simulata</span>' : ''}</p>`
     : `<h2>Gradimento personale al ${pct(poll.personal.approval, 0)}</h2><p>Sei indipendente: il barometro misura te, non un partito.</p>`;
   const component = player && world.playerComponent?.label ? `<p class="poll-component-note">Il tuo partito, ${esc(world.playerComponent.label)}, è rilevato nei sondaggi dentro ${esc(player.label)}: una sola forza, una sola serie.</p>` : '';
   const region = world.place.region || 'Regione';
@@ -112,7 +112,7 @@ export function nationalBars(world, poll, index, logo) {
     ? `Scenario ${esc(poll.scenario.label.toLowerCase())}: quadro iniziale inventato sulle forze della ${esc(poll.scenario.basedOn?.label ?? 'Supermedia reale')}${poll.scenario.mode === 'casuale' ? `, estratto dal seme «${esc(poll.scenario.seed)}» (lo stesso seme dà sempre lo stesso quadro)` : ', con le percentuali scritte dal giocatore'}. Non sono i dati della fonte, che restano quelli pubblicati. “Altri” è quel che resta alle liste minori. Dalla prossima settimana i sondaggi sono simulati e reagiscono alla tua carriera.`
   : poll.sample
     ? 'Barre = stima del sondaggio; la linea sottile indica l’intervallo del margine d’errore al 95%. Percentuali sui voti validi. Barre tratteggiate = stima interna di una forza non ancora rilevata.'
-    : `Dato reale: ${esc(poll.real?.label ?? 'fonte reale')} ${esc(poll.real ? realPollDates(poll.real) : `del ${formatDate(poll.date)}`)}, media di più istituti (nessun margine d’errore unico).${poll.real?.deltaNote ? ` Le variazioni sono quelle pubblicate dalla fonte, rispetto alla sua Supermedia precedente.` : ''} Sono mostrate solo le forze presenti nella fonte, con “Altri” come nella fonte${estimates.length ? '; la barra tratteggiata è una stima simulata del tuo partito, fuori dal totale reale' : ''}. Dalla prossima settimana i sondaggi sono simulati e reagiscono alla tua carriera.`;
+    : `<span>Dato reale:</span> <span>${esc(poll.real?.label ?? 'fonte reale')}</span>, <span>${esc(poll.real ? realPollDates(poll.real) : formatDate(poll.date))}</span>, <span>media di più istituti (nessun margine d’errore unico).</span>${poll.real?.deltaNote ? ' <span>Le variazioni sono quelle pubblicate dalla fonte, rispetto alla sua Supermedia precedente.</span>' : ''} <span>Sono mostrate solo le forze presenti nella fonte, con “Altri” come nella fonte.</span>${estimates.length ? ' <span>La barra tratteggiata è una stima simulata del tuo partito, fuori dal totale reale.</span>' : ''} <span>Dalla prossima settimana i sondaggi sono simulati e reagiscono alla tua carriera.</span>`;
   return `<div class="poll-bars">${rows.map(bar).join('')}${othersRow}${outside}</div>${moves}${watch}<p class="poll-footnote">${footnote}</p>`;
 }
 

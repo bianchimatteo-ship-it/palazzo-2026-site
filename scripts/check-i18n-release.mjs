@@ -35,13 +35,37 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, version }) => {
     for (const text of [...new Set(lists)]) if (detector.reasonOf(text)) found.push(`editor ${area} (lista): ${text.slice(0, 140)}`);
   }
   // ---- the rooms of the activity scenes and their straps
-  for (const [activity, name] of [['riunione', 'sede'], ['associazioni', 'sala'], ['cantiere', 'cantiere'], ['audizione-commissione', 'commissione'], ['intervista', 'redazione']]) {
-    const ok = await S(`try { await store.startActivityScene(${JSON.stringify(activity)}, { quick: false }); return true; } catch (e) { return String(e.message); }`);
-    if (ok !== true) { console.log(`(${activity}: ${ok})`); continue; }
-    await wait(() => evaluate(`Boolean(document.querySelector('.st-svg'))`), 8000);
-    knownNames.push(...await evaluate(`import('/src/core/store.js?v=${version}').then(m => (m.store.getState().scene?.cast ?? []).map(c => c.name))`));
-    for (let step = 0; step < 4; step++) { await scan(`scena ${name} #${step}`, evaluate, '.scene'); await click('[data-scene-choice]'); }
-    await S(`store.sceneAbandon(); return true;`); await pause(300);
+  // every moment of every encounter, with different decisions each round: the moves, the reactions, the second voice, the guarantees, the outcome and what it leaves
+  for (const [activity, name, picks] of [['riunione', 'sede', [0, 2]], ['associazioni', 'sala', [1, 3]], ['cittadini', 'mercato', [0, 3]], ['audizione-commissione', 'commissione', [1, 2]], ['intervista', 'redazione', [2, 0]], ['cantiere', 'cantiere', [0, 1]]]) {
+    const id = name === 'cantiere' ? 'sopralluogo' : activity;
+    for (const offset of picks) {
+      await S('store.advance(7); return true;');
+      const ok = await S(`try { await store.startActivityScene(${JSON.stringify(id)}, { quick: false${activity === 'cittadini' ? ", target: 'anziani'" : ''} }); return true; } catch (e) { return String(e.message); }`);
+      if (ok !== true) { console.log(`(${id}: ${ok})`); break; }
+      await wait(() => evaluate(`Boolean(document.querySelector('.st-svg'))`), 8000);
+      knownNames.push(...await evaluate(`import('/src/core/store.js?v=${version}').then(m => (m.store.getState().scene?.cast ?? []).map(c => c.name))`));
+      let step = 0;
+      for (let guard = 0; guard < 14; guard++) {
+        const node = await evaluate(`document.querySelector('.scene')?.dataset.sceneNode ?? ''`);
+        if (!node) break;
+        await scan(`scena ${name} ${node}`, evaluate, '.scene');
+        // the language changed in the middle of the encounter: Italian and English both come back whole, on the same moment
+        if (node === 'r2' && offset === picks[0] && name === 'sede') {
+          await evaluate(`import('/src/core/i18n.js?v=${version}').then(m => m.setLanguage('it')).then(() => true)`); await pause(500);
+          const italian = await evaluate(`document.querySelector('.scene-dialogue')?.innerText ?? ''`);
+          assert.ok(/Hai detto|Perché/.test(italian) && !/You said|Why/.test(italian), `Cambiando lingua a metà scena il testo torna italiano (${italian.slice(0, 80)})`);
+          assert.equal(await evaluate(`document.querySelector('.scene')?.dataset.sceneNode`), node, 'Cambiare lingua non sposta la scena.');
+          await evaluate(`import('/src/core/i18n.js?v=${version}').then(m => m.setLanguage('en')).then(() => true)`); await pause(500);
+          const english = await evaluate(`document.querySelector('.scene-dialogue')?.innerText ?? ''`);
+          assert.ok(/You said/.test(english) && !/Hai detto/.test(english), `E tornando all’inglese il testo è inglese (${english.slice(0, 80)})`);
+          await scan(`scena ${name} ${node} (dopo il cambio di lingua)`, evaluate, '.scene');
+        }
+        if (node === 'esito') break;
+        const choices = await evaluate(`[...document.querySelectorAll('[data-scene-choice]:not([disabled])')].map(b => b.dataset.sceneChoice)`);
+        await click(`[data-scene-choice="${choices.length > 1 ? choices[(offset + step++) % choices.length] : choices[0]}"]`);
+      }
+      await S(`store.sceneAbandon(); return true;`); await pause(300);
+    }
   }
   await S(`store.advance(7); store.startTalkShowScene({ source: 'attivita', showId: 'tg-sera' }); return true;`); await wait(() => evaluate(`Boolean(document.querySelector('.st-svg'))`), 8000);
   knownNames.push(...await evaluate(`import('/src/core/store.js?v=${version}').then(m => (m.store.getState().scene?.cast ?? []).map(c => c.name))`)); await scan('studio', evaluate, '.scene'); await S(`store.sceneAbandon(); return true;`); await pause(300);

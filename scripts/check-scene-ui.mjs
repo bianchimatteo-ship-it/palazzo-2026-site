@@ -77,13 +77,15 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   await evaluate(`import('/src/core/i18n.js?v=${version}').then(m => m.setLanguage('en')).then(() => true)`); await pause(800);
   const allTexts = new Set();
   const collect = async () => { for (const text of await evaluate('[...document.querySelectorAll(".scene *")].filter(el => !el.children.length).map(el => (el.textContent || el.getAttribute("aria-label") || "").replace(/\\s+/g, " ").trim()).filter(Boolean)')) allTexts.add(text); };
+  const castNames = new Set();
   for (let i = 0; i < 16; i++) {
     await collect();
+    for (const name of await evaluate(`import('/src/core/store.js?v=${version}').then(m => (m.store.getState().scene?.cast ?? []).map(c => c.name))`)) castNames.add(name);
     const now = await snapshot();
     if (now.node === 'esito') break;
     await click(`[data-scene-choice="${pick(now.choices, plan[now.node] ?? ['continua'])}"]`);
   }
-  const left = [...allTexts].filter(text => detector.reasonOf(text));
+  const left = [...allTexts].filter(text => detector.reasonOf([...castNames].reduce((acc, name) => acc.split(name).join(''), text)));
   if (process.env.SCENE_OUT) writeFileSync(process.env.SCENE_OUT, JSON.stringify(left, null, 1));
   assert.deepEqual(left, [], `Nessun italiano rimasto nella scena in inglese: ${left.join(' | ').slice(0, 600)}`);
   await S('store.sceneAbandon(); return true;');

@@ -104,8 +104,9 @@ for (const [kind, spec] of Object.entries(lines.ACTIVITY_SCENES)) {
     const scene = scenes.createActivityScene({ id: `a-${kind}-${family.id}`, seed: `scelte|${kind}`, sceneKey: kind, activityId: spec.activityIds[0], player, playerAvatar: null, prefer: family.id });
     scene.nodeId = 'q1';
     const node = scenes.activityNode(scene);
-    assert.deepEqual(node.choices.map(item => item[0]), spec.approaches.map(item => item.id), `${kind}/${family.id}: stessi id e stessi effetti.`);
-    assert.deepEqual(node.choices.map(item => item[1]), labels.map(pair => pair[0]), `${kind}/${family.id}: le parole della famiglia.`);
+    assert.deepEqual(node.choices.slice(0, 3).map(item => item[0]), spec.approaches.map(item => item.id), `${kind}/${family.id}: stessi id e stessi effetti.`);
+    assert.deepEqual(node.choices.slice(0, 3).map(item => item[1]), labels.map(pair => pair[0]), `${kind}/${family.id}: le parole della famiglia.`);
+    assert.ok(node.choices.length >= 4 && node.choices.length <= 5, `${kind}/${family.id}: oltre ai tre approcci, una mossa della situazione.`);
   }
   assert.equal(sets.size, spec.families.length, `${kind}: ogni famiglia ha le sue scelte (non le stesse per tutte).`);
 }
@@ -129,8 +130,8 @@ const roles = scene => scene.cast.filter(item => item.role === 'ospite').map(ite
 let different = 0;
 for (let n = 0; n < 12; n++) { const a = scenes.createActivityScene({ id: `y${n}`, seed: `y${n}`, sceneKey: 'associazioni', activityId: 'associazioni', player, playerAvatar: null }), c = scenes.createActivityScene({ id: `y${n}`, seed: `y${n}`, sceneKey: 'associazioni', activityId: 'cittadini', player, playerAvatar: null }); if (roles(a).join() !== roles(c).join()) different++; }
 assert.ok(different >= 10, 'Con i cittadini parlano persone comuni, con le associazioni presidenti e delegati.');
-const ended = scene => { for (const pick of ['continua', 'ascolto', 'continua', 'ascolto', 'continua']) { const node = scenes.activityNode(scene); scenes.activityChoose(scene, node.choices.some(item => item[0] === pick) ? pick : node.choices[0][0]); } return scene; };
-assert.notEqual(ended(mkAct('associazioni')).outcome.summary, ended(mkAct('cittadini')).outcome.summary, 'Le chiusure sono diverse.');
+const ended = scene => { for (let guard = 0; guard < 30 && scene.status === 'active'; guard++) { const node = scenes.activityNode(scene); const pick = node.choices.find(item => item[0] === 'continua') ?? node.choices.find(item => !item[2]); scenes.activityChoose(scene, pick[0]); } return scene; };
+assert.notEqual(ended(mkAct('associazioni')).outcome.flavor, ended(mkAct('cittadini')).outcome.flavor, 'Le chiusure sono diverse.');
 console.log('  Cittadini e associazioni: piazza e mercato contro sala civica (sfondo, striscione, persone, dialoghi e chiusure).');
 
 // ---------- 4. names on the lecterns ----------

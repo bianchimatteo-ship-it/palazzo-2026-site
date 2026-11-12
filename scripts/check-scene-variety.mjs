@@ -74,12 +74,14 @@ for (const kind of KINDS) for (const family of lines.ACTIVITY_SCENES[kind].famil
   assert.ok(pair && pair[0][0] && pair[1][0] && pair[0][1] && pair[1][1], `${kind}/${family.id}: una risposta buona e una scarsa, bilingui.`);
   for (const text of [pair[0][0], pair[1][0]]) { assert.ok(!stakeTexts.has(text), `Risposta riciclata: ${text}`); stakeTexts.add(text); }
 }
-const probe = scenes.createActivityScene({ id: 'st', seed: 'stake', sceneKey: 'commissione', activityId: 'audizione-commissione', player, playerAvatar: null, prefer: 'sanita', refs: {} });
 let stakeSeen = 0;
-for (const approach of lines.ACTIVITY_SCENES.commissione.approaches) {
-  const copy = structuredClone(probe); copy.nodeId = 'q1'; scenes.activityChoose(copy, approach.id);
-  const node = scenes.activityNode(copy);
-  if (copy.history[0].band !== 'mid') { assert.equal(node.lines?.[0], stakes.STAKES.commissione.sanita[copy.history[0].band === 'good' ? 0 : 1][0], 'La reazione porta la risposta del tema.'); stakeSeen++; } else assert.ok(!node.lines, 'Una risposta mediocre non aggiunge nulla.');
+for (let i = 0; i < 12; i++) {
+  const probe = scenes.createActivityScene({ id: `st-${i}`, seed: `stake-${i}`, sceneKey: 'commissione', activityId: 'audizione-commissione', player, playerAvatar: null, prefer: 'sanita', refs: {} });
+  for (const choice of scenes.activityNode({ ...structuredClone(probe), nodeId: 'q1' }).choices) {
+    const copy = structuredClone(probe); copy.nodeId = 'q1'; scenes.activityChoose(copy, choice[0]);
+    const node = scenes.activityNode(copy);
+    if (copy.history[0].band !== 'mid') { assert.equal(node.lines?.[0], stakes.STAKES.commissione.sanita[copy.history[0].band === 'good' ? 0 : 1][0], 'La reazione porta la risposta del tema.'); stakeSeen++; } else assert.ok(!node.lines, 'Una risposta mediocre non aggiunge nulla.');
+  }
 }
 assert.ok(stakeSeen >= 1, 'Almeno una delle tre risposte è buona o scarsa e porta la riga del tema.');
 

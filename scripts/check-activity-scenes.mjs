@@ -40,8 +40,10 @@ assert.equal(new Set(ALL_PAIRS.map(pair => pair[0])).size, ALL_PAIRS.length, 'Ne
 
 // ---------- 2. the machine ----------
 const make = (sceneKey, seed, extra = {}) => createActivityScene({ id: `t-${seed}`, seed, sceneKey, activityId: ACTIVITY_SCENES[sceneKey].activityIds[0], player: { name: 'Anna Verdi', tag: 'Deputata · Prova' }, playerAvatar: null, stats: { competence: 60, charisma: 55, reputation: 50 }, ...extra });
-const FLOW = ['continua', null, 'continua', null, 'continua'];
-const play = (scene, pick) => { let s = scene; for (const step of FLOW) { const node = sceneNode(s); s = chooseInScene(s, step ?? pick(node.choices)); } return s; };
+// one step at a time through the beats: the continue/finish button where it is the only choice, `pick` where there is a decision
+const first = choices => choices.find(choice => !choice[2])[0];
+const walk = (scene, pick, onNode = null) => { let s = scene; const seen = []; for (let guard = 0; guard < 30 && s.status === 'active'; guard++) { seen.push(s.nodeId); const node = sceneNode(s); onNode?.(s, node); s = chooseInScene(s, node.choices.length === 1 ? node.choices[0][0] : pick(node.choices, node, s)); } return { scene: s, seen }; };
+const play = (scene, pick) => walk(scene, pick).scene;
 const best = choices => choices.map(choice => choice[0])[0];
 for (const key of SCENE_KEYS) {
   const a = make(key, 'seme-1'), b = make(key, 'seme-1');
@@ -54,21 +56,23 @@ for (const key of SCENE_KEYS) {
   const spec = ACTIVITY_SCENES[key];
   for (let i = 0; i < 30; i++) { const recent = spec.families.slice(0, 3).map(item => item.id); assert.ok(!recent.includes(pickFamily(spec, `m-${i}`, recent).id), `${key}: non ripete le ultime famiglie.`); }
   assert.ok(pickFamily(spec, 'x', [], spec.families[2].id).id === spec.families[2].id, `${key}: una preferenza della situazione vale.`);
-  // the six beats
-  const seen = []; let s = make(key, 'seme-2');
-  for (const step of FLOW) { seen.push(s.nodeId); const node = sceneNode(s); assert.ok(node.text && node.speaker && node.camera && node.choices.length, `${key}/${s.nodeId}: il momento ha testo, voce, camera, scelte.`); assert.ok(s.cast.some(item => item.id === node.speaker)); const stage = stageOf(s, node); assert.equal(stage.setting, ACTIVITY_SCENES[key].setting); assert.ok(Object.keys(stage.poses).length === 3, `${key}/${s.nodeId}: tre pose.`); s = chooseInScene(s, step ?? node.choices[0][0]); }
-  assert.deepEqual(seen, ['apertura', 'q1', 'r1', 'q2', 'r2'], `${key}: i momenti in ordine.`);
+  // the beats: the opening, three moments of decision with their reactions (a fourth when guarantees are asked or the tone has risen), the outcome
+  const stepped = walk(make(key, 'seme-2'), choices => first(choices), (scene, node) => { assert.ok(node.text && node.speaker && node.camera && node.choices.length, `${key}/${scene.nodeId}: il momento ha testo, voce, camera, scelte.`); assert.ok(scene.cast.some(item => item.id === node.speaker)); const stage = stageOf(scene, node); assert.equal(stage.setting, ACTIVITY_SCENES[key].setting); assert.ok(Object.keys(stage.poses).length === 3, `${key}/${scene.nodeId}: tre pose.`); });
+  const s = stepped.scene;
+  assert.deepEqual(stepped.seen.slice(0, 7), ['apertura', 'q1', 'r1', 'q2', 'r2', 'q3', 'r3'], `${key}: i momenti in ordine.`);
+  assert.ok([7, 9].includes(stepped.seen.length), `${key}: tre momenti di decisione, quattro quando servono garanzie (${stepped.seen.join(' ')}).`);
   assert.equal(s.nodeId, 'esito'); assert.equal(s.status, 'done'); assert.ok(sceneNode(s).final && s.outcome, `${key}: l’esito è finale.`);
   assert.equal(JSON.stringify(JSON.parse(JSON.stringify(s))), JSON.stringify(s), `${key}: la scena è salvabile e uguale dopo il salvataggio.`);
   // a scene resumed from a save continues the same
-  const half = play(make(key, 'seme-3'), best); assert.deepEqual(half, play(JSON.parse(JSON.stringify(make(key, 'seme-3'))), best), `${key}: ripresa identica.`);
+  const half = play(make(key, 'seme-3'), choices => first(choices)); assert.deepEqual(half, play(JSON.parse(JSON.stringify(make(key, 'seme-3'))), choices => first(choices)), `${key}: ripresa identica.`);
   // the quick way: the same scene, the careful choice at each beat; played by hand the same choices give the same outcome
   const quick = autoPlay(make(key, 'seme-4'));
-  assert.equal(quick.status, 'done'); let manual;
-  manual = make(key, 'seme-4'); const picks = quick.history.map(item => item.choice);
-  manual = chooseInScene(manual, 'continua'); manual = chooseInScene(manual, picks[0]); manual = chooseInScene(manual, 'continua'); manual = chooseInScene(manual, picks[1]); manual = chooseInScene(manual, 'continua');
+  assert.equal(quick.status, 'done');
+  const picks = quick.history.map(item => item.choice);
+  const manual = play(make(key, 'seme-4'), () => picks.shift());
   assert.deepEqual(manual.outcome, quick.outcome, `${key}: «Partecipa» e «Simula» danno lo stesso esito con le stesse scelte.`);
-  const worst = (() => { let w = make(key, 'seme-4'); w = chooseInScene(w, 'continua'); for (let i = 0; i < 2; i++) { const node = sceneNode(w); const scored = node.choices.map(choice => ({ id: choice[0], score: chooseInScene(w, choice[0]).history.at(-1).score })).sort((x, y) => x.score - y.score); w = chooseInScene(w, scored[0].id); w = chooseInScene(w, 'continua'); } return w; })();
+  assert.deepEqual(sceneEffects(manual), sceneEffects(quick), `${key}: stesse scelte, stesse conseguenze.`);
+  const worst = play(make(key, 'seme-4'), (choices, node, scene) => choices.filter(choice => !choice[2]).map(choice => ({ id: choice[0], score: chooseInScene(scene, choice[0]).history.at(-1).score })).sort((x, y) => x.score - y.score)[0].id);
   assert.ok(quick.outcome.performance >= worst.outcome.performance, `${key}: chi sceglie meglio fa meglio (${quick.outcome.performance} ≥ ${worst.outcome.performance}).`);
   const effects = sceneEffects(quick); assert.ok(Number.isFinite(effects.edge) && effects.edge >= -6 && effects.edge <= 6 && effects.activityId === ACTIVITY_SCENES[key].activityIds[0] && effects.line, `${key}: il verdetto è un’intensità limitata.`);
   const strong = autoPlay(make(key, 'seme-5', { stats: { competence: 95, charisma: 95, reputation: 95 } })).outcome.performance, weak = autoPlay(make(key, 'seme-5', { stats: { competence: 10, charisma: 10, reputation: 10 } })).outcome.performance;

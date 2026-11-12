@@ -1,5 +1,5 @@
 // The collections each tab of the archive needs, loaded on demand (kept apart from the archive page so that the page state can be built without loading it: see ui/lazy-views.js).
-import { PARTY_LINK_COLLECTIONS } from '../data/repositories/party-links.js?v=20261111-3';
+import { PARTY_LINK_COLLECTIONS } from '../data/repositories/party-links.js?v=20261112-3';
 export const ARCHIVE_COLLECTIONS = Object.freeze({
   partiti: ['parties', 'politicalMovements', 'coalitions', 'electoralLists', 'territories', 'electionParticipations', 'twoPerThousand', 'partyLeaderships', 'politicalFigures', 'partyMemberships', 'politicians'],
   deputati: ['politicians', 'parliamentaryGroups', ...PARTY_LINK_COLLECTIONS],

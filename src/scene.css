@@ -196,3 +196,14 @@ html[data-scene-motion="full"] .cm-protest .cm-arm { animation: st-arms .45s eas
 @media (max-width: 640px) { .floor-board, .aula-board { grid-template-columns: repeat(3, minmax(0, 1fr)); } .floor-choices { grid-template-columns: 1fr; } .floor-offer-actions, .floor-offer-actions button, .floor-confirm .primary-button, .floor-result-actions button { width: 100%; } }
 .floor-skip { justify-self: start; min-height: 40px; padding: 0 16px; }
 .aula-mine b { margin-left: .4em; }
+
+/* the encounters of the weekly activities: the second voice that joins in and the kind of reaction of the people */
+.scene-exchange { margin: 4px 0 0; padding-left: 10px; border-left: 3px solid var(--line, #cfd6dc); color: inherit; }
+.scene-exchange b { font-weight: 700; margin-right: 4px; }
+.scene-exchange span::before { content: '«'; }
+.scene-exchange span::after { content: '»'; }
+.scene-reaction { display: inline-block; align-self: flex-start; width: fit-content; max-width: 100%; margin: 2px 0 4px 0; padding: 1px 9px; border-radius: 999px; font-size: .74rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; background: #e8eef3; color: #26333f; }
+.scene-reaction[data-reaction="approvazione"], .scene-reaction[data-reaction="soddisfazione"] { background: #dff1e3; color: #1d5a2c; }
+.scene-reaction[data-reaction="dissenso"], .scene-reaction[data-reaction="protesta"] { background: #f7dfdc; color: #8a2a1f; }
+.scene-reaction[data-reaction="perplessita"], .scene-reaction[data-reaction="garanzie"] { background: #f6ecd1; color: #6b4c05; }
+.scene-reaction[data-reaction="compromesso"] { background: #dde8f6; color: #1f3f73; }

@@ -949,6 +949,6 @@ export const PHRASES = [
   ["Le linee sono la quota di consenso di Lega (%) nelle regioni scelte e la media nazionale. Nella tabella: quota (%) e, sotto, lo scarto in punti dalla media nazionale della stessa forza; un trattino (—) è un dato non disponibile.", "The lines are the share of support for Lega (%) in the chosen regions and the national average. In the table: share (%) and, below, the gap in points from the national average of the same force; a dash (—) is a missing figure."],
   ["Le notizie nuove che riguardano la tua carriera o il tuo partito. Quando le hai lette chiudi il riepilogo: non tornano.", "New news about your career or your party. When you have read them close the summary: they do not come back."],
   ["Le nuove priorità di spesa e le entrate valgono per tutto l’anno.", "The new spending priorities and income apply for the whole year."],
-  ["Le nuove tariffe arrivano a casa e il malumore si sente nei bar e nei mercati.", "The new rates arrive at home and the discontent is felt in cafés and markets."],
+  ["Le nuove tariffe arrivano a casa e il malumore si sente nei bar e nei mercati.", "The new rates arrive at home and the discontent is felt in bars and markets."],
   ["Le percentuali della campagna e che cosa misurano", "The campaign percentages and what they measure"]
 ];

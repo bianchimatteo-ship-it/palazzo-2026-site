@@ -1,12 +1,14 @@
 // English phrase-book pairs of the last release pass (data/i18n/en-ui-8.js reads `ALL_PAIRS`): the guided programme editor, the days of the Quirinale and the rule on the parties, the government room, the live
 // votes of the assemblies, the party headquarters, the TV name plates and the tutorial. Format as in the phrase-book: [Italian as shown, English]; `#` a number, `{}` a free part.
-import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261111-3';
-import { DEBATE_PAIRS } from './debate-choices.js?v=20261111-3';
-import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261111-3';
+import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261112-3';
+import { DEBATE_PAIRS } from './debate-choices.js?v=20261112-3';
+import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261112-3';
+import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261112-3';
 export const ALL_PAIRS = [
   ...GUEST_PAIRS,
   ...DEBATE_PAIRS,
   ...APPROACH_PAIRS,
+  ...MOVE_PAIRS,
   // ---- the guided programme editor ----
   // ---- the open votes (the player's own ballot) ----
   ['Congresso — Forza delle aree: Si misura il peso di ogni area: iscritti, quadri, comitati, risorse.', 'Congress — Strength of the areas: The weight of each area is measured: members, cadres, committees, resources.'],
@@ -238,4 +240,12 @@ export const ALL_PAIRS = [
   ['Riservato al Presidente della Repubblica.', 'Reserved for the President of the Republic.'],
   ["Governo in carica all’avvio ha la fiducia di # gruppi (di cui # dall’esterno); la stabilità è a #/# e il margine nella Camera più stretta è di +# seggi.", "The government in office at the start has the confidence of # groups (# from outside); stability stands at #/# and the margin in the narrower Chamber is +# seats."],
   ["Governo in carica all’avvio ha la fiducia di # gruppi (di cui # dall’esterno); la stabilità è a #/# e il margine nella Camera più stretta è di -# seggi.", "The government in office at the start has the confidence of # groups (# from outside); stability stands at #/# and the margin in the narrower Chamber is -# seats."],
+  // ---- the polls page: every piece of a composed sentence is a text of its own ----
+  ['al #%', 'at #%'],
+  ['rispetto al sondaggio precedente', 'compared with the previous poll'],
+  ['margine d’errore ±# punti', 'margin of error ±# points'],
+  ['media di più istituti (nessun margine d’errore unico).', 'average of several pollsters (no single margin of error).'],
+  ['Sono mostrate solo le forze presenti nella fonte, con “Altri” come nella fonte.', 'Only the forces in the source are shown, with “Others” as in the source.'],
+  ['La barra tratteggiata è una stima simulata del tuo partito, fuori dal totale reale.', 'The dashed bar is a simulated estimate for your party, outside the real total.'],
+  ['Dalla prossima settimana i sondaggi sono simulati e reagiscono alla tua carriera.', 'From next week the polls are simulated and react to your career.']
 ];

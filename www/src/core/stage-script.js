@@ -5,7 +5,7 @@
 //
 // Coordinates: the stage is 640 x 360 units; `x` is the centre of the figure, `y` the line of its feet (the lower, the nearer to the camera); `s` the scale of the figure (nearer = bigger).
 
-import { formatOf } from './studio-lines.js?v=20261111-3';
+import { formatOf } from './studio-lines.js?v=20261112-3';
 
 export const STAGE_W = 640, STAGE_H = 360;
 export const depthScale = y => Math.max(0.2, Math.min(0.72, 0.3 + (y - 170) / 190 * 0.34));
