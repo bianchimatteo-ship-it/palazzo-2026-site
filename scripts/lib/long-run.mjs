@@ -157,6 +157,8 @@ export function playWeek({ store, db, decide }) {
     const activity = ['party_meeting', 'citizen_meeting', 'door_to_door', 'rally', 'interview', 'fundraising', 'social', 'posters'][Math.floor(decide() * 8)];
     try { store.performCampaignActivity(activity, { territoryId: store.getState().campaign.territories?.[0]?.id }); } catch { /* not affordable today */ }
   }
+  // an invitation accepted from the agenda (a guest spot in prime time) opens its scene and the week waits for it, as in the game: the harness plays it the quick way, the one the game offers («Simula»)
+  for (let guard = 0; guard < 4 && store.getState().scene; guard++) { try { store.sceneSkip(); } catch { try { store.sceneAbandon(); } catch { break; } } }
   store.advance(7);
 }
 

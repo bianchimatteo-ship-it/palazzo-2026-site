@@ -80,7 +80,8 @@ if (pending) {
 }
 
 // 3. Alleanze proposte dal giocatore: costi, esito e rottura.
-const partner = store.getState().world.parties.find(item => !item.isPlayer);
+// (a party that is already in an accord of its own cannot be taken away from its allies: the engine refuses, rightly — the partner is one that is free)
+const partner = store.getState().world.parties.find(item => !item.isPlayer && item.active && !store.getState().world.alliances.some(pact => pact.status === 'active' && pact.partyIds.length >= 2 && pact.partyIds.includes(item.id)));
 const capital = store.getState().game.resources.politicalCapital;
 const alliance = store.proposeAlliance(partner.id);
 assert.equal(store.getState().game.resources.politicalCapital, capital - 4);

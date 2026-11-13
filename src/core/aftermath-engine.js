@@ -35,7 +35,7 @@ export function electionAftermath({ campaign, result, game = null, player = null
   const expectation = outcome.expectation === 'sopra' ? 1 : outcome.expectation === 'sotto' ? -1 : 0;
   if (expectation) {
     base.reputation += expectation; base.influence += 1.5 * expectation; base.support += 2 * expectation; base.leadership += expectation > 0 ? 1 : -1.5;
-    lines.push(expectation > 0 ? `Sopra le attese: ${outcome.expected}% atteso, ${result.playerShare}% ottenuto.` : `Sotto le attese: ${outcome.expected}% atteso, ${result.playerShare}% ottenuto.`);
+    lines.push(expectation > 0 ? `Sopra le attese: ${String(outcome.expected).replace('.', ',')}% atteso, ${String(result.playerShare).replace('.', ',')}% ottenuto.` : `Sotto le attese: ${String(outcome.expected).replace('.', ',')}% atteso, ${String(result.playerShare).replace('.', ',')}% ottenuto.`);
   }
   // A narrow defeat is less damaging; a landslide victory opens more doors.
   const margin = outcome.margin ?? 0;

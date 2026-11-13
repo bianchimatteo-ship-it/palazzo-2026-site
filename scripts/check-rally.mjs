@@ -122,6 +122,6 @@ while (vote.status === 'active') {
 }
 assert.deepEqual(beats, [...VOTE_ORDER], 'ingresso, banco, cabina, voto, piega, uscita dalla cabina, urna, uscita');
 assert.equal(vote.outcome.voted, true);
-assert.equal(stageOf({ ...vote, nodeId: 'voto' }, null).poses.giocatore.visible, false, 'dentro la cabina non si vede il votante');
+assert.notEqual(stageOf({ ...vote, nodeId: 'voto' }, null).poses.giocatore.visible, false, 'dentro la cabina il votante resta in vista sopra la tenda (testa, spalle, mani), mai nascosto');
 assert.equal(stageOf({ ...vote, nodeId: 'voto' }, null).props.booth, 'closed');
 console.log('check-rally: ok');

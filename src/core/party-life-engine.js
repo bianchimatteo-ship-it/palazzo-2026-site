@@ -4,17 +4,17 @@
 // rebuilding of a party in opposition. Everything lives in game.party.life and is simulated: no real person or
 // real organisation is described. The career engine owns the calendar and hands in the helpers it already has
 // (memory, relations, diary) through `api`, so nothing here imports the career engine.
-import { closeConflicts, reopenConflicts } from './organization-engine.js?v=20261112-8';
-import { announceOutcome, celebrate } from './celebration.js?v=20261112-8';
-import { uniqueId } from './ids.js?v=20261112-8';
+import { closeConflicts, reopenConflicts } from './organization-engine.js?v=20261113-1';
+import { announceOutcome, celebrate } from './celebration.js?v=20261113-1';
+import { uniqueId } from './ids.js?v=20261113-1';
 import {
   ACTOR_PERSONAS, CADRE_ACTIONS, CADRE_INTERESTS, CONGRESS_ACTIONS, CONGRESS_DELEGATES, CONGRESS_PHASES, EMERGING_AREAS, PACT_KINDS, PERSONAS_BY_CURRENT, PERSONA_FALLBACK,
   REBUILD_FOCUS, REBUILD_WEEKS, REQUEST_KINDS, SPLIT_RULES
-} from '../data/simulation/party-life-rules.js?v=20261112-8';
-import { CURRENT_AREAS, CURRENT_LINES, PARTY_LINES } from '../data/simulation/career-rules.js?v=20261112-8';
-import { LEADER_RULES } from '../data/simulation/committee-rules.js?v=20261112-8';
-import { leaderKeyOf, leaderStance, territorialControl } from './committee-engine.js?v=20261112-8';
-import { italianSeatName } from './seat-roster.js?v=20261112-8';
+} from '../data/simulation/party-life-rules.js?v=20261113-1';
+import { CURRENT_AREAS, CURRENT_LINES, PARTY_LINES } from '../data/simulation/career-rules.js?v=20261113-1';
+import { LEADER_RULES } from '../data/simulation/committee-rules.js?v=20261113-1';
+import { leaderKeyOf, leaderStance, territorialControl } from './committee-engine.js?v=20261113-1';
+import { italianSeatName } from './seat-roster.js?v=20261113-1';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -1107,8 +1107,8 @@ function applyCongressOutcome(game, life, api, outcome, { week, date, rand, mode
     if (actor.grievance >= 60 && actor.loyalty <= 45 && current.strength >= SPLIT_RULES.minStrength && outcome.margin >= 15) life.splitWatch[current.id] = { since: week, deadline: week + 8, from: 'congresso' };
   }
   api.remember(game, { date, kind: 'congresso', text: `Congresso: vince ${outcome.playerWon ? 'la tua linea' : winner.label} (${outcome.winner.pct}%)`, weight: 1.1, subject: outcome.winnerCurrentId });
-  note(life, week, 'congresso', `Congresso: ${outcome.winner.label} al ${outcome.winner.pct}% (scarto ${outcome.margin} punti)`);
-  lines.push(`Congresso: ${outcome.winner.label} al ${outcome.winner.pct}% dei delegati, scarto ${outcome.margin} punti`);
+  note(life, week, 'congresso', `Congresso: ${outcome.winner.label} al ${String(outcome.winner.pct).replace('.', ',')}% (scarto ${String(outcome.margin).replace('.', ',')} punti)`);
+  lines.push(`Congresso: ${outcome.winner.label} al ${String(outcome.winner.pct).replace('.', ',')}% dei delegati, scarto ${String(outcome.margin).replace('.', ',')} punti`);
   if (outcome.playerWon) celebrate(game, { id: `congresso-${week}`, kind: 'congresso', title: 'Congresso vinto', body: `La tua linea vince con il ${outcome.winner.pct}% dei delegati.`, date });
   // The official result, told once at the centre of the page: the winning line, the share of the delegates, the margin and whether the player's line won
   {
@@ -1116,7 +1116,7 @@ function applyCongressOutcome(game, life, api, outcome, { week, date, rand, mode
     const tone = !mine ? 'partial' : outcome.playerWon ? 'win' : 'loss';
     announceOutcome(game, { id: `esito-congresso-${week}`, kind: 'congresso', tone, title: 'Congresso del partito',
       headline: !mine ? `Vince ${outcome.winner.label}` : outcome.playerWon ? 'La tua linea vince il congresso' : `La tua linea perde: vince ${outcome.winner.label}`,
-      lines: [`Linea vincente: ${outcome.winner.label} con il ${outcome.winner.pct}% dei delegati`, `Margine sul secondo: ${outcome.margin} punti`,
+      lines: [`Linea vincente: ${outcome.winner.label} con il ${String(outcome.winner.pct).replace('.', ',')}% dei delegati`, `Margine sul secondo: ${String(outcome.margin).replace('.', ',')} punti`,
         mine ? (outcome.playerWon ? `Hai sostenuto ${mine.label}: ha vinto.` : `Hai sostenuto ${mine.label}: non ha vinto.`) : 'Non avevi una linea di riferimento: segui il congresso da fuori.'],
       date, celebrationId: outcome.playerWon ? `congresso-${week}` : null });
   }

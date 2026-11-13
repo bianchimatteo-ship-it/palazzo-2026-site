@@ -1,9 +1,9 @@
 // Rival life between campaigns (rival-life-rules.js): the rivals the player has already met (game.rivalRegistry, the same record the campaigns write) keep acting on their own. Pure and deterministic
 // (hash of week and key, no random numbers): by personality (RIVAL_PERSONALITIES of the campaign engine), by what they remember of the player (the same memory types) and by what the player promised
 // (game.promises). A move is a situation event; the answer is written back in the registry, so the next campaign meets a rival who remembers.
-import { RIVAL_PERSONALITIES } from './campaign-engine.js?v=20261112-8';
-import { RIVAL_LIFE, RIVAL_SITUATIONS } from '../data/simulation/rival-life-rules.js?v=20261112-8';
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261112-8';
+import { RIVAL_PERSONALITIES } from './campaign-engine.js?v=20261113-1';
+import { RIVAL_LIFE, RIVAL_SITUATIONS } from '../data/simulation/rival-life-rules.js?v=20261113-1';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261113-1';
 
 const hash = text => { let h = 2166136261; for (const ch of String(text)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967296; };
 const round1 = value => Math.round(value * 10) / 10;
@@ -31,7 +31,7 @@ function moveOf(record, game, week) {
   const promises = openPromises(game);
   const promise = promises.length ? promises[Math.floor(hash(`${record.key}|tema|${week}`) * promises.length)] : null;
   const area = promise?.area ? AREA_BY_ID[promise.area] : null;
-  const base = { rivalKey: record.key, rival: record.label, personality: RIVAL_LIFE.personalityLabels[record.personality] ?? 'un avversario che conosci', memoryLine: memoryLineOf(record), topic: area?.label?.toLowerCase() ?? 'i temi del territorio', area: promise?.area ?? null };
+  const base = { rivalKey: record.key, rival: record.label, personality: RIVAL_LIFE.personalityLabels[record.personality] ?? 'un avversario che conosci', memoryLine: memoryLineOf(record), topic: area?.label?.toLowerCase() ?? 'temi del territorio', area: promise?.area ?? null };
   if (record.record?.lostToPlayer && traits.attack >= 1.2 && roll < 0.5) return { kind: 'rivale-rivincita', params: base };
   if (mood.warmth > mood.hostility && traits.alliance >= 1) return { kind: 'rivale-mano-tesa', params: base };
   if (promise && (record.personality === 'ideologico' || record.personality === 'territoriale' || record.personality === 'opportunista') && roll < 0.7) return { kind: 'rivale-sfida-tema', params: base };

@@ -171,6 +171,13 @@ Branch `test/ambiente-privato`. Che cosa è cambiato, dove, e come si verifica:
 - **Test nuovi.** `check-scene-topics`, `check-qa-ui` (sei risoluzioni, IT/EN).
 - **Non fatto/da sapere.** Il deploy su Test richiede `wrangler.test.local.jsonc` e le credenziali locali, assenti in questo ambiente.
 
+## Audit finale per la release 1.0 (nota di lavoro)
+- **Comizio su smartphone** (bug reale): nella riga «Comizio» della campagna i due pulsanti («Scendi in piazza», «Simula il comizio») stavano nella stessa cella della griglia di `redesign.css` e uno copriva l'altro. Correzione in `src/sections.css` (griglia a due colonne sotto i 640 px, testi e costi a tutta riga, pulsanti ≥ 44 px, ritorno a capo del testo); test `check-rally-buttons` (6 risoluzioni, tutte le 39 righe di attività, scena del comizio, inglese) verificato in negativo sul CSS vecchio.
+- **Testi generati in partita**: decimali con la virgola (congresso, esiti), «richiesta del ministro…», titoli delle notizie del talk show dal solo diario pubblico (`publicHeadlines`), grammatica «su i temi», elenco rivali con «;», e circa 40 coppie del dizionario per frasi composte che restavano in italiano (sblocchi dei traguardi, controllori del consiglio, problemi nazionali, mozioni, richieste respinte, posizioni).
+- **Test**: `check-soak` (104 settimane per due carriere, checkpoint 25/50/75/104, controllo di tutti i testi generati in IT/EN, tempo del motore e dei salvataggi misurati a parte); `check-long-run` ora gioca anche la scena aperta da un invito in studio. `check-first-run` (guida con tre sezioni nuove), `check-rally` (il votante resta in vista sopra la tenda, scelta voluta) e `check-polls` (partner già in un accordo: il motore lo rifiuta giustamente) avevano aspettative superate: aggiornate, non indebolite.
+- **Prestazioni**: il motore resta a ~60→150 ms a settimana in due anni; un salvataggio costa ~35→135 ms con 1,7 MB di stato (copie, backup e slot): accettabile ma è la parte che cresce.
+- **Android**: audit statico (versionCode 1 / versionName 1.0, solo INTERNET, firma fuori dal repository). Il versionCode già su Google Play non è noto da qui: il prossimo deve essere superiore.
+
 ## Milestone precedente — fondazione partito, consenso, fiducia, direttiva (completata)
 Vedi la cronologia git (commit `7fbae22`, `8842e95`).
 

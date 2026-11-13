@@ -8,9 +8,9 @@
 //   - the minister who contests the line in public and, if nobody listens, resigns with a quarrel.
 // The Prime Minister decides: when it is the player, requests, conflicts and meetings wait for him (and turn into their default if he lets them pass); when it is a simulated one, the same
 // rules are answered by chance seeded on the date. Everything is pure: the store passes the parliament and gets it back with the lines to tell.
-import { DATA_SOURCES } from '../data/schema.js?v=20261112-8';
-import { AREA_BY_ID, areasOfPortfolio } from '../data/simulation/policy-rules.js?v=20261112-8';
-import { activeMinisters, assignMinister, changePartner, groupProfile, parliamentInternals } from './parliament-engine.js?v=20261112-8';
+import { DATA_SOURCES } from '../data/schema.js?v=20261113-1';
+import { AREA_BY_ID, areasOfPortfolio } from '../data/simulation/policy-rules.js?v=20261113-1';
+import { activeMinisters, assignMinister, changePartner, groupProfile, parliamentInternals } from './parliament-engine.js?v=20261113-1';
 
 const { getGroup, record } = parliamentInternals;
 const SIM = DATA_SOURCES.SIMULATION;
@@ -85,7 +85,7 @@ export function advanceCabinetLife(input, { date, week = 0, rand = Math.random, 
       const score = Math.round((minister.competence ?? 60) * 0.35 + (minister.loyalty ?? 60) * 0.25 + delivery * 0.4);
       const grade = gradeOf(score);
       next = patchMinister(next, minister.id, item => ({ ...traitsPatch(item, { evaluations: [...(item.traits?.evaluations ?? []), { date, score, grade }].slice(-8) }), loyalty: clamp((item.loyalty ?? 60) + (grade === 'ottimo' ? 3 : grade === 'insufficiente' ? -3 : 0), 0, 100), pressure: Math.max(0, (item.pressure ?? 0) + (grade === 'insufficiente' ? 1 : 0)) }));
-      verdicts.push(`${minister.portfolio} ${GRADE_LABELS[grade].toLowerCase()}`);
+      verdicts.push(`${minister.portfolio}: ${GRADE_LABELS[grade].toLowerCase()}`);
       const previous = minister.traits?.evaluations?.at(-1)?.grade;
       if (grade === 'insufficiente' && previous === 'insufficiente' && !life.requests.some(item => item.ministerId === minister.id && item.type === 'sostituzione')) {
         life = { ...life, requests: [...life.requests, { id: `richiesta-${date}-${minister.id}-s`, type: 'sostituzione', ministerId: minister.id, by: hashOf(`${date}|${minister.id}`) % 2 ? 'gli alleati' : 'la stampa', openedAt: date }] };
@@ -210,10 +210,10 @@ export function resolveRequest(parliament, id, choice, date, { auto = false } = 
       // the others notice: whoever was not asked for is a little more distant
       for (const other of activeMinisters(next.government).filter(item => item.id !== minister.id)) next = patchMinister(next, other.id, item => traitsPatch(item, { bond: clamp((traitsOf(item).bond ?? 60) - 2, 0, 100) }));
       next = shiftStability(next, -1);
-      lines.push(`Accolta la richiesta di ${who}: più peso nel governo, qualche invidia nella squadra.`);
+      lines.push(`Accolta la richiesta del ministro ${minister.portfolio}: più peso nel governo, qualche invidia nella squadra.`);
     } else {
       next = patchMinister(next, minister.id, item => ({ ...traitsPatch(item, { bond: clamp((traitsOf(item).bond ?? 60) - 5, 0, 100), grievance: (traitsOf(item).grievance ?? 0) + 1 }), loyalty: clamp((item.loyalty ?? 60) - 6, 0, 100) }));
-      lines.push(`Respinta la richiesta di ${who}: la lealtà cala.`);
+      lines.push(`Respinta la richiesta del ministro ${minister.portfolio}: la lealtà cala.`);
     }
   } else if (choice === 'accogli') {
     next = replace(next, minister, date, 'Sostituito su richiesta');
