@@ -1,11 +1,11 @@
 // Wires the rewards to the page: the play clock (visibility, foreground, one tab at a time, the career that is open), the journal of the device, the time of an account (kept by the Worker, merged across devices),
 // the daily reward and the one-off community reward (the Worker decides for an account, the device for a guest), the notices the player is shown and the rewarded videos. The rules are in core/rewards-engine.js and the store;
 // this file only decides WHEN time is counted, what is sent to the Worker and who may claim what.
-import { createPlayClock, createStorageLease } from '../core/play-clock.js?v=20261113-1';
-import { normalizeRewards, playProgress, romeDay, rewardHistory } from '../core/rewards-engine.js?v=20261113-1';
-import { COMMUNITY_REWARD, DAILY_REWARD, PLAY_CLOCK, PLAY_REWARDS } from '../data/simulation/reward-rules.js?v=20261113-1';
-import { rewardsJournal } from '../data/repositories/rewards-journal.js?v=20261113-1';
-import { createRewardedAds } from '../data/repositories/ads-rewarded.js?v=20261113-1';
+import { createPlayClock, createStorageLease } from '../core/play-clock.js?v=20261113-8';
+import { normalizeRewards, playProgress, romeDay, rewardHistory } from '../core/rewards-engine.js?v=20261113-8';
+import { COMMUNITY_REWARD, DAILY_REWARD, PLAY_CLOCK, PLAY_REWARDS } from '../data/simulation/reward-rules.js?v=20261113-8';
+import { rewardsJournal } from '../data/repositories/rewards-journal.js?v=20261113-8';
+import { createRewardedAds } from '../data/repositories/ads-rewarded.js?v=20261113-8';
 
 const RETRY_MS = 30000;
 const BLOCK_KINDS = { capitale: PLAY_REWARDS.capital.everyMinutes, preparazione: PLAY_REWARDS.preparation.everyMinutes };
@@ -16,7 +16,7 @@ export function createRewardsService({ store, journal = rewardsJournal, username
   const storage = env.storage ?? globalThis.localStorage;
   const lease = env.lease ?? createStorageLease(storage, { wall });
   const listeners = new Set();
-  let adsState = { available: false, reason: null };
+  let adsState = { available: false, reason: null, code: 'checking' };
   let noTimeRoute = false, timer = null, careerId = null, claiming = false, claimingCommunity = false, inflight = null, retryAt = 0, lastNotice = 0, lastSync = 0, unlisten = null;
   const communityRetry = {};
   const rewardedAds = createRewardedAds({ ...ads, grant: id => store.claimAdReward(id) });
@@ -204,16 +204,16 @@ export function createRewardsService({ store, journal = rewardsJournal, username
       const state = store.getState();
       const day = romeDay(wall()), key = scope();
       const daily = journal.daily(key, day);
-      const spec = COMMUNITY_REWARD.instagram, instagram = journal.community(key, 'instagram');
+      const communities = Object.fromEntries(Object.values(COMMUNITY_REWARD).map(spec => [spec.id, { enabled: communityOn(spec.id), platform: spec.platform, linkWhenOff: Boolean(spec.linkWhenOff), url: spec.url, funds: spec.funds, capital: spec.capital, state: journal.community(key, spec.id).state, guest: !username() }]));
       return {
         daily: { amount: DAILY_REWARD.amount, minutes: DAILY_REWARD.minutes, ms: Math.min(daily.ms, DAILY_REWARD.minutes * 60000), state: daily.state, day, guest: !username() },
         play: playProgress(state.game), history: rewardHistory(state.game),
-        community: { instagram: { enabled: communityOn('instagram'), url: spec.url, funds: spec.funds, capital: spec.capital, state: instagram.state, guest: !username() } },
+        community: communities,
         lost: username() ? journal.lost(key) : { ms: 0, log: [] },
         ads: { ...adsState }, playing: playing()
       };
     },
-    async refreshAds() { const availability = await rewardedAds.availability(); adsState = { available: availability.ok, reason: availability.reason }; emit(); return adsState; }
+    async refreshAds() { const availability = await rewardedAds.availability(); adsState = { available: availability.ok, reason: availability.reason, code: availability.code ?? (availability.ok ? 'ready' : 'not-configured') }; emit(); return adsState; }
   };
   return service;
 }

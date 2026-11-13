@@ -20,5 +20,10 @@ export const REWARD_HISTORY_SIZE = 60;
 // It is ON (`enabled: true`). The text of Meta's rules on rewarding a follow could not be read when it was switched on (see docs/audit-finale.md): if an incompatibility emerges, set `enabled: false` here (nothing else
 // changes: the card then says the reward is not available and nothing can be claimed; what was already received stays).
 export const COMMUNITY_REWARD = Object.freeze({
-  instagram: Object.freeze({ id: 'instagram', url: 'https://www.instagram.com/politicandoitalia2026/', funds: 1500, capital: 5, category: 'ricompense', label: 'Community Instagram', enabled: true })
+  instagram: Object.freeze({ id: 'instagram', platform: 'Instagram', url: 'https://www.instagram.com/politicandoitalia2026/', funds: 1500, capital: 5, category: 'ricompense', label: 'Community Instagram', enabled: true }),
+  // TikTok: the same mechanism, apart (its own id, its own claims, nothing shared with Instagram), but OFF. TikTok's rules on engagement forbid «false incentives for engaging with content» and a reward for a
+  // follow is one: until the platform's rules (or its written answer) allow it, the card shows the profile and NO incentive, nothing can be claimed, and the Worker refuses the claim too (it needs
+  // COMMUNITY_TIKTOK_ENABLED=1 on the Worker AND `enabled: true` here). See docs/audit-finale.md. `linkWhenOff`: with the reward off the card still offers the link to the profile, with no word of a prize.
+  tiktok: Object.freeze({ id: 'tiktok', platform: 'TikTok', url: 'https://www.tiktok.com/@politicando2026_gioco', funds: 1500, capital: 5, category: 'ricompense', label: 'Community TikTok', enabled: false, linkWhenOff: true })
 });
+export const COMMUNITY_PLATFORM = Object.freeze(Object.fromEntries(Object.values(COMMUNITY_REWARD).map(item => [item.id, item.platform])));

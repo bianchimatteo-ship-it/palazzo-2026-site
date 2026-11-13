@@ -87,7 +87,10 @@ const stripped = (await readFile(join(root, 'wrangler.jsonc'), 'utf8')).split('\
 const wrangler = JSON.parse(stripped);
 const worker = await readFile(join(root, 'worker.js'), 'utf8');
 assert.ok(files.includes(wrangler.main), 'Il Worker principale esiste.');
-assert.equal(wrangler.assets?.directory, '.', 'Gli asset sono la radice del progetto (filtrata da .assetsignore).');
+// Production serves only the portal (confirmation and legal pages): its assets are ./portal; the full game lives in the Worker of Test (wrangler.test.jsonc), whose assets are the project root (filtered by .assetsignore).
+assert.equal(wrangler.assets?.directory, './portal', 'La produzione serve solo il portale.');
+const testConfig = JSON.parse((await readFile(join(root, 'wrangler.test.jsonc'), 'utf8')).split('\n').filter(line => !/^\s*\/\//.test(line)).join('\n'));
+assert.equal(testConfig.assets?.directory, '.', 'Il sito di prova serve la radice del progetto (filtrata da .assetsignore).');
 assert.equal(wrangler.assets?.binding, 'ASSETS'); assert.deepEqual(wrangler.assets?.run_worker_first, ['/api/*'], 'Il Worker risponde solo a /api/*: il resto sono asset.');
 const bindings = new Set([...(wrangler.kv_namespaces ?? []).map(item => item.binding), ...(wrangler.d1_databases ?? []).map(item => item.binding), ...(wrangler.r2_buckets ?? []).map(item => item.binding), wrangler.assets?.binding, ...Object.keys(wrangler.vars ?? {})]);
 // Secrets of the Worker (never in the project) and the one hook for tests (a function: a Worker's variables are strings, so it cannot exist in production).
@@ -98,7 +101,9 @@ const WORKER_SECRETS = new Set(['ADMIN_SETUP_CODE', 'EMAIL_GATEWAY_SECRET', 'EMA
 assert.deepEqual(wrangler.r2_buckets, [{ binding: 'LOGOS', bucket_name: 'politicando-logos' }], 'Il binding R2 dei loghi è dichiarato e attivo in wrangler.jsonc (non commentato).');
 assert.ok(/env\.LOGOS\b/.test(worker), 'Il Worker usa il binding LOGOS.');
 assert.ok(['EMAIL_GATEWAY_URL', 'PUBLIC_BASE_URL', 'ACCOUNT_EMAIL_REQUIRED'].every(name => name in (wrangler.vars ?? {})) && !('EMAIL_GATEWAY_SECRET' in (wrangler.vars ?? {})), 'Le impostazioni dell’email sono dichiarate; il segreto del gateway è un secret, non una variabile.');
-for (const used of new Set([...worker.matchAll(/\benv\.([A-Z_]+)\b/g)].map(match => match[1]))) assert.ok(bindings.has(used) || WORKER_SECRETS.has(used), `env.${used} è letto dal Worker ma non è dichiarato in wrangler.jsonc.`);
+// (GAME_WEB is declared only by the Worker of Test: Production never serves the game, so it never sets it)
+const testVars = new Set(Object.keys(testConfig.vars ?? {}));
+for (const used of new Set([...worker.matchAll(/\benv\.([A-Z_]+)\b/g)].map(match => match[1]))) assert.ok(bindings.has(used) || WORKER_SECRETS.has(used) || testVars.has(used), `env.${used} è letto dal Worker ma non è dichiarato in wrangler.jsonc (né in wrangler.test.jsonc).`);
 assert.ok(worker.includes('ADMIN_SETUP_CODE') && !/ADMIN_SETUP_CODE['"]?\s*[:=]\s*['"][^'"]{3,}/.test(worker + stripped), 'Il codice di attivazione è un secret del Worker, non scritto nel progetto.');
 assert.ok(files.includes('migrations/0001_accounts.sql') && wrangler.d1_databases?.every(item => item.migrations_dir && files.some(path => path.startsWith(`${item.migrations_dir}/`))), 'Le migrazioni D1 ci sono.');
 for (const route of ['/api/admin', '/api/admin/session', '/api/account/register', '/api/account/login', '/api/saves']) assert.ok(worker.includes(route), `Il Worker gestisce ${route}.`);

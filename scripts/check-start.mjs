@@ -512,6 +512,8 @@ const BIRTH = '1975-04-03';
       const s = store.getState();
       for (const item of s.game.inbox) { if (item.templateId.startsWith('start-')) seen.add(item.templateId); }
       for (const item of [...s.game.inbox]) { const choice = item.choices[(i + item.templateId.length) % item.choices.length]; try { store.resolveAgendaItem(item.id, choice.id); } catch { /* costo non sostenibile questa settimana */ } }
+      // (an invitation accepted by the week opens a scene in the studio: the long run plays it quick, as a player would, before the next week)
+      for (let guard = 0; guard < 4 && store.getState().scene; guard++) { try { store.sceneSkip(); } catch { try { store.sceneAbandon(); } catch { break; } } }
       store.advance(7);
       if (i % 20 === 19) noIssues(store.getState(), `${seed} settimana ${i + 1}`);
     }

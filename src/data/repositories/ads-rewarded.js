@@ -5,7 +5,7 @@
 //   { kind: 'admob', isReady(): boolean | Promise<boolean>, show(): Promise<{ completed: boolean, verified: boolean, completionId: string }> }
 // `completed` is the SDK's own confirmation that the user earned the reward, `verified` that it comes from the SDK / the ad network (and not from the page), `completionId` an id that is unique for each completion
 // (the transaction id of the network). A `demo` provider (kind: 'demo') is for tests only and is refused unless the caller passes `allowDemo: true`; production never does.
-import { ADS_CONFIG } from '../ads-config.js?v=20261113-1';
+import { ADS_CONFIG } from '../ads-config.js?v=20261113-8';
 
 export const REWARDED_ADS_OFF = 'Gli annunci premiati non sono ancora attivi: serve l’integrazione di AdMob, non ancora configurata.';
 const validId = id => typeof id === 'string' && /^[\w.:|~-]{8,160}$/.test(id);
@@ -17,9 +17,10 @@ export function createRewardedAds({ config = ADS_CONFIG, provider = null, allowD
   return {
     // Whether a video can be offered now, and why not.
     async availability() {
-      if (provider?.kind === 'demo' && allowDemo === true) { try { return await provider.isReady?.() === false ? { ok: false, reason: 'Nessun video disponibile in questo momento.' } : { ok: true, reason: null }; } catch { return { ok: false, reason: 'Nessun video disponibile in questo momento.' }; } }
-      if (!configured() || !providerOk()) return { ok: false, reason: REWARDED_ADS_OFF };
-      try { return await provider.isReady?.() === false ? { ok: false, reason: 'Nessun video disponibile in questo momento.' } : { ok: true, reason: null }; } catch { return { ok: false, reason: 'Nessun video disponibile in questo momento.' }; }
+      if (provider?.kind === 'demo' && allowDemo === true) { try { return await provider.isReady?.() === false ? { ok: false, code: 'no-ad', reason: 'Nessun video disponibile in questo momento.' } : { ok: true, code: 'ready', reason: null }; } catch { return { ok: false, reason: 'Nessun video disponibile in questo momento.' }; } }
+      // three states, told apart: not integrated or not configured (nothing to wait for), integrated and ready (the button works), integrated but with no video now (it comes back by itself)
+      if (!configured() || !providerOk()) return { ok: false, code: 'not-configured', reason: REWARDED_ADS_OFF };
+      try { return await provider.isReady?.() === false ? { ok: false, code: 'no-ad', reason: 'Nessun video disponibile in questo momento.' } : { ok: true, code: 'ready', reason: null }; } catch { return { ok: false, code: 'no-ad', reason: 'Nessun video disponibile in questo momento.' }; }
     },
     // Shows a video. Returns { status: 'completed' | 'dismissed' | 'failed' | 'unavailable' | 'duplicate' | 'busy' }. The reward is granted (once) only on 'completed'.
     async watch() {

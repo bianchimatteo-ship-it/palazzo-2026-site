@@ -5,11 +5,11 @@
 // it needs or puts the question of confidence; the bills of the opposition often never reach the floor. The player sits
 // in one Chamber: speaks, amends and casts a personal vote on every bill there — and the vote has consequences.
 // Everything here is simulation (source: simulation); the groups of the real XIX legislature keep their real reference.
-import { DATA_SOURCES } from '../data/schema.js?v=20261113-1';
-import { AREA_BY_ID, DECREE_RULES, FINANCING, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261113-1';
-import { amendLawPolicy, campOfAxis, cohesiveShare, confidenceBallotMissing, directiveOf, governingGroupIds, groupDirectiveEffect, groupProfile, parliamentInternals, playerSeatedOn } from './parliament-engine.js?v=20261113-1';
-import { openLocalFloors, playerVotesIn } from './local-engine.js?v=20261113-1';
-import { groupLine, splitGroupVote } from './vote-engine.js?v=20261113-1';
+import { DATA_SOURCES } from '../data/schema.js?v=20261113-8';
+import { AREA_BY_ID, DECREE_RULES, FINANCING, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261113-8';
+import { amendLawPolicy, campOfAxis, cohesiveShare, confidenceBallotMissing, directiveOf, governingGroupIds, groupDirectiveEffect, groupProfile, parliamentInternals, playerSeatedOn } from './parliament-engine.js?v=20261113-8';
+import { openLocalFloors, playerVotesIn } from './local-engine.js?v=20261113-8';
+import { groupLine, splitGroupVote } from './vote-engine.js?v=20261113-8';
 
 const { getGroup, allGroups, record, replaceLaw, demandFor, contentAffinity, setRelation } = parliamentInternals;
 const SIM = DATA_SOURCES.SIMULATION;
@@ -582,7 +582,9 @@ function actContent(inst, act) {
     row('Seconda convocazione', act.secondCall ? 'Sì: la prima seduta non aveva il numero legale' : null)
   ].filter(Boolean);
 }
-const lawSummary = law => law.summary ?? law.description ?? `${KIND_LABELS[law.kind] ?? 'Proposta di legge'} presentato da ${law.sponsor?.label ?? 'un gruppo parlamentare'}.`;
+// «presentata» for the feminine kinds of act (a motion, a question, a resolution, a proposal, a deliberation…), «presentato» for the others (a decree, a bill)
+const presented = label => /^(mozione|interrogazione|risoluzione|proposta|deliberazione|delibera|ordinanza|legge|petizione|interpellanza|manovra)/i.test(String(label ?? '')) ? 'presentata' : 'presentato';
+const lawSummary = law => law.summary ?? law.description ?? `${KIND_LABELS[law.kind] ?? 'Proposta di legge'} ${presented(KIND_LABELS[law.kind] ?? 'Proposta di legge')} da ${law.sponsor?.label ?? 'un gruppo parlamentare'}.`;
 
 // Who puts the measure forward, said only as far as the data prove it: the institution (the Government, the Giunta, the committee), the parliamentary or council group, the party the group belongs to when
 // the data tie them, and the first signatory when it is the player. The institution is never taken for the party that leads it, and nothing is attributed without a link in the data.
@@ -644,7 +646,7 @@ export function openVotesOf(state) {
       const spec = committee ? { name: 'Commissione del Parlamento europeo', president: 'Il Presidente della commissione', hall: 'Sala della commissione' } : FLOOR_ASSEMBLIES[inst.kind] ?? FLOOR_ASSEMBLIES.comune;
       out.push({
         id: `local:${inst.id}|${act.id}`, scope: 'locale', own: act.sponsor?.kind === 'player' || act.kind === 'player', instId: inst.id, actId: act.id, assembly: inst.kind, assemblyName: spec.name, place: inst.name ?? '', president: spec.president, hall: spec.hall, committee,
-        title: act.title, kindLabel: act.label ?? 'Atto', reading: committee ? 'Voto in commissione' : act.secondCall ? 'Seconda convocazione' : act.firstReadingAt ? 'Seconda deliberazione' : 'Votazione in aula', summary: `${act.label ?? 'Atto'} presentato da ${act.sponsor?.label ?? 'un gruppo'}${AREA_BY_ID[act.area] ? `: ${AREA_BY_ID[act.area].label.toLowerCase()}` : ''}.`, content: actContent(inst, act),
+        title: act.title, kindLabel: act.label ?? 'Atto', reading: committee ? 'Voto in commissione' : act.secondCall ? 'Seconda convocazione' : act.firstReadingAt ? 'Seconda deliberazione' : 'Votazione in aula', summary: `${act.label ?? 'Atto'} ${presented(act.label ?? 'Atto')} da ${act.sponsor?.label ?? 'un gruppo'}${AREA_BY_ID[act.area] ? `: ${AREA_BY_ID[act.area].label.toLowerCase()}` : ''}.`, content: actContent(inst, act),
         proposer: act.sponsor?.label ?? 'Un gruppo consiliare', proposerParts: proposerParts({ sponsor: act.sponsor, own: act.sponsor?.kind === 'player' || act.kind === 'player', groups: inst.groups ?? [], parties: state.world?.parties ?? [], playerGroupId: inst.playerGroupId, plural: 'consiliare' }), confidence: act.kind === 'sfiducia', openedAt: act.floor.openedAt ?? null, line: act.floor.line ?? 'astenuto', intention: BALLOTS[act.pendingPlayerVote] ? act.pendingPlayerVote : null,
         voteId: committee ? null : `local:${inst.id}|${act.id}`, floorKey: act.floor.key
       });

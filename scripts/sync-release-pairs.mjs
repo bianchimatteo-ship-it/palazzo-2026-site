@@ -4,7 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 const build = (await readFile(new URL('../index.html', import.meta.url), 'utf8')).match(/main\.js\?v=([^"']+)/)?.[1];
 const v = build ? `?v=${build}` : '';
 const load = path => import(new URL(`../${path}${v}`, import.meta.url).href);
-const sources = [await load('src/data/program-catalog.js'), await load('src/data/activity-scene-guests.js'), await load('src/data/activity-scene-stakes.js'), await load('src/data/release-pairs.js')];
+const sources = [await load('src/data/program-catalog.js'), await load('src/data/activity-scene-guests.js'), await load('src/data/activity-scene-stakes.js'), await load('src/data/release-pairs.js'), await load('src/data/news-messages.js')];
 // a phrase the book already translates elsewhere keeps its translation (the same Italian is never listed twice with two Englishes)
 const existing = new Set();
 for (let n = 1; n <= 8; n++) { const text = (await readFile(new URL(`../src/data/i18n/en-ui-${n}.js`, import.meta.url), 'utf8')).replace(/ {2}\/\/ <release-pairs:begin>[\s\S]*?\/\/ <release-pairs:end>/, ''); for (const match of text.matchAll(/^\s*\["((?:[^"\\]|\\.)*)",\s*"(?:[^"\\]|\\.)*"\]/gm)) existing.add(JSON.parse(`"${match[1]}"`)); }

@@ -1,8 +1,10 @@
 // Simulated newsroom: headlines tied to what happens in the career, written with different structures
 // (fact, question, number, local angle, quote-like, analysis) and never the same template twice in a row.
 // Headlines speak of the player's own character and of the simulated world: no statement is put in the mouth of real people.
-import { ARTICLE_CATEGORIES, KICKERS, NEWSROOM_OUTLETS, NEWS_RULES as RULES, OUTLET_STYLE, RADIO_PROGRAMMES, RADIO_RULES, STORY_KINDS } from '../data/simulation/news-rules.js?v=20261113-1';
-import { WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20261113-1';
+import { ARTICLE_CATEGORIES, KICKERS, NEWSROOM_OUTLETS, NEWS_RULES as RULES, OUTLET_STYLE, RADIO_PROGRAMMES, RADIO_RULES, STORY_KINDS } from '../data/simulation/news-rules.js?v=20261113-8';
+import { WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20261113-8';
+import { ACTIVITY_KINDS, ACTIVITY_RESULT, message, topicEnglish } from '../data/news-messages.js?v=20261113-8';
+import { rememberPairs } from './i18n.js?v=20261113-8';
 const RECENT = 18;
 // A template not used recently; when every template of the kind has been used, the least recently used one.
 const pick = (list, seed, recent) => {
@@ -86,8 +88,21 @@ export const categoryLabel = id => ARTICLE_CATEGORIES.find(item => item.id === i
 export const credibilityWeight = outlet => clamp(RULES.weight.base + RULES.weight.perPoint * (outlet?.credibility ?? 55), RULES.weight.min, RULES.weight.max);
 
 // The media of a save, with the identity of every channel (credibility keeps what it earned), and the containers of the newsroom.
+// The articles that carry their own English tell it to the translation (Italian sentence → English sentence); once for each article.
+const told = new WeakSet();
+function tellEnglish(articles) {
+  const pairs = [];
+  for (const article of articles) {
+    if (!article?.en || told.has(article)) continue;
+    told.add(article);
+    pairs.push([article.headline, article.en.headline], [article.deck, article.en.deck]);
+    (article.body ?? []).forEach((paragraph, index) => pairs.push([paragraph, article.en.body?.[index]]));
+  }
+  if (pairs.length) rememberPairs(pairs);
+}
 export function normalizeMedia(input) {
   const media = input && typeof input === 'object' ? input : {};
+  tellEnglish(Array.isArray(media.articles) ? media.articles : []);
   const outlets = (media.outlets ?? []).map(outlet => {
     const identity = NEWSROOM_OUTLETS[outlet.id];
     return identity ? { ...outlet, name: identity.name, tagline: identity.tagline, leaning: identity.leaning, baseCredibility: identity.credibility, credibility: Number.isFinite(outlet.credibility) ? outlet.credibility : identity.credibility } : outlet;
@@ -190,11 +205,18 @@ const BUILDERS = {
     const head = won ? { neutral: `${what}: il tuo risultato${pct ? ` (${pct})` : ''} vale un mandato`, critical: `${what}: ${pct ? `${pct} e ` : ''}un mandato conquistato, ma restano le divisioni`, friendly: `${what}: successo${pct ? ` al ${pct}` : ''}, mandato conquistato` } : { neutral: `${what}: ${pct ? `${pct}, ` : ''}nessun mandato`, critical: `${what}: ${pct ? `${pct}, ` : ''}la candidatura non basta`, friendly: `${what}: ${pct ? `${pct}, ` : ''}il risultato non basta per il mandato` };
     return { headline: head, deck: d.outcomeLabel ?? fact.text, paragraphs: [`${d.label ?? 'Il voto'} si chiude${pct ? ` con il ${pct} per la tua candidatura` : ''}${d.seats ? ` e ${d.seats} ${d.seats === 1 ? 'seggio' : 'seggi'}` : ''}. ${won ? 'Il mandato personale è conquistato.' : 'Il mandato personale non è raggiunto.'}`, d.outcomeLabel ? `Esito: ${lower(d.outcomeLabel)}.` : '', d.objectiveMet === true ? 'L’obiettivo che ti eri dato è stato raggiunto.' : d.objectiveMet === false ? 'L’obiettivo che ti eri dato non è stato raggiunto.' : ''].filter(Boolean), facts: [['Elezione', d.label ?? '—'], ...(pct ? [['Risultato', pct]] : []), ...(d.seats ? [['Seggi', d.seats]] : []), ['Mandato', won ? 'conquistato' : 'non raggiunto']] };
   },
-  attivita(fact) {
+  // The public appearances are written from the catalog of data/news-messages.js: the template, the parameters (name, topic, territory, party) and the kind are separate, and the same builder gives the
+  // Italian text (what the save keeps) and the English one (`article.en`). A topic the catalog has no English for gives no English text: the phrase book translates it, as for older saves.
+  attivita(fact, ctx, lang = 'it') {
     const d = fact.data;
-    const how = d.tone === 'bad' ? 'una prova difficile' : d.tone === 'good' ? 'una prova convincente' : 'una prova senza scossoni';
-    const kind = { intervista: 'L’intervista', conferenza: 'La conferenza stampa', talk: 'L’ospitata televisiva', 'prima-serata': 'La prima serata', interrogazione: 'L’interrogazione' }[d.activity] ?? 'L’uscita pubblica';
-    return { headline: { neutral: `${d.name}: ${lower(kind)} su ${d.topic}`, critical: d.tone === 'bad' ? `${d.name} in difficoltà su ${d.topic}` : `${d.name} parla di ${d.topic}: molte domande restano aperte`, friendly: d.tone === 'bad' ? `${d.name} su ${d.topic}: nonostante le critiche, tiene la linea` : `${d.name} su ${d.topic}: il punto di vista di ${d.party ?? 'una forza politica'}` }, deck: `${kind} di ${d.name} è stata ${how}; il tema è ${d.topic}${d.region ? ` e il territorio di riferimento è ${d.region}` : ''}.`, paragraphs: [`${kind} di ${d.name} ha messo al centro ${d.topic}. Secondo i resoconti simulati è stata ${how}.`, d.region ? `Il riferimento al territorio (${d.region}) ha dato concretezza agli argomenti.` : '', d.priority ? `Il tema era tra le priorità dichiarate del Governo.` : ''].filter(Boolean), facts: [['Esito', d.tone === 'good' ? 'positivo' : d.tone === 'bad' ? 'negativo' : 'neutro'], ['Tema', d.topic]] };
+    const english = lang === 'en';
+    const tone = d.tone === 'bad' || d.tone === 'good' ? d.tone : 'neutral';
+    const topic = english ? topicEnglish(d.topic) : d.topic;
+    if (english && topic === null) return null;
+    const params = { name: d.name, topic, region: d.region, party: d.party ?? message('attivita.forza', lang), kindKey: ACTIVITY_KINDS[d.activity] ? d.activity : 'pubblica', tone };
+    const m = id => message(id, lang, params);
+    const result = ACTIVITY_RESULT[tone][english ? 1 : 0];
+    return { headline: { neutral: m('attivita.titolo'), critical: tone === 'bad' ? m('attivita.titolo.difficolta') : m('attivita.titolo.domande'), friendly: tone === 'bad' ? m('attivita.titolo.linea') : m('attivita.titolo.punto') }, deck: `${d.region ? m('attivita.sommario.territorio') : m('attivita.sommario')}.`, paragraphs: [m('attivita.corpo'), d.region ? m('attivita.territorio') : '', d.priority ? m('attivita.priorita') : ''].filter(Boolean), facts: [[english ? 'Outcome' : 'Esito', result], [english ? 'Topic' : 'Tema', topic]] };
   }
 };
 
@@ -444,6 +466,9 @@ export function publishFact(mediaIn, fact, ctx) {
   const breaking = (fact.importance ?? 0) >= RULES.breakingMin && !media.articles.some(item => item.breaking && item.week === fact.week);
   const region = fact.data?.region ?? fact.region ?? null;
   const article = { id: `articolo-${fact.week}-${media.seq}`, key: fact.key, week: fact.week, date: fact.date, outletId: outlet.id, outlet: outlet.name, category: fact.category, headline: headlineFor(pickVariant(built.headline, edge), outlet, region), tags: outlet.id === 'social' ? [`#${categoryLabel(fact.category).replace(/\s+/g, '')}`] : [], kicker: shaped.kicker, form: shaped.form, deck: shaped.deck, body: shaped.body, facts: built.facts.map(([label, value]) => ({ label, value: String(value) })), tone: fact.tone, importance: fact.importance, edge, storyId: story?.id ?? null, kind: fact.kind, region: fact.data?.region ?? fact.region ?? null, breaking, source: RULES.source };
+  // the English of what the engine writes from a template with parameters, kept next to the Italian (see data/news-messages.js)
+  const builtEn = fact.kind === 'attivita' ? BUILDERS.attivita(fact, ctx, 'en') : null;
+  if (builtEn) { const shapedEn = shapeArticle(builtEn, { fact, outlet, story, ctx }); article.en = { headline: headlineFor(pickVariant(builtEn.headline, edge), outlet, region), deck: shapedEn.deck, body: shapedEn.body }; }
   media.articles = [article, ...media.articles].slice(0, RULES.articlesKept);
   media.seen = [...media.seen, fact.key].slice(-RULES.seenKept);
   if (story) {

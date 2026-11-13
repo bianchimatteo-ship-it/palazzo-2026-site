@@ -5,7 +5,7 @@
 //     the phrase book (src/data/i18n/en-*.js): exact phrases, phrases with numbers (`#`) or free parts (`{}`), and the numbers, currency and dates in English form.
 //     Proper names (people, parties, places, official denominations) are never in the phrase book: they stay as they are. A phrase that is not in the book stays Italian, never wrong.
 // Nothing here touches a career: the language is a view of the same data.
-import { saveSetting } from './settings.js?v=20261113-1';
+import { saveSetting } from './settings.js?v=20261113-8';
 
 export const LANGUAGES = Object.freeze([['it', 'Italiano', 'it-IT'], ['en', 'English', 'en-GB']]);
 const SETTINGS_KEY = 'politicando.settings.v1';
@@ -62,6 +62,16 @@ export function installBook(pairs, keys = {}) {
   }
   Object.assign(book.keys, keys);
 }
+// Texts the engine wrote in BOTH languages (an article of the newsroom keeps its English next to its Italian): the Italian sentence is the key, the English one is what the screen shows, exact and
+// ahead of every other rule — the parameters (names, topics) were never translated, they were put in the English template. Nothing is kept in the save from here: the pairs are read again from the
+// articles each time they are shown (`rememberPairs`), so a language change still goes through the same Italian source.
+const written = new Map();
+export function rememberPairs(pairs) {
+  let added = false;
+  for (const [it, en] of pairs) { const key = String(it ?? '').trim(); if (key && typeof en === 'string' && en && written.get(key) !== en) { written.set(key, en); added = true; } }
+  if (added) { if (written.size > 4000) { const keep = [...written].slice(-3000); written.clear(); for (const [k, v] of keep) written.set(k, v); } cache.clear(); }
+}
+export function forgetPairs() { written.clear(); cache.clear(); }
 export const bookSize = () => book ? book.exact.size + book.templates.length : 0;
 export const hasBook = () => Boolean(book);
 
@@ -266,7 +276,7 @@ function translatePiece(text, depth = 0, level = 0) {
   }
   if (first !== null) return first;
   // a known label followed by a signed figure («Reputazione sul territorio +8», «Capitale politico ogni settimana −1»): the label is translated, the figure stays
-  const signed = text.match(/^(.*\S) ([+−±-]\d[\d.,]*%?)$/u);
+  const signed = text.match(/^(.*\S) ((?:[+−±-]\d[\d.,]*%?)|(?:\d[\d.,]*%)|(?:\(\d[\d.,]*\)))$/u);   // (a figure after the label: «+8», «1.2%», «(4)»)
   if (signed) { const head = lookup(signed[1], depth); if (head !== null) return `${head} ${signed[2]}`; }
   // a list of known labels joined by «, » and « e » when some labels hold an « e » themselves («pensionati e over 65 e famiglie e lavoratori 35–54»): cut at the separators and put together again with the
   // longest labels the book knows; translated only when EVERY label is known
@@ -323,7 +333,7 @@ export function translateText(text) {
   const core = text.trim();
   let out = cache.get(core);
   if (out === undefined) {
-    let translated = translatePiece(core);
+    let translated = written.get(core) ?? translatePiece(core);
     // Not in the phrase book, or only in part («Programma: fino a quattro priorità» → «PROGRAMME: fino a quattro priorità»): the automatic translator (server provider, persistent cache) is asked for the
     // WHOLE text as an anonymous template; until it answers the text stays as it is (retranslate() clears this memory when answers arrive).
     if (auto && (translated === core || residualItalian(englishDates(englishNumbers(translated))) !== null)) {
@@ -455,7 +465,7 @@ export function watchTree(root) {
 let loading = null;
 export function loadBook() {
   if (book?.loaded) return Promise.resolve(book);
-  loading ??= import('../data/i18n/index.js?v=20261113-1').then(module => { module.install(installBook); book.loaded = true; return book; });
+  loading ??= import('../data/i18n/index.js?v=20261113-8').then(module => { module.install(installBook); book.loaded = true; return book; });
   return loading;
 }
 // The title of the page (the tab) is read by people and by assistive technology: it follows the language like the rest (the Italian one is kept to go back to).

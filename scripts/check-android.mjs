@@ -121,6 +121,11 @@ for (const [name, factor] of Object.entries(densities)) {
 
 // ---------- 4. www and the copy inside the Android project ----------
 const wwwIndex = await text('www/index.html');
+// a build for the store reads and writes Production: it never carries the address of a Test Worker (POLITICANDO_API_ORIGIN is for Test builds only)
+if (/name="politicando-api-origin"/.test(wwwIndex)) {
+  if (release) assert.fail('www/index.html dichiara il Worker di Test (politicando-api-origin): una build per lo store legge e scrive la Produzione. Ricostruisci www senza POLITICANDO_API_ORIGIN.');
+  notes.push('www/index.html dichiara un Worker di Test (build di collaudo): non va usata per lo store');
+}
 const stamp = /main\.js\?v=([\w-]+)/.exec(await text('index.html'))?.[1];
 assert.ok(stamp && wwwIndex.includes(`?v=${stamp}`), 'www/index.html ha lo stesso timbro di versione dei sorgenti.');
 assert.equal(buildInfo.buildStamp, stamp, 'www/build-info.json ha il timbro dei sorgenti.');

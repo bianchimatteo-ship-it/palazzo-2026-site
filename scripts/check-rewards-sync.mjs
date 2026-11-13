@@ -559,6 +559,62 @@ const HOUR = 3600000;
   assert.ok(!/<input|password|<img[^>]*instagram/i.test(html), 'Nessun campo per credenziali, nessun logo nelle altre carte.');
   assert.match(html, /Segui su Instagram/); assert.match(html, /Ho seguito, riscuoti/); assert.match(html, /non controlliamo il tuo account Instagram/);
   lines.push('ricompensa Instagram: attiva da configurazione (e disattivabile da lì); da autodichiarazione una volta (ospite per dispositivo, account per account), +1.500 € nel registro e +5 capitale col tetto, recuperabile dopo errore di rete, risposta persa e uscita, nessuna chiamata a Instagram');
+
+  // ----- TikTok: the same mechanism, apart from Instagram, and OFF (the rules of the platform forbid false incentives for engagement: see reward-rules.js) -----
+  const tk_TT = rules.COMMUNITY_REWARD.tiktok;
+  assert.ok(tk_TT && tk_TT.id === 'tiktok' && tk_TT.url === 'https://www.tiktok.com/@politicando2026_gioco' && tk_TT.funds === 1500 && tk_TT.capital === 5, 'La ricompensa TikTok ha il suo identificativo, il profilo ufficiale e gli stessi valori di Instagram.');
+  assert.equal(tk_TT.enabled, false, 'TikTok è spenta finché le regole della piattaforma non lo consentono.');
+  const tk_tokenTT = await register('social.tiktok');
+  const tk_refused = await post(tk_tokenTT, '/api/account/rewards/community/tiktok', { device: 'dev-tt-a' });
+  assert.equal(tk_refused.code, 'disabled', 'Anche il Worker rifiuta la riscossione finché è spenta.');
+  assert.equal(local.sqlite.prepare("SELECT COUNT(*) AS n FROM reward_community WHERE reward = 'tiktok'").get().n, 0, 'E non scrive nulla.');
+  // the page: the profile, no incentive, no way to claim
+  const tk_dflt = makeDevice('T0', null, null, {}); tk_dflt.service = createRewardsService({ store, journal: tk_dflt.journal, username: () => null, env: { now: () => 0, wall: () => vt, visible: () => true, playing: () => true, lease: createStorageLease(memoryStorage(), { tabId: 'T0', wall: () => vt }), storage: memoryStorage() } });
+  const tk_pageOff = renderRewardsPage(store.getState(), { ...tk_dflt.service.snapshot(), playing: true });
+  const tk_cardOff = /<section class="reward-card[^>]*data-reward-community="tiktok"[\s\S]*?<\/section>/.exec(tk_pageOff)?.[0] ?? '';
+  assert.ok(tk_cardOff.includes('href="https://www.tiktok.com/@politicando2026_gioco"') && /rel="noopener noreferrer"/.test(tk_cardOff) && /Apri il profilo su TikTok/.test(tk_cardOff), 'La carta TikTok offre il collegamento al profilo.');
+  assert.ok(!/€|capitale|riscuot|data-community-claim|fondi/i.test(tk_cardOff), 'Senza alcun incentivo né pulsante di riscossione.');
+  assert.ok(/data-reward-community="instagram"/.test(tk_pageOff) && /\+1\.500|1\.500/.test(tk_pageOff), 'La carta Instagram non cambia.');
+  assert.equal(tk_dflt.service.visitCommunity('tiktok'), false); assert.equal((await tk_dflt.service.claimCommunity('tiktok')).reason, 'non-attiva', 'Il servizio non riscuote.');
+  // switched on (a test of the mechanism: configuration of the page AND of the Worker): independent of Instagram
+  local.env.COMMUNITY_TIKTOK_ENABLED = '1';
+  const tk_makeTT = (name, userName, tokenX, hooks = {}) => { const d = makeDevice(name, userName, tokenX, {}); d.service = createRewardsService({ store, journal: d.journal, username: () => userName, community: { tiktok: true }, claimCommunity: userName ? viaWorker(tokenX, hooks).claim : null, syncTime: userName ? body => sendRaw(tokenX, body) : null, env: { now: () => d.env.t, wall: () => vt, visible: () => true, playing: () => d.env.playing, lease: createStorageLease(memoryStorage(), { tabId: name, wall: () => vt }), storage: memoryStorage() } }); return d; };
+  // a guest: once for the device, double click included, and Instagram still has its own claim
+  const tk_GT = tk_makeTT('T1', null, null); activate('T1'); const tk_g0 = game().resources.funds, tk_c0 = game().resources.politicalCapital = 10;
+  assert.equal((await tk_GT.service.claimCommunity('tiktok')).reason, 'non-visitato', 'Senza aver aperto il profilo non si riscuote.');
+  assert.equal(tk_GT.service.visitCommunity('tiktok'), true);
+  await Promise.all([tk_GT.service.claimCommunity('tiktok'), tk_GT.service.claimCommunity('tiktok')]);
+  assert.equal(game().resources.funds, tk_g0 + 1500, 'Doppio clic: una sola riscossione.'); assert.equal(game().resources.politicalCapital, tk_c0 + 5);
+  assert.equal(game().finance.ledger[0].label, 'Community TikTok', 'Nel registro finanziario con il nome della piattaforma.');
+  const tk_ttEntries = R.rewardHistory(game()).filter(item => item.kind === 'community' && item.reward === 'tiktok');
+  assert.equal(tk_ttEntries.length, 2, 'Due voci nello storico (fondi e capitale), con l’identificativo tiktok.');
+  assert.match(renderRewardsPage(store.getState(), { ...tk_GT.service.snapshot(), playing: true }), /Community TikTok/, 'Lo storico e la carta nominano TikTok.');
+  const tk_ttNotice = tk_GT.service.notices().find(item => item.kind === 'community' && item.reward === 'tiktok');
+  assert.ok(tk_ttNotice && /TikTok/.test(noticeParts(tk_ttNotice).reason) && !/Instagram/.test(noticeParts(tk_ttNotice).reason), 'Il popup nomina TikTok, non Instagram.');
+  assert.equal((await tk_GT.service.claimCommunity('tiktok')).reason, 'già-riscossa');
+  tk_GT.service.visitCommunity('instagram');
+  const tk_gi = game().resources.funds;
+  assert.equal((await tk_GT.service.claimCommunity('instagram')).ok, true, 'La riscossione di Instagram è un’altra: indipendente.'); assert.equal(game().resources.funds, tk_gi + 1500);
+  // an account: once for the account, on every device and career; a tk_lost answer is recovered; a network error leaves it pending and nothing is credited twice
+  let tk_dropTT = false;
+  const tk_T2a = tk_makeTT('T2', 'social.tiktok', tk_tokenTT, { drop: () => tk_dropTT }), tk_T2b = tk_makeTT('T3', 'social.tiktok', tk_tokenTT);
+  activate('T2'); const tk_f2 = game().resources.funds;
+  tk_T2a.service.visitCommunity('tiktok'); tk_dropTT = true;
+  const tk_lost = await tk_T2a.service.claimCommunity('tiktok');
+  assert.equal(tk_lost.ok, false); assert.equal(tk_T2a.journal.community(tk_T2a.journal.scope('social.tiktok'), 'tiktok').state, 'pending', 'Errore di rete: in attesa, nulla accreditato.'); assert.equal(game().resources.funds, tk_f2);
+  tk_dropTT = false; vt += 40000;
+  await tk_T2a.service.settleCommunity('tiktok', true);
+  assert.equal(game().resources.funds, tk_f2 + 1500, 'Il tentativo successivo la riconosce come sua e la accredita una volta.');
+  assert.equal(local.sqlite.prepare("SELECT COUNT(*) AS n FROM reward_community WHERE reward = 'tiktok' AND user_id = (SELECT id FROM users WHERE username = 'social.tiktok')").get().n, 1, 'Una riga per account.');
+  activate('T3'); const tk_f3 = game().resources.funds;
+  tk_T2b.service.visitCommunity('tiktok');
+  await Promise.all([tk_T2b.service.claimCommunity('tiktok'), tk_T2b.service.claimCommunity('tiktok')]);
+  assert.equal(game().resources.funds, tk_f3, 'Un altro dispositivo dello stesso account non la riscuote di nuovo.'); assert.equal(tk_T2b.journal.community(tk_T2b.journal.scope('social.tiktok'), 'tiktok').state, 'claimed-elsewhere');
+  assert.equal(local.sqlite.prepare("SELECT COUNT(*) AS n FROM reward_community WHERE user_id = (SELECT id FROM users WHERE username = 'social.tiktok')").get().n, 1, 'E nel database di Instagram nulla è cambiato.');
+  local.env.COMMUNITY_TIKTOK_ENABLED = '0';
+  assert.equal((await post(tk_tokenTT, '/api/account/rewards/community/tiktok', { device: 'dev-tt-z' })).code, 'disabled', 'Spenta di nuovo sul Worker, torna a rifiutare.');
+  lines.push('ricompensa TikTok: identificativo proprio, profilo ufficiale, stessi valori di Instagram; spenta (carta con il solo collegamento, nessun incentivo, Worker e servizio rifiutano); acceso il meccanismo, una riscossione per account e per ospite, doppio clic, errore di rete, storico e popup con la piattaforma giusta, indipendente da Instagram, nessuna chiamata a TikTok');
+
 }
 
 // ============ 11. the migration of a database made by the earlier version ============

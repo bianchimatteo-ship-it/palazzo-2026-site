@@ -1,9 +1,9 @@
 // «Ricompense»: the daily reward, the time played, the rewarded videos and what was received. It shows only what the player is meant to know: nothing about how long the effect of a video lasts or where it
 // comes from (that is not told anywhere in the game).
-import { DAILY_REWARD, PLAY_REWARDS } from '../data/simulation/reward-rules.js?v=20261113-1';
-import { t } from '../core/i18n.js?v=20261113-1';
-import { glyph } from './visuals.js?v=20261113-1';
-import { esc } from './charts.js?v=20261113-1';
+import { COMMUNITY_PLATFORM, DAILY_REWARD, PLAY_REWARDS } from '../data/simulation/reward-rules.js?v=20261113-8';
+import { t } from '../core/i18n.js?v=20261113-8';
+import { glyph } from './visuals.js?v=20261113-8';
+import { esc } from './charts.js?v=20261113-8';
 // euros with the thousands point also for four digits (toLocaleString('it-IT') writes 1500): the amounts here are 500 and 1.500
 const euro = value => `${String(Math.round(Number(value) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} €`;
 
@@ -29,7 +29,7 @@ export function noticeParts(notice) {
   const title = gained ? (funds ? `+${euro(notice.amount)}` : `+${notice.amount} ${notice.resource}`) : `${notice.resource} già al massimo`;
   let reason;
   if (notice.kind === 'giornaliera') reason = t('rewards.popup.daily', 'Hai giocato almeno 5 minuti oggi');
-  else if (notice.kind === 'community') reason = gained ? t('rewards.popup.community', 'Grazie per far parte della community') : t('rewards.popup.limit', 'Il limite è 100: nessun punto aggiunto');
+  else if (notice.kind === 'community') reason = gained ? (COMMUNITY_PLATFORM[notice.reward] ? `Grazie per far parte della community ${COMMUNITY_PLATFORM[notice.reward]}` : t('rewards.popup.community', 'Grazie per far parte della community')) : t('rewards.popup.limit', 'Il limite è 100: nessun punto aggiunto');
   else reason = gained ? t('rewards.popup.minutes', 'Hai raggiunto {minutes} minuti di gioco', { minutes: notice.minutes }) : t('rewards.popup.minutesFull', 'Hai raggiunto {minutes} minuti di gioco: nessun punto aggiunto, il limite è 100', { minutes: notice.minutes });
   return { title, reason, gained, resource: notice.resource };
 }
@@ -58,25 +58,31 @@ export function renderRewardsPage(state, snapshot = null) {
   const dailyFraction = taken ? 1 : daily.ms / (daily.minutes * 60000);
   const card = (tone, kicker, title, body, extra = '') => `<section class="reward-card is-${tone}" ${extra}><header class="reward-card-head"><span class="section-kicker">${kicker}</span><h2>${title}</h2></header>${body}</section>`;
   const block = (spec, progress, key, name) => `<div class="reward-row" data-reward-row="${key}"><div class="reward-row-name"><strong>${name}</strong><small>Ogni ${spec.everyMinutes} minuti di gioco: +${spec.amount} ${esc(spec.resource.toLowerCase())}</small></div>${bar(progress.fraction, key, name)}<span class="reward-meta"><b data-reward-text="${key}">${progress.minutes} di ${spec.everyMinutes} minuti</b><small>${progress.blocks} ${progress.blocks === 1 ? 'premio ottenuto' : 'premi ottenuti'}</small></span></div>`;
-  const rows = history.length ? `<div class="reward-history" role="table" aria-label="Storico delle ricompense"><div class="reward-history-head" role="row"><span role="columnheader">Data e ora</span><span role="columnheader">Ricompensa</span><span role="columnheader">Ricevuto</span><span role="columnheader">Risorsa</span></div>${history.map(entry => `<div class="reward-history-row is-${KIND_TONE[entry.kind] ?? 'gold'} ${entry.amount ? '' : 'is-zero'}" role="row"><time role="cell" datetime="${esc(entry.at)}">${esc(whenText(entry.at))}</time><span role="cell" class="reward-history-kind">${esc(KIND_LABEL[entry.kind] ?? 'Ricompensa')}</span><b role="cell">${esc(amountText(entry))}</b><span role="cell">${esc(entry.resource ?? '')}</span></div>`).join('')}</div>` : '<p class="quiet-copy">Nessuna ricompensa ancora: gioca qualche minuto per ottenere la prima.</p>';
-  const ig = community?.instagram;
-  const [igLabel, igTone] = COMMUNITY_STATE[ig?.state] ?? COMMUNITY_STATE.idle;
-  const igDone = ig?.state === 'claimed' || ig?.state === 'claimed-elsewhere';
-  const igBusy = ['claiming', 'pending', 'owed'].includes(ig?.state);
-  const instagram = ig ? card('rose', 'COMMUNITY', 'Community Instagram', `
-      <p>Segui il profilo ufficiale del gioco e ricevi una volta sola:</p><ul class="reward-perks"><li><strong>+${euro(ig.funds)}</strong> <span>ai fondi personali</span></li><li><strong>+${ig.capital}</strong> <span>capitale politico</span></li></ul>
-      <div class="reward-state"><span class="badge badge-${ig.enabled ? igTone : 'warn'}" data-community-label>${ig.enabled ? esc(igLabel) : 'Non disponibile'}</span><small>${ig.guest ? 'Senza accesso vale una volta per questo dispositivo.' : 'Una volta sola per account, su qualunque carriera e dispositivo.'}</small></div>
-      ${ig.enabled && !igDone ? `<div class="reward-actions"><a class="secondary-button" href="${esc(ig.url)}" target="_blank" rel="noopener noreferrer" data-community-follow>Segui su Instagram</a><button type="button" class="primary-button" data-community-claim ${ig.state === 'visited' && snapshot.playing && !igBusy ? '' : 'disabled aria-disabled="true"'}>Ho seguito, riscuoti</button></div>
-      <p class="quiet-copy" data-community-note>${ig.state === 'idle' ? 'Apri il profilo, poi torna qui e riscuoti.' : igBusy ? 'La richiesta è in attesa: si completa da sola appena possibile.' : snapshot.playing ? 'È una tua dichiarazione: non controlliamo il tuo account Instagram e non ti chiediamo credenziali.' : 'Servono una carriera aperta e la partita in primo piano.'}</p>` : ''}
-      ${ig.enabled ? '' : '<p class="quiet-copy" data-community-note>Questa ricompensa non è al momento disponibile.</p>'}`, `data-reward-community="instagram" data-community-state="${esc(ig.state)}" data-community-enabled="${ig.enabled ? 'yes' : 'no'}"`) : '';
+  const rows = history.length ? `<div class="reward-history" role="table" aria-label="Storico delle ricompense"><div class="reward-history-head" role="row"><span role="columnheader">Data e ora</span><span role="columnheader">Ricompensa</span><span role="columnheader">Ricevuto</span><span role="columnheader">Risorsa</span></div>${history.map(entry => `<div class="reward-history-row is-${KIND_TONE[entry.kind] ?? 'gold'} ${entry.amount ? '' : 'is-zero'}" role="row"><time role="cell" datetime="${esc(entry.at)}">${esc(whenText(entry.at))}</time><span role="cell" class="reward-history-kind">${esc((entry.kind === 'community' && COMMUNITY_PLATFORM[entry.reward] ? `Community ${COMMUNITY_PLATFORM[entry.reward]}` : KIND_LABEL[entry.kind] ?? 'Ricompensa'))}</span><b role="cell">${esc(amountText(entry))}</b><span role="cell">${esc(entry.resource ?? '')}</span></div>`).join('')}</div>` : '<p class="quiet-copy">Nessuna ricompensa ancora: gioca qualche minuto per ottenere la prima.</p>';
+  // one card for each community profile: the reward is a self-declaration after the profile was opened from the game; a profile whose reward is off (TikTok) shows the link and no incentive at all
+  const communityCard = (id, data) => {
+    const [label, tone] = COMMUNITY_STATE[data.state] ?? COMMUNITY_STATE.idle;
+    const done = data.state === 'claimed' || data.state === 'claimed-elsewhere';
+    const busy = ['claiming', 'pending', 'owed'].includes(data.state);
+    const name = data.platform ?? COMMUNITY_PLATFORM[id] ?? id;
+    const attrs = `data-reward-community="${esc(id)}" data-community-state="${esc(data.state)}" data-community-enabled="${data.enabled ? 'yes' : 'no'}"`;
+    if (!data.enabled && data.linkWhenOff) return card('rose', 'COMMUNITY', `Community ${name}`, `<p>Il profilo ufficiale del gioco su ${name}.</p><div class="reward-actions"><a class="secondary-button" href="${esc(data.url)}" target="_blank" rel="noopener noreferrer" data-community-profile="${esc(id)}">Apri il profilo su ${name}</a></div>`, attrs);
+    return card('rose', 'COMMUNITY', `Community ${name}`, `
+      <p>Segui il profilo ufficiale del gioco e ricevi una volta sola:</p><ul class="reward-perks"><li><strong>+${euro(data.funds)}</strong> <span>ai fondi personali</span></li><li><strong>+${data.capital}</strong> <span>capitale politico</span></li></ul>
+      <div class="reward-state"><span class="badge badge-${data.enabled ? tone : 'warn'}" data-community-label>${data.enabled ? esc(label) : 'Non disponibile'}</span><small>${data.guest ? 'Senza accesso vale una volta per questo dispositivo.' : 'Una volta sola per account, su qualunque carriera e dispositivo.'}</small></div>
+      ${data.enabled && !done ? `<div class="reward-actions"><a class="secondary-button" href="${esc(data.url)}" target="_blank" rel="noopener noreferrer" data-community-follow data-community-id="${esc(id)}">Segui su ${name}</a><button type="button" class="primary-button" data-community-claim data-community-id="${esc(id)}" ${data.state === 'visited' && snapshot.playing && !busy ? '' : 'disabled aria-disabled="true"'}>Ho seguito, riscuoti</button></div>
+      <p class="quiet-copy" data-community-note>${data.state === 'idle' ? 'Apri il profilo, poi torna qui e riscuoti.' : busy ? 'La richiesta è in attesa: si completa da sola appena possibile.' : snapshot.playing ? `È una tua dichiarazione: non controlliamo il tuo account ${name} e non ti chiediamo credenziali.` : 'Servono una carriera aperta e la partita in primo piano.'}</p>` : ''}
+      ${data.enabled ? '' : '<p class="quiet-copy" data-community-note>Questa ricompensa non è al momento disponibile.</p>'}`, attrs);
+  };
+  const communities = Object.entries(community ?? {}).map(([id, data]) => communityCard(id, data)).join('');
   return `<div class="rewards-page" data-rewards-page>
     <section class="reward-hero"><div class="reward-hero-mark">${glyph('trophy', 34)}</div><div class="reward-hero-copy"><span class="section-kicker">RICOMPENSE · SIMULAZIONE</span><h2>Giocare ti premia</h2><p class="section-subtitle">Un premio al giorno, uno ogni mezz’ora e uno ogni ora di gioco, e i video premiati. Il tempo conta solo quando giochi davvero: la partita aperta, la pagina in primo piano.</p></div>
       <dl class="reward-hero-stats"><div><dt>Tempo di gioco</dt><dd data-reward-text="total">${esc(durationText(play.totalMs))}</dd></div><div><dt>Premi ottenuti</dt><dd>${history.filter(entry => entry.amount > 0).length}</dd></div></dl></section>
     <div class="reward-grid">
       ${card('gold', 'OGNI GIORNO', 'Ricompensa giornaliera', `<div class="reward-daily" data-reward-daily="${esc(daily.state)}"><div class="reward-amount"><strong>+${euro(DAILY_REWARD.amount)}</strong><small>ai tuoi fondi personali (non alla tesoreria del partito)</small></div><div class="reward-state"><span class="badge badge-${dailyTone}" data-reward-state>${esc(dailyLabel)}</span>${bar(dailyFraction, 'daily', 'Avanzamento della ricompensa giornaliera')}<span class="reward-meta"><b data-reward-text="daily">${taken ? 'Già riscossa nella giornata' : `${clockText(daily.ms)} di ${daily.minutes}:00`}</b><small>${daily.guest ? 'Senza accesso vale per questo dispositivo.' : 'Una sola volta al giorno per account, su qualunque carriera e dispositivo.'} Il giorno cambia a mezzanotte, ora di Roma.</small></span></div></div>`)}
       ${card('blue', 'LA TUA CARRIERA', 'Tempo di gioco', `${block(PLAY_REWARDS.capital, play.capital, 'capital', 'Prossimo capitale politico')}${block(PLAY_REWARDS.preparation, play.preparation, 'preparation', 'Prossima preparazione elettorale')}<p class="quiet-copy">Il tempo si somma tra una sessione e l’altra e non si perde. Capitale e preparazione non superano mai 100: se sei già al massimo il premio si ferma lì e lo storico lo dice.</p>${lost?.ms > 0 ? `<p class="quiet-copy" data-reward-lost>${esc(durationText(lost.ms))} di gioco non è stato possibile registrare sul tuo account: il premio locale resta.</p>` : ''}`)}
-      ${instagram}
-      ${card('violet', 'VIDEO PREMIATI', 'Ricompense pubblicitarie', `<p>Guarda un video fino alla fine: il tuo partito guadagna +0,15 punti nei sondaggi nazionali. I vantaggi di più video si sommano.</p><button type="button" class="primary-button" data-reward-video ${ads.available ? '' : 'disabled aria-disabled="true"'}>Guarda il video</button>${ads.available ? '' : `<p class="quiet-copy" data-reward-video-note>${esc(ads.reason ?? 'Nessun video disponibile in questo momento.')}</p>`}`)}
+      ${communities}
+      ${card('violet', 'VIDEO PREMIATI', 'Ricompense pubblicitarie', `<p>Guarda un video fino alla fine: il tuo partito guadagna +0,15 punti nei sondaggi nazionali. I vantaggi di più video si sommano.</p><button type="button" class="primary-button" data-reward-video data-ads-state="${esc(ads.available ? 'ready' : ads.code ?? 'not-configured')}" ${ads.available ? '' : 'disabled aria-disabled="true"'}>Guarda il video</button>${ads.available ? '' : `<p class="quiet-copy" data-reward-video-note data-ads-state="${esc(ads.code ?? 'not-configured')}">${esc(ads.reason ?? 'Nessun video disponibile in questo momento.')}</p>`}`)}
     </div>
     <section class="reward-card is-neutral reward-history-card"><header class="reward-card-head"><span class="section-kicker">STORICO</span><h2>Che cosa hai ricevuto</h2></header>${rows}</section>
   </div>`;
@@ -90,8 +96,7 @@ export function patchRewardsPage(root, snapshot) {
     const barEl = page.querySelector(`[data-reward-bar="${key}"]`); if (barEl) { barEl.firstElementChild.style.width = `${Math.max(0, Math.min(100, fraction * 100)).toFixed(1)}%`; barEl.setAttribute('aria-valuenow', String(Math.round(fraction * 100))); }
     const textEl = page.querySelector(`[data-reward-text="${key}"]`); if (textEl && text) textEl.textContent = text;
   };
-  const card = page.querySelector('[data-reward-community]');
-  if (card && snapshot.community?.instagram && (card.dataset.communityState !== snapshot.community.instagram.state || card.dataset.communityEnabled !== (snapshot.community.instagram.enabled ? 'yes' : 'no'))) return false;   // the card changes: the page is drawn again
+  for (const card of page.querySelectorAll('[data-reward-community]')) { const now = snapshot.community?.[card.dataset.rewardCommunity]; if (now && (card.dataset.communityState !== now.state || card.dataset.communityEnabled !== (now.enabled ? 'yes' : 'no'))) return false; }   // a card changes: the page is drawn again
   const { daily, play } = snapshot;
   const taken = daily.state === 'claimed' || daily.state === 'claimed-elsewhere';
   set('daily', taken ? 1 : daily.ms / (daily.minutes * 60000), taken ? 'Già riscossa nella giornata' : `${clockText(daily.ms)} di ${daily.minutes}:00`);

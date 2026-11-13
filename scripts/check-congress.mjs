@@ -279,7 +279,9 @@ const snapshot = game => JSON.stringify({ ap: game.week.ap, funds: game.resource
     const popup = game.celebrations?.outcome;
     assert.ok(popup && popup.kind === 'congresso' && popup.id === 'esito-congresso-26', `${seed}: l'esito del congresso è annunciato.`);
     assert.equal(popup.tone, outcome.playerWon ? 'win' : 'loss', `${seed}: vittoria o sconfitta della linea del giocatore dichiarata.`);
-    assert.ok(popup.lines.join(' ').includes(`${outcome.winner.pct}%`) && popup.lines.join(' ').includes(String(outcome.margin)) && popup.lines.join(' ').includes(outcome.winner.label), `${seed}: percentuale dei delegati, margine e linea vincente.`);
+    // (the Italian text writes its decimals with a comma: «37,5%», not «37.5%»)
+    const italian = value => String(value).replace('.', ',');
+    assert.ok(popup.lines.join(' ').includes(`${italian(outcome.winner.pct)}%`) && popup.lines.join(' ').includes(italian(outcome.margin)) && popup.lines.join(' ').includes(outcome.winner.label), `${seed}: percentuale dei delegati, margine e linea vincente.`);
     assert.ok(outcome.playerWon ? /vince il congresso/.test(popup.headline) : /perde/.test(popup.headline), `${seed}: il titolo dice se la linea ha vinto o perso.`);
     if (outcome.playerWon) won++; else lost++;
     margins.push(outcome.margin);

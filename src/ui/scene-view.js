@@ -1,14 +1,14 @@
 // The scene on screen (scene-engine.js): a 2D stage drawn in SVG (ui/stage-art.js) — the television studio, the square of a rally, the polling station — with the characters built from the game's own
 // avatars (the player is always the avatar chosen at the start of the career), the poses and the shots decided by core/stage-script.js and played by ui/stage-player.js. Below the stage: the line,
 // the reactions, the choices; above it the controls of the animation (skip, pause, complete / reduced / off). The same scenes with the motion off or reduced: the stage is simply in its final pose.
-import { ASKS, CLOSINGS, REPLIES, STYLES, sceneNode, sceneProgress } from '../core/scene-engine.js?v=20261113-1';
-import { stageBefore, stageOf } from '../core/stage-script.js?v=20261113-1';
-import { renderStageSvg } from './stage-art.js?v=20261113-1';
-import { ROOMS } from './room-art.js?v=20261113-1';
+import { ASKS, CLOSINGS, REPLIES, STYLES, sceneNode, sceneProgress } from '../core/scene-engine.js?v=20261113-8';
+import { stageBefore, stageOf } from '../core/stage-script.js?v=20261113-8';
+import { renderStageSvg } from './stage-art.js?v=20261113-8';
+import { ROOMS } from './room-art.js?v=20261113-8';
 export const SCENE_ROOMS = ROOMS; // the rooms of the optional scenes register themselves when room-art.js is imported
-import { ACTIVITY_SCENES } from '../core/activity-scenes.js?v=20261113-1';
-import { esc } from './charts.js?v=20261113-1';
-import { DEBATE_CHOICES } from '../data/debate-choices.js?v=20261113-1';   // (loading it registers the choices of the debate in the scene engine)
+import { ACTIVITY_SCENES } from '../core/activity-scenes.js?v=20261113-8';
+import { esc } from './charts.js?v=20261113-8';
+import { DEBATE_CHOICES } from '../data/debate-choices.js?v=20261113-8';   // (loading it registers the choices of the debate in the scene engine)
 export const DEBATE_TOPIC_IDS = Object.freeze(Object.keys(DEBATE_CHOICES));
 
 const KIND_LABELS = { risposta: 'Risposta', domanda: 'Domanda', replica: 'Replica', chiusura: 'Chiusura', saluto: 'Saluto', discorso: 'Discorso', contestazione: 'Contestazione' };

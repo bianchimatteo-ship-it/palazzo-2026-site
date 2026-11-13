@@ -1,11 +1,14 @@
 // Network side of the shared admin archive: read it for every player, write it with the owner's session.
-import { loadAdminArchive, loadSharedArchive, setSharedSessionToken, sharedCopyStored, sharedSessionToken, storeSharedArchive } from './admin-store.js?v=20261113-1';
+import { loadAdminArchive, loadSharedArchive, setSharedArchiveTag, setSharedSessionToken, sharedArchiveTag, sharedCopyStored, sharedLogoRef, sharedSessionToken, storeSharedArchive } from './admin-store.js?v=20261113-8';
+import { isNativeApp, nativeApiOrigin } from './account-sync.js?v=20261113-8';
 
 const PRODUCTION_API = 'https://palazzo-2026-site.bianchimatteo657.workers.dev/api/admin';
 // On the Worker (and its local preview) the API is on the same site; GitHub Pages reads it from the Worker.
 export function sharedApiUrl() {
   const location = globalThis.location;
   if (!location) return PRODUCTION_API;
+  // The installed app (Android) runs on its own origin (https://localhost): it reads the same archive as the web, from the Worker it is built for (Production unless the build says otherwise: see nativeApiOrigin).
+  if (isNativeApp()) return `${nativeApiOrigin()}/api/admin`;
   if (/workers\.dev$/.test(location.hostname) || location.port === '8791') return new URL('/api/admin', location.origin).href;
   if (/github\.io$/.test(location.hostname)) return PRODUCTION_API;
   // Any other published address (a custom domain on the Worker) has the API on the same site; a local copy has none.
@@ -19,7 +22,9 @@ async function call(path = '', options = {}, timeout = 5000) {
   const timer = setTimeout(() => controller.abort(), timeout);
   try {
     const response = await fetch(base + path, { ...options, signal: controller.signal, headers: { 'content-type': 'application/json', ...(options.headers ?? {}) } });
+    if (response.status === 304) return { notModified: true, etag: response.headers?.get?.('etag') ?? null };
     const body = await response.json().catch(() => ({}));
+    body.etag = response.headers?.get?.('etag') ?? null;
     if (!response.ok) throw Object.assign(new Error(body.error || `Archivio condiviso non raggiungibile (${response.status}).`), { status: response.status });
     return body;
   } catch (error) {
@@ -35,9 +40,11 @@ export const sharedSyncStatus = () => ({ ...syncStatus, copyStored: sharedCopySt
 export async function refreshSharedArchive() {
   const before = JSON.stringify(loadSharedArchive() ?? null);
   try {
-    const archive = await call('', { method: 'GET', cache: 'no-store' });
-    storeSharedArchive(archive);
-    syncStatus = { ok: true, at: new Date().toISOString(), error: null };
+    // a copy of the archive the server already sent is not downloaded again: the tag of the copy in use goes with the request (a 304 answer keeps the copy)
+    const tag = loadSharedArchive() ? sharedArchiveTag() : null;
+    const archive = await call('', { method: 'GET', cache: 'no-store', headers: tag ? { 'if-none-match': tag } : {} });
+    if (archive.notModified) syncStatus = { ok: true, at: new Date().toISOString(), error: null, notModified: true };
+    else { const { etag, ...rest } = archive; storeSharedArchive(rest); setSharedArchiveTag(etag); syncStatus = { ok: true, at: new Date().toISOString(), error: null }; }
   } catch (error) { syncStatus = { ok: false, at: new Date().toISOString(), error: error.message || 'Archivio condiviso non raggiungibile.' }; return false; }
   const after = loadSharedArchive();
   return JSON.stringify({ ...after, fetchedAt: null }) !== JSON.stringify({ ...(JSON.parse(before) ?? {}), fetchedAt: null });
@@ -90,4 +97,33 @@ export async function publishSharedArchive() {
     if (error.code === 'timeout') throw Object.assign(new Error('Il server non ha risposto in tempo: la pubblicazione non è confermata (le modifiche restano in questo browser, riprova).'), { code: 'timeout' });
     throw error;
   }
+}
+
+// ---- the logos of the parties of the catalogue: published by the owner, shown to every player ----
+// The address of the logo a party has in the shared catalogue (null when none): it carries the hash, so a new image is a new address and the browser keeps the old one for good (and offline).
+export function sharedLogoUrl(partyId) {
+  const ref = sharedLogoRef(partyId), base = sharedApiUrl();
+  return ref?.sha256 && base ? `${base}/catalog-logos/${encodeURIComponent(partyId)}?v=${ref.sha256.slice(0, 16)}` : null;
+}
+async function logoCall(partyId, init) {
+  const token = sharedSessionToken();
+  if (!token) throw new Error('Collega prima questo browser all’archivio condiviso.');
+  const base = sharedApiUrl();
+  if (!base) throw new Error('L’archivio condiviso è disponibile sul sito pubblicato.');
+  const response = await fetch(`${base}/catalog-logos/${encodeURIComponent(partyId)}`, { ...init, headers: { authorization: `Bearer ${token}`, ...(init.headers ?? {}) } });
+  const body = await response.json().catch(() => ({}));
+  if (response.status === 401) closeSharedSession();
+  if (!response.ok) throw Object.assign(new Error(body.error || `Logo non pubblicato (${response.status}).`), { status: response.status });
+  return body;
+}
+// Publishes the image (PNG, JPEG or WebP, at most 300 KB: what the logo editor produces) as the logo of the party for every player; the shared copy of the archive is refreshed after.
+export async function publishCatalogLogo(partyId, blob) {
+  const result = await logoCall(partyId, { method: 'PUT', headers: { 'content-type': blob.type || 'application/octet-stream' }, body: blob });
+  await refreshSharedArchive();
+  return result;
+}
+export async function removeCatalogLogo(partyId) {
+  const result = await logoCall(partyId, { method: 'DELETE' });
+  await refreshSharedArchive();
+  return result;
 }

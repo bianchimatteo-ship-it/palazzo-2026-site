@@ -11,7 +11,7 @@
   // GAME_WEB=1: the Worker serves the whole game (the production Worker serves only the portal).
   // No EMAIL_GATEWAY_URL: this site sends no e-mail (the service answers "Invio email non configurato"). If you want to test the messages, point it to a SEPARATE test gateway, never to the production one.
   // PUBLIC_BASE_URL: set it to the address of the test site (the links of the test messages must not lead to production).
-  "vars": { "GAME_WEB": "1", "PUBLIC_BASE_URL": "REPLACE_WITH_THE_TEST_SITE_ADDRESS", "ACCOUNT_EMAIL_REQUIRED": "0", "RETENTION_ENABLED": "0", "RETENTION_NOTICE_TESTED": "0" },
+  "vars": { "GAME_WEB": "1", "COMMUNITY_TIKTOK_ENABLED": "0", "PUBLIC_BASE_URL": "REPLACE_WITH_THE_TEST_SITE_ADDRESS", "ACCOUNT_EMAIL_REQUIRED": "0", "RETENTION_ENABLED": "0", "RETENTION_NOTICE_TESTED": "0" },
   "assets": { "directory": ".", "binding": "ASSETS", "run_worker_first": ["/api/*"] },
   "kv_namespaces": [{ "binding": "ADMIN_ARCHIVE", "id": "REPLACE_WITH_THE_TEST_KV_NAMESPACE_ID" }],
   "r2_buckets": [{ "binding": "LOGOS", "bucket_name": "politicando-logos-test" }],

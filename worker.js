@@ -51,6 +51,10 @@ function cleanAddedParty(id, input) {
     officialName, abbreviation: cleanText(input.abbreviation, 20), factualDescription: cleanText(input.factualDescription, 1500),
     website: website && /^https?:\/\/[^\s"'<>]+$/i.test(website) ? website : null,
     politicalPosition: POSITIONS.includes(input.politicalPosition) ? input.politicalPosition : null,
+    // kind and state of the force, and who leads it when the owner knows: the same values the real catalogue uses
+    entityType: ['party', 'politicalMovement', 'coalition'].includes(input.entityType) ? input.entityType : 'party',
+    status: ['active', 'historical'].includes(input.status) ? input.status : 'active',
+    leaderName: cleanText(input.leaderName, 120),
     color: /^#[\da-f]{6}$/i.test(input.color ?? '') ? input.color : null,
     color2: null, // the only colour of a party is the primary one: a second colour sent by an old page is dropped
     createdAt: cleanText(input.createdAt, 40), updatedAt: cleanText(input.updatedAt, 40)
@@ -209,7 +213,9 @@ export function romeDay(moment = Date.now()) {
 }
 // ----- the time played, merged across devices (reward_time) -----
 const REWARD_DAILY_MS = 5 * 60_000;
-const COMMUNITY_REWARDS = ['instagram'];
+const COMMUNITY_REWARDS = ['instagram', 'tiktok'];
+// A reward that is switched off on the Worker cannot be claimed whatever a client says (TikTok: off until the rules of the platform allow a reward for a follow; COMMUNITY_TIKTOK_ENABLED=1 turns it on).
+const communityOn = (env, reward) => reward !== 'tiktok' || env.COMMUNITY_TIKTOK_ENABLED === '1';
 const SPAN_KEEP_MS = 30 * 86_400_000;              // spans older than this are refused (and said so), and the detail of the older ones is folded into a total
 const SPAN_MAX = 2000;                             // detail kept per row; the oldest are folded into folded_ms
 const SPAN_LONGEST_MS = 6 * 3_600_000;             // a single span longer than this is not a span of play
@@ -856,13 +862,14 @@ async function handleAccounts(request, env, url) {
     try { return json(request, { ok: true, ...(await rewardBlocks(db, account.id, body)) }); }
     catch { return json(request, { error: 'Il conteggio del tempo di gioco è occupato: riprova tra poco.', code: 'busy' }, 503); }
   }
-  // One-off community rewards (today only «instagram»): the Worker gives each to an account once. The claim is a self-declaration of the player: nothing about the social network is verified or asked for.
+  // One-off community rewards («instagram»; «tiktok» exists but is off): the Worker gives each to an account once. The claim is a self-declaration of the player: nothing about the social network is verified or asked for.
   const community = /^\/api\/account\/rewards\/community\/([a-z]{3,20})$/.exec(path);
   if (community && (request.method === 'GET' || request.method === 'POST')) {
     const reward = community[1];
     if (!COMMUNITY_REWARDS.includes(reward)) return json(request, { error: 'Ricompensa non riconosciuta.' }, 404);
     const taken = () => db.prepare('SELECT claimed_at AS claimedAt, device_id AS deviceId FROM reward_community WHERE user_id = ? AND reward = ?').bind(account.id, reward).first();
     if (request.method === 'GET') return json(request, { ok: true, reward, claimed: Boolean(await taken()) });
+    if (!communityOn(env, reward)) return json(request, { error: 'Questa ricompensa non è al momento disponibile.', code: 'disabled' }, 403);
     let careerId = null, device = null;
     try {
       const body = await request.json();
@@ -985,16 +992,71 @@ async function handleAccounts(request, env, url) {
   return json(request, { error: 'Richiesta non riconosciuta.' }, 404);
 }
 
+// ---------- logos of the parties added to the shared catalogue (published by the owner, read by every player) ----------
+// The owner's session writes them; everyone reads them, with no account: `GET /api/admin/catalog-logos/<id>` (immutable: the address the archive gives carries the hash of the image). The images are in the
+// bucket LOGOS under `admin-logos/` (apart from the personal logos of the accounts, `logos/<user>/`), their metadata in the same KV namespace as the archive: a Worker of Test has its own bucket and its
+// own namespace, so a logo of Test is never served by Production. Not configured (no bucket) the routes say so and the catalogue keeps its drawn marks.
+const CATALOG_LOGOS_KEY = 'logo-catalogo';
+const CATALOG_LOGO_PATH = /^\/api\/admin\/catalog-logos\/(admin-party-[a-z0-9-]{3,90}|party-[\w.-]{1,100})$/;
+const catalogLogoKey = async (partyId, version) => `admin-logos/${(await sha256(partyId)).slice(0, 24)}-${version}`;
+const catalogLogoIndex = async env => { const stored = await env.ADMIN_ARCHIVE.get(CATALOG_LOGOS_KEY, 'json'); return stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {}; };
+const publicLogoRefs = index => Object.fromEntries(Object.entries(index).map(([id, item]) => [id, { sha256: item.sha256, mime: item.mime, version: item.version, bytes: item.bytes }]));
+async function handleCatalogLogo(request, env, url, match) {
+  const partyId = match[1];
+  if (!env.LOGOS) return json(request, { error: 'L’archivio dei loghi non è configurato.' }, 503);
+  const index = await catalogLogoIndex(env);
+  if (request.method === 'GET') {
+    const item = index[partyId];
+    if (!item) return json(request, { error: 'Nessun logo pubblicato per questo partito.' }, 404);
+    if (request.headers.get('if-none-match') === `"${item.sha256}"`) return new Response(null, { status: 304, headers: { etag: `"${item.sha256}"`, ...API_SECURITY_HEADERS, ...cors(request) } });
+    const object = await env.LOGOS.get(await catalogLogoKey(partyId, item.version));
+    if (!object) return json(request, { error: 'Il logo non è più disponibile.' }, 404);
+    return new Response(await object.arrayBuffer(), { headers: { 'content-type': item.mime, 'cache-control': 'public, max-age=31536000, immutable', etag: `"${item.sha256}"`, ...API_SECURITY_HEADERS, ...cors(request) } });
+  }
+  if (request.method !== 'PUT' && request.method !== 'DELETE') return json(request, { error: 'Richiesta non riconosciuta.' }, 404);
+  // writing: only the owner's session, never an account of a player
+  if (!await sessionValid(env, request)) return json(request, { error: 'Sessione amministrativa scaduta: inserisci di nuovo il PIN.' }, 401);
+  const current = index[partyId] ?? null;
+  if (request.method === 'DELETE') {
+    if (!current) return json(request, { ok: true, removed: false });
+    delete index[partyId];
+    await env.ADMIN_ARCHIVE.put(CATALOG_LOGOS_KEY, JSON.stringify(index));
+    await env.LOGOS.delete(await catalogLogoKey(partyId, current.version)).catch(() => null);
+    return json(request, { ok: true, removed: true });
+  }
+  const bytes = new Uint8Array(await request.arrayBuffer());
+  if (bytes.length > MAX_LOGO_BYTES) return json(request, { error: `Il logo supera ${MAX_LOGO_BYTES / 1024} KB.`, code: 'too-large' }, 413);
+  const mime = sniffLogo(bytes);
+  if (!mime) return json(request, { error: 'Il logo deve essere un’immagine PNG, JPEG o WebP.', code: 'type' }, 415);
+  if (!current && Object.keys(index).length >= 400) return json(request, { error: 'Troppi loghi nel catalogo.', code: 'limit' }, 409);
+  const sha = await sha256Bytes(bytes);
+  if (current && current.sha256 === sha) return json(request, { ok: true, unchanged: true, ...publicLogoRefs({ [partyId]: current })[partyId] });
+  const version = (current?.version ?? 0) + 1;
+  try { await env.LOGOS.put(await catalogLogoKey(partyId, version), bytes, { httpMetadata: { contentType: mime } }); } catch { return json(request, { error: 'L’archivio non ha salvato l’immagine.' }, 502); }
+  index[partyId] = { sha256: sha, mime, bytes: bytes.length, version, updatedAt: new Date().toISOString() };
+  await env.ADMIN_ARCHIVE.put(CATALOG_LOGOS_KEY, JSON.stringify(index));
+  if (current) await env.LOGOS.delete(await catalogLogoKey(partyId, current.version)).catch(() => null);
+  return json(request, { ok: true, ...publicLogoRefs({ [partyId]: index[partyId] })[partyId] });
+}
+
 async function handleApi(request, env) {
   const url = new URL(request.url);
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { ...API_SECURITY_HEADERS, ...cors(request) } });
   if (url.pathname === '/api/translate' || url.pathname === '/api/translate/status') return handleTranslate(request, env, json, url, ensureSchema);
   if (url.pathname.startsWith('/api/account') || url.pathname.startsWith('/api/saves') || url.pathname.startsWith('/api/logos')) return handleAccounts(request, env, url);
   if (!env.ADMIN_ARCHIVE) return json(request, { error: 'Archivio condiviso non configurato.' }, 503);
+  const catalogLogo = CATALOG_LOGO_PATH.exec(url.pathname);
+  if (catalogLogo) return handleCatalogLogo(request, env, url, catalogLogo);
   if (url.pathname === '/api/admin' && request.method === 'GET') {
     const archive = await env.ADMIN_ARCHIVE.get(ARCHIVE_KEY, 'json') ?? emptyArchive();
-    // logos are not served any more (they are personal, on each device)
-    return json(request, { ...archive, logos: {}, configured: Boolean(await env.ADMIN_ARCHIVE.get(PIN_KEY)), source: 'user' });
+    // the personal logos are not served (they stay on each device); the logos of the parties of the catalogue are referenced by their hash, to be read at /api/admin/catalog-logos/<id>
+    const body = { ...archive, logos: {}, logoRefs: publicLogoRefs(await catalogLogoIndex(env)), configured: Boolean(await env.ADMIN_ARCHIVE.get(PIN_KEY)), source: 'user' };
+    // the same archive is not sent twice: the tag is the hash of what would be sent; a client that already has it gets «not modified» (a few bytes) and keeps its copy
+    const tag = `"${(await sha256(JSON.stringify(body))).slice(0, 24)}"`;
+    if (request.headers.get('if-none-match') === tag) return new Response(null, { status: 304, headers: { etag: tag, 'cache-control': 'no-store', ...API_SECURITY_HEADERS, ...cors(request) } });
+    const response = json(request, body);
+    response.headers.set('etag', tag);   // (cache-control stays «no-store» like every answer of the API: the client sends the tag itself, the browser keeps nothing)
+    return response;
   }
   // Is this browser's owner session still valid? The game shows the admin area only after the server says so.
   if (url.pathname === '/api/admin/session' && request.method === 'GET') {

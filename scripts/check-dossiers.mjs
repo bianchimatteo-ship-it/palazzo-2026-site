@@ -233,7 +233,7 @@ const drafted = pmState().parliament.laws.find(law => law.origin === 'governo' &
 assert.ok(drafted && dossiers.dossiersOf(pmState().parliament.government).find(item => item.id === 'dossier-pm-2').drafted, 'Il testo del ministro diventa un disegno di legge del governo.');
 // What the reader sees.
 const html = ui.dossierPanel(pmState());
-assert.ok(/I dossier dei ministri/.test(html) && /data-dossier-action="postpone"/.test(html) && /Il programma di governo alla prova/.test(html) && !bad(html), 'La pagina del governo mostra dossier, azioni e programma.');
+assert.ok(/Lavori affidati ai ministri/.test(html) && /data-dossier-action="postpone"/.test(html) && /Il programma di governo alla prova/.test(html) && !bad(html), 'La pagina del governo mostra dossier, azioni e programma.');
 // Back to the career of a Government led by others: nobody but the Prime Minister decides on the dossiers, and everyone else reads them.
 const pmSaved = pmStore.exportSave();
 pmStore.loadGame(JSON.parse(aiSave));

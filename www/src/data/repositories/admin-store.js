@@ -66,12 +66,20 @@ export function loadSharedArchive() {
 // Returns true when the copy is also written in the browser's storage.
 export function storeSharedArchive(archive) {
   if (!archive || typeof archive !== 'object') return false;
-  const copy = { version: 1, updatedAt: archive.updatedAt ?? null, parties: archive.parties ?? {}, politicians: archive.politicians ?? {}, logos: {}, addedParties: archive.addedParties ?? {}, hidden: archive.hidden ?? {}, configured: Boolean(archive.configured), fetchedAt: new Date().toISOString() };
+  const copy = { version: 1, updatedAt: archive.updatedAt ?? null, parties: archive.parties ?? {}, politicians: archive.politicians ?? {}, logos: {}, logoRefs: archive.logoRefs && typeof archive.logoRefs === 'object' ? archive.logoRefs : {}, addedParties: archive.addedParties ?? {}, hidden: archive.hidden ?? {}, configured: Boolean(archive.configured), fetchedAt: new Date().toISOString() };
   memoryShared = copy;
   try { localStorage.setItem(SHARED_KEY, JSON.stringify(copy)); sharedStored = true; } catch { sharedStored = false; }
   return sharedStored;
 }
+// (the copy kept in memory belongs to the page, not to the browser's storage: a test that plays two browsers in one process starts each one without it)
+export const forgetSharedMemory = () => { memoryShared = null; sharedStored = true; };
 export const sharedCopyStored = () => sharedStored;
+// The tag the server gave to the copy of the archive in use (ETag): sent back with the next request, a «not modified» answer keeps the copy without downloading it again.
+const SHARED_TAG_KEY = 'politicando.admin.shared-tag.v1';
+export const sharedArchiveTag = () => { try { return localStorage.getItem(SHARED_TAG_KEY); } catch { return null; } };
+export function setSharedArchiveTag(tag) { try { if (tag) localStorage.setItem(SHARED_TAG_KEY, tag); else localStorage.removeItem(SHARED_TAG_KEY); } catch { /* without room the copy is simply read again next time */ } }
+// The logo the owner published for a party of the catalogue: { sha256, mime, version } or null (the address is built by admin-sync.js, which knows where the service is).
+export const sharedLogoRef = partyId => loadSharedArchive()?.logoRefs?.[partyId] ?? null;
 export function sharedSessionToken() { try { return sessionStorage.getItem(SHARED_TOKEN_KEY); } catch { return null; } }
 export function setSharedSessionToken(token) { try { if (token) sessionStorage.setItem(SHARED_TOKEN_KEY, token); else sessionStorage.removeItem(SHARED_TOKEN_KEY); } catch { /* session only */ } }
 // The archive in use: the shared one (published for everyone) with this browser's newer edits on top.
@@ -194,6 +202,9 @@ export function addAdminParty(values, existing = []) {
   const clean = {};
   for (const key of PARTY_FIELDS) { const field = ADMIN_FIELDS.parties.find(item => item.key === key); clean[key] = field.type === 'color' && values[`${key}__off`] ? null : cleanValue(field, values[key]); }
   clean.color2 = null; // the only colour of a party is the primary one (legacy field kept empty in the data)
+  clean.entityType = ['party', 'politicalMovement', 'coalition'].includes(values.entityType) ? values.entityType : 'party';
+  clean.status = values.status === 'historical' ? 'historical' : 'active';
+  clean.leaderName = String(values.leaderName ?? '').trim().slice(0, 120) || null;
   if (!clean.officialName) throw new Error('Il nome ufficiale è obbligatorio.');
   const names = new Set(existing.flatMap(item => [item.officialName, item.name, ...(item.aliases ?? []).map(alias => alias.name)]).filter(Boolean).map(nameKey));
   if (names.has(nameKey(clean.officialName))) throw new Error('Esiste già un partito o movimento con questo nome.');
@@ -211,9 +222,9 @@ export function setRecordHidden(id, hidden, { deleted = false } = {}) {
   return persist(archive);
 }
 const addedRecord = (id, party) => ({
-  id, entityType: 'party', officialName: party.officialName, abbreviation: party.abbreviation ?? null, factualDescription: party.factualDescription ?? null, color: party.color ?? null, color2: party.color2 ?? null,
-  website: party.website ?? null, politicalPosition: party.politicalPosition ?? null, level: null, geographicArea: null, regionId: null, status: 'active', parliamentaryPresence: null, regionalPresence: null, localPresence: null,
-  foundedAt: null, registeredAt: null, leadership: [], logoUrl: null, logoAsset: null, logoSource: null, logoVerified: null, logoAlt: `Logo di ${party.officialName}`,
+  id, entityType: ['party', 'politicalMovement', 'coalition'].includes(party.entityType) ? party.entityType : 'party', officialName: party.officialName, abbreviation: party.abbreviation ?? null, factualDescription: party.factualDescription ?? null, color: party.color ?? null, color2: party.color2 ?? null,
+  website: party.website ?? null, politicalPosition: party.politicalPosition ?? null, level: null, geographicArea: null, regionId: null, status: party.status === 'historical' ? 'historical' : 'active', parliamentaryPresence: null, regionalPresence: null, localPresence: null,
+  foundedAt: null, registeredAt: null, leadership: party.leaderName ? [{ role: 'Leader', name: party.leaderName }] : [], logoUrl: null, logoAsset: null, logoSource: null, logoVerified: null, logoAlt: `Logo di ${party.officialName}`,
   source: 'user', verified: false, sourceUrl: party.website ?? null, sourceName: 'Aggiunto dall’amministratore del gioco', adminCreated: { createdAt: party.createdAt ?? null, updatedAt: party.updatedAt ?? null, source: 'user' }
 });
 

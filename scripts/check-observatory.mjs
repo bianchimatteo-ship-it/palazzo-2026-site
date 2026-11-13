@@ -289,7 +289,8 @@ assert.ok(withIndependents > 0 && withIndependents < campaignsChecked, `Gli indi
 assert.ok(outsiders > 0 && kindsSeen.has('utente') && kindsSeen.has('reale'), 'Tra gli avversari anche una forza creata da un giocatore, accanto a quelle reali.');
 const withFree = localCampaign('comunale', 'sindaco', 'Lombardia', 'Milano', 'obs-independents', { independents: 2 });
 assert.equal(rivalsOf(withFree).filter(item => item.independent).length, 2, 'Gli indipendenti si possono prevedere esplicitamente.');
-assert.ok(rivalsOf(withFree).filter(item => item.independent).every(item => /indipendente/i.test(item.displayName)), 'E si presentano come tali.');
+// (an independent is a person named by his own name, with no party: the views name the candidacies of the independents that way — observatory-view.js)
+assert.ok(rivalsOf(withFree).filter(item => item.independent).every(item => item.partyId === null && item.displayName && !/\d/.test(item.displayName)), 'E si presentano come tali: una persona, col proprio nome, senza partito.');
 // The candidacy of the player: a party of the database, a party he founded, or nobody.
 assert.equal(localCampaign('comunale', 'sindaco', 'Lazio', 'Roma', 'obs-me').candidates[0].partyKind, 'reale');
 assert.equal(localCampaign('comunale', 'sindaco', 'Lazio', 'Roma', 'obs-me', {}, outsider.id).candidates[0].partyKind, 'utente', 'Un partito fondato dal giocatore è del giocatore.');

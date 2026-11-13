@@ -1,6 +1,6 @@
 // The choices of the television debate, per TOPIC (core/scene-engine.js): loaded with the scene page (ui/scene-view.js), never at start — it registers itself in the scene engine, which uses the generic wording
 // where a topic is not here.
-import { setDebateChoices } from '../core/scene-engine.js?v=20261113-1';
+import { setDebateChoices } from '../core/scene-engine.js?v=20261113-8';
 // The choices of the television debate, per TOPIC (core/scene-engine.js): what the player can say depends on what is being talked about — a health debate offers waiting lists, hospitals and funding, an economy
 // debate offers taxes, firms, jobs and debt — instead of the same four approaches every time. The IDs are those of the engine (the style of the answer: dati / empatia / programma / attacco; the question to the
 // rival: conti / coerenza / passato / salta; the reply to an attack: fatti / calma / contrattacco / ignora; the closing: sobrio / appello / sfida), so the effects, the evaluation and the explanation of

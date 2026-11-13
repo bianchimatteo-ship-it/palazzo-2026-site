@@ -71,6 +71,14 @@ for (const name of files.keys()) if (FORBIDDEN.some(rule => rule.test(name))) fa
 
 const text = name => files.get(name)?.toString('utf8') ?? '';
 
+// A Test build of the app (never the one for the store): the app reads and writes the Worker of Test, not Production. The address is declared in index.html and only here, only when asked
+// (POLITICANDO_API_ORIGIN=https://politicando-test.<account>.workers.dev npm run build:www); it must be a workers.dev site and never the Production one. check-android refuses a release with the tag.
+const TEST_ORIGIN = process.env.POLITICANDO_API_ORIGIN ?? '';
+if (TEST_ORIGIN) {
+  if (!/^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)*\.workers\.dev$/.test(TEST_ORIGIN) || /^https:\/\/palazzo-2026-site\./.test(TEST_ORIGIN)) fail(`POLITICANDO_API_ORIGIN «${TEST_ORIGIN}» non è un sito di Test (https, workers.dev, diverso dalla Produzione).`);
+  else files.set('index.html', Buffer.from(text('index.html').replace(/<head>/, `<head>\n  <meta name="politicando-api-origin" content="${TEST_ORIGIN}">`)));
+}
+
 // ---------- 2. one build stamp ----------
 const stamps = new Set();
 for (const [name, data] of files) if (/\.(html|js|css)$/.test(name)) for (const match of data.toString('utf8').matchAll(/[?&]v=([0-9]{8}-[0-9]+)\b/g)) stamps.add(match[1]);

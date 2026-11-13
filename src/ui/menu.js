@@ -1,16 +1,16 @@
 // Main menu, how-to-play, settings, save slots and the end-of-week report.
-import { renderTutorialInvite } from './tutorial.js?v=20261113-1';
-import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261113-1';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261113-1';
-import { formatDate } from '../core/time.js?v=20261113-1';
-import { illustration } from './illustrations.js?v=20261113-1';
-import { glyph } from './visuals.js?v=20261113-1';
-import { identityMark, identityVars } from './party-identity.js?v=20261113-1';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261113-1';
-import { hallView } from './hall-view.js?v=20261113-1';
-import { renderLogoCatalog } from './logo-catalog.js?v=20261113-1';
-import { esc, signed } from './charts.js?v=20261113-1';
-import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261113-1';
+import { renderTutorialInvite } from './tutorial.js?v=20261113-8';
+import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261113-8';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261113-8';
+import { formatDate } from '../core/time.js?v=20261113-8';
+import { illustration } from './illustrations.js?v=20261113-8';
+import { glyph } from './visuals.js?v=20261113-8';
+import { identityMark, identityVars } from './party-identity.js?v=20261113-8';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261113-8';
+import { hallView } from './hall-view.js?v=20261113-8';
+import { renderLogoCatalog } from './logo-catalog.js?v=20261113-8';
+import { esc, signed } from './charts.js?v=20261113-8';
+import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261113-8';
 
 const when = iso => { try { return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); } catch { return ''; } };
 // The actions of the opening screen, in order of importance: starting a career and resuming one are the two main ones (drawn apart, below); then what concerns the
@@ -133,7 +133,11 @@ function loadView({ hasCareer, meta, account = null, gate = null, protectedCount
 
 // Account: sign up or sign in, then every career is also kept online and can be resumed on another device.
 // The public pages (also reachable without the game): privacy notice, terms and the page to ask for the deletion of the account.
-export const legalLinks = () => { const base = publicSiteBase(); return `<nav class="legal-links" aria-label="Informazioni legali"><a href="${base}privacy.html" target="_blank" rel="noopener">Informativa sulla privacy</a><a href="${base}termini.html" target="_blank" rel="noopener">Termini di utilizzo</a><a href="${base}elimina-account.html" target="_blank" rel="noopener">Elimina l’account</a></nav>`; };
+// Bugs and proposals: the address of the legal pages, one line, the mail opens already addressed with its subject. The game sends nothing by itself: no data of the player goes in the message.
+export const SUPPORT_EMAIL = 'politicando2026simulazione@gmail.com';
+export const SUPPORT_SUBJECT = 'Politicando 2026 - Segnalazione o proposta';
+export const supportContact = (extraClass = '') => `<p class="support-contact${extraClass ? ` ${extraClass}` : ''}" data-support-contact><span>Bug o suggerimenti? Scrivici a</span> <a href="mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(SUPPORT_SUBJECT)}" data-support-mail>${SUPPORT_EMAIL}</a></p>`;
+export const legalLinks = () => { const base = publicSiteBase(); return `${supportContact()}<nav class="legal-links" aria-label="Informazioni legali"><a href="${base}privacy.html" target="_blank" rel="noopener">Informativa sulla privacy</a><a href="${base}termini.html" target="_blank" rel="noopener">Termini di utilizzo</a><a href="${base}elimina-account.html" target="_blank" rel="noopener">Elimina l’account</a></nav>`; };
 const SYNC_KIND_LABEL = { local: 'Salvata in questo browser', unsaved: 'Modifiche non salvate', pending: 'Sincronizzazione in attesa', synced: 'Sincronizzata', conflict: 'Conflitto', error: 'Errore', foreign: 'Di un altro account', unlinked: 'Solo su questo dispositivo' };
 // The state of the online copy of the career being played, in words: saved here, waiting, synced, conflict, error.
 export function syncStatusLine(sync) {
@@ -245,6 +249,7 @@ export function settingsView(settings, { error = '', account = null } = {}) {
   return `<h2>Impostazioni</h2><p class="section-subtitle">Valgono per tutte le partite in questo browser e si applicano subito; il popup delle notizie settimanali segue l’account con cui hai effettuato l’accesso.</p>
     ${groups.map(([title, keys, icon]) => `<section class="settings-group" data-settings-group="${esc(title)}"><h3>${glyph(icon, 16)} ${esc(title)}</h3>${keys.map(key => { const spec = SETTINGS_SCHEMA[key]; const hint = spec.hint ? `<small class="setting-hint" role="status" data-setting-state="${key}"><b>${esc(spec.options.find(([v]) => v === settings[key])?.[1] ?? '')}.</b> ${esc(spec.hint[settings[key]] ?? '')}${spec.scoped ? ` ${account?.user ? `Vale per l’account «${esc(account.user.username)}».` : 'Vale per questo browser.'}` : ''}</small>` : ''; return `<div class="setting-row ${spec.hint ? 'has-hint' : ''}" data-setting-row="${key}"><span>${esc(spec.label)}</span><div class="segmented" role="group" aria-label="${esc(spec.label)}">${spec.options.map(([value, label]) => `<button data-setting-key="${key}" data-setting-value="${esc(value)}" class="${settings[key] === value ? 'active' : ''}" aria-pressed="${settings[key] === value}"${key === 'language' ? ` lang="${esc(value)}" data-no-translate` : ''}>${esc(label)}</button>`).join('')}</div>${hint}</div>`; }).join('')}</section>`).join('')}
     <section class="settings-group" data-settings-group="Dati"><h3>${glyph('book', 16)} Dati di gioco</h3><div class="setting-actions"><button class="secondary-button" data-menu-action="export">Esporta la partita in corso</button><label class="secondary-button menu-import-inline"><input type="file" accept="application/json,.json" data-menu-import />Importa una partita</label><button class="secondary-button" data-menu-action="reset-settings">Ripristina le impostazioni</button></div><p class="parliament-note">L’archivio dell’amministratore e i loghi personali restano separati e non vengono toccati.</p></section>
+    <section class="settings-group" data-settings-group="Supporto"><h3>${glyph('users', 16)} Supporto</h3>${supportContact()}</section>
     <section class="settings-group settings-danger" data-settings-group="Pericolo"><h3>${glyph('alert', 16)} Zona pericolosa</h3><p class="parliament-note">Queste azioni sono definitive e chiedono una conferma.</p><div class="setting-actions"><button class="secondary-button danger" data-menu-action="clear-saves">Elimina tutti i salvataggi</button></div></section>
     ${error ? `<p class="menu-error" role="alert">${esc(error)}</p>` : ''}`;
 }
@@ -296,6 +301,7 @@ export function renderMainMenu(menu, context) {
       ${newCareerCard(context.loading)}
       ${hasCareer ? continueCard(meta, lastSaved, unsaved, identity, context.gate) : ''}${hasCareer && !context.gate && context.account?.sync ? syncStatusLine(context.account.sync) : ''}
       ${MENU_GROUPS.map(group).join('')}
+      ${supportContact('menu-support')}
       <p class="menu-footnote">Dati reali verificati · simulazione dichiarata · ${context.account?.user ? `salvataggi online come ${esc(context.account.user.username)}` : 'salvataggi nel browser, online con un account'}</p>
     </div>
     <section class="menu-panel" aria-live="polite"${popup ? ' inert' : ''}>${home}</section>

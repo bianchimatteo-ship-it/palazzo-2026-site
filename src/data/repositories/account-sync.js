@@ -10,7 +10,7 @@
 // The last one is kept per CAREER (not per slot name and not per account) together with what the copy was when it was synced (its local revision and how far it had got). A copy
 // goes online only if it descends from that: an older copy with the same name does not inherit the newest revision. Without that proof (a copy that was never linked, a record written by
 // the old protocol) nothing is uploaded automatically: the player reconciles first.
-import { hiddenOwner, releaseCareersOf } from './career-visibility.js?v=20261113-1';
+import { hiddenOwner, releaseCareersOf } from './career-visibility.js?v=20261113-8';
 const PRODUCTION_ORIGIN = 'https://palazzo-2026-site.bianchimatteo657.workers.dev';
 const ACCOUNT_KEY = 'politicando.account.v1';
 // The old record (revision per slot and per account, with no provenance): never trusted again to authorize an upload; kept only so that nothing is erased.
@@ -32,11 +32,20 @@ export const isNativeApp = () => globalThis.Capacitor?.isNativePlatform?.() === 
 // Where the public pages of the game live (privacy, terms, account deletion): the same site on the web, the published site inside the app.
 export function publicSiteBase() {
   const location = globalThis.location;
-  return !location || location.protocol === 'file:' || isNativeApp() ? `${PRODUCTION_ORIGIN}/` : '';
+  return !location || location.protocol === 'file:' || isNativeApp() ? `${nativeApiOrigin()}/` : '';
+}
+// The Worker the installed app talks to: Production, unless the build of a Test app declares its own (<meta name="politicando-api-origin">, written by build-www only when POLITICANDO_API_ORIGIN is set): then it is
+// that address (https, a workers.dev site), never anything else. A build for the store never has the tag (check-android refuses it), so a published app always reads and writes Production.
+export function nativeApiOrigin() {
+  try {
+    const declared = globalThis.document?.querySelector?.('meta[name="politicando-api-origin"]')?.getAttribute('content') ?? '';
+    if (/^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)*\.workers\.dev$/.test(declared)) return declared;
+  } catch { /* no document: Production */ }
+  return PRODUCTION_ORIGIN;
 }
 export function accountApiBase() {
   const location = globalThis.location;
-  if (!location || isNativeApp()) return PRODUCTION_ORIGIN;
+  if (!location || isNativeApp()) return nativeApiOrigin();
   if (/workers\.dev$/.test(location.hostname) || location.port === '8791' || location.hostname === '127.0.0.1') return location.origin;
   if (/github\.io$/.test(location.hostname)) return PRODUCTION_ORIGIN;
   return null;

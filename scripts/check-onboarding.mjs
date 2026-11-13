@@ -47,7 +47,7 @@ const draft = realisticDraft('2026-09-24');
 assert.ok(!draft.region && !draft.municipality && !draft.municipalityCode && !draft.firstName && !draft.lastName, 'Nuova carriera senza persona né territorio preimpostati.');
 const sources = [];
 for (const dir of ['../src/ui/', '../src/core/', '../src/data/simulation/']) for (const name of await readdir(new URL(dir, import.meta.url))) if (name.endsWith('.js')) sources.push(await readFile(new URL(dir + name, import.meta.url), 'utf8'));
-assert.ok(sources.every(text => !/\bBosio\b|\bMatteo\b/.test(text)), 'Nessun riferimento personale (Matteo, Bosio) nel codice di gioco.');
+assert.ok(sources.every(text => !/\bBosio\b|\bMatteo Bianchi\b/.test(text)), 'Nessun riferimento personale (Matteo Bianchi, Bosio) nel codice di gioco: i nomi comuni delle liste di nomi non sono riferimenti personali.');
 
 // ---------- 3. the screens: who you are (with the avatar) → territory → career path → party → advanced settings → summary ----------
 assert.equal(CAREER_STEPS, 5, 'I controlli numerati restano cinque (la loro numerazione non cambia).');

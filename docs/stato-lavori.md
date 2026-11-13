@@ -178,6 +178,14 @@ Branch `test/ambiente-privato`. Che cosa è cambiato, dove, e come si verifica:
 - **Prestazioni**: il motore resta a ~60→150 ms a settimana in due anni; un salvataggio costa ~35→135 ms con 1,7 MB di stato (copie, backup e slot): accettabile ma è la parte che cresce.
 - **Android**: audit statico (versionCode 1 / versionName 1.0, solo INTERNET, firma fuori dal repository). Il versionCode già su Google Play non è noto da qui: il prossimo deve essere superiore.
 
+## Verifica conclusiva pre-release 1.0 (13 novembre 2026, nota di lavoro)
+- **Redazione in inglese alla fonte**: `data/news-messages.js` è l'unico catalogo (modello + parametri + nomi propri separati) per italiano ed inglese; il motore salva l'italiano e `article.en`; i salvataggi vecchi si leggono in inglese dalle stesse coppie. `check-i18n-newsroom` controlla i campi renderizzati (caso «Roberto Vannacci: l'ospitata televisiva su…», nuovo e legacy).
+- **Contatto** `politicando2026simulazione@gmail.com` (mailto con oggetto) in menu, impostazioni, piede di ogni pagina e foglio «Altro»; `check-contact`.
+- **Catalogo partiti**: «In attesa di verifica» per i non verificati (es. Progetto Civico Italia), filtri e conteggi; `check-party-catalog`.
+- **Catalogo condiviso admin ↔ Web/Android**: ETag/304, logo nel bucket, solo admin scrivono, Test/Produzione separati, partiti del giocatore mai pubblicati; `check-shared-catalog`.
+- **Ricompensa TikTok**: implementata e testata ma SPENTA (`COMMUNITY_TIKTOK_ENABLED` off): la pagina ufficiale delle regole non è stata leggibile da qui. **AdMob**: tre stati verificabili (`not-configured|no-ad|ready`), nessun ID inventato, nessun SDK: `check-ads-states`.
+- **Non fatto**: dry-run e deploy su Test (mancano `wrangler.test.local.jsonc` e credenziali); AAB non generato (versionCode attuale 1, il prossimo deve superare l'ultimo caricato su Play, non noto da qui).
+
 ## Milestone precedente — fondazione partito, consenso, fiducia, direttiva (completata)
 Vedi la cronologia git (commit `7fbae22`, `8842e95`).
 

@@ -1,75 +1,75 @@
-import { onLanguageChange, retranslate, setAutoTranslator, setLanguage, watchTree } from '../core/i18n.js?v=20261113-1';
-import { createAutoTranslator } from '../core/i18n-auto.js?v=20261113-1';
-import { pendingCelebration, pendingOutcome } from '../core/celebration.js?v=20261113-1';
-import { fullDate, formatDate } from '../core/time.js?v=20261113-1';
-import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20261113-1';
-import * as accountApi from '../data/repositories/account-sync.js?v=20261113-1';
-import { hideCareers } from '../data/repositories/career-visibility.js?v=20261113-1';
-import { accountApiBase, commitRevision, currentAccount, deleteAccount, probeAccountService, deleteCloudSave, downloadSave, listCloudSaves, login, logout, register, slotForCareer } from '../data/repositories/account-sync.js?v=20261113-1';
-import { createSyncEngine } from '../data/repositories/sync-queue.js?v=20261113-1';
-import { setPartyLogoResolver } from './person-marks.js?v=20261113-1';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261113-1';
-import { isRealCollectionLoaded, loadRealCollections, optionalDocumentStatus, loadRealCollectionsSettled, pristineRecord, realDataFailures, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20261113-1';
-import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20261113-1';
-import { renderAdminPanel } from './lazy-views.js?v=20261113-1';
-import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, rotateSharedCredential, publishSharedArchive, refreshSharedArchive, sharedApiUrl, sharedSyncStatus, verifySharedSession } from '../data/repositories/admin-sync.js?v=20261113-1';
-import { syncLogos, resolveLogoConflict, listLogoConflicts } from '../data/repositories/logo-sync.js?v=20261113-1';
-import { analyzeLogoArchive, applyLogoImport, exportLogosZip, listReplacedLogos, restoreReplacedLogos } from '../data/repositories/logo-archive.js?v=20261113-1';
-import { claimLegacyLogo, deleteLogo, discardLegacyLogo, importGuestLogo, importLogoFromUrl, listGuestLogos, listLegacyLogos, listLogoInfos, loadLogos, logoInfo, logosArePersistent, migrateLegacyLogos, onLogosChange, prepareLogo, releaseLegacyPreviews, resolveLogo, saveLogo } from '../data/repositories/personal-logos.js?v=20261113-1';
-import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20261113-1';
-import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20261113-1';
-import { PARTY_LINK_COLLECTIONS, forceKind, isCoalitionList, politicalForces } from '../data/repositories/party-links.js?v=20261113-1';
-import { prefetchViews, renderScene, setLazyRender } from './lazy-views.js?v=20261113-1';
-import { playNightMotion } from './night-motion.js?v=20261113-1';
-import { playStage, stageIsPaused, stagePause, stageResume, stageSkip } from './stage-player.js?v=20261113-1';
-import { renderDiplomacy } from './lazy-views.js?v=20261113-1';
-import { renderElectionNight } from './lazy-views.js?v=20261113-1';
-import { PROFESSIONS, chosenPlace, makeCareerDraft, pollScenarioOf, removePartyCriterion, renderCareerWizard, togglePartyOrientation, wizardLogoPreview } from './career-wizard.js?v=20261113-1';
-import { userPartyLogo } from './party-logo.js?v=20261113-1';
-import { WIZARD_VIEWS, validateWizardStep } from '../core/career-rules.js?v=20261113-1';
-import { avatarOf, normalizeAvatar } from '../core/avatar.js?v=20261113-1';
-import { avatarSvg } from './avatar-svg.js?v=20261113-1';
-import { renderElectionsHub } from './lazy-views.js?v=20261113-1';
-import { renderQuirinale } from './lazy-views.js?v=20261113-1';
-import { renderCareerPage } from './lazy-views.js?v=20261113-1';
-import { renderPartyPage } from './lazy-views.js?v=20261113-1';
-import { renderAgendaPage } from './lazy-views.js?v=20261113-1';
-import { HEMICYCLE_DEFAULTS, renderHemicycle } from './lazy-views.js?v=20261113-1';
-import { renderFeaturedMembers } from './lazy-views.js?v=20261113-1';
-import { drawLogoEditor, exportLogo, measureBackground, panFromDrag, renderLogoEditor } from './logo-editor-view.js?v=20261113-1';
-import { createEditorState } from '../core/logo-editor.js?v=20261113-1';
-import { renderParliamentPage } from './lazy-views.js?v=20261113-1';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261113-1';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261113-1';
-import { chooseStart } from '../core/start-engine.js?v=20261113-1';
-import { renderHeadquarters, renderNewsroom } from './lazy-views.js?v=20261113-1';
-import { newsMedia, newsPopupHtml, popupItem } from './news-view.js?v=20261113-1';
-import { articleScript, bulletinScript, onVoiceChange, onVoicesChange, speakLines, stopVoice, syncVoiceDom, voiceStatus, voiceTarget } from './radio-voice.js?v=20261113-1';
-import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './lazy-views.js?v=20261113-1';
-import { playerRoles } from '../core/roles.js?v=20261113-1';
-import { accordWarning, budgetPreview, designFromForm, planFromForm, policyFields, policyPreview, projectPreview, rangeText, requestFromForm } from './policy-mode.js?v=20261113-1';
-import { areaOf } from '../data/simulation/policy-rules.js?v=20261113-1';
-import { attachChartInteractions, hideChartTip } from './polls-mode.js?v=20261113-1';
-import { renderObservatory } from './lazy-views.js?v=20261113-1';
-import { glyph } from './visuals.js?v=20261113-1';
-import { identityVars, partyChip, partyIdentity, topbarParty } from './party-identity.js?v=20261113-1';
-import { renderMediaPanel, renderTerritoriesPage } from './lazy-views.js?v=20261113-1';
-import { renderFinancePage } from './lazy-views.js?v=20261113-1';
-import { PLAN_MAX, planConfirmLines, planKey, renderPlanTray } from './plan-view.js?v=20261113-1';
-import { STAFF_TASK_BY_ID } from '../data/simulation/staff-rules.js?v=20261113-1';
-import { renderContactsPanel } from './lazy-views.js?v=20261113-1';
-import { renderRealLaws } from './lazy-views.js?v=20261113-1';
-import { realLawArea } from '../core/society-engine.js?v=20261113-1';
-import { canManageParliament } from '../core/parliament-engine.js?v=20261113-1';
-import { renderConfirmDialog, renderMainMenu, renderWeeklyReport, settingsView, TOUR_STEPS } from './menu.js?v=20261113-1';
-import { setForceColorOverrides } from './political-colors.js?v=20261113-1';
-import { renderTutorialCard, tutorialAction, tutorialContext, tutorialState, TUTORIAL_STEPS } from './tutorial.js?v=20261113-1';
-import { storage as localStorageApi } from '../core/storage.js?v=20261113-1';
-import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20261113-1';
-import { playSound } from './sound.js?v=20261113-1';
-import { resolveInstitution } from './lazy-views.js?v=20261113-1';
-import { createRewardsService } from './rewards-service.js?v=20261113-1';
-import { patchRewardsPage, renderRewardNotice, renderRewardsPage } from './rewards-page.js?v=20261113-1';
+import { onLanguageChange, retranslate, setAutoTranslator, setLanguage, watchTree } from '../core/i18n.js?v=20261113-8';
+import { createAutoTranslator } from '../core/i18n-auto.js?v=20261113-8';
+import { pendingCelebration, pendingOutcome } from '../core/celebration.js?v=20261113-8';
+import { fullDate, formatDate } from '../core/time.js?v=20261113-8';
+import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20261113-8';
+import * as accountApi from '../data/repositories/account-sync.js?v=20261113-8';
+import { hideCareers } from '../data/repositories/career-visibility.js?v=20261113-8';
+import { accountApiBase, commitRevision, currentAccount, deleteAccount, probeAccountService, deleteCloudSave, downloadSave, listCloudSaves, login, logout, register, slotForCareer } from '../data/repositories/account-sync.js?v=20261113-8';
+import { createSyncEngine } from '../data/repositories/sync-queue.js?v=20261113-8';
+import { setPartyLogoResolver } from './person-marks.js?v=20261113-8';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261113-8';
+import { isRealCollectionLoaded, loadRealCollections, optionalDocumentStatus, loadRealCollectionsSettled, pristineRecord, realDataFailures, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20261113-8';
+import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20261113-8';
+import { renderAdminPanel } from './lazy-views.js?v=20261113-8';
+import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, rotateSharedCredential, publishSharedArchive, publishCatalogLogo, refreshSharedArchive, removeCatalogLogo, sharedApiUrl, sharedLogoUrl, sharedSyncStatus, verifySharedSession } from '../data/repositories/admin-sync.js?v=20261113-8';
+import { syncLogos, resolveLogoConflict, listLogoConflicts } from '../data/repositories/logo-sync.js?v=20261113-8';
+import { analyzeLogoArchive, applyLogoImport, exportLogosZip, listReplacedLogos, restoreReplacedLogos } from '../data/repositories/logo-archive.js?v=20261113-8';
+import { claimLegacyLogo, deleteLogo, discardLegacyLogo, importGuestLogo, importLogoFromUrl, listGuestLogos, listLegacyLogos, listLogoInfos, loadLogos, logoInfo, logosArePersistent, migrateLegacyLogos, onLogosChange, prepareLogo, releaseLegacyPreviews, resolveLogo, saveLogo } from '../data/repositories/personal-logos.js?v=20261113-8';
+import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20261113-8';
+import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20261113-8';
+import { PARTY_LINK_COLLECTIONS, forceKind, isCoalitionList, politicalForces } from '../data/repositories/party-links.js?v=20261113-8';
+import { prefetchViews, renderScene, setLazyRender } from './lazy-views.js?v=20261113-8';
+import { playNightMotion } from './night-motion.js?v=20261113-8';
+import { playStage, stageIsPaused, stagePause, stageResume, stageSkip } from './stage-player.js?v=20261113-8';
+import { renderDiplomacy } from './lazy-views.js?v=20261113-8';
+import { renderElectionNight } from './lazy-views.js?v=20261113-8';
+import { PROFESSIONS, chosenPlace, makeCareerDraft, pollScenarioOf, removePartyCriterion, renderCareerWizard, togglePartyOrientation, wizardLogoPreview } from './career-wizard.js?v=20261113-8';
+import { userPartyLogo } from './party-logo.js?v=20261113-8';
+import { WIZARD_VIEWS, validateWizardStep } from '../core/career-rules.js?v=20261113-8';
+import { avatarOf, normalizeAvatar } from '../core/avatar.js?v=20261113-8';
+import { avatarSvg } from './avatar-svg.js?v=20261113-8';
+import { renderElectionsHub } from './lazy-views.js?v=20261113-8';
+import { renderQuirinale } from './lazy-views.js?v=20261113-8';
+import { renderCareerPage } from './lazy-views.js?v=20261113-8';
+import { renderPartyPage } from './lazy-views.js?v=20261113-8';
+import { renderAgendaPage } from './lazy-views.js?v=20261113-8';
+import { HEMICYCLE_DEFAULTS, renderHemicycle } from './lazy-views.js?v=20261113-8';
+import { renderFeaturedMembers } from './lazy-views.js?v=20261113-8';
+import { drawLogoEditor, exportLogo, measureBackground, panFromDrag, renderLogoEditor } from './logo-editor-view.js?v=20261113-8';
+import { createEditorState } from '../core/logo-editor.js?v=20261113-8';
+import { renderParliamentPage } from './lazy-views.js?v=20261113-8';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261113-8';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261113-8';
+import { chooseStart } from '../core/start-engine.js?v=20261113-8';
+import { renderHeadquarters, renderNewsroom } from './lazy-views.js?v=20261113-8';
+import { newsMedia, newsPopupHtml, popupItem } from './news-view.js?v=20261113-8';
+import { articleScript, bulletinScript, onVoiceChange, onVoicesChange, speakLines, stopVoice, syncVoiceDom, voiceStatus, voiceTarget } from './radio-voice.js?v=20261113-8';
+import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './lazy-views.js?v=20261113-8';
+import { playerRoles } from '../core/roles.js?v=20261113-8';
+import { accordWarning, budgetPreview, designFromForm, planFromForm, policyFields, policyPreview, projectPreview, rangeText, requestFromForm } from './policy-mode.js?v=20261113-8';
+import { areaOf } from '../data/simulation/policy-rules.js?v=20261113-8';
+import { attachChartInteractions, hideChartTip } from './polls-mode.js?v=20261113-8';
+import { renderObservatory } from './lazy-views.js?v=20261113-8';
+import { glyph } from './visuals.js?v=20261113-8';
+import { identityVars, partyChip, partyIdentity, topbarParty } from './party-identity.js?v=20261113-8';
+import { renderMediaPanel, renderTerritoriesPage } from './lazy-views.js?v=20261113-8';
+import { renderFinancePage } from './lazy-views.js?v=20261113-8';
+import { PLAN_MAX, planConfirmLines, planKey, renderPlanTray } from './plan-view.js?v=20261113-8';
+import { STAFF_TASK_BY_ID } from '../data/simulation/staff-rules.js?v=20261113-8';
+import { renderContactsPanel } from './lazy-views.js?v=20261113-8';
+import { renderRealLaws } from './lazy-views.js?v=20261113-8';
+import { realLawArea } from '../core/society-engine.js?v=20261113-8';
+import { canManageParliament } from '../core/parliament-engine.js?v=20261113-8';
+import { renderConfirmDialog, renderMainMenu, renderWeeklyReport, settingsView, supportContact, TOUR_STEPS } from './menu.js?v=20261113-8';
+import { setForceColorOverrides } from './political-colors.js?v=20261113-8';
+import { renderTutorialCard, tutorialAction, tutorialContext, tutorialState, TUTORIAL_STEPS } from './tutorial.js?v=20261113-8';
+import { storage as localStorageApi } from '../core/storage.js?v=20261113-8';
+import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20261113-8';
+import { playSound } from './sound.js?v=20261113-8';
+import { resolveInstitution } from './lazy-views.js?v=20261113-8';
+import { createRewardsService } from './rewards-service.js?v=20261113-8';
+import { patchRewardsPage, renderRewardNotice, renderRewardsPage } from './rewards-page.js?v=20261113-8';
 
 // The destinations of the game, by theme. On computers the sidebar lists the eight and opens the pages of the current one; on phones the
 // bar below keeps Home · Elezioni · Sondaggi · Istituzioni one tap away and “Altro” gathers everything else (the same pages, nothing twice).
@@ -116,7 +116,7 @@ const mobileSheet = (state, lastSaved, territory) => {
   const body = groups.map(({ group, items }) => items.length > 1
     ? `<details class="sheet-group" data-sec="${group.id}" data-sheet-group="${group.id}" data-remember="sheet-${group.id}"${group.id === current ? ' open' : ''}><summary><span class="sheet-group-icon">${icon(group.glyph, 18)}</span><span class="sheet-group-text"><strong>${group.label}</strong><small>${items.map(item => item.label).join(' · ')}</small></span><span class="sheet-group-count">${items.length}</span></summary><div class="mobile-sheet-grid">${items.map(entry => itemHtml(entry, items)).join('')}</div></details>`
     : `<div class="sheet-group is-direct" data-sec="${group.id}" data-sheet-group="${group.id}"><button type="button" class="sheet-item sheet-direct ${entryOn(items[0], items, page, territory) ? 'active' : ''}" data-sheet-label="${group.label}" ${entryAttrs(items[0])}><span class="sheet-group-icon">${icon(group.glyph, 18)}</span><strong>${group.label}</strong></button></div>`).join('');
-  return `<div class="mobile-sheet" id="mobile-sheet" data-mobile-sheet hidden><div class="mobile-sheet-panel" role="dialog" aria-modal="true" aria-label="Altro: tutte le sezioni"><div class="mobile-sheet-head"><strong>Altro</strong><button type="button" class="icon-button" data-mobile-close aria-label="Chiudi">×</button></div><label class="sheet-search"><span class="visually-hidden">Cerca una pagina</span><input type="search" data-sheet-search placeholder="Cerca una pagina…" autocomplete="off" enterkeyhint="search" /></label><p class="sheet-empty" data-sheet-empty hidden>Nessuna pagina corrisponde.</p>${body}<div class="mobile-sheet-status"><span class="save-dot"></span>${lastSaved}</div></div></div>`;
+  return `<div class="mobile-sheet" id="mobile-sheet" data-mobile-sheet hidden><div class="mobile-sheet-panel" role="dialog" aria-modal="true" aria-label="Altro: tutte le sezioni"><div class="mobile-sheet-head"><strong>Altro</strong><button type="button" class="icon-button" data-mobile-close aria-label="Chiudi">×</button></div><label class="sheet-search"><span class="visually-hidden">Cerca una pagina</span><input type="search" data-sheet-search placeholder="Cerca una pagina…" autocomplete="off" enterkeyhint="search" /></label><p class="sheet-empty" data-sheet-empty hidden>Nessuna pagina corrisponde.</p>${body}<div class="mobile-sheet-status"><span class="save-dot"></span>${lastSaved}</div>${supportContact('sheet-support')}</div></div>`;
 };
 const entryActive = (entry, page, territory = {}) => page === entry.page && (!entry.kind || (territory.localInst ? territory.localInst === entry.inst || territory.localInst === entry.kind : false));
 // An entry is current when it is its page, or, in Territori, the institution that is open ("Il Paese" is current while none is chosen).
@@ -547,7 +547,8 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   const findParty = id => [...store.getState().dataset.parties, ...realParties()].find(item => item.id === id) ?? null;
   // The one resolver of a party's logo: the personal catalog of the account in use, by the party's stable identifier. A party the player made keeps its own original drawn mark when there is
   // none; no logo is ever matched by name, and no third-party logo comes with the game.
-  const logoFor = party => (party?.id ? resolveLogo(party.id) : null) ?? (party?.source === DATA_SOURCES.USER && party.logo ? userPartyLogo(party) : null);
+  // the logo of a party: the player's own, else the one the owner published for everyone (catalogue), else the one of a party the player founded
+  const logoFor = party => (party?.id ? resolveLogo(party.id) : null) ?? (party?.id ? sharedLogoUrl(party.id) : null) ?? (party?.source === DATA_SOURCES.USER && party.logo ? userPartyLogo(party) : null);
   setPartyLogoResolver(logoFor);
   // Verified party offices only: when the dataset has none, the field stays empty.
   const realLeader = partyId => {
@@ -763,7 +764,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
         ${store.hasCareer() && state.game && !wizard && !menu.open ? renderTutorialCard(state, state.ui.activePage, tutorialFacts(state)) : ''}
         <main class="main-area">
           <header class="topbar"><div class="topbar-title"><span class="topbar-brands"><img class="topbar-brand" src="icons/logo-politicando-240.webp" srcset="icons/logo-politicando-240.webp 240w, icons/logo-politicando-640.webp 640w" sizes="96px" width="96" height="96" alt="POLITICANDO 2026" decoding="async" />${store.hasCareer() && state.game ? topbarParty(identity) : ''}</span><strong>${current.title}</strong><span>${current.intro}</span></div><div class="top-actions"><div class="top-tools"><button class="icon-button menu-button" data-action="menu" aria-label="Torna alla schermata iniziale (menu principale)" title="Schermata iniziale: Nuova partita, Continua, Carica partita">${icon('home', 17)}</button><button class="icon-button" aria-label="Salva carriera" title="Salva carriera" data-action="save">${icon('save', 17)}</button></div><div class="top-time"><div class="date-chip">${icon('calendar', 16)}<span>${fullDate(state.clock.currentDate)}</span></div><span class="week-chip">Settimana ${state.game.week.index} · ${state.game.week.ap}/${state.game.week.maxAp} giorni</span><button class="advance-button" data-action="advance" ${state.game.status === 'ended' ? 'disabled' : ''}>${state.campaign?.status === 'active' ? 'Avanza campagna' : 'Chiudi settimana'} ${icon('arrow', 17)}</button></div></div></header>
-          ${wizard ? '' : saveAlert()}${wizard ? '' : dataNotice()}<div class="page-wrap">${wizard ? '' : (state.ui.activePage === 'panoramica' ? renderHeadquarters(state, { identity, partyName: identity.kind === 'partito' ? identity.name : null, partyLogo: identity.logo, newsFilter: views.newsFilter, newsCategory: views.newsCategory, newsOutlet: views.newsOutlet, expanded: views.homeExpand ?? {} }) : subpage(state, current, player, party, eventList, catalog, { logoFor, homePlace: () => store.homePlace(), nationalOverview: () => store.nationalOverview(), programView: () => store.programView(), challengeView: () => store.challengeView(), presidencyView: () => store.presidencyView(), electoralGeography: () => store.electoralGeography?.() ?? null, campaignPicks: campaignChoices(state), parties:realParties(), selectable:selectableParties(), findParty, realLeader, admin, adminContext, territory, realLaws, archive, views, tabFor, settings, lastSaved, account, rewards: () => rewardsApi?.snapshot() ?? null, allianceOdds: id => { try { return store.allianceOdds(id); } catch { return null; } }, inviteOdds: id => { try { return store.inviteOdds(id); } catch { return null; } }, inviteBlock: id => { try { return store.inviteBlock(id); } catch { return null; } }, allianceBlock: id => { try { return store.allianceBlock(id); } catch { return null; } }, allianceWindow: () => store.allianceWindow(), raceOptions: id => { try { return store.raceCandidates(id, racePeople()); } catch { return null; } } }))}</div>
+          ${wizard ? '' : saveAlert()}${wizard ? '' : dataNotice()}<div class="page-wrap">${wizard ? '' : (state.ui.activePage === 'panoramica' ? renderHeadquarters(state, { identity, partyName: identity.kind === 'partito' ? identity.name : null, partyLogo: identity.logo, newsFilter: views.newsFilter, newsCategory: views.newsCategory, newsOutlet: views.newsOutlet, expanded: views.homeExpand ?? {} }) : subpage(state, current, player, party, eventList, catalog, { logoFor, homePlace: () => store.homePlace(), nationalOverview: () => store.nationalOverview(), programView: () => store.programView(), challengeView: () => store.challengeView(), presidencyView: () => store.presidencyView(), electoralGeography: () => store.electoralGeography?.() ?? null, campaignPicks: campaignChoices(state), parties:realParties(), selectable:selectableParties(), findParty, realLeader, admin, adminContext, territory, realLaws, archive, views, tabFor, settings, lastSaved, account, rewards: () => rewardsApi?.snapshot() ?? null, allianceOdds: id => { try { return store.allianceOdds(id); } catch { return null; } }, inviteOdds: id => { try { return store.inviteOdds(id); } catch { return null; } }, inviteBlock: id => { try { return store.inviteBlock(id); } catch { return null; } }, allianceBlock: id => { try { return store.allianceBlock(id); } catch { return null; } }, allianceWindow: () => store.allianceWindow(), raceOptions: id => { try { return store.raceCandidates(id, racePeople()); } catch { return null; } } }))}</div>${wizard ? '' : `<footer class="app-foot">${supportContact('app-support')}</footer>`}
         </main>
         ${wizard ? renderCareerWizard(state, wizard, realParties(), logoFor, realDatabase.parliamentaryGroups ?? [], realDatabase.partyLeaderships ?? [], realDatabase.politicalFigures ?? [], realDatabase.politicians ?? [], wizardTerritoryView(), wizardDataStatus(), store.pollScenarioView(pollScenarioOf(wizard))) : ''}
         ${catalog.selectedPoliticianId ? renderPoliticianProfile(catalog.selectedPoliticianId,{loading:catalog.profileLoading,logoFor}) : ''}
@@ -1712,7 +1713,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
         if (!vote) throw new Error('Questa votazione non è più aperta.');
         const mode = floorControl.dataset.floorMode === 'diretta' && !vote.deferred ? 'diretta' : 'simulata';
         store.setFloorMode(voteId, mode);
-        const [floor, aulaModule] = await Promise.all([import('./floor-view.js?v=20261113-1'), import('./aula-view.js?v=20261113-1')]);
+        const [floor, aulaModule] = await Promise.all([import('./floor-view.js?v=20261113-8'), import('./aula-view.js?v=20261113-8')]);
         const motion = document.documentElement.dataset.sceneMotion ?? settings.sceneMotion;
         // The Aula of the vote just counted: the Chambers through the hemicycle, a council through the totals of its groups.
         const aulaOf = () => {
@@ -1739,7 +1740,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     const aulaControl = event.target.closest('[data-aula-open],[data-aula-local]');
     if (aulaControl) {
       try {
-        const module = await import('./aula-view.js?v=20261113-1');
+        const module = await import('./aula-view.js?v=20261113-8');
         let aula = null;
         if (aulaControl.dataset.aulaOpen) aula = module.parliamentAula(store.getState(), { voteId: aulaControl.dataset.aulaOpen, chamber: aulaControl.dataset.aulaChamber, politicians: realDatabase.politicians ?? [], db: realDatabase });
         else {
@@ -1752,7 +1753,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
         // Live only while the vote is the one Home offers (decided, held in the last two weeks, not followed yet): it plays seat by seat, resumes where it was left and is marked seen at the end.
         // Any other (one already followed, an older one, the history of the votes) opens on the official result, clearly marked as concluded: no animation, nothing saved, nothing applied.
         const voteKey = aulaControl.dataset.aulaOpen ? aulaControl.dataset.aulaOpen : `local:${aulaControl.dataset.aulaLocal}`;
-        const { liveVoteOffer } = await import('./game-mode.js?v=20261113-1');
+        const { liveVoteOffer } = await import('./game-mode.js?v=20261113-8');
         const live = liveVoteOffer(store.getState())?.id === voteKey;
         const left = store.getState().game?.flags?.aulaProgress;
         const start = live && left?.voteId === voteKey ? left.shown : 0;
@@ -1903,6 +1904,21 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       } catch (error) { store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
       return;
     }
+    const logoAction = event.target.closest('[data-admin-logo]');
+    if (logoAction) {
+      try {
+        if (!isAdminVerified()) throw new Error('Sessione del proprietario non verificata.');
+        const partyId = logoAction.dataset.adminLogoId;
+        if (logoAction.dataset.adminLogo === 'publish') {
+          const personal = resolveLogo(partyId);
+          if (!personal) throw new Error('Carica prima il logo di questo partito dal menu della Home, «Loghi dei partiti».');
+          const blob = await (await fetch(personal)).blob();
+          await publishCatalogLogo(partyId, blob);
+          admin.message = 'Logo pubblicato: lo vedono tutti i giocatori al prossimo aggiornamento del catalogo.';
+        } else { await removeCatalogLogo(partyId); admin.message = 'Logo pubblicato rimosso.'; }
+      } catch (error) { admin.message = error.message; }
+      render(store.getState(), store.getLastSaved()); return;
+    }
     const sharedAction = event.target.closest('[data-admin-shared]')?.dataset.adminShared;
     if (sharedAction) {
       try {
@@ -2026,8 +2042,8 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     }
     const noticeClose = event.target.closest('[data-reward-notice-dismiss]');
     if (noticeClose) { const id = noticeClose.closest('[data-reward-notice]')?.dataset.rewardNotice; if (id) rewardsApi?.dismissNotice(id); render(store.getState(), store.getLastSaved()); return; }
-    if (event.target.closest('[data-community-follow]')) { rewardsApi?.visitCommunity('instagram'); render(store.getState(), store.getLastSaved()); return; }   // (the link itself opens the profile; nothing is checked there)
-    if (event.target.closest('[data-community-claim]')) { rewardsApi?.claimCommunity('instagram').then(() => render(store.getState(), store.getLastSaved())); return; }
+    { const follow = event.target.closest('[data-community-follow]'); if (follow) { rewardsApi?.visitCommunity(follow.dataset.communityId || 'instagram'); render(store.getState(), store.getLastSaved()); return; } }   // (the link itself opens the profile; nothing is checked there)
+    { const claim = event.target.closest('[data-community-claim]'); if (claim) { rewardsApi?.claimCommunity(claim.dataset.communityId || 'instagram').then(() => render(store.getState(), store.getLastSaved())); return; } }
     if (event.target.closest('[data-reward-video]')) {
       // The reward is given only for a video the provider confirms as completed (data/repositories/ads-rewarded.js); with no provider the button is off and this does nothing.
       rewardsApi?.ads.watch().then(result => {
@@ -2662,7 +2678,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     if (field.matches('[data-wizard-municipality-search]')) { wizard.municipalityLimit = 40; preserveFocusRender('[data-wizard-municipality-search]'); }
   });
   // The guided fields of the programme editor (ui/program-guide.js, loaded with the page of the programme): the choices of an area fill the fields, which stay editable.
-  const guided = (event, handler) => { if (event.target.closest?.('[data-proposal-form],[data-proposal-edit-form]')) import('./program-guide.js?v=20261113-1').then(guide => guide[handler](event, store)).catch(() => {}); };
+  const guided = (event, handler) => { if (event.target.closest?.('[data-proposal-form],[data-proposal-edit-form]')) import('./program-guide.js?v=20261113-8').then(guide => guide[handler](event, store)).catch(() => {}); };
   root.addEventListener('input', event => guided(event, 'onGuideEvent'));
   root.addEventListener('focusin', event => guided(event, 'onGuideFocus'));
   root.addEventListener('change', async event => {

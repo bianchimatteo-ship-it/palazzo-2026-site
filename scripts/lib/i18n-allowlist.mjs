@@ -17,6 +17,7 @@ export const ALLOWED_ITALIAN = [
   { pattern: /· Misto ·/, reason: 'Gruppo Misto: denominazione ufficiale del gruppo parlamentare.' },
   { pattern: /: «[^»]+»$/, reason: 'Un titolo tra virgolette alla fine della frase (nome di una legge o di una votazione) è un nome proprio.' },
   { pattern: /(NOI CON L'ITALIA|Noi con l'Italia), .*(UDC E |\))-MAIE-CENTRO POPOLARE|^Civici d'Italia-UDC-/i, reason: 'Denominazione ufficiale di un gruppo parlamentare (nome proprio, come pubblicata da Camera e Senato).' },
+  { pattern: /^politicando2026simulazione@gmail\.com$/, reason: 'Indirizzo di posta del gioco per segnalazioni e proposte: un indirizzo non si traduce.' },
   { pattern: /^(Popolare|Massimo)$/, reason: 'Frammento di una denominazione ufficiale (gruppo parlamentare) o nome di persona.' }
 ];
 // English words of Italian origin or spelling the phrase book never needs to translate (they are English too): not counted as untranslated Italian.

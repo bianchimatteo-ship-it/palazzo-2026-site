@@ -2,13 +2,13 @@
 // elections, coalitions and national campaign, the seats projected on the real map of 2022, the last votes, the new
 // Chambers and the formation of the Government. The map, the seats and the results of 2022 are real data (Eligendo);
 // polls, coalitions, votes, seats and Governments of the game are simulation, and every block says which is which.
-import { districtRows } from '../core/legislature-engine.js?v=20261113-1';
-import { formatDate } from '../core/time.js?v=20261113-1';
-import { ALLIANCE_COLORS, NEUTRAL_COLOR, coalitionColor, forceColor } from './political-colors.js?v=20261113-1';
-import { glyph } from './visuals.js?v=20261113-1';
-import { arrow, badge, bar, card, esc, euro, kpi, num, pct, table } from './sections-kit.js?v=20261113-1';
-import { toneEdge } from '../data/party-brand.js?v=20261113-1';
-import { ABSENT_COLOR, MAP_SCOPES, NO_DATA_COLOR, PRESENCE_NOTE, PROVINCE_INDICATOR_NOTE, italyMapInfo, italyMapSvg, italyMapTable, territoryTallies } from './italy-map.js?v=20261113-1';
+import { districtRows } from '../core/legislature-engine.js?v=20261113-8';
+import { formatDate } from '../core/time.js?v=20261113-8';
+import { ALLIANCE_COLORS, NEUTRAL_COLOR, coalitionColor, forceColor } from './political-colors.js?v=20261113-8';
+import { glyph } from './visuals.js?v=20261113-8';
+import { arrow, badge, bar, card, esc, euro, kpi, num, pct, table } from './sections-kit.js?v=20261113-8';
+import { toneEdge } from '../data/party-brand.js?v=20261113-8';
+import { ABSENT_COLOR, MAP_SCOPES, NO_DATA_COLOR, PRESENCE_NOTE, PROVINCE_INDICATOR_NOTE, italyMapInfo, italyMapSvg, italyMapTable, territoryTallies } from './italy-map.js?v=20261113-8';
 
 export const NATIONAL_MAP_VIEWS = Object.freeze([['proiezione', 'Proiezione di oggi'], ['2022', 'Vincitori 2022 (reale)'], ['voto', 'Ultimo voto della partita']]);
 const NEUTRAL = NEUTRAL_COLOR;
@@ -248,7 +248,7 @@ function contestedCard(overview, geography) {
   const rows = [...(projection.contested?.camera ?? []).map(row => ({ ...row, chamber: 'Camera' })), ...(projection.contested?.senato ?? []).map(row => ({ ...row, chamber: 'Senato' }))].sort((a, b) => a.m - b.m).slice(0, 12).map(row => {
     const district = names.get(row.id);
     const second = row.t?.[1] ? `${swatch(colors.of(row.t[1][0]))}${esc(label(row.t[1][0]))}` : '—';
-    return `<li><span><strong>${esc(district?.name ?? row.id)}</strong><small>${esc(row.chamber)} · ${esc(district?.code ?? '')} · nel 2022 ${esc(ALLIANCES_2022[row.f]?.[0] ?? row.f ?? 'risultato non disponibile')}</small><small class="nv-race">${swatch(colors.of(row.w))}${esc(label(row.w))} davanti a ${second}</small></span><b>${num(row.m)}<small>punti</small></b></li>`;
+    return `<li><span><strong>${esc(district?.name ?? row.id)}</strong><small>${esc(row.chamber)} · ${esc(district?.code ?? '')} · nel 2022 ${esc(ALLIANCES_2022[row.f]?.[0] ?? row.f ?? 'risultato non disponibile')}</small><small class="nv-race">${swatch(colors.of(row.w))}<span>${esc(label(row.w))}</span> <span>davanti a</span> ${second}</small></span><b>${num(row.m)}<small>punti</small></b></li>`;
   }).join('');
   const count = (projection.contested?.camera?.length ?? 0) + (projection.contested?.senato?.length ?? 0);
   return card({ fold: { id: 'nv-bilico', icon: 'scales', start: 'closed' }, kicker: 'COLLEGI IN BILICO · PROIEZIONE SIMULATA', title: `${num(count, 0)} collegi sotto i 4 punti`, body: rows ? `<ul class="nv-contested">${rows}</ul>${count > 12 ? `<p class="sx-note">I 12 più incerti; tutti i collegi sono nella mappa qui sotto (bordo chiaro).</p>` : ''}` : '<p class="sx-empty">Nessun collegio in bilico: i margini sono tutti sopra i 4 punti.</p>' });

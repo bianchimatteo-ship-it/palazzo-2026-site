@@ -579,7 +579,7 @@
 .poll-barometer > summary::-webkit-details-marker { display: none; }
 .poll-barometer > summary:focus-visible { outline: 2px solid var(--gold-light, #e6c77a); outline-offset: -3px; }
 .poll-sum-text { display: grid; gap: 3px; min-width: 0; flex: 1; }
-.poll-sum-text .section-kicker { color: var(--gold-soft); font-size: 11px; }
+.poll-sum-text .section-kicker { color: var(--gold-soft); font-size: 12px; }
 .poll-sum-line { display: block; color: var(--ink-hi); font: 750 clamp(17px, 2.4vw, 22px)/1.2 Manrope, sans-serif; letter-spacing: -.02em; overflow-wrap: anywhere; }
 .poll-sum-toggle { flex: none; display: inline-flex; align-items: center; gap: 8px; color: var(--gold-light, #e6c77a); font: 700 12px/1 Manrope, sans-serif; letter-spacing: .04em; text-transform: uppercase; }
 .poll-sum-chevron { width: 9px; height: 9px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); transition: transform .18s ease; margin-top: -3px; }

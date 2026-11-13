@@ -1,18 +1,18 @@
-import { residentsText } from '../core/municipal-rules.js?v=20261113-1';
-import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261113-1';
-import { DEFAULT_LOGO_SECONDARY, LOGO_SECONDARY_PALETTE, LOGO_SHAPES, LOGO_SYMBOLS, isLogoColor, partyLogoDataUrl } from './party-logo.js?v=20261113-1';
-import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261113-1';
-import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261113-1';
-import { AVATAR_GROUPS, AVATAR_LABELS, AVATAR_OPTIONS, DEFAULT_AVATAR, SHAPE_FIELDS, SHAPE_LABELS, SHAPE_LIMIT, normalizeAvatar } from '../core/avatar.js?v=20261113-1';
-import { avatarSvg } from './avatar-svg.js?v=20261113-1';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261113-1';
-import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261113-1';
-import { POLL_SCENARIOS, SCENARIO_LIMITS } from '../core/poll-scenario.js?v=20261113-1';
-import { startStep, startSummary } from './start-wizard.js?v=20261113-1';
-import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261113-1';
-import { normalizeStart } from '../core/start-engine.js?v=20261113-1';
-import { legacyBanner } from './hall-view.js?v=20261113-1';
-import { formatDate } from '../core/time.js?v=20261113-1';
+import { residentsText } from '../core/municipal-rules.js?v=20261113-8';
+import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261113-8';
+import { DEFAULT_LOGO_SECONDARY, LOGO_SECONDARY_PALETTE, LOGO_SHAPES, LOGO_SYMBOLS, isLogoColor, partyLogoDataUrl } from './party-logo.js?v=20261113-8';
+import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261113-8';
+import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261113-8';
+import { AVATAR_GROUPS, AVATAR_LABELS, AVATAR_OPTIONS, DEFAULT_AVATAR, SHAPE_FIELDS, SHAPE_LABELS, SHAPE_LIMIT, normalizeAvatar } from '../core/avatar.js?v=20261113-8';
+import { avatarSvg } from './avatar-svg.js?v=20261113-8';
+import { DATA_SOURCES, isPendingReal, isSelectableParty } from '../data/schema.js?v=20261113-8';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261113-8';
+import { POLL_SCENARIOS, SCENARIO_LIMITS } from '../core/poll-scenario.js?v=20261113-8';
+import { startStep, startSummary } from './start-wizard.js?v=20261113-8';
+import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261113-8';
+import { normalizeStart } from '../core/start-engine.js?v=20261113-8';
+import { legacyBanner } from './hall-view.js?v=20261113-8';
+import { formatDate } from '../core/time.js?v=20261113-8';
 
 const POSITIONS = ['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra'];
 
@@ -273,6 +273,8 @@ function levelStep(d, parliamentaryGroups, realPoliticians, place = null) {
   return '<div class="level-cards">' + cards + pdcCard + presidentCard + '</div>' + pdcChambers + contextBlock + '<div class="wizard-data-note">La carriera parlamentare è uno scenario di gioco: non aggiunge il tuo personaggio agli elenchi dei parlamentari reali e non modifica le consistenze ufficiali.</div>';
 }
 // --- Party-selection filter: only criteria that exist in the data (orientation, kind, status, origin) plus name search. ---
+// The label of a card says what the data is: «verified» only for a record read on its source; a declared one that waits for confirmation says so; a party of the player is the player's.
+export const partySourceLabel = party => (party.entityType === 'coalition' ? 'COALIZIONE / LISTA ELETTORALE · ' : '') + (party.source === DATA_SOURCES.REAL ? (party.verified === true ? 'DATO REALE VERIFICATO' : isPendingReal(party) ? 'IN ATTESA DI VERIFICA' : 'DATO REALE NON VERIFICATO') : party.adminCreated ? 'AGGIUNTO DALL’AMMINISTRATORE · NON VERIFICATO' : party.source === DATA_SOURCES.USER ? 'CREATO DA TE' : 'SIMULAZIONE');
 const KIND_LABELS = { party: 'Partito', politicalMovement: 'Movimento', coalition: 'Coalizione / lista' };
 const STATUS_LABELS = { active: 'In attività', historical: 'Storico' };
 const NO_VALUE = '__none__';
@@ -284,7 +286,12 @@ const selectedOrientations = d => Array.isArray(d.partyOrient) ? d.partyOrient :
 const partyMatches = (party, d, skip) => {
   const query = String(d.partyQuery ?? '').trim().toLocaleLowerCase('it-IT');
   if (query && ![party.officialName, party.name, party.abbreviation].filter(Boolean).join(' ').toLocaleLowerCase('it-IT').includes(query)) return false;
-  if (d.partyFilter && d.partyFilter !== 'all' && party.source !== d.partyFilter) return false;
+  // «Dati reali verificati» holds only what was read on its source (verified: true); what is declared and waits for confirmation has its own entry, and nothing unverified is ever counted as verified
+  if (d.partyFilter === 'real' && !(party.source === DATA_SOURCES.REAL && party.verified === true)) return false;
+  if (d.partyFilter === 'pending' && !isPendingReal(party)) return false;
+  // (a party the owner added to the catalogue is not «yours»: it has its own entry)
+  if (d.partyFilter === 'user' && (party.source !== DATA_SOURCES.USER || party.adminCreated)) return false;
+  if (d.partyFilter === 'admin' && !party.adminCreated) return false;
   if (skip !== 'orient' && selectedOrientations(d).length && !selectedOrientations(d).includes(orientationOf(party))) return false;
   if (skip !== 'kind' && d.partyKind && d.partyKind !== 'all' && kindOf(party) !== d.partyKind) return false;
   if (skip !== 'status' && d.partyStatus && d.partyStatus !== 'all' && statusOf(party) !== d.partyStatus) return false;
@@ -300,7 +307,7 @@ export function activePartyCriteria(d) {
   for (const value of selectedOrientations(d)) out.push({ key: 'orient', value, label: value === NO_VALUE ? 'Orientamento non indicato' : capital(value) });
   if (d.partyKind && d.partyKind !== 'all') out.push({ key: 'kind', value: d.partyKind, label: KIND_LABELS[d.partyKind] ?? 'Tipo non indicato' });
   if (d.partyStatus && d.partyStatus !== 'all') out.push({ key: 'status', value: d.partyStatus, label: STATUS_LABELS[d.partyStatus] ?? 'Stato non indicato' });
-  if (d.partyFilter && d.partyFilter !== 'all') out.push({ key: 'source', value: d.partyFilter, label: d.partyFilter === 'real' ? 'Dati reali verificati' : 'Creati da te' });
+  if (d.partyFilter && d.partyFilter !== 'all') out.push({ key: 'source', value: d.partyFilter, label: d.partyFilter === 'real' ? 'Dati reali verificati' : d.partyFilter === 'pending' ? 'In attesa di verifica' : d.partyFilter === 'admin' ? 'Aggiunti dall’amministratore' : 'Creati da te' });
   return out;
 }
 export function removePartyCriterion(d, key, value) {
@@ -335,7 +342,7 @@ function partyFilterControls(parties, d) {
   const removable = criteria.map(item => '<button type="button" class="party-criterion" data-party-criterion="' + esc(item.key) + '" data-value="' + esc(item.value) + '" aria-label="Rimuovi criterio: ' + esc(item.label) + '">' + esc(item.label) + ' <span aria-hidden="true">×</span></button>').join('');
   const facets = select('partyKind', 'Tipo', 'kind', kindOf, present(kindOf), KIND_LABELS, d.partyKind, 'Tutti i tipi') + select('partyStatus', 'Stato', 'status', statusOf, present(statusOf), STATUS_LABELS, d.partyStatus, 'Tutti gli stati');
   return '<div class="wizard-party-controls"><label>Cerca partito<input type="search" name="partyQuery" data-wizard-party-search value="' + val(d, 'partyQuery') + '" placeholder="Nome o sigla…" autocomplete="off" /></label>' +
-    '<label>Origine<select name="partyFilter" data-wizard-party-filter><option value="all" ' + (!d.partyFilter || d.partyFilter === 'all' ? 'selected' : '') + '>Tutte le origini</option><option value="real" ' + (d.partyFilter === 'real' ? 'selected' : '') + '>Dati reali verificati</option><option value="user" ' + (d.partyFilter === 'user' ? 'selected' : '') + '>Creati da te</option></select></label></div>' +
+    '<label>Origine<select name="partyFilter" data-wizard-party-filter><option value="all" ' + (!d.partyFilter || d.partyFilter === 'all' ? 'selected' : '') + '>Tutte le origini</option><option value="real" ' + (d.partyFilter === 'real' ? 'selected' : '') + '>Dati reali verificati</option><option value="pending" ' + (d.partyFilter === 'pending' ? 'selected' : '') + '>In attesa di verifica</option><option value="admin" ' + (d.partyFilter === 'admin' ? 'selected' : '') + '>Aggiunti dall’amministratore</option><option value="user" ' + (d.partyFilter === 'user' ? 'selected' : '') + '>Creati da te</option></select></label></div>' +
     '<div class="party-orient" role="group" aria-label="Orientamento politico"><span class="party-orient-title">Orientamento politico <small>(puoi sceglierne più di uno)</small></span><div class="party-chip-row">' + chips + '</div></div>' +
     (facets ? '<div class="wizard-party-controls wizard-party-facets">' + facets + '</div>' : '') +
     (criteria.length ? '<div class="party-criteria" aria-label="Criteri applicati">' + removable + '<button type="button" class="party-criterion party-clear" data-party-criterion="all">Rimuovi tutti i filtri</button></div>' : '');
@@ -357,7 +364,7 @@ function partyStep(d, parties, logoFor, parliamentaryGroups, partyLeaderships, p
       const color = /^#[\da-f]{6}$/i.test(party.color ?? '') ? party.color : null;
       const mark = logo ? '<img class="wizard-party-logo" src="' + esc(logo) + '" alt="' + esc(party.logoAlt ?? ('Logo di ' + name)) + '" loading="lazy" />' : '<span class="wizard-party-placeholder" aria-hidden="true">' + esc((party.abbreviation || name.slice(0, 2)).slice(0, 3)) + '</span>';
       // A coalition that stands as one list (AVS) is a political force one can join, not a party: it says so.
-      const sourceName = (party.entityType === 'coalition' ? 'COALIZIONE / LISTA ELETTORALE · ' : '') + (party.source === DATA_SOURCES.REAL ? 'DATO REALE VERIFICATO' : party.source === DATA_SOURCES.USER ? 'CREATO DA TE' : 'SIMULAZIONE');
+      const sourceName = partySourceLabel(party);
       const leaders = partyLeaderships.filter(item => item.partyId === party.id && item.source === DATA_SOURCES.REAL && item.verified === true).map(item => {
         const figure = politicalFigures.find(person => person.id === item.politicalFigureId && person.source === DATA_SOURCES.REAL && person.verified === true);
         return figure ? item.role + ': ' + figure.fullName : null;
@@ -365,10 +372,11 @@ function partyStep(d, parties, logoFor, parliamentaryGroups, partyLeaderships, p
       const facts = [
         party.level ? 'Livello: ' + party.level : null,
         party.geographicArea ? 'Territorio: ' + party.geographicArea : null,
-        party.status ? 'Stato: ' + party.status : null,
+        party.status ? 'Stato: ' + (STATUS_LABELS[party.status] ?? party.status) : null,
         Number.isInteger(party.parliamentaryPresence) ? 'Presenza parlamentare documentata: ' + party.parliamentaryPresence : null,
         Number.isInteger(party.regionalPresence) ? 'Presenza regionale documentata: ' + party.regionalPresence : null,
-        party.foundedAt ? 'Fondato: ' + party.foundedAt : null
+        party.foundedAt ? 'Fondato: ' + party.foundedAt : null,
+        party.adminCreated && party.leadership?.[0]?.name ? 'Leader indicato dall’amministratore: ' + party.leadership[0].name : null
       ].filter(Boolean);
       const description = party.factualDescription ?? party.description;
       const officialSource = party.source === DATA_SOURCES.REAL && party.sourceUrl ? '<a class="wizard-party-source" href="' + esc(party.sourceUrl) + '" target="_blank" rel="noopener noreferrer">Fonte ufficiale ↗</a>' : '';

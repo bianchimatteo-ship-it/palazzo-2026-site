@@ -15,12 +15,15 @@ const { KEYS } = await module('src/data/i18n/keys.js');
 I.installBook(books.flat(), KEYS); await I.setLanguage('en');
 const { newsroomWeek, normalizeMedia, activityArticle } = await module('src/core/news-engine.js');
 const { createSociety } = await module('src/core/society-engine.js');
+const createSocietyForCase = () => { const base = createSociety({ seedText: 'caso', date: '2026-10-26', homeRegion: 'Toscana', notoriety: 30 }); return { ...base, media: normalizeMedia(structuredClone(base.media)) }; };
 const source = await readFile(new URL('../src/core/news-engine.js', import.meta.url), 'utf8');
 const types = [...source.matchAll(/^  '?([a-z]+(?:-[a-z]+)*)'?: \{ cat: '/gm)].map(match => match[1]);
 assert.ok(types.length >= 20, `I tipi di voce del registro (${types.length}).`);
 
 const ITALIAN = new Set('il lo la le gli un una uno di del della dei delle al alla dal nel nella sul sulla per con che non sono come più tra fra sei hai puoi questa questo quando dove cosa senza ogni è già può così anche ancora prima dopo mentre perché però quindi solo molto tutti tutte suo sua loro nostro vostro fino dalla degli sulle nelle negli dello allo agli alle'.split(' '));
-const looksItalian = text => { const words = text.toLowerCase().match(/[a-zà-ù']+/g) ?? []; return words.length >= 3 && words.filter(word => ITALIAN.has(word)).length >= 2; };
+import { createIndependentDetector } from './lib/i18n-independent.mjs';
+const detector = createIndependentDetector();
+const looksItalianOld = text => { const words = text.toLowerCase().match(/[a-zà-ù']+/g) ?? []; return words.length >= 3 && words.filter(word => ITALIAN.has(word)).length >= 2; };
 
 const society = createSociety({ seedText: 'inglese', date: '2026-10-26', homeRegion: 'Toscana', notoriety: 30 });
 const ctx = (week, extra = {}) => ({ week, date: '2026-11-09', year: 2026, parliament: { history: [], laws: [] }, govAxis: 0, gov: { name: 'Governo di prova', stability: 55, margin: 4, groups: 3, external: 0 }, surveys: [], lawsApplied: [], worldEvents: [], projects: [], euCalls: [], finance: null, elections: [], pollLine: null, reactionsFor: () => [], ...extra });
@@ -28,7 +31,7 @@ const history = types.map((type, index) => ({ id: `h${index}`, type, date: '2026
 const facts = [
   { key: 'e1', kind: 'elezione', category: 'elezioni', importance: 4, tone: 'good', week: 5, date: '2026-11-09', text: 'Il voto.', data: { label: 'Elezioni comunali', percent: 31.2, seats: 4, personalMandate: true, outcomeLabel: 'Eletto' } },
   { key: 'e2', kind: 'elezione', category: 'elezioni', importance: 5, tone: 'bad', week: 5, date: '2026-11-09', text: 'Il voto.', data: { national: true, percent: 4.1, seats: 0, personalMandate: false, outcomeLabel: 'Non eletto' } },
-  { key: 'm1', kind: 'mondo', category: 'inchieste', importance: 4, tone: 'bad', week: 5, date: '2026-11-09', text: 'Bollette: la rabbia dei cittadini', data: { title: 'Bollette: la rabbia dei cittadini', body: 'Bollette: la rabbia dei cittadini', lines: [] }, reactions: [], story: { kind: 'scandalo', op: 'open', key: 'caso:x', title: 'Il caso X', stage: 'indiscrezione', text: 'Un’indiscrezione.', heat: 55 } }
+  { key: 'm1', kind: 'mondo', category: 'inchieste', importance: 4, tone: 'bad', week: 5, date: '2026-11-09', text: 'Bollette: la rabbia dei cittadini', data: { title: 'Bollette: la rabbia dei cittadini', body: 'Bollette: la rabbia dei cittadini', lines: [] }, reactions: [], story: { kind: 'scandalo', op: 'open', key: 'caso:x', title: 'La crisi di governo', stage: 'indiscrezione', text: 'Si apre la crisi di governo', heat: 55 } }
 ];
 let current = { ...society, media: normalizeMedia(structuredClone(society.media)) };
 const pollLine = { label: 'Futuro Nazionale', share: 7.2, delta: 0.4, week: 5, date: '2026-10-21', previousDate: '2026-10-14', period: { from: '2026-10-17', to: '2026-10-19' } };
@@ -38,21 +41,56 @@ let week = 5;
 for (let at = 0; at < history.length; at += chunk, week++) current = newsroomWeek(current, ctx(week, { parliament: { history: history.slice(0, at + chunk), laws: [] }, extraFacts: at === 0 ? facts : [], pollLine }));
 for (let more = 0; more < 8; more++, week++) current = newsroomWeek(current, ctx(week, { parliament: { history, laws: [] }, pollLine }));
 current = activityArticle(current, { activity: 'intervista', week, date: '2026-11-09', name: 'Anna Prova', topic: 'i trasporti', tone: 'good', outletId: 'quotidiani' }, ctx(week));
+// The case of the field (Roberto Vannacci, the TV appearance on infrastructure) and every other way an activity is told: five activities × three tones × the topics of the society × every outlet that writes
+// a full article, with and without territory and government priority. Names are parameters, never words of the template.
+const PERSON = 'Roberto Vannacci', PARTY = 'Futuro Nazionale';
+const TOPICS = ['economia', 'occupazione', 'servizi pubblici', 'sanità', 'istruzione', 'infrastrutture', 'trasporti', 'sicurezza', 'ambiente', 'lavoro'];
+let combo = 0;
+const written = [];   // the newsroom keeps the last articles only: each one written here is kept apart to be read
+for (const activity of ['intervista', 'conferenza', 'talk', 'prima-serata', 'interrogazione']) for (const tone of ['good', 'bad', 'neutral']) for (const topic of TOPICS) for (const outletId of ['quotidiani', 'tg', 'locale', 'social']) {
+  combo++;
+  current = activityArticle(current, { activity, name: PERSON, topic, region: combo % 2 ? 'Toscana' : null, tone, party: combo % 3 ? PARTY : null, week: week + combo, date: '2026-11-09', outletId, priority: combo % 5 === 0 }, ctx(week + combo));
+  if (current.media.articles[0]) written.push(current.media.articles[0]);
+}
 
 const texts = [];
 const add = (where, value) => { if (typeof value === 'string' && value.trim()) texts.push([where, value]); };
-for (const article of current.media.articles) { add(`articolo ${article.kind}`, article.headline); add('occhiello', article.kicker); add('sommario', article.deck); for (const paragraph of article.body) add('corpo', paragraph); for (const fact of article.facts ?? []) { add('dato', fact.label); add('dato', fact.value); } for (const tag of article.tags ?? []) add('tag', tag); }
+for (const article of [...current.media.articles, ...written]) { add(`articolo ${article.kind}`, article.headline); add('occhiello', article.kicker); add('sommario', article.deck); for (const paragraph of article.body) add('corpo', paragraph); for (const fact of article.facts ?? []) { add('dato', fact.label); add('dato', fact.value); } for (const tag of article.tags ?? []) add('tag', tag); }
 for (const story of current.media.stories) { add('vicenda', story.title); add('esito', story.resolution?.text); for (const entry of story.timeline ?? []) add('cronologia', entry.text); for (const reaction of story.reactions ?? []) { add('reazione', reaction.actor); add('reazione', reaction.text); } }
 for (const bulletin of current.media.radio.bulletins) { add(`radio ${bulletin.programme}`, bulletin.label); add('radio', bulletin.slot); add('radio', bulletin.intro); for (const item of bulletin.items) add('radio', item.headline); }
 assert.ok(current.media.articles.length >= 20 && current.media.radio.bulletins.length >= 3 && texts.length > 150, `La redazione ha scritto abbastanza (${current.media.articles.length} articoli, ${texts.length} testi).`);
 
 // official and proper names stay as they are: the names of the parties and groups in the real data
-const names = new Set(['Governo di prova', 'Futuro Nazionale', 'Anna Prova', 'TG Orizzonte', 'Rete Quartiere', 'Il Meridiano', 'La Gazzetta del Territorio', 'Piazza Digitale', 'Radio Terzo Piano']);
+const names = new Set([PERSON, PARTY, 'Governo di prova', 'Futuro Nazionale', 'Anna Prova', 'TG Orizzonte', 'Rete Quartiere', 'Il Meridiano', 'La Gazzetta del Territorio', 'Piazza Digitale', 'Radio Terzo Piano']);
 const strip = text => { let out = text; for (const name of names) out = out.split(name).join(' '); return out; };
 const left = [];
-for (const [where, text] of texts) { const english = I.translateText(text); if (looksItalian(strip(english))) left.push(`${where}: ${english.slice(0, 200)}`); }
+// the verdict is the independent detector (Italian function words, accents, morphology and the lexicon of the project), on the WHOLE sentence once the proper names are taken out; the old heuristic
+// (two Italian small words in a text of three) is kept as a second net
+// third net, independent of any list of Italian words: a word of the Italian SOURCE (four letters or more, not a name) that is found again, unchanged, in the English text and is not a word of any English
+// phrase of the book was not translated («l’ospitata televisiva» → «l'ospitata televisiva»)
+const englishWords = new Set(); for (const book of books) for (const [, en] of book) for (const word of String(en).toLowerCase().match(/[a-zà-ù]{4,}/g) ?? []) englishWords.add(word);
+const SHARED = new Set(['radio', 'social', 'dossier', 'welfare', 'budget', 'leader', 'premier', 'spread', 'gazzetta', 'meridiano', 'orizzonte', 'quartiere', 'terzo', 'piano', 'digitale', 'rete', 'prova', 'politica', 'agenda']);
+const leaks = (source, english) => { const out = english.toLowerCase().match(/[a-zà-ù]{4,}/g) ?? []; const seen = new Set(strip(source).toLowerCase().match(/[a-zà-ù]{4,}/g) ?? []); return [...new Set(out.filter(word => seen.has(word) && !englishWords.has(word) && !SHARED.has(word)))]; };
+// read twice: with the English that the engine wrote next to the Italian (the articles of a new game), and with the phrase book alone (the articles that a save written before already holds)
+const readAll = label => { for (const [where, text] of texts) { const english = I.translateText(text); const clean = strip(english); const reason = detector.reasonOf(clean); const leaked = leaks(text, clean); if (reason || leaked.length || looksItalianOld(clean)) left.push(`${label} ${where}: ${english.slice(0, 200)}${reason ? ` [${reason.slice(0, 60)}]` : ''}${leaked.length ? ` [non tradotto: ${leaked.join(', ')}]` : ''}`); } };
+const withEnglish = written.filter(article => article.en).length;
+assert.ok(withEnglish >= written.length * 0.9, `Le uscite pubbliche portano il loro inglese (${withEnglish}/${written.length}).`);
+readAll('[nuovo]');
+const newCount = left.length;
+I.forgetPairs(); readAll('[vecchio salvataggio]');
+// the case of the field, word by word, in both ways
+const vannacci = activityArticle(createSocietyForCase(), { activity: 'talk', name: PERSON, topic: 'infrastrutture', region: 'Toscana', tone: 'good', party: PARTY, week: 900, date: '2026-11-09', outletId: 'quotidiani' }, ctx(900)).media.articles[0];
+assert.equal(vannacci.headline, 'Roberto Vannacci: l’ospitata televisiva su infrastrutture');
+assert.equal(vannacci.en.headline, 'Roberto Vannacci: the TV appearance on infrastructure');
+assert.match(vannacci.en.deck, /^The TV appearance by Roberto Vannacci was a convincing performance; the subject is infrastructure and the reference territory is Toscana\./);
+assert.equal(I.translateText(vannacci.headline), 'Roberto Vannacci: the TV appearance on infrastrutture'.replace('infrastrutture', 'infrastructure'), 'Anche senza il suo inglese (vecchio salvataggio) il titolo è tutto in inglese.');
+I.rememberPairs([[vannacci.headline, vannacci.en.headline], [vannacci.deck, vannacci.en.deck]]);
+assert.equal(I.translateText(vannacci.headline), vannacci.en.headline);
+assert.equal(I.translateText(vannacci.deck), vannacci.en.deck);
+if (process.env.NEWS_DEBUG_NEW) console.log(`nuovo: ${newCount} residui`);
 const ratio = left.length / texts.length;
 if (process.env.I18N_NEWS_DEBUG) for (const [where, text] of texts) if (/si chiude/.test(text)) console.log(JSON.stringify(text), '=>', JSON.stringify(I.translateText(text)));
+if (process.env.NEWS_TRY) for (const t of process.env.NEWS_TRY.split('|')) console.log(JSON.stringify(t), '=>', JSON.stringify(I.translateText(t)));
 console.log(`Inglese generato dalla redazione: ${texts.length} testi (${current.media.articles.length} articoli, ${current.media.stories.length} vicende, ${current.media.radio.bulletins.length} notiziari), ${left.length} ancora in italiano (${(ratio * 100).toFixed(1)}%).`);
 if (left.length) console.log(left.slice(0, 40).join('\n'));
 if (process.env.I18N_NEWS_LEFT) (await import('node:fs')).writeFileSync(process.env.I18N_NEWS_LEFT, JSON.stringify(left));

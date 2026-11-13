@@ -133,14 +133,13 @@ console.log(`  Maggioranze possibili nella XIX: ${found.size} esiti diversi (${[
   s.parliament.government.verificaFor = s.clock.currentDate;
   keepAlive(); store.advance(7);
   s = store.getState();
-  const request = s.game.inbox.find(item => item.templateId === 'voto-fiducia');
-  assert.ok(request && /Fiducia al/.test(request.title) && request.params.line === 'a favore', 'In crisi arriva la decisione sul voto di fiducia.');
+  // (the vote of confidence is a live vote of the Chamber: the player is asked in the Aula, he does not answer from the agenda any more)
+  const request = store.openVotes().find(item => item.scope === 'fiducia');
+  assert.ok(request && /Fiducia al/.test(request.title), 'In crisi arriva la votazione sulla fiducia, da votare in Aula.');
   html = renderParliamentPage('governo', s, { secretary: false });
-  assert.ok(html.includes('data-confidence-vote="contrario"'), 'Il voto sulla fiducia si decide anche dalla scheda del governo.');
   const partyBefore = s.parliament.careerStanding.partySupport;
-  store.resolveAgendaItem(request.id, 'contrario');
-  assert.equal(store.getState().parliament.government.pendingPlayerVote, 'contrario');
-  let entry = null;
+  store.castOpenVote(request.id, 'contrario', { mode: 'simulata' });
+  let entry = store.getState().parliament.history.find(item => ['fiducia-ottenuta', 'fiducia-negata'].includes(item.type) && item.details?.decided);
   for (let week = 0; week < 4 && !entry; week++) {
     keepAlive(); store.advance(7);
     entry = store.getState().parliament.history.find(item => ['fiducia-ottenuta', 'fiducia-negata'].includes(item.type) && item.details?.decided);

@@ -116,17 +116,19 @@ const chamber = 'camera';
 const seatGroup = parliament.chambers[chamber].groups.find(group => group.simulatedSeats > 5);
 parliament.player = { chamber, groupId: seatGroup.groupId, politicianId: base.career.playerId };
 const law = { ...structuredClone(parliament.laws[0] ?? lawWithVote(base)), votes: [], confidence: false };
-const vote = autoVote(parliament, law, chamber, { date: base.clock.currentDate, playerChoice: 'assente' });
+// (the player's vote is compulsory: favourable, against or abstained — «absent» is no longer a choice, the vote cannot be closed without his own)
+assert.throws(() => autoVote(parliament, law, chamber, { date: base.clock.currentDate, playerChoice: 'assente' }), /manca il tuo voto/, 'Il giocatore non può risultare assente: senza il suo voto la votazione non si chiude.');
+const vote = autoVote(parliament, law, chamber, { date: base.clock.currentDate, playerChoice: 'astenuto' });
 const own = vote.byGroup.find(row => row.groupId === seatGroup.groupId);
-assert.equal(own.absentVotes, 1, 'Il giocatore assente è contato come assente nel suo gruppo.');
-assert.equal(own.yesVotes + own.noVotes + own.abstainVotes + own.absentVotes, seatGroup.simulatedSeats, 'Il gruppo del giocatore assente somma ai suoi seggi.');
+assert.ok(own.abstainVotes >= 1, 'Il giocatore astenuto è contato come astenuto nel suo gruppo.');
+assert.equal(own.yesVotes + own.noVotes + own.abstainVotes + (own.absentVotes ?? 0), seatGroup.simulatedSeats, 'Il gruppo del giocatore astenuto somma ai suoi seggi.');
 assert.equal(vote.yes + vote.against + vote.abstain + vote.absent, vote.total, 'sì + no + astenuti + assenti = componenti.');
 const government = parliament.government;
 if (government && government.coalitionGroupIds.length) {
-  const confidence = voteGovernmentConfidence(setConfidenceVote({ ...parliament, government: { ...government, status: 'awaiting-confidence', confidenceVotes: government.confidenceVotes ?? [] } }, 'assente'), base.clock.currentDate);
+  const confidence = voteGovernmentConfidence(setConfidenceVote({ ...parliament, government: { ...government, status: 'awaiting-confidence', confidenceVotes: government.confidenceVotes ?? [] } }, 'astenuto'), base.clock.currentDate);
   const record = confidence.government.confidenceVotes.at(-1).votes.find(item => item.chamber === chamber);
   for (const row of record.byGroup) assert.equal(row.yesVotes + row.noVotes + row.abstainVotes + (row.absentVotes ?? 0), row.simulatedSeats, `Fiducia: il gruppo ${row.groupId} somma ai suoi seggi.`);
-  assert.equal(record.absent, 1, 'Fiducia: l’assenza del giocatore è registrata.');
+  assert.ok(record.abstain >= 1, 'Fiducia: l’astensione del giocatore è registrata.');
 }
 
 // ---------- 8. texts show dates through labels, never through the keys the state reads as dates ----------
