@@ -186,6 +186,11 @@ Branch `test/ambiente-privato`. Che cosa è cambiato, dove, e come si verifica:
 - **Ricompensa TikTok**: implementata e testata ma SPENTA (`COMMUNITY_TIKTOK_ENABLED` off): la pagina ufficiale delle regole non è stata leggibile da qui. **AdMob**: tre stati verificabili (`not-configured|no-ad|ready`), nessun ID inventato, nessun SDK: `check-ads-states`.
 - **Non fatto**: dry-run e deploy su Test (mancano `wrangler.test.local.jsonc` e credenziali); AAB non generato (versionCode attuale 1, il prossimo deve superare l'ultimo caricato su Play, non noto da qui).
 
+## Audit legale e di conformità (13 novembre 2026, nota di lavoro)
+- Nuovo `docs/audit-legale-conformita.md` e `docs/app-store-apple.md`; ruoli: account Play intestato a un genitore (non a Matteo), titolare GDPR non presunto, iscrizione Apple da decidere (individuale o organizzazione).
+- Informativa/termini: titolare con segnaposto esplicito, riga sui dati delle ricompense (lacuna trovata), dichiarazione sulla pubblicità; `check-legal` accetta solo segnaposto registrati in `legale-requisiti.json` (ora 9 requisiti indispensabili aperti: il gate `--release` fallisce, come deve).
+- Fonti non raggiungibili da qui: Google Play Console, EUR-Lex, Normattiva, EDPB; Apple letta solo in parte. Nessuna conformità dichiarata.
+
 ## Milestone precedente — fondazione partito, consenso, fiducia, direttiva (completata)
 Vedi la cronologia git (commit `7fbae22`, `8842e95`).
 

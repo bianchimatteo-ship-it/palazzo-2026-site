@@ -1,6 +1,6 @@
 # Minori e privacy — analisi del trattamento reale e decisioni aperte (22/10/2026)
 
-Documento di lavoro tecnico. **Non è un parere legale**: dice che cosa il codice fa davvero, quali obblighi vanno valutati e che cosa deve decidere o far verificare a un professionista il titolare (Matteo Bianchi, persona fisica). Le norme sono citate dalla conoscenza dell'autore: prima di dichiarare qualcosa a Google Play o a terzi vanno ricontrollate sui testi vigenti.
+Documento di lavoro tecnico. **Non è un parere legale**: dice che cosa il codice fa davvero, quali obblighi vanno valutati e che cosa devono decidere o far verificare a un professionista i genitori (che supervisionano Matteo Bianchi, sviluppatore e gestore operativo) e il soggetto che risulterà titolare del trattamento. **Aggiornamento 13/11/2026:** il titolare GDPR non è presunto (né Matteo né i genitori per default): vedi `docs/audit-legale-conformita.md` §2 e il requisito `titolare-trattamento`. Se Matteo è minorenne la sua capacità di assumere obblighi e contratti è limitata. Le norme sono citate dalla conoscenza dell'autore: prima di dichiarare qualcosa a Google Play o a terzi vanno ricontrollate sui testi vigenti.
 
 ## 1. Che cosa viene trattato davvero
 

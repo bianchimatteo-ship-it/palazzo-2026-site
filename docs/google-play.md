@@ -104,12 +104,14 @@ Le dichiarazioni le compila e le firma il titolare. Qui ci sono solo i **fatti v
 | Icone e splash nativi | `android/app/src/main/res` | **sostituiti il 22/10/2026**: nel progetto c'erano i segnaposto del modello Capacitor (la «X» azzurra); ora icona adattiva, tonda e splash derivano dall'icona del gioco (`icons/icon-maskable-512.png`, stessa titolarità da documentare). Da controllare a vista su dispositivo |
 | Video promozionale | facoltativo | assente |
 
-Nelle schermate non devono comparire loghi di partiti di terzi che il titolare non abbia diritto di mostrare: usare le grafiche originali del gioco.
+Nelle schermate non devono comparire loghi di partiti di terzi che chi pubblica non abbia diritto di mostrare: usare le grafiche originali del gioco.
 
-## 7. Cosa resta a Matteo Bianchi (in ordine)
+## 7. Cosa resta da fare (in ordine) — ruoli aggiornati il 13/11/2026
+
+**Ruoli.** L'account Play Console è intestato a **un genitore**, che ha accettato l'accordo con Google e firma scheda e dichiarazioni; Matteo Bianchi sviluppa e gestisce operativamente il progetto sotto la loro supervisione ma **non è titolare dell'account**. Chi sia il titolare del trattamento GDPR non è presunto (`docs/audit-legale-conformita.md` §2). Le verifiche su Google Play di questo documento (22/10/2026) non sono state riconfermate da fonti ufficiali il 13/11/2026 (host non raggiungibile).
 
 1. Chiudere i requisiti legali bloccanti di `docs/legale-requisiti.json` (indirizzo, DPA Cloudflare, minori, diritti sugli asset, account sviluppatore Play).
-2. Creare l'account sviluppatore Play (verifica identità/indirizzo richiesta da Google) e decidere chi figura come sviluppatore.
+2. Il genitore titolare dell'account completa la verifica di Google (identità/indirizzo) e conferma nome sviluppatore e contatti pubblici, coerenti con l'informativa; dichiarazione «trader» DSA da valutare con un professionista.
 3. Costruire il bundle firmato (§2) e provarlo su dispositivo (§3); caricarlo in un test interno, leggere il pre-launch report.
 4. Compilare Play Console: scheda (§4), dichiarazioni (§5), IARC, pubblico di destinazione, sicurezza dei dati; caricare le risorse (§6).
 5. Pubblicare **solo dopo** i punti precedenti: nulla è stato inviato a Google Play da questo lavoro.

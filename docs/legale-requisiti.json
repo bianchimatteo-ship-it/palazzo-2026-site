@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updated": "2026-10-22",
-  "note": "Informazioni che solo il titolare può fornire e che il codice non può verificare. Le pagine pubbliche (privacy.html, termini.html, elimina-account.html) sono scritte senza di esse e non le inventano. Finché un requisito con required=true è «mancante» le pagine restano con noindex e il controllo di rilascio (npm run check:legal -- --release) fallisce. Per chiudere un requisito: inserire il dato nel testo pubblico indicato in «section», portare status a «fornito» e scrivere in «provided» una nota con la data e la fonte (mai il dato personale, se non pubblico).",
+  "updated": "2026-11-13",
+  "note": "Informazioni che solo il titolare può fornire e che il codice non può verificare. Le pagine pubbliche (privacy.html, termini.html, elimina-account.html) sono scritte senza di esse e non le inventano: dove il dato manca c'è un segnaposto esplicito (`data-placeholder=\"<id>\"`), e il test `check:legal` verifica che ogni segnaposto corrisponda a un requisito mancante di questo file. Finché un requisito con required=true è «mancante» le pagine restano con noindex e il controllo di rilascio (npm run check:legal -- --release) fallisce. Per chiudere un requisito: inserire il dato nel testo pubblico indicato in «section», portare status a «fornito» e scrivere in «provided» una nota con la data e la fonte (mai il dato personale, se non pubblico).",
   "items": [
     {
       "id": "indirizzo-titolare",
@@ -77,9 +77,54 @@
     },
     {
       "id": "account-sviluppatore-play",
-      "title": "Chi gestisce il servizio e chi è titolare dell'account sviluppatore Google Play",
-      "section": "privacy.html §1 · termini.html §1 · scheda Play Console (sviluppatore, indirizzo, contatti)",
-      "why": "Le pagine pubbliche indicano come titolare Matteo Bianchi, persona fisica. Google Play chiede che nome e contatti dello sviluppatore siano veri e coerenti con la politica sulla privacy, e per gli account personali nuovi richiede la verifica dell'identità e dell'indirizzo. Solo il titolare può confermare che l'account sviluppatore e il titolare del trattamento sono la stessa persona (o indicare chi è l'altro soggetto e adeguare informativa e termini). Il codice non può verificarlo e non va inventato.",
+      "title": "Titolarità dell'account sviluppatore Google Play e rapporto con chi gestisce il servizio",
+      "section": "scheda Play Console (sviluppatore, indirizzo, contatti) · docs/audit-legale-conformita.md §2 e §4",
+      "why": "Fatto indicato dal progetto: l'account Play Console è intestato a uno dei genitori, che ha accettato l'accordo di distribuzione con Google. Matteo Bianchi NON è il titolare dell'account. Manca: nome e cognome esatti del genitore intestatario, indirizzo/contatti che Google mostrerà (e se l'account è «personale» o «organizzazione»), e la conferma che nome sviluppatore, contatto e informativa privacy sono coerenti tra loro. Va deciso se il genitore, in quanto titolare dell'account e contraente con Google, risulti anche come soggetto che offre il servizio agli utenti (e quindi, probabilmente, titolare del trattamento): vedi «titolare-trattamento». Il codice non può verificarlo e non va inventato.",
+      "required": true,
+      "status": "mancante",
+      "provided": null
+    },
+    {
+      "id": "titolare-trattamento",
+      "title": "Chi è il titolare del trattamento (e chi è responsabile o autorizzato)",
+      "section": "privacy.html §1 · termini.html §1 (segnaposto) · docs/audit-legale-conformita.md §2",
+      "why": "Il titolare è chi determina finalità e mezzi del trattamento (art. 4 n. 7 GDPR; criterio funzionale, linee guida EDPB 07/2020), non chi ha l'account sullo store né chi è proprietario del progetto. Fatti noti: Matteo Bianchi ideò e gestisce operativamente il servizio sotto la supervisione dei genitori; un genitore è titolare dell'account Play. Matteo è minorenne? Se sì non ha piena capacità di contrarre (con Cloudflare, Google, Apple) né di rispondere in proprio degli obblighi del titolare: la soluzione più prudente è che un adulto assuma il ruolo e la responsabilità, ma è una scelta dei genitori da formalizzare con un professionista. Mancano: la decisione su chi sia il titolare (nome, cognome, indirizzo), il ruolo di Matteo (autorizzato al trattamento, istruito per iscritto?) e di chi detiene gli account Cloudflare e Gmail del servizio.",
+      "required": true,
+      "status": "mancante",
+      "provided": null
+    },
+    {
+      "id": "account-apple-developer",
+      "title": "Iscrizione all'Apple Developer Program: persona e modalità (individuale o organizzazione)",
+      "section": "scheda App Store Connect (venditore, contatti, trader status) · docs/audit-legale-conformita.md §3",
+      "why": "Apple richiede la maggiore età nella propria area per iscriversi; un minorenne può usare l'account di un genitore (fonte: developer.apple.com/programs/enroll). Con l'iscrizione individuale il nome legale della persona figura come venditore sull'App Store; come organizzazione serve un'entità giuridica riconosciuta, D-U-N-S e sito/email di dominio (non si accettano nomi commerciali o ditte fittizie). Mancano: quale genitore si iscrive, se come individuo (e quindi con il suo nome come venditore e il suo contratto con Apple) o tramite un'entità giuridica (non esistente oggi), conferma delle conseguenze su titolarità dell'app, dichiarazione di «trader» ai sensi del DSA e pubblicazione di indirizzo e contatti.",
+      "required": true,
+      "status": "mancante",
+      "provided": null
+    },
+    {
+      "id": "trader-dsa",
+      "title": "Dichiarazione di «trader» (DSA) su Google Play e App Store Connect",
+      "section": "Play Console · App Store Connect · docs/audit-legale-conformita.md §5",
+      "why": "Entrambi gli store chiedono agli sviluppatori di dichiarare se agiscono come professionisti (trader) nell'UE; Apple dichiara che l'app è gratuita non basta a stabilirlo, e rinvia al consulente legale. Se si dichiara trader, nome, indirizzo e contatti diventano pubblici. Va deciso con un professionista, dal soggetto che detiene l'account.",
+      "required": true,
+      "status": "mancante",
+      "provided": null
+    },
+    {
+      "id": "ricompense-social-policy",
+      "title": "Ricompensa «comunità» (TikTok/Instagram): regole delle piattaforme e dei negozi",
+      "section": "privacy.html §3 (riga «Ricompense») · src/data/simulation/reward-rules.js",
+      "why": "La ricompensa TikTok è spenta (`COMMUNITY_TIKTOK_ENABLED` off) perché non è stato possibile leggere le regole ufficiali della piattaforma; quella Instagram è attiva come autodichiarazione. Prima di offrire incentivi per seguire un profilo vanno verificate le regole delle piattaforme sociali (promozioni/incentivi) e dei negozi (Apple 3.2.2 e simili sulle ricompense per azioni su social; Google Play sulle ricompense), oltre alla disciplina italiana su concorsi e operazioni a premio se il caso. Verifica da fare con fonti ufficiali e un professionista.",
+      "required": false,
+      "status": "mancante",
+      "provided": null
+    },
+    {
+      "id": "eta-pubblico-store",
+      "title": "Pubblico di destinazione, classificazione per età (IARC e Apple) e Famiglie/Kids",
+      "section": "Play Console · App Store Connect · docs/minori-e-privacy.md §3",
+      "why": "Le risposte vanno date dal titolare dell'account sui fatti dell'app, non scelte per superare i controlli. Fatto: il gioco è giocabile da chiunque senza account, gratuito, senza pubblicità e senza SDK di terzi; l'account è dichiarato per 14+. La categoria Kids di Apple e le Norme per le famiglie di Google non vanno richieste se il pubblico non è principalmente bambini; la scelta va documentata.",
       "required": true,
       "status": "mancante",
       "provided": null

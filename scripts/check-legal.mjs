@@ -23,7 +23,12 @@ const links = [];
 for (const name of PAGES) {
   const html = await readFile(new URL(name, root), 'utf8');
   const text = html.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/, '').replace(/<[^>]+>/g, ' ');
-  for (const pattern of PLACEHOLDERS) assert.ok(!pattern.test(html.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/, '')), `${name}: nessun testo provvisorio (${pattern}).`);
+  // explicit placeholders (data-placeholder="<id>") are the ONLY allowed provisional text: each one must name a requirement that is still missing in docs/legale-requisiti.json (never invented data), and it is removed from the scan below
+  const open = [...html.matchAll(/<span data-placeholder="([a-z-]+)">\[(?:SEGNAPOSTO|PLACEHOLDER) · \1\]<\/span>/g)].map(match => match[1]);
+  assert.equal(open.length, (html.match(/data-placeholder=/g) ?? []).length, `${name}: ogni segnaposto ha il formato [SEGNAPOSTO · id].`);
+  for (const id of open) assert.ok(requirements.missingRequired.some(item => item.id === id), `${name}: il segnaposto «${id}» corrisponde a un requisito indispensabile mancante.`);
+  const scanned = html.replace(/<span data-placeholder="[a-z-]+">[^<]*<\/span>/g, '').replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/, '');
+  for (const pattern of PLACEHOLDERS) assert.ok(!pattern.test(scanned), `${name}: nessun testo provvisorio (${pattern}).`);
   const english = EN_PAGES.includes(name);
   assert.ok(new RegExp(`<html lang="${english ? 'en' : 'it'}">`).test(html) && /<title>[^<]+<\/title>/.test(html) && /name="viewport"/.test(html) && /name="description"/.test(html) && /<h1>[^<]+<\/h1>/.test(html), `${name}: pagina completa.`);
   assert.ok((english ? /<nav class="legal-nav"[\s\S]*privacy-en\.html[\s\S]*terms-en\.html[\s\S]*delete-account-en\.html/ : /<nav class="legal-nav"[\s\S]*privacy\.html[\s\S]*termini\.html[\s\S]*elimina-account\.html/).test(html), `${name}: navigazione fra le pagine legali.`);
@@ -44,6 +49,8 @@ for (const [name, target] of links) await access(new URL(target === './' ? 'inde
 // the texts say what the code does (the numbers are audited in check-security.mjs)
 const privacy = await readFile(new URL('privacy.html', root), 'utf8');
 for (const needle of ['Titolare del trattamento', 'Cloudflare', 'Garante', 'Minori', 'localStorage', 'non usa cookie', 'Per quanto tempo conserviamo i dati', 'Elimina il mio account', 'nessun dato di gioco viene inviato ai nostri server', 'Google Apps Script e Gmail', 'Loghi dei partiti']) assert.ok(privacy.includes(needle), `Informativa: «${needle}».`);
+assert.ok(!/titolare del trattamento è <strong>Matteo Bianchi/.test(privacy) && !/controller is <strong>Matteo Bianchi/.test(await readFile(new URL('privacy-en.html', root), 'utf8')), 'Privacy: la titolarità non è attribuita a Matteo Bianchi per default.');
+for (const [html, label] of [[privacy, 'Informativa'], [await readFile(new URL('termini.html', root), 'utf8'), 'Termini']]) assert.ok(!/(account|titolare dell’account)[^.]{0,80}(Matteo|sviluppatore)/i.test(html), `${label}: nessuna attribuzione dell’account sviluppatore a Matteo.`);
 const terms = await readFile(new URL('termini.html', root), 'utf8');
 for (const needle of ['simulazione politica', 'Account e responsabilità', 'Salvataggi locali e online', 'Proprietà intellettuale', 'Uso consentito', 'Disponibilità, manutenzione', 'inderogabil']) assert.ok(terms.includes(needle), `Termini: «${needle}».`);
 // the English pages say the same as the Italian ones: the same sections, the same table rows, the same numbers and the same contact
@@ -66,4 +73,4 @@ for (const name of PAGES) {
 }
 const state = `Requisiti indispensabili mancanti: ${requirements.missingRequired.length} (${requirements.missingRequired.map(item => item.id).join(', ') || 'nessuno'}); facoltativi o condizionati: ${requirements.missingOptional.length}.`;
 if (process.argv.includes('--release') && requirements.missingRequired.length) { console.error(releaseMessage(requirements.missingRequired)); process.exit(1); }
-console.log(`Documenti legali verificati: pagine definitive senza bozze né segnaposto, recapito ${CONTACT}, collegamenti e navigazione validi, noindex coerente con i requisiti. ${state}`);
+console.log(`Documenti legali verificati: pagine senza bozze (segnaposto solo se registrati come requisiti aperti), recapito ${CONTACT}, collegamenti e navigazione validi, noindex coerente con i requisiti. ${state}`);
