@@ -119,3 +119,18 @@ Quanto già documentato resta valido come inventario tecnico (`docs/google-play.
 
 ## Aggiornamento del 14/11/2026
 Confermato: Matteo è minorenne e decide in concreto finalità e modalità. Le pagine pubbliche (IT/EN) descrivono i ruoli operativi, non attribuiscono la titolarità formale né l'offerta del servizio (segnaposto `titolare-trattamento`, da decidere con un professionista tenendo conto di capacità giuridica e rappresentanza dei genitori), non qualificano Cloudflare e Google, e non rivelano l'età di Matteo (scelta dei genitori). `email-fornitore` diventa requisito indispensabile (10 aperti).
+
+## Aggiornamento del 14/11/2026 (2)
+Fatti comunicati: i genitori supervisionano; un genitore, intestatario dell'account Play, è disponibile a valutare di assumere formalmente il ruolo di **offerente del servizio** (proposto, **non** formalizzato: nessuna accettazione documentata); gli account **Cloudflare e Gmail sono intestati a Matteo** e il genitore era presente alle accettazioni, ma **non risulta rappresentanza formale documentata**; pubblico **14+** con verifica per Paese; nome, marchio e grafiche opera di Matteo; **AdMob** unica monetizzazione futura, non presente nella versione attuale (1.0.1 secondo i genitori; nel repository `versionName` è ancora 1.0).
+
+| Ruolo | Stato |
+|---|---|
+| Sviluppatore e gestore operativo | Matteo Bianchi (minorenne); decide in concreto finalità e modalità |
+| Intestatario account Google Play | un genitore (nome non fornito) |
+| Intestatario account Cloudflare e Gmail | Matteo; nessuna rappresentanza formale documentata |
+| Offerente del servizio | proposto: il genitore; **non formalizzato** (`offerente-servizio`) |
+| Titolare del trattamento | **non attribuito**; da validare con un professionista (`titolare-trattamento`) |
+| Responsabili del trattamento | nessuno qualificato finché non esistono prove degli accordi (`cloudflare-dpa`, `email-fornitore`) |
+| Autore di nome, marchio e grafiche | Matteo; asset/licenze di terzi da verificare (`diritti-asset`) |
+
+Requisiti aperti indispensabili: indirizzo-titolare, cloudflare-dpa, minori, diritti-asset, email-fornitore, account-sviluppatore-play, titolare-trattamento, account-apple-developer, trader-dsa, eta-pubblico-store, **offerente-servizio**, **rappresentanza-capacita**. Facoltativi: ricompense-social-policy, **admob-futuro** (solo prima della versione con annunci), conservazione-inattivi, verifica-identita-richieste, legge-foro. Le pagine pubbliche non menzionano gli account di Cloudflare e Gmail né l'età di Matteo.

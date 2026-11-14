@@ -16,16 +16,16 @@
       "id": "cloudflare-dpa",
       "title": "Accordo sul trattamento dei dati con Cloudflare",
       "section": "privacy.html §5",
-      "why": "Cloudflare fornisce servizi tecnici (Workers, D1, KV, R2). Le pagine non gli attribuiscono un ruolo giuridico: va verificato quali accordi sono effettivamente accettati per l'account usato (addendum sul trattamento dei dati, DPA), da chi (l'intestatario dell'account Cloudflare: non noto), se sono validi per un titolare minorenne rappresentato dai genitori, lo stato delle garanzie di trasferimento (clausole contrattuali standard, Data Privacy Framework) e l'eventuale giurisdizione dedicata di D1 e KV. Solo allora si può dire che Cloudflare è responsabile del trattamento.",
+      "why": "Fatto: l'account Cloudflare è intestato a Matteo (minorenne). Il genitore era presente alla registrazione e all'accettazione delle condizioni, ma NON risulta documentata un'accettazione formale per rappresentanza. Le pagine non attribuiscono a Cloudflare alcun ruolo giuridico. Servono prove: quali condizioni e quale DPA sono stati accettati e da chi, validità dell'accettazione da parte di un minore, ratifica/subentro del genitore o riapertura dell'account a suo nome, garanzie di trasferimento (clausole contrattuali standard, Data Privacy Framework), giurisdizione di D1 e KV. Chiuso solo con evidenze, non con una dichiarazione.",
       "required": true,
       "status": "mancante",
       "provided": null
     },
     {
       "id": "minori",
-      "title": "Trattamento dei minori: età minima, consenso dei genitori, Google Play Families",
+      "title": "Pubblico 14+, minori e norme dei Paesi di distribuzione",
       "section": "privacy.html §10 · termini.html §6 · docs/minori-e-privacy.md",
-      "why": "Misure già nel codice: si gioca senza account (nessun dato ai server); la registrazione dell'account chiede una fascia d'età neutra («meno di 14» / «14 o più»), non salvata né inviata, e sotto i 14 anni non crea l'account; nessuna data di nascita dell'utente, nessuna pubblicità, analisi o SDK; eliminazione in app e dalla pagina pubblica. Restano decisioni del titolare e verifica di un professionista (vedi docs/minori-e-privacy.md): se i minori di 14 anni siano o no pubblico previsto (dichiarazione «Target audience» e programma Families di Google Play), la base giuridica e la capacità di concludere il contratto del servizio, e se introdurre un consenso dei genitori verificabile (il testo oggi dice che non esiste). La fascia d'età dichiarata non è una verifica e non va presentata come tale.",
+      "why": "Pubblico previsto: utenti dai 14 anni in su (pagine e termini lo dicono). Resta da fare: elenco dei Paesi di distribuzione e verifica delle norme locali sull'età per il consenso e per i servizi online (art. 8 GDPR e Codice privacy in Italia, con soglia 14; altri Paesi UE e COPPA/UK/altri hanno soglie diverse) [non verificate da fonti ufficiali]; decidere se limitare la distribuzione per Paese; effetto del fatto che l'app non verifica l'età per giocare senza account (nessun dato raccolto); valutare se il tema e la grafica attirano comunque minori di 14 anni. Misure già nel codice: gioco senza account senza dati ai server, autodichiarazione 14+ alla registrazione non salvata, nessuna pubblicità né SDK, eliminazione in app e dal web.",
       "required": true,
       "status": "mancante",
       "provided": null
@@ -34,7 +34,7 @@
       "id": "diritti-asset",
       "title": "Titolarità e licenze di marchio, illustrazioni e testata; diritti sui loghi scelti dagli utenti",
       "section": "termini.html §4–5",
-      "why": "Il nome e il marchio «POLITICANDO», le illustrazioni e la testata «LA POLITICA 24» hanno bisogno di una titolarità o licenza documentata (e di una ricerca di anteriorità sul nome). I loghi dei partiti non sono più distribuiti dal gioco né dal titolare: ogni giocatore sceglie i propri nel catalogo personale, che resta sul suo dispositivo, e termini e catalogo avvertono che deve averne i diritti; il gioco non verifica da dove provengano e non stabilisce nessuna licenza. Resta da fornire la documentazione su marchio, illustrazioni e testata, e il titolare deve valutare se l'avvertenza basta. Il requisito resta aperto e bloccante finché non è documentato.",
+      "why": "Fatto: nome «POLITICANDO», marchio e grafiche sono stati realizzati da Matteo (minorenne). Mancano: una dichiarazione scritta di paternità e delle eventuali fonti/strumenti usati, la verifica di asset e licenze di terzi (caratteri OFL documentati; loghi, illustrazioni, dati reali e testata «LA POLITICA 24» da verificare), la ricerca di anteriorità sul nome, e la questione di chi esercita e concede i diritti di sfruttamento delle opere di un minore (rappresentanza dei genitori; licenza di distribuzione allo store). Non è registrato alcun marchio.",
       "required": true,
       "status": "mancante",
       "provided": null
@@ -43,7 +43,7 @@
       "id": "email-fornitore",
       "title": "Google (Apps Script/Gmail) come fornitore dell’invio e-mail: ruolo e account",
       "section": "privacy.html §5 e §6",
-      "why": "L’invio dei messaggi di verifica e recupero passa da un gateway Google Apps Script che spedisce da un account Gmail. Le pagine non attribuiscono a Google un ruolo giuridico. Mancano: a chi appartiene l’account Gmail/Apps Script (un genitore? Matteo, minorenne?), quali condizioni di Google valgono per questo uso e se danno una qualifica di responsabile o di titolare autonomo, e la conferma che l’uso è compatibile con l’età del titolare dell’account.",
+      "why": "Fatto: l'account Gmail del gateway (Apps Script) è intestato a Matteo (minorenne). Le pagine non attribuiscono a Google un ruolo giuridico. Mancano: le condizioni di Google valide per quell'account e per quell'uso (incluse le regole sull'età per gli account Google), se Google agisce come responsabile o titolare autonomo, e se il gateway va spostato su un account di un adulto o su un servizio con accordo documentato.",
       "required": true,
       "status": "mancante",
       "provided": null
@@ -79,7 +79,7 @@
       "id": "account-sviluppatore-play",
       "title": "Titolarità dell'account sviluppatore Google Play e rapporto con chi gestisce il servizio",
       "section": "scheda Play Console (sviluppatore, indirizzo, contatti) · docs/audit-legale-conformita.md §2 e §4",
-      "why": "Fatto: l'account Play Console è intestato a un genitore, che ha accettato l'accordo con Google; Matteo non ne è titolare. L'intestazione dell'account non determina il titolare GDPR né l'autore dell'opera. Mancano: nome e cognome esatti del genitore, tipo di account (personale/organizzazione), dati che Google mostrerà pubblicamente e conferma che sono coerenti con le pagine legali; accordo familiare scritto su chi decide cosa (pubblicazione, rimozione, aggiornamenti) e su chi risponde verso gli utenti. Non vanno inventati.",
+      "why": "Fatto: l'account Play Console è intestato a un genitore, che ha accettato l'accordo con Google; Matteo non ne è titolare. L'intestazione non determina il titolare GDPR né l'autore dell'opera. Mancano: nome/cognome del genitore, tipo di account, dati che Google mostrerà e coerenza con le pagine legali, ed eventuale accordo familiare scritto su chi decide su pubblicazione, aggiornamenti e rimozione. Non vanno inventati.",
       "required": true,
       "status": "mancante",
       "provided": null
@@ -88,7 +88,7 @@
       "id": "titolare-trattamento",
       "title": "Chi è il titolare del trattamento (e chi è responsabile o autorizzato)",
       "section": "privacy.html §1 · termini.html §1 (segnaposto) · docs/audit-legale-conformita.md §2",
-      "why": "Contesto: Matteo Bianchi è minorenne e, in concreto, decide finalità e modalità di raccolta e uso dei dati; i genitori supervisionano. Il titolare è chi determina finalità e mezzi (art. 4 n. 7 GDPR; criterio funzionale) e non è chi intesta l'account Play Console (un genitore). Ma l'attribuzione formale non può ignorare la capacità giuridica del minore né la rappresentanza dei genitori (art. 2 e 320 c.c.): finché non è deciso non si indica nessuno. Le pagine pubbliche descrivono i ruoli operativi e lasciano il segnaposto. Mancano: (a) decisione, con un professionista, su chi risponde come titolare (un genitore, altro soggetto, o Matteo con la rappresentanza dei genitori); (b) nome, cognome e indirizzo; (c) ruolo di Matteo se non titolare (persona autorizzata con istruzioni scritte) e di chi altro tratta i dati; (d) se e come rivelare pubblicamente l'età di Matteo (le pagine non la indicano).",
+      "why": "Fatti noti: Matteo Bianchi (minorenne) decide in concreto finalità e modalità del trattamento; i genitori supervisionano; un genitore intesta l'account Google Play e valuta di assumere il ruolo di offerente del servizio. Il titolare GDPR è chi determina finalità e mezzi (art. 4 n. 7; criterio funzionale): il fatto che Matteo decida pesa nella qualificazione, ma la sua minore età, la capacità giuridica e la rappresentanza dei genitori incidono su chi può risponderne. Titolarità, offerente del servizio, sviluppatore, intestatario degli account e responsabili sono ruoli distinti e NON sono attribuiti per default né a Matteo né al genitore: la qualificazione va validata da un professionista (ipotesi da valutare: genitore titolare con Matteo persona autorizzata; contitolarità; Matteo titolare rappresentato). Mancano: la decisione, nome/cognome/indirizzo del soggetto, istruzioni scritte a Matteo, se rivelare pubblicamente l'età di Matteo.",
       "required": true,
       "status": "mancante",
       "provided": null
@@ -124,8 +124,35 @@
       "id": "eta-pubblico-store",
       "title": "Pubblico di destinazione, classificazione per età (IARC e Apple) e Famiglie/Kids",
       "section": "Play Console · App Store Connect · docs/minori-e-privacy.md §3",
-      "why": "Le risposte vanno date dal titolare dell'account sui fatti dell'app, non scelte per superare i controlli. Fatto: il gioco è giocabile da chiunque senza account, gratuito, senza pubblicità e senza SDK di terzi; l'account è dichiarato per 14+. La categoria Kids di Apple e le Norme per le famiglie di Google non vanno richieste se il pubblico non è principalmente bambini; la scelta va documentata.",
+      "why": "Pubblico: 14+. Le risposte su Play Console (pubblico di destinazione, IARC, Data safety) e App Store Connect (classificazione, privacy label) spettano ai titolari degli account e devono riflettere i fatti: non si sceglie 14+ per superare i controlli né si chiedono Famiglie/Kids. Per Play le dichiarazioni le firma il genitore intestatario; per Apple l'account non esiste ancora.",
       "required": true,
+      "status": "mancante",
+      "provided": null
+    },
+    {
+      "id": "offerente-servizio",
+      "title": "Offerente del servizio verso gli utenti e verso gli store (formalizzazione)",
+      "section": "termini.html §1 · privacy.html §1 (segnaposto) · docs/audit-legale-conformita.md §2",
+      "why": "Proposta: un genitore, già intestatario dell'account Google Play, assume formalmente il ruolo di offerente del servizio; si è dichiarato disponibile a valutarlo, ma non risulta alcuna accettazione. Mancano: la sua decisione e un atto scritto (anche semplice, redatto con un professionista) che dica cosa comporta (responsabilità verso utenti e store, gestione di reclami e richieste, rapporto con Matteo come sviluppatore), nome/cognome/indirizzo per l'identificazione richiesta ai servizi online (art. 7 D.Lgs. 70/2003) [NV]. Offerente, titolare GDPR e sviluppatore possono essere soggetti diversi: il ruolo di offerente non implica per sé la titolarità del trattamento.",
+      "required": true,
+      "status": "mancante",
+      "provided": null
+    },
+    {
+      "id": "rappresentanza-capacita",
+      "title": "Rappresentanza dei genitori e capacità contrattuale di Matteo (fornitori e store)",
+      "section": "docs/audit-legale-conformita.md §2 · account Cloudflare, Gmail, Play, Apple, AdMob",
+      "why": "Matteo è minorenne e intesta gli account Cloudflare e Gmail; il genitore era presente alle accettazioni ma non risulta una rappresentanza formale documentata. Occorre che un professionista valuti validità e ratifica dei contratti già conclusi (Cloudflare, Google/Gmail) e decida a nome di chi concludere i futuri (Apple, AdMob, eventuali altri), con prova scritta dell'autorizzazione o del subentro dei genitori.",
+      "required": true,
+      "status": "mancante",
+      "provided": null
+    },
+    {
+      "id": "admob-futuro",
+      "title": "AdMob come unica monetizzazione futura: aggiornamenti da fare prima della versione con annunci",
+      "section": "privacy.html §5 · termini.html §9 · schede store",
+      "why": "La versione attuale non ha annunci né SDK pubblicitari (le pagine lo dicono). Prima di pubblicare una versione con AdMob servono: l'offerente formale e il titolare definiti, un account AdMob/AdSense intestato a un adulto (i pagamenti e i dati fiscali non possono essere di un minore) [NV], informativa e termini aggiornati, gestione del consenso (UMP) dove richiesto, Data safety e privacy label aggiornati, revisione dell'impatto sul pubblico 14+ e sulle norme dei Paesi. Non ancora applicabile alla versione attuale.",
+      "required": false,
       "status": "mancante",
       "provided": null
     }
