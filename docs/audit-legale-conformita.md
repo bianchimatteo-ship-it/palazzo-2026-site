@@ -20,17 +20,17 @@ Ogni punto sotto è marcato **[V]** se poggia su una fonte ufficiale letta oggi 
 
 | Aspetto | Chi | Base |
 |---|---|---|
-| Ideazione, sviluppo, gestione operativa | Matteo Bianchi, sotto la supervisione dei genitori | dato fornito dal progetto |
+| Ideazione, sviluppo, gestione operativa | Matteo Bianchi (**minorenne**, confermato il 14/11/2026), sotto la supervisione dei genitori; è lui a decidere in concreto finalità e modalità del trattamento | dato fornito dal progetto |
 | Account Google Play Console e accordo con Google | Un genitore (intestatario e contraente). **Matteo non è titolare** dell'account | dato fornito dal progetto; nome del genitore **non fornito** |
 | Account Apple Developer | Non esiste ancora | — |
 | Titolare del trattamento GDPR | **Non determinato** (segnaposto `titolare-trattamento`) | vedi sotto |
 | Diritti di proprietà intellettuale su codice, testi, grafica | Da documentare (`diritti-asset`); in generale spettano a chi crea l'opera, non a chi ha l'account dello store [NV] | — |
-| Responsabile del trattamento | Cloudflare (hosting, D1, KV, R2); Google (Apps Script/Gmail, solo invio e-mail: qualifica da confermare); DeepL (riceve solo modelli di frase anonimi, nessun dato personale) | codice, `privacy.html` §5 |
+| Fornitori tecnici | Cloudflare (hosting, D1, KV, R2) e Google (Apps Script/Gmail, solo invio e-mail): **nessun ruolo giuridico attribuito nelle pagine finché non sono verificati gli accordi effettivi** (segnaposti `cloudflare-dpa`, `email-fornitore`); DeepL (riceve solo modelli di frase anonimi, nessun dato personale) | codice, `privacy.html` §5 |
 | Titolari autonomi per i propri dati | Google Play e Apple, per l'installazione e l'acquisto/scaricamento | [NV] |
 
 **Titolare del trattamento.** Per l'art. 4, n. 7 GDPR il titolare è chi «determina le finalità e i mezzi» del trattamento; secondo l'impostazione delle linee guida EDPB 07/2020 il criterio è funzionale (chi decide davvero), non formale [NV]. Nel progetto le scelte (quali dati raccogliere, quali fornitori usare, quanto conservare) le prende Matteo; ma i contratti con Cloudflare, Google e Apple e gli account sugli store sono (o saranno) di un genitore. Conseguenze da non risolvere per presunzione:
 
-- Attribuire il ruolo ai genitori «perché sono adulti» o «perché hanno l'account Play» non è corretto di per sé: l'account dello store non determina il titolare. Ma anche attribuirlo a Matteo senza altro è rischioso se Matteo è minorenne (la sua età non è stata fornita): un minore non ha piena capacità di agire (art. 2 c.c.) e non può assumere in proprio contratti e obblighi/responsabilità del titolare; esercita la rappresentanza legale chi ha la responsabilità genitoriale (art. 320 c.c.) [NV].
+- Attribuire il ruolo ai genitori «perché sono adulti» o «perché hanno l'account Play» non è corretto di per sé: l'account dello store non determina il titolare. Ma anche attribuirlo a Matteo senza altro è rischioso se Matteo è minorenne (confermato minorenne): un minore non ha piena capacità di agire (art. 2 c.c.) e non può assumere in proprio contratti e obblighi/responsabilità del titolare; esercita la rappresentanza legale chi ha la responsabilità genitoriale (art. 320 c.c.) [NV].
 - L'esenzione per le attività puramente personali o domestiche (art. 2, par. 2, lett. c GDPR) non si applica a un servizio con account offerto al pubblico [NV].
 - Soluzioni possibili, da scegliere con un professionista: (A) un genitore assume il ruolo di titolare e Matteo opera come persona autorizzata che segue istruzioni scritte (art. 29 GDPR; art. 2-quaterdecies Codice privacy) [NV]; (B) un'entità giuridica diversa (associazione o altro) come titolare, con relativi costi e obblighi; (C) Matteo titolare con l'intervento di chi lo rappresenta — è la soluzione che richiede più cautele. La documentazione pubblica non anticipa la scelta: usa un segnaposto.
 - Va chiarito anche **a chi appartengono gli account tecnici** (Cloudflare, il Gmail/Apps Script del gateway, il dominio): chi li possiede stipula il contratto con il fornitore e va coerentemente indicato come titolare/responsabile.
@@ -116,3 +116,6 @@ Quanto già documentato resta valido come inventario tecnico (`docs/google-play.
 
 **Android:** requisiti legali indispensabili chiusi (`npm run check:legal -- --release` oggi **fallisce con 9 requisiti aperti**, come deve); account Play verificato; scheda e dichiarazioni compilate dal genitore; `.aab` firmato (non generato qui); prove su dispositivo; versionCode > ultimo caricato.
 **iOS:** iscrizione Apple decisa e conclusa dal genitore; `ios/` con firma e Xcode 26+ su Mac (non provato qui); privacy label e age rating compilate sui fatti; trader DSA; privacy manifest (**non verificato**: pagina non leggibile); test su dispositivo/TestFlight; checklist `docs/app-store-apple.md`.
+
+## Aggiornamento del 14/11/2026
+Confermato: Matteo è minorenne e decide in concreto finalità e modalità. Le pagine pubbliche (IT/EN) descrivono i ruoli operativi, non attribuiscono la titolarità formale né l'offerta del servizio (segnaposto `titolare-trattamento`, da decidere con un professionista tenendo conto di capacità giuridica e rappresentanza dei genitori), non qualificano Cloudflare e Google, e non rivelano l'età di Matteo (scelta dei genitori). `email-fornitore` diventa requisito indispensabile (10 aperti).
