@@ -45,3 +45,31 @@ Va dichiarato tutto ciò che si trasmette fuori dal dispositivo oltre il tempo n
 - ☐ Test su dispositivo e TestFlight: avvio, account, eliminazione, offline, recupero password, tastiera.
 - ☐ Icone/launch screen iOS (verificare che non siano i segnaposto Capacitor, come era per Android).
 - ☐ Versione/build number crescente a ogni invio.
+
+## G. Stato tecnico iOS (15/11/2026) e decisioni prese
+**Decisioni dei genitori:** app universale iPhone + iPad; iPhone solo verticale; iPad verticale e orizzontale; Bundle ID invariato `it.matteobianchi.politicando2026`; prima release senza pubblicità; ricompensa Instagram spenta su iOS.
+
+| Voce | Stato |
+|---|---|
+| Icona 1024 senza alfa, splash | ✅ dal marchio del gioco (non più il segnaposto Capacitor); `check-capacitor` lo verifica |
+| `PrivacyInfo.xcprivacy` | ✅ app: nessun tracciamento, dati dichiarati da `privacy.html` §3 (e-mail, ID utente, ID dispositivo, contenuto) — **da confermare dal titolare con la privacy label**; manifest dei plugin: nessun plugin nativo su iOS (`includePlugins: []`) |
+| `Info.plist` | ✅ `arm64`, iPhone verticale, iPad quattro orientamenti, nessun permesso, nessuna modalità in background |
+| Firma | automatica, nessun team nel repository (lo sceglie il titolare dell'account) |
+| Safe area | ✅ `viewport-fit=cover` + regole solo iOS (`html.platform-ios`) per notch e Dynamic Island; **da verificare sul simulatore** |
+| iPad | layout a barra laterale già adattivo (820/1024/1180 px verificati in Chrome: nessuno scorrimento orizzontale); da verificare su simulatore e con tocco |
+| Instagram su iOS | ✅ spento (resta il collegamento senza premio); `check-rewards-sync` |
+| AdMob | non presente su iOS; il pacchetto SPM è riallineato a Capacitor 8.5.3 |
+| Login/registrazione/recupero/eliminazione/salvataggi | stessa logica del web, Worker già accetta `capacitor://localhost`; test automatici su web (`check-accounts`, `check-account-deletion`, `check-account-isolation`, `check-saves`); **nessuna prova su iOS** |
+| Build, simulatore, TestFlight | ❌ **non eseguiti: serve un Mac con Xcode** |
+
+### Prove da fare su Mac (non eseguite)
+`npm ci && npm run build:www && npx cap sync ios`, aprire `ios/App/App.xcworkspace` (Xcode 26+), scegliere il team, e provare su: iPhone piccolo (es. SE), iPhone con Dynamic Island, iPad verticale, iPad orizzontale: avvio, registrazione, accesso, recupero password, eliminazione account, tastiera sui moduli, safe area (barra inferiore, titoli), selettore file (loghi), salvataggio e ripresa, modalità aereo (gioco offline), link esterni e `mailto:`, rotazione su iPad, e che iPhone non ruoti.
+
+### Scheda dell'App Store (bozza, da far approvare ai genitori)
+**Nome:** POLITICANDO 2026 · **Sottotitolo (≤30):** `Simulazione politica italiana` / `Italian politics simulation`
+**Descrizione IT:** come in `docs/google-play.md` §4 (stesso testo, senza riferimenti ad Android); **EN:** idem. **Parole chiave:** simulazione, politica, elezioni, Parlamento, strategia / simulation, politics, elections, parliament, strategy. **Categoria:** Giochi → Simulazione (a scelta). **Classificazione per età:** questionario da compilare sui fatti (tema politico simulato, nessuna violenza, UGC non condiviso, nessuna pubblicità in questa versione). **Supporto:** pagina del portale + `politicando2026simulazione@gmail.com`. **Privacy policy:** `…/privacy.html` (IT) e `privacy-en.html`: solo dopo la chiusura dei requisiti legali.
+**Privacy label (da compilare dal titolare):** contatti → e-mail (facoltativa); identificativi → ID utente (nome utente) e ID dispositivo (casuale, ricompense); contenuto → salvataggi e loghi; tutti collegati all'identità, per funzionalità dell'app, **nessun tracciamento**; senza account nessun dato.
+**Screenshot:** prove di formato in `/tmp/ios-qa/appstore/` (fuori dal repository): iPhone 6,9" 1320×2868 e 6,5" 1284×2778, iPad 13" 2064×2752, IT/EN, pagine Home, Sondaggi, Notizie, Ricompense. Sono rendering di Chrome: vanno rifatti dal simulatore prima dell'invio.
+
+### Prossimi passi per l'invio
+1. Iscrizione Apple del genitore (sezione A) e decisione trader DSA. 2. Mac: build, simulatore, correzioni. 3. Archivio e TestFlight interno. 4. App Store Connect: scheda, privacy label, classificazione, screenshot, URL di privacy e supporto. 5. Invio per la revisione solo con i requisiti legali chiusi.

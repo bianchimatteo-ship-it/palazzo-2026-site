@@ -25,25 +25,25 @@ export function createRewardedAds({ config = ADS_CONFIG, provider = null, allowD
     // Shows a video. Returns { status: 'completed' | 'dismissed' | 'failed' | 'unavailable' | 'duplicate' | 'busy' }. The reward is granted (once) only on 'completed'.
     async watch() {
       if (busy) return { status: 'busy' };
-      const available = await this.availability();
-      if (!available.ok) return { status: 'unavailable', reason: available.reason };
-      busy = true;
+      busy = true;   // taken at once, before any wait: two clicks together are one video (the second answers «busy»)
       try {
+        const available = await this.availability();
+        if (!available.ok) return { status: 'unavailable', reason: available.reason };
         let result;
         try { result = await provider.show(); } catch { return { status: 'failed' }; }
         if (!result || result.completed !== true) return { status: 'dismissed' };
         // an authentic completion: confirmed by the provider, verified, with a unique id; anything else is not a completion
         if (result.verified !== true || !validId(result.completionId)) return { status: 'failed' };
-        const granted = grant(result.completionId);
+        const granted = await grant(result.completionId);   // (may be asynchronous: an account asks the Worker first, see rewards-service.js)
         if (granted?.ok === false && granted.reason === 'duplicato') return { status: 'duplicate' };
         if (granted?.ok === false) return { status: 'failed', reason: granted.reason };
         return { status: 'completed', completionId: result.completionId };
       } finally { busy = false; }
     },
     // A late or repeated callback of the SDK for a completion: the same id is never paid twice (the store keeps the ids), so it only reports what happened.
-    complete(completion) {
+    async complete(completion) {
       if (!completion || completion.completed !== true || completion.verified !== true || !validId(completion.completionId)) return { status: 'failed' };
-      const granted = grant(completion.completionId);
+      const granted = await grant(completion.completionId);
       return granted?.ok ? { status: 'completed', completionId: completion.completionId } : granted?.reason === 'duplicato' ? { status: 'duplicate' } : { status: 'failed', reason: granted?.reason };
     }
   };

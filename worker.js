@@ -170,6 +170,9 @@ const SCHEMA = [
   'CREATE TABLE IF NOT EXISTS reward_blocks (user_id TEXT NOT NULL, career_id TEXT NOT NULL, kind TEXT NOT NULL, block INTEGER NOT NULL, device_id TEXT, claimed_at TEXT NOT NULL, PRIMARY KEY (user_id, career_id, kind, block))',
   // One-off community rewards (the Instagram one): one row per account and reward.
   'CREATE TABLE IF NOT EXISTS reward_community (user_id TEXT NOT NULL, reward TEXT NOT NULL, claimed_at TEXT NOT NULL, career_id TEXT, device_id TEXT, PRIMARY KEY (user_id, reward))',
+  // Rewarded videos (migrations/0008_reward_ads.sql has the same text): one row per account and completion id, so the same completion is never credited twice, and the day (Europe/Rome) for the daily limit.
+  'CREATE TABLE IF NOT EXISTS reward_ads (user_id TEXT NOT NULL, ad_id TEXT NOT NULL, day TEXT NOT NULL, claimed_at TEXT NOT NULL, career_id TEXT, device_id TEXT, PRIMARY KEY (user_id, ad_id))',
+  'CREATE INDEX IF NOT EXISTS reward_ads_day ON reward_ads (user_id, day)',
   // The migrations applied by the code (the ones that cannot be written as CREATE ... IF NOT EXISTS, such as a column added to a table that already exists).
   'CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, applied_at TEXT NOT NULL)',
   'CREATE TABLE IF NOT EXISTS logos (user_id TEXT NOT NULL, party_id TEXT NOT NULL, version INTEGER NOT NULL, sha256 TEXT, mime TEXT, bytes INTEGER, width INTEGER, height INTEGER, name TEXT, origin TEXT, object_key TEXT, deleted_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, PRIMARY KEY (user_id, party_id))',
@@ -214,6 +217,7 @@ export function romeDay(moment = Date.now()) {
 // ----- the time played, merged across devices (reward_time) -----
 const REWARD_DAILY_MS = 5 * 60_000;
 const COMMUNITY_REWARDS = ['instagram', 'tiktok'];
+const AD_COMPLETION_ID = /^[\w.:|~-]{8,160}$/, AD_DAILY_MAX = 30;
 // A reward that is switched off on the Worker cannot be claimed whatever a client says (TikTok: off until the rules of the platform allow a reward for a follow; COMMUNITY_TIKTOK_ENABLED=1 turns it on).
 const communityOn = (env, reward) => reward !== 'tiktok' || env.COMMUNITY_TIKTOK_ENABLED === '1';
 const SPAN_KEEP_MS = 30 * 86_400_000;              // spans older than this are refused (and said so), and the detail of the older ones is folded into a total
@@ -352,6 +356,7 @@ async function cleanupExpired(db, now = Date.now()) {
   // the claims of the daily reward are kept two months (the day is the key, nothing else is needed after it)
   await db.prepare('DELETE FROM reward_claims WHERE day < ?').bind(romeDay(now - 62 * 86_400_000)).run().catch(() => null);
   await db.prepare("DELETE FROM reward_time WHERE scope LIKE 'd:%' AND scope < ?").bind(`d:${romeDay(now - 62 * 86_400_000)}`).run().catch(() => null);
+  await db.prepare('DELETE FROM reward_ads WHERE day < ?').bind(romeDay(now - 62 * 86_400_000)).run().catch(() => null);
   await db.prepare('DELETE FROM reward_devices WHERE updated_at < ?').bind(new Date(now - 90 * 86_400_000).toISOString()).run().catch(() => null);
   return { attempts: attempts?.meta?.changes ?? 0, sessions: sessions?.meta?.changes ?? 0, tokens: tokens?.meta?.changes ?? 0 };
 }
@@ -509,6 +514,7 @@ async function deleteAccountData(db, userId) {
     db.prepare('DELETE FROM reward_devices WHERE user_id = ?').bind(userId),
     db.prepare('DELETE FROM reward_blocks WHERE user_id = ?').bind(userId),
     db.prepare('DELETE FROM reward_community WHERE user_id = ?').bind(userId),
+    db.prepare('DELETE FROM reward_ads WHERE user_id = ?').bind(userId),
     db.prepare('DELETE FROM users WHERE id = ?').bind(userId)
   ]);
   // the table of the notices exists only once the retention has run (it never does while it is off): nothing to delete when it is not there
@@ -861,6 +867,20 @@ async function handleAccounts(request, env, url) {
     try { body = await request.json(); } catch { /* nothing claimed */ }
     try { return json(request, { ok: true, ...(await rewardBlocks(db, account.id, body)) }); }
     catch { return json(request, { error: 'Il conteggio del tempo di gioco è occupato: riprova tra poco.', code: 'busy' }, 503); }
+  }
+  // A rewarded video completed on the device (the SDK's own «user earned reward» callback): the Worker books the completion id once for each account (a repeated or concurrent claim is recognised, never credited twice)
+  // and refuses more than AD_DAILY_MAX in a day (Europe/Rome). The effect on the polls stays in the career of the player (the save); this only decides whether the credit may be given. A device without an account
+  // keeps its own record, the Worker is not involved. NOT a server-side verification (SSV) of the ad network: see docs/admob.md.
+  if (path === '/api/account/rewards/ad' && request.method === 'POST') {
+    let body = null; try { body = await request.json(); } catch { /* no body */ }
+    const id = body?.id;
+    if (typeof id !== 'string' || !AD_COMPLETION_ID.test(id)) return json(request, { error: 'Completamento non valido.' }, 400);
+    const careerId = typeof body?.careerId === 'string' && REWARD_ID.test(body.careerId) ? body.careerId : null, device = typeof body?.device === 'string' && REWARD_ID.test(body.device) ? body.device : null;
+    const day = romeDay();
+    const written = await db.prepare('INSERT OR IGNORE INTO reward_ads (user_id, ad_id, day, claimed_at, career_id, device_id) SELECT ?, ?, ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM reward_ads WHERE user_id = ? AND day = ?) < ?').bind(account.id, id, day, new Date().toISOString(), careerId, device, account.id, day, AD_DAILY_MAX).run();
+    if (written?.meta?.changes > 0) return json(request, { ok: true, credited: true });
+    if (await db.prepare('SELECT 1 AS found FROM reward_ads WHERE user_id = ? AND ad_id = ?').bind(account.id, id).first()) return json(request, { ok: true, credited: false, duplicate: true });
+    return json(request, { error: 'Hai raggiunto il limite giornaliero di video con premio.', code: 'limit' }, 429);
   }
   // One-off community rewards («instagram»; «tiktok» exists but is off): the Worker gives each to an account once. The claim is a self-declaration of the player: nothing about the social network is verified or asked for.
   const community = /^\/api\/account\/rewards\/community\/([a-z]{3,20})$/.exec(path);

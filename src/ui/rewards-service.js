@@ -11,7 +11,7 @@ const RETRY_MS = 30000;
 const BLOCK_KINDS = { capitale: PLAY_REWARDS.capital.everyMinutes, preparazione: PLAY_REWARDS.preparation.everyMinutes };
 const NOTICE_KINDS = new Set(['giornaliera', 'capitale', 'preparazione', 'community']);
 
-export function createRewardsService({ store, journal = rewardsJournal, username = () => null, claimDaily = null, syncTime = null, claimBlocks = null, claimCommunity = null, community = {}, ads = {}, env = {} } = {}) {
+export function createRewardsService({ store, journal = rewardsJournal, username = () => null, claimDaily = null, syncTime = null, claimBlocks = null, claimCommunity = null, claimAd = null, onAdCompleted = () => {}, community = {}, ads = {}, env = {} } = {}) {
   const wall = env.wall ?? (() => Date.now());
   const storage = env.storage ?? globalThis.localStorage;
   const lease = env.lease ?? createStorageLease(storage, { wall });
@@ -19,7 +19,20 @@ export function createRewardsService({ store, journal = rewardsJournal, username
   let adsState = { available: false, reason: null, code: 'checking' };
   let noTimeRoute = false, timer = null, careerId = null, claiming = false, claimingCommunity = false, inflight = null, retryAt = 0, lastNotice = 0, lastSync = 0, unlisten = null;
   const communityRetry = {};
-  const rewardedAds = createRewardedAds({ ...ads, grant: id => store.claimAdReward(id) });
+  // A completed video is credited (in the career of the player, once for each id) only after the Worker has booked it for the account: a repeated or concurrent claim, or one over the daily limit, is refused there.
+  // Without an account (a guest) the record of the device is the only one. If the Worker cannot be reached the reward is NOT given (the video must be watched again): a credit never goes unbooked.
+  const grantAd = async id => {
+    if (username() && claimAd) {
+      let answer;
+      try { answer = await claimAd(id, store.getState().career?.id ?? null, journal.deviceId()); } catch (error) { return { ok: false, reason: error?.data?.code === 'limit' ? 'limite' : 'rete' }; }
+      if (answer?.duplicate) return { ok: false, reason: 'duplicato' };
+      if (!answer?.ok) return { ok: false, reason: 'rifiutato' };
+    }
+    const out = store.claimAdReward(id);
+    if (out?.ok) onAdCompleted();
+    return out;
+  };
+  const rewardedAds = createRewardedAds({ ...ads, grant: grantAd });
   const scope = () => journal.scope(username());
   const playing = () => Boolean(store.hasCareer?.() && store.getState().game && store.getState().game.status !== 'ended' && (env.playing ? env.playing() : true));
   const emit = () => { for (const fn of listeners) { try { fn(); } catch { /* a listener must not stop the clock */ } } };

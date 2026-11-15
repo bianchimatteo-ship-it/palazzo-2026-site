@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-11-14",
+  "updated": "2026-11-15",
   "note": "Informazioni che solo il titolare può fornire e che il codice non può verificare. Le pagine pubbliche (privacy.html, termini.html, elimina-account.html) sono scritte senza di esse e non le inventano: dove il dato manca c'è un segnaposto esplicito (`data-placeholder=\"<id>\"`), e il test `check:legal` verifica che ogni segnaposto corrisponda a un requisito mancante di questo file. Finché un requisito con required=true è «mancante» le pagine restano con noindex e il controllo di rilascio (npm run check:legal -- --release) fallisce. Per chiudere un requisito: inserire il dato nel testo pubblico indicato in «section», portare status a «fornito» e scrivere in «provided» una nota con la data e la fonte (mai il dato personale, se non pubblico).",
   "items": [
     {
@@ -149,10 +149,10 @@
     },
     {
       "id": "admob-futuro",
-      "title": "AdMob come unica monetizzazione futura: aggiornamenti da fare prima della versione con annunci",
+      "title": "AdMob: la build con l'SDK non può uscire con i documenti attuali",
       "section": "privacy.html §5 · termini.html §9 · schede store",
-      "why": "La versione attuale non ha annunci né SDK pubblicitari (le pagine lo dicono). Prima di pubblicare una versione con AdMob servono: l'offerente formale e il titolare definiti, un account AdMob/AdSense intestato a un adulto (i pagamenti e i dati fiscali non possono essere di un minore) [NV], informativa e termini aggiornati, gestione del consenso (UMP) dove richiesto, Data safety e privacy label aggiornati, revisione dell'impatto sul pubblico 14+ e sulle norme dei Paesi. Non ancora applicabile alla versione attuale.",
-      "required": false,
+      "why": "Il codice di AdMob (Google Mobile Ads SDK + UMP) è nel ramo feature/ios-admob-android, SPENTO (ADS_MODE 'off') e solo su Android. Ma un AAB costruito da questo ramo contiene comunque l'SDK, anche con gli annunci spenti: l'informativa dice che la versione attuale non ha annunci né SDK pubblicitari, il manifest unito aggiunge il permesso AD_ID, e Play Console richiede le dichiarazioni «contiene annunci» e ID pubblicitario e la Sicurezza dei dati aggiornata. La versione 1.0.1 (senza annunci) va costruita dal ramo senza questo codice. Prima di pubblicare la versione con AdMob servono: offerente e titolare definiti, account AdMob intestato a un adulto (pagamenti e dati fiscali) [non verificato], informativa e termini aggiornati (AdMob come servizio presente, dati e identificativi, consenso), Data safety e dichiarazione ID pubblicitario, verifica dell'account AdMob (app-ads.txt, sito e store collegati, pagamenti), verifica del pubblico 14+ e dei Paesi, test con gli ID di prova su dispositivo e passaggio a 'live' solo dopo.",
+      "required": true,
       "status": "mancante",
       "provided": null
     }

@@ -25,9 +25,12 @@ const card = async ads => { const rewards = service(ads); await rewards.refreshA
 // ---- what the game ships: nothing ----
 assert.deepEqual({ ...ADS_CONFIG }, { enabled: false, appId: null, rewardedUnitId: null }, 'La configurazione degli annunci è spenta e senza identificativi.');
 const read = path => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
-const shipped = ['package.json', 'capacitor.config.json', 'android/app/build.gradle', 'android/build.gradle', 'android/variables.gradle', 'android/app/src/main/AndroidManifest.xml', 'android/app/capacitor.build.gradle', 'android/capacitor.settings.gradle'].map(read).join('\n');
-assert.ok(!/admob|play-services-ads|google-mobile-ads|ca-app-pub|com\.google\.android\.gms\.ads|capacitor-community\/admob|@capacitor-community/i.test(shipped), 'Nel progetto Android non ci sono SDK o plugin AdMob né identificativi pubblicitari.');
-assert.ok(!/ca-app-pub-/.test(fs.readdirSync(new URL('../src/', import.meta.url), { recursive: true }).filter(name => /\.(js|json|html)$/.test(name) && !/^data\/real\//.test(name)).map(name => read(`src/${name}`)).join('\n')), 'Nessun identificativo AdMob nei sorgenti del gioco.');
+const { ADS_MODE } = await module('src/data/ads-config.js');
+assert.equal(ADS_MODE, 'off', 'Gli annunci sono spenti nel repository (modalità off).');
+// the SDK is in the Android project now (plugin + App ID in the manifest, see check-admob.mjs), never on iOS; the ids live in ONE file of the game and nowhere else
+const iosShipped = ['ios/App/App/Info.plist', 'ios/App/CapApp-SPM/Package.swift', 'ios/App/App.xcodeproj/project.pbxproj'].map(read).join('\n');
+assert.ok(!/admob|google-mobile-ads|ca-app-pub|GADApplicationIdentifier/i.test(iosShipped), 'Nel progetto iOS non ci sono SDK o plugin AdMob né identificativi pubblicitari.');
+assert.ok(!/ca-app-pub-/.test(fs.readdirSync(new URL('../src/', import.meta.url), { recursive: true }).filter(name => /\.(js|json|html)$/.test(name) && !/^data\/real\//.test(name) && name !== 'data/ads-config.js').map(name => read(`src/${name}`)).join('\n')), 'Gli identificativi AdMob stanno solo in data/ads-config.js.');
 
 // ---- 1. not integrated / not configured ----
 let state = await card({});
@@ -52,7 +55,7 @@ assert.equal(state.note, null, '2. La nota sulla configurazione è sparita.'); a
 const before = JSON.stringify(store.getState().game?.rewards?.ads ?? []);
 const first = await createRewardedAds({ config: TEST_CONFIG, provider, grant: id => store.claimAdReward(id) }).watch();
 assert.equal(first.status, 'completed'); assert.notEqual(JSON.stringify(store.getState().game?.rewards?.ads ?? []), before, 'Il premio è registrato.');
-const repeated = createRewardedAds({ config: TEST_CONFIG, provider, grant: id => store.claimAdReward(id) }).complete({ completed: true, verified: true, completionId: first.completionId });
+const repeated = await createRewardedAds({ config: TEST_CONFIG, provider, grant: id => store.claimAdReward(id) }).complete({ completed: true, verified: true, completionId: first.completionId });
 assert.equal(repeated.status, 'duplicate', 'La stessa conferma non paga due volte.');
 assert.equal((await createRewardedAds({ config: TEST_CONFIG, provider: { kind: 'admob', isReady: () => true, show: async () => ({ completed: true, verified: false, completionId: 'transazione-falsa-1' }) }, grant: id => store.claimAdReward(id) }).watch()).status, 'failed', 'Una conferma che non viene dalla rete pubblicitaria non vale.');
 

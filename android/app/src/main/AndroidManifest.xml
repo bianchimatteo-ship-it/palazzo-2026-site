@@ -9,6 +9,11 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
+        <!-- Google Mobile Ads SDK: the App ID of the owner's AdMob account (Android app). Without it the SDK stops the app at start-up. The ads themselves stay OFF (ADS_MODE 'off' in src/data/ads-config.js): nothing is requested until the mode is changed. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-6404822903303014~1677702221" />
+
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
             android:name=".MainActivity"

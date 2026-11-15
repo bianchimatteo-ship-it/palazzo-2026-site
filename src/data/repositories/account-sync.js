@@ -330,4 +330,5 @@ export async function deleteCloudSave(slot) {
 // The blocks of 30/60 minutes of a career, confirmed to the Worker: { claims: [{ kind, n }] } → results [{ kind, n, status: 'first' | 'recorded' | 'short' | 'invalid' }].
 export const claimRewardBlocks = body => call('/api/account/rewards/blocks', { method: 'POST', body });
 // A one-off community reward (today «instagram»): the Worker gives it once for each account: { claimed: true } the first time, { claimed: false, already: true, mine } afterwards.
+export const claimAdRewardOnServer = (id, careerId, device = null) => call('/api/account/rewards/ad', { method: 'POST', body: { id: String(id), ...(careerId ? { careerId: String(careerId) } : {}), ...(device ? { device: String(device) } : {}) } });
 export const claimCommunityReward = (reward, careerId, device = null) => call(`/api/account/rewards/community/${encodeURIComponent(reward)}`, { method: 'POST', body: { ...(careerId ? { careerId: String(careerId) } : {}), ...(device ? { device: String(device) } : {}) } });

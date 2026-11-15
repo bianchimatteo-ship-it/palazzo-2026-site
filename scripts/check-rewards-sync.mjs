@@ -675,8 +675,9 @@ const HOUR = 3600000;
   await post(token, '/api/account/rewards/blocks', { careerId, device: 'x', claims: [{ kind: 'capitale', n: 1 }] });
   await post(token, '/api/account/rewards/community/instagram', { careerId, device: 'x' });
   await post(token, '/api/account/rewards/daily', { careerId, device: 'x' });
+  await post(token, '/api/account/rewards/ad', { id: 'adm-cancellazione-1', careerId, device: 'x' });
   const count = table => local.sqlite.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE user_id = (SELECT id FROM users WHERE username = 'cancella.uno')`).get().n;
-  const tables = ['reward_time', 'reward_devices', 'reward_blocks', 'reward_community', 'reward_claims'];
+  const tables = ['reward_time', 'reward_devices', 'reward_blocks', 'reward_community', 'reward_claims', 'reward_ads'];
   assert.ok(tables.every(table => count(table) > 0), 'Prima della cancellazione l’account ha righe in tutte le tabelle delle ricompense.');
   const userId = local.sqlite.prepare("SELECT id FROM users WHERE username = 'cancella.uno'").get().id;
   const proof = await client.passwordProof('cancella.uno', 'password-di-cancella.uno');
@@ -684,6 +685,28 @@ const HOUR = 3600000;
   assert.equal(response.status, 200, 'L’account si elimina.');
   for (const table of tables) assert.equal(local.sqlite.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE user_id = ?`).get(userId).n, 0, `${table}: nessuna riga resta.`);
   lines.push('eliminazione dell’account: nessuna riga delle ricompense resta');
+}
+
+// ============ 5b. rewarded videos: the Worker books each completion once for each account ============
+{
+  const tokenA = await register('video.uno'), tokenB = await register('video.due'); const career = 'carriera-video';
+  const first = await post(tokenA, '/api/account/rewards/ad', { id: 'adm-aaaa-0001', careerId: career, device: 'd1' });
+  assert.deepEqual({ ok: first.ok, credited: first.credited }, { ok: true, credited: true }, 'Il primo completamento è registrato.');
+  const again = await post(tokenA, '/api/account/rewards/ad', { id: 'adm-aaaa-0001', careerId: career, device: 'd2' });
+  assert.deepEqual({ credited: again.credited, duplicate: again.duplicate }, { credited: false, duplicate: true }, 'Lo stesso completamento, anche da un altro dispositivo, non è accreditato due volte.');
+  const burst = await Promise.all(Array.from({ length: 6 }, (_, i) => post(tokenA, '/api/account/rewards/ad', { id: 'adm-burst-0002', careerId: career, device: `d${i}` })));
+  assert.equal(burst.filter(answer => answer.credited === true).length, 1, 'Sei richieste insieme: una sola accreditata.'); assert.equal(burst.filter(answer => answer.duplicate === true).length, 5);
+  const other = await post(tokenB, '/api/account/rewards/ad', { id: 'adm-aaaa-0001', careerId: career, device: 'd1' });
+  assert.equal(other.credited, true, 'Gli account sono isolati: l’altro account può avere lo stesso identificativo.');
+  for (const bad of [undefined, '', 'corto', 'x'.repeat(200), 'con spazi non validi', { id: 1 }]) assert.match(String((await post(tokenA, '/api/account/rewards/ad', { id: bad })).error ?? ''), /non valido/, `Identificativo non valido rifiutato: ${JSON.stringify(bad)}`);
+  const resp = await local.worker.fetch(new Request(`${local.origin}/api/account/rewards/ad`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: 'adm-senza-account' }) }), local.env);
+  assert.equal(resp.status, 401, 'Senza account non si registra nulla sul servizio.');
+  // the daily limit (30): the rest is refused, and the duplicate of one already booked is still told apart
+  const tokenC = await register('video.tre'); let credited = 0, limited = 0;
+  for (let i = 0; i < 33; i += 1) { const answer = await post(tokenC, '/api/account/rewards/ad', { id: `adm-limite-${String(i).padStart(4, '0')}`, careerId: career }); if (answer.credited) credited += 1; else if (answer.code === 'limit') limited += 1; }
+  assert.deepEqual([credited, limited], [30, 3], 'Al massimo 30 video al giorno per account.');
+  assert.equal((await post(tokenC, '/api/account/rewards/ad', { id: 'adm-limite-0000' })).duplicate, true, 'Un completamento già registrato resta un duplicato, non un superamento del limite.');
+  lines.push('video con premio: un solo accredito per completamento e account (anche con richieste insieme), account isolati, identificativi non validi e senza account rifiutati, limite giornaliero');
 }
 
 // ============ 6. nothing unused is left, nothing leaks ============

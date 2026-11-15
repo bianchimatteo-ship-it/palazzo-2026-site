@@ -5,7 +5,7 @@ import { fullDate, formatDate } from '../core/time.js?v=20261113-8';
 import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20261113-8';
 import * as accountApi from '../data/repositories/account-sync.js?v=20261113-8';
 import { hideCareers } from '../data/repositories/career-visibility.js?v=20261113-8';
-import { accountApiBase, commitRevision, currentAccount, deleteAccount, probeAccountService, deleteCloudSave, downloadSave, listCloudSaves, login, logout, register, slotForCareer } from '../data/repositories/account-sync.js?v=20261113-8';
+import { accountApiBase, commitRevision, isNativeApp, currentAccount, deleteAccount, probeAccountService, deleteCloudSave, downloadSave, listCloudSaves, login, logout, register, slotForCareer } from '../data/repositories/account-sync.js?v=20261113-8';
 import { createSyncEngine } from '../data/repositories/sync-queue.js?v=20261113-8';
 import { setPartyLogoResolver } from './person-marks.js?v=20261113-8';
 import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261113-8';
@@ -69,6 +69,8 @@ import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=
 import { playSound } from './sound.js?v=20261113-8';
 import { resolveInstitution } from './lazy-views.js?v=20261113-8';
 import { createRewardsService } from './rewards-service.js?v=20261113-8';
+import { createAdMobAdapter } from '../data/repositories/admob-adapter.js?v=20261113-8';
+import { createAdsManager, interruptible } from '../data/repositories/ads-manager.js?v=20261113-8';
 import { patchRewardsPage, renderRewardNotice, renderRewardsPage } from './rewards-page.js?v=20261113-8';
 
 // The destinations of the game, by theme. On computers the sidebar lists the eight and opens the pages of the current one; on phones the
@@ -1256,7 +1258,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
         else if (data.slotDelete) { const slot = store.listSlots().find(item => item.id === data.slotDelete); assertAvailable(slot?.careerId); confirmThen({ title: 'Eliminare questo salvataggio?', body: `«${slot?.name ?? 'Salvataggio'}» verrà eliminato da questo browser. L’operazione non si può annullare.`, confirmLabel: 'Elimina salvataggio', tone: 'danger' }, () => store.deleteSlot(data.slotDelete)); return; }
         else if (data.settingKey === 'language') { await setLanguage(data.settingValue); settings = loadSettings(settingsScope()); applySettings(); playSound('click'); }
         else if (data.settingKey) { settings = saveSetting(data.settingKey, data.settingValue, settingsScope()); if (data.settingKey === 'newsPopup') { if (data.settingValue === 'off') newsPopup = null; else newsPopupHoldWeek = store.getState().game?.week?.index ?? null; } applySettings(); playSound('click'); }
-        else if ('reportClose' in data) reportOpen = false;
+        else if ('reportClose' in data) { reportOpen = false; adsManager.onWeekClosed(store.getState()).catch(() => {}); }
         else if (data.accountAction === 'logout') { await leaveAccount(); }
         else if (data.accountAction === 'refresh') { await refreshCloud({ info: true }); }
         else if (data.accountAction === 'probe') { await probeAccount(); }
@@ -2823,7 +2825,12 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   store.subscribe(state => { if (!prefetchStarted && careerOpen(state)) { prefetchStarted = true; prefetchViews(); } });
   if (careerOpen(store.getState())) { prefetchStarted = true; prefetchViews(); }
   // The rewards of time played: the clock counts only with a career open, the page in the foreground and this tab holding the lease; the page «Ricompense» is patched live, not drawn again every second.
-  const rewards = createRewardsService({ store, username: () => account.user?.username ?? null, claimDaily: (careerId, device) => accountApi.claimDailyReward(careerId, device), syncTime: body => accountApi.syncRewardTime(body), claimBlocks: body => accountApi.claimRewardBlocks(body), claimCommunity: (reward, careerId, device) => accountApi.claimCommunityReward(reward, careerId, device), env: { playing: () => !menu.open && !wizard } });
+  // Advertising: Android only and only when the mode of data/ads-config.js is not 'off' (it is 'off' in every release): the adapter then does nothing at all, the banners and interstitials never appear and the video button says why it is off.
+  // iPhone and iPad: no ids, no plugin: the same code stays silent. The banner follows the page (secondary pages only), the interstitial follows the closing of a week (data/repositories/ads-manager.js).
+  const adPlatform = /Android/i.test(globalThis.navigator?.userAgent ?? '') && isNativeApp() ? 'android' : 'none';
+  const adMob = createAdMobAdapter({ platform: adPlatform });
+  const adsManager = createAdsManager({ adapter: adMob });
+  const rewards = createRewardsService({ store, ads: { config: adMob.ids, provider: adMob.rewardedProvider }, claimAd: (id, careerId, device) => accountApi.claimAdRewardOnServer(id, careerId, device), onAdCompleted: () => adsManager.noteRewarded(), username: () => account.user?.username ?? null, claimDaily: (careerId, device) => accountApi.claimDailyReward(careerId, device), syncTime: body => accountApi.syncRewardTime(body), claimBlocks: body => accountApi.claimRewardBlocks(body), claimCommunity: (reward, careerId, device) => accountApi.claimCommunityReward(reward, careerId, device), env: { playing: () => !menu.open && !wizard } });
   rewardsApi = rewards;
   rewards.onChange(() => {
     // a new notice (or the end of one) redraws the screen; otherwise only the page of the rewards is patched while it is open
@@ -2899,6 +2906,8 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   // the main menu) starts from the Home, never from the last page visited.
   const initialPage = 'panoramica';
   setHash(initialPage, true);
+  const syncBanner = () => { if (!adMob.ids.enabled) return; const page = String(globalThis.location?.hash ?? '').replace(/^#/, '').split(/[/?]/)[0]; adsManager.syncBanner({ page, blocked: interruptible(store.getState()) || reportOpen || menu.open || Boolean(wizard), margin: 72 }); };
+  store.subscribe(syncBanner); globalThis.addEventListener?.('hashchange', syncBanner);
   globalThis.addEventListener?.('hashchange', () => {
     const page = pageFromHash();
     // #comune, #provincia and #regione open that institution in Territori.

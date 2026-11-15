@@ -366,8 +366,8 @@ const total = poll => Math.round((poll.results.reduce((sum, row) => sum + row.sh
   assert.ok(R.rewardHistory(game()).some(item => item.kind === 'video' && item.amount === 0.15), 'E compare nello storico.');
   const repeating = make('repeat'); const first = await repeating.watch(); const second = await repeating.watch();
   assert.equal(first.status, 'completed'); assert.equal(second.status, 'duplicate', 'La stessa conferma ripetuta non paga due volte.'); assert.equal(transfers(), before + 2);
-  const late = repeating.complete({ completed: true, verified: true, completionId: 'demo-completion-fixed' }); assert.equal(late.status, 'duplicate', 'Nemmeno una callback in ritardo.'); assert.equal(transfers(), before + 2);
-  assert.equal(repeating.complete({ completed: true, verified: false, completionId: 'abcdefghij' }).status, 'failed'); assert.equal(transfers(), before + 2);
+  const late = await repeating.complete({ completed: true, verified: true, completionId: 'demo-completion-fixed' }); assert.equal(late.status, 'duplicate', 'Nemmeno una callback in ritardo.'); assert.equal(transfers(), before + 2);
+  assert.equal((await repeating.complete({ completed: true, verified: false, completionId: 'abcdefghij' })).status, 'failed'); assert.equal(transfers(), before + 2);
   lines.push('annunci: disattivati senza integrazione, demo rifiutato in produzione, nessun premio se chiuso/fallito/non verificato, una sola assegnazione per conferma');
 }
 {
