@@ -7,6 +7,9 @@ import { PARTY_LINK_COLLECTIONS, governingEntityIds } from './data/repositories/
 import { referenceGovernmentSpec } from './data/repositories/government-reference.js?v=20261113-8';
 
 const BUILD = new URL(import.meta.url).searchParams.get('v');
+// iPhone and iPad (WKWebView, viewport-fit=cover): the content may run under the notch, the Dynamic Island and the home indicator, so the iOS-only rules of theme.css (class platform-ios) keep it inside the safe area.
+// Android and the web keep their layout untouched. iPadOS reports itself as a Mac with a touch screen.
+try { if (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) document.documentElement.classList.add('platform-ios'); } catch { /* no navigator: nothing to mark */ }
 // The installed app (Capacitor) carries its own copy of the game: the site cannot update it, so it never asks the site for a newer build and keeps no browser cache of its own.
 const NATIVE = isNativeApp();
 

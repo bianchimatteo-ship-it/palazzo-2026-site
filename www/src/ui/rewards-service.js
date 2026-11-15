@@ -116,7 +116,11 @@ export function createRewardsService({ store, journal = rewardsJournal, username
   }
 
   // ---------- the community reward (Instagram): a self-declaration, once for each account (for each device, for a guest) ----------
-  const communityOn = id => Boolean(community[id] ?? COMMUNITY_REWARD[id]?.enabled);
+  // On iPhone and iPad the Instagram incentive is OFF (first App Store release: the App Store rules on rewards for actions on social networks are still to be verified, docs/app-store-apple.md): the card keeps the link to
+  // the profile, with no word of a prize, and nothing can be claimed. Android and the web are untouched. `env.ios` lets the tests choose the platform.
+  const onIos = () => env.ios ?? (/iPad|iPhone|iPod/.test(globalThis.navigator?.userAgent ?? '') || (globalThis.navigator?.platform === 'MacIntel' && (globalThis.navigator?.maxTouchPoints ?? 0) > 1));
+  const IOS_OFF = new Set(['instagram']);
+  const communityOn = id => !(IOS_OFF.has(id) && onIos()) && Boolean(community[id] ?? COMMUNITY_REWARD[id]?.enabled);
   const communityId = (id, key) => `comunita-${id}-${key}`;
   // The player went to the profile (the page opened the link): from now the claim button is there. Nothing is checked on the social network.
   function visitCommunity(id) {
@@ -204,7 +208,7 @@ export function createRewardsService({ store, journal = rewardsJournal, username
       const state = store.getState();
       const day = romeDay(wall()), key = scope();
       const daily = journal.daily(key, day);
-      const communities = Object.fromEntries(Object.values(COMMUNITY_REWARD).map(spec => [spec.id, { enabled: communityOn(spec.id), platform: spec.platform, linkWhenOff: Boolean(spec.linkWhenOff), url: spec.url, funds: spec.funds, capital: spec.capital, state: journal.community(key, spec.id).state, guest: !username() }]));
+      const communities = Object.fromEntries(Object.values(COMMUNITY_REWARD).map(spec => [spec.id, { enabled: communityOn(spec.id), platform: spec.platform, linkWhenOff: Boolean(spec.linkWhenOff) || (IOS_OFF.has(spec.id) && onIos()), url: spec.url, funds: spec.funds, capital: spec.capital, state: journal.community(key, spec.id).state, guest: !username() }]));
       return {
         daily: { amount: DAILY_REWARD.amount, minutes: DAILY_REWARD.minutes, ms: Math.min(daily.ms, DAILY_REWARD.minutes * 60000), state: daily.state, day, guest: !username() },
         play: playProgress(state.game), history: rewardHistory(state.game),

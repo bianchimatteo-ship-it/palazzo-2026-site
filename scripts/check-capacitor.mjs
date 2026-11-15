@@ -7,7 +7,7 @@
 //   - `--www` also fails if the committed `www/` is not exactly what the sources produce (the gate before building the app).
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { cp, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdtemp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -93,6 +93,28 @@ try {
   const plist = await readFile(join(ROOT, 'ios/App/App/Info.plist'), 'utf8');
   assert.equal(/UsageDescription/.test(plist), false, 'Nessun permesso richiesto sull’iPhone (nessuna descrizione d’uso: il gioco non usa fotocamera, microfono, posizione, contatti).');
   assert.equal(/UIBackgroundModes/.test(plist), false, 'Nessuna modalità in background.');
+  // ---------- 3b. iOS: universal app (iPhone portrait, iPad every orientation), real icon and splash, privacy manifest, safe area ----------
+  const { createHash } = await import('node:crypto');
+  const plistList = text => key => { const at = text.indexOf(`<key>${key}</key>`); assert.ok(at >= 0, `Info.plist: ${key}`); const rest = text.slice(at + key.length + 11, text.indexOf('</array>', at)); return [...rest.matchAll(/<string>([^<]+)<\/string>/g)].map(match => match[1]); };
+  const read = plistList(plist);
+  assert.deepEqual(read('UISupportedInterfaceOrientations'), ['UIInterfaceOrientationPortrait'], 'iPhone: solo verticale.');
+  assert.deepEqual(read('UISupportedInterfaceOrientations~ipad').sort(), ['UIInterfaceOrientationLandscapeLeft', 'UIInterfaceOrientationLandscapeRight', 'UIInterfaceOrientationPortrait', 'UIInterfaceOrientationPortraitUpsideDown'], 'iPad: tutti gli orientamenti.');
+  assert.deepEqual(read('UIRequiredDeviceCapabilities'), ['arm64'], 'Architettura arm64 (non armv7).');
+  assert.ok([...pbx.matchAll(/TARGETED_DEVICE_FAMILY = "([^"]+)"/g)].every(match => match[1] === '1,2'), 'App universale iPhone e iPad.');
+  assert.ok(/CODE_SIGN_STYLE = Automatic/.test(pbx) && !/DEVELOPMENT_TEAM = \w/.test(pbx), 'Firma automatica e nessun team nel repository (lo sceglie il titolare dell’account Apple).');
+  const manifest = await readFile(join(ROOT, 'ios/App/App/PrivacyInfo.xcprivacy'), 'utf8');
+  assert.ok(/<key>NSPrivacyTracking<\/key>\s*<false\/>/.test(manifest) && /<key>NSPrivacyTrackingDomains<\/key>\s*<array\/>/.test(manifest), 'Privacy manifest: nessun tracciamento.');
+  assert.ok(pbx.includes('PrivacyInfo.xcprivacy in Resources'), 'Il privacy manifest è nelle risorse dell’app.');
+  const iconPath = join(ROOT, 'ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png'), icon = await readFile(iconPath);
+  assert.equal(icon.readUInt32BE(16), 1024, 'Icona iOS 1024 px.'); assert.equal(icon.readUInt32BE(20), 1024); assert.notEqual(icon[25], 6, 'Icona iOS senza canale alfa (Apple la rifiuta con trasparenza).');
+  const PLACEHOLDER_HASHES = new Set(['0ac741c9e1701ee14dd05ea131f7cfd8', '958532b95c3e7d4997327dc977b80600']);
+  const splashDir = join(ROOT, 'ios/App/App/Assets.xcassets/Splash.imageset');
+  for (const file of (await readdir(splashDir)).filter(name => name.endsWith('.png'))) assert.ok(!PLACEHOLDER_HASHES.has(createHash('md5').update(await readFile(join(splashDir, file))).digest('hex')), `Splash iOS ${file}: non è più il segnaposto di Capacitor.`);
+  assert.ok(!PLACEHOLDER_HASHES.has(createHash('md5').update(icon).digest('hex')), 'Icona iOS: non è più il segnaposto di Capacitor.');
+  const webIndex = await readFile(join(ROOT, 'index.html'), 'utf8');
+  assert.ok(/name="viewport"[^>]*viewport-fit=cover/.test(webIndex), 'viewport-fit=cover (area sicura su iPhone con notch e Dynamic Island).');
+  const themeCss = await readFile(join(ROOT, 'src/theme.css'), 'utf8');
+  assert.ok(/html\.platform-ios body \{[^}]*env\(safe-area-inset-top/.test(themeCss), 'Area sicura superiore solo su iOS (classe platform-ios).');
   const pkg = JSON.parse(await readFile(join(ROOT, 'package.json'), 'utf8'));
   const hasAndroid = Boolean(pkg.dependencies?.['@capacitor/android']);
   console.log(`Stato piattaforme: iOS ${pbx.length ? 'presente' : 'assente'} (target ${[...new Set([...pbx.matchAll(/IPHONEOS_DEPLOYMENT_TARGET = ([\d.]+);/g)].map(match => match[1]))].join(', ')}, versione ${[...new Set([...pbx.matchAll(/MARKETING_VERSION = ([\d.]+);/g)].map(match => match[1]))].join(', ')}, build ${[...new Set([...pbx.matchAll(/CURRENT_PROJECT_VERSION = (\d+);/g)].map(match => match[1]))].join(', ')}); Android ${hasAndroid ? 'presente' : 'NON PRESENTE'}.`);

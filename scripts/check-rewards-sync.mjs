@@ -445,6 +445,14 @@ const HOUR = 3600000;
   game().resources.politicalCapital = 50;
   assert.equal((await off.service.claimCommunity('instagram')).reason, 'non-attiva', 'Spegnendola dalla configurazione non si riscuote più.'); assert.equal(off.service.snapshot().community.instagram.enabled, false);
   assert.match(renderRewardsPage(store.getState(), { ...off.service.snapshot(), playing: true }), /Questa ricompensa non è al momento disponibile/, 'E la carta lo dice.');
+  // iPhone and iPad (first App Store release): the Instagram incentive is off, the link to the profile stays with no prize; Android and the web are untouched (the same configuration, `ios` false)
+  for (const ios of [true, false]) {
+    const plat = makeDevice(ios ? 'IOS1' : 'AND1', null, null, {}); plat.service = createRewardsService({ store, journal: plat.journal, username: () => null, env: { ios, now: () => 0, wall: () => vt, visible: () => true, playing: () => true, lease: createStorageLease(memoryStorage(), { tabId: plat.id ?? (ios ? 'IOS1' : 'AND1'), wall: () => vt }), storage: memoryStorage() } });
+    const card = plat.service.snapshot().community.instagram;
+    assert.equal(card.enabled, !ios, ios ? 'Su iOS la ricompensa Instagram è spenta.' : 'Su Android e sul web resta attiva.');
+    assert.equal(Boolean(card.linkWhenOff), ios, ios ? 'Su iOS resta il solo collegamento, senza premio.' : 'Altrove nessun cambiamento.');
+    if (ios) { activate('IOS1'); assert.equal((await plat.service.claimCommunity('instagram')).reason, 'non-attiva', 'Su iOS non si riscuote.'); assert.equal(plat.service.visitCommunity('instagram'), false); }
+  }
   assert.equal(off.service.visitCommunity('instagram'), false);
 
   // a guest: once for this device
