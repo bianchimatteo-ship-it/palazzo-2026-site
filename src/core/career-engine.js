@@ -1206,6 +1206,9 @@ function handleSpecial(ctx, env, special, item, lines, specials, choice = {}) {
     runForSecretary(ctx, env, lines);
   } else if (special.startsWith('secretary-')) {
     congressAsSecretary(ctx, env, special.slice(10), item, lines);
+  } else if ((special === 'current-resist' || special === 'current-cede') && !game.party) {
+    // the player left the party meanwhile: a question about the currents of a party that is no longer his lapses (it used to stop the week with an error)
+    lines.push('Non fai più parte del partito: la questione decade.');
   } else if (special === 'current-resist' || special === 'current-cede') {
     const party = game.party;
     const leadership = relationValue(game, 'leadership') ?? 50;

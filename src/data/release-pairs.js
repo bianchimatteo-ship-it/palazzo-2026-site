@@ -805,4 +805,13 @@ export const ALL_PAIRS = [
   ['{} vuole «{}» per sé', '{1} wants “{2}” for itself'],
   ['su {} le posizioni distano {} punti', 'on {1} the positions are {2} points apart'],
   ['Le trattative per «{}» si sono chiuse il {}, con il deposito delle liste: fino al voto non si formano, non si allargano e non cambiano (restano valide quelle già registrate).', 'The talks for “{1}” closed on {2}, with the filing of the lists: until the vote they cannot be formed, widened or changed (those already registered remain valid).'],
+  ['Votazioni delegate allo staff', 'Votes delegated to the staff'],
+  ['Mi fermo e voto io', 'I stop and vote myself'],
+  ['Lo staff segue la linea del gruppo', 'The staff follows the group line'],
+  ['Lo staff si astiene', 'The staff abstains'],
+  ['Quando delegi lo staff, l’avanzamento si ferma a ogni votazione in cui hai un seggio.', 'When you delegate to the staff, the advance stops at every vote in which you hold a seat.'],
+  ['Delegando lo staff, le votazioni non essenziali seguono la linea del tuo gruppo; fiducia, leggi tue e bilancio ti fermano sempre.', 'When delegating to the staff, non-essential votes follow the line of your group; confidence votes, your own bills and the budget always stop you.'],
+  ['Delegando lo staff, le votazioni non essenziali si chiudono con un’astensione; fiducia, leggi tue e bilancio ti fermano sempre.', 'When delegating to the staff, non-essential votes end in an abstention; confidence votes, your own bills and the budget always stop you.'],
+  ['Lo staff ha votato per te «{}»: {} (linea del gruppo).', 'The staff voted for you on “{1}”: {2} (group line).'],
+  ['Lo staff ha votato per te «{}»: {} (astensione).', 'The staff voted for you on “{1}”: {2} (abstention).'],
 ];

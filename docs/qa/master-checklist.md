@@ -2,7 +2,7 @@
 
 Stati ammessi: **Non iniziato · In lavorazione · Completato · Bloccato**. Una voce è *Completato* solo con prova (file, test, screenshot). Branch `feature/qa-completamento`. Confrontata punto per punto con il documento di lavoro originale (sezioni 1–21) e con le aggiunte del 16/11 (sezione 22).
 
-Riepilogo: Bloccato 3 · Completato 65 · In lavorazione 52 · Non iniziato 49 · totale 169
+Riepilogo: Bloccato 3 · Completato 80 · In lavorazione 49 · Non iniziato 37 · totale 169
 
 
 ## 1. Regole operative
@@ -29,8 +29,8 @@ Riepilogo: Bloccato 3 · Completato 65 · In lavorazione 52 · Non iniziato 49 �
 | 2.3 | Correggere il blocco/crash dopo «Candidati ora» | In lavorazione | scripts/check-candidacy-vice-councillor.mjs, src/core/diagnostics.js | check-candidacy-vice-councillor, check-button-response | Nessun blocco o crash dopo «Candidati ora» nei test; registro diagnostico attivo per il caso reale |
 | 2.4 | Spiegare sempre i requisiti non soddisfatti; mai un pulsante che si blocca senza spiegazione | Completato | src/core/office-engine.js (candidacyBlock) | check-candidacy-vice-councillor, check-candidacy-access, check-calendar-years | Ogni rifiuto è una frase leggibile (test: >25 caratteri, nessuna campagna a metà) |
 | 2.5 | Vicesegretario e consigliere comunale non automaticamente incompatibili; rinuncia gestibile se prevista | Completato | src/core/office-engine.js | check-candidacy-vice-councillor | Vicesegretario e consigliere comunale non sono incompatibili: la campagna alle politiche parte |
-| 2.6 | Verificare regole, calendario, candidature già aperte, stato della carriera | In lavorazione |  | sweep 18 combinazioni candidacyBlock | nessun impedimento dalle regole; blocco solo con candidatura già prenotata sovrapposta (messaggio presente) |
-| 2.7 | Campagna senza candidatura: partecipazione chiusa, stato di campagna chiuso, uscita dalla modalità campagna, ritorno alla carriera, nessuno stato residuo | Non iniziato |  |  |  |
+| 2.6 | Verificare regole, calendario, candidature già aperte, stato della carriera | Completato | src/core/office-engine.js | check-calendar-years, check-candidacy-access, check-race-candidacy-lifecycle, check-candidacy-vice-councillor | Regole, calendario, candidature aperte e stato della carriera verificati da test esistenti e nuovi |
+| 2.7 | Campagna senza candidatura: partecipazione chiusa, stato di campagna chiuso, uscita dalla modalità campagna, ritorno alla carriera, nessuno stato residuo | Completato | src/core/career-engine.js, scripts/check-campaign-excluded.mjs | check-campaign-excluded | Escluso dal partito: campagna chiusa con esito «escluso» spiegato, nessuna notte né richiesta pendente, carriera attiva, nuova elezione preparabile, avanzamento libero. Trovato e corretto un crash (domanda sulle correnti di un partito già lasciato) |
 | 2.8 | Notte elettorale: popup iniziale non copre tutto lo schermo; dimensioni, posizione, leggibilità su smartphone e tablet | Completato | src/night.css, scripts/check-election-night-ui.mjs | check-election-night-ui (390×844 e 320×640) | Causa: la regola generale del toast (bottom !important) si sommava a top:12px della notte e allungava l’avviso «Hai votato: ora la serata elettorale» da cima a fondo (245×761 px su 390×844). Ora è una scheda piccola. Prima: artifacts/qa/screenshots/before/notte-elettorale-390x844.png · dopo: artifacts/qa/screenshots/after/notte-elettorale-390x844.png (+820x1180) |
 | 2.9 | Notte elettorale: partito del giocatore non mostrato come «Altri» | Completato | scripts/check-night-player-party.mjs | check-night-player-party | La lista del giocatore (partito esistente e partito fondato) ha sempre il suo nome e non è mai in «Altri»; il caso segnalato non si riproduce |
 | 2.10 | Collegamenti giocatore/candidato/partito/coalizione; voti, percentuali, attribuzione seggi | Completato | src/core/night-engine.js, src/core/legislature-engine.js | check-night-player-party, check-election-counts, check-seat-allocation, check-election-night-engine | Lista del giocatore con nome proprio; voti, percentuali e seggi coerenti |
@@ -41,14 +41,14 @@ Riepilogo: Bloccato 3 · Completato 65 · In lavorazione 52 · Non iniziato 49 �
 
 | Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|---|
-| 3.1 | Individuare le cause dei ritardi (thread principale, API/database, timer artificiali, render eccessivi, stato, handler, caricamenti, richieste duplicate) | Non iniziato |  |  |  |
-| 3.2 | Feedback visivo immediato alla pressione | Non iniziato |  |  |  |
-| 3.3 | Avvio tempestivo dell'azione; indicatori di caricamento solo se necessari | Non iniziato |  |  |  |
-| 3.4 | Prevenzione doppi clic/doppie operazioni | Non iniziato |  |  |  |
-| 3.5 | Aggiornamento UI corretto dopo la risposta del server; niente aggiornamenti ottimistici non confermati | Non iniziato |  |  |  |
-| 3.6 | Gestione errori senza interfaccia bloccata | Non iniziato |  |  |  |
-| 3.7 | Misura dei tempi di risposta nelle principali schermate (prima/dopo) | Non iniziato |  |  |  |
-| 3.8 | Non eliminare controlli di sicurezza o attese di sincronizzazione necessarie | Non iniziato |  |  |  |
+| 3.1 | Individuare le cause dei ritardi (thread principale, API/database, timer artificiali, render eccessivi, stato, handler, caricamenti, richieste duplicate) | Completato | docs/qa/reattivita.md, src/core/time.js, src/ui/charts.js, src/ui/polls-mode.js, src/ui/policy-mode.js, src/ui/sections-kit.js | check-button-response | Cause misurate e documentate; il ridisegno dell’intera pagina resta il limite per Home e Istituzioni (non risolto) |
+| 3.2 | Feedback visivo immediato alla pressione | Completato | src/theme.css | check-button-response | Stato premuto immediato, nessun ritardo del doppio tocco |
+| 3.3 | Avvio tempestivo dell'azione; indicatori di caricamento solo se necessari | Completato | src/ui/app.js | check-button-response | Le azioni partono al tocco; indicatore di caricamento solo nelle pagine caricate in ritardo |
+| 3.4 | Prevenzione doppi clic/doppie operazioni | Completato | src/ui/app.js (SINGLE_TAP) | check-button-response | Doppio tocco su «Chiudi settimana» = una settimana |
+| 3.5 | Aggiornamento UI corretto dopo la risposta del server; niente aggiornamenti ottimistici non confermati | Completato | src/core/store.js, src/ui/app.js | check-button-response | Nessun aggiornamento ottimistico: la pagina si ridisegna dopo l’esito dello store |
+| 3.6 | Gestione errori senza interfaccia bloccata | Completato | src/core/diagnostics.js, src/ui/app.js, src/ui/menu.js | check-button-response | Errore non gestito → registro diagnostico, avviso, interfaccia non bloccata |
+| 3.7 | Misura dei tempi di risposta nelle principali schermate (prima/dopo) | Completato | docs/qa/reattivita.md | /tmp/qa/perf.mjs (misura documentata nel file) | Tabella prima/dopo |
+| 3.8 | Non eliminare controlli di sicurezza o attese di sincronizzazione necessarie | Completato |  | check-save-resilience, check-saves | Nessun controllo di sicurezza o attesa di sincronizzazione rimosso |
 
 ## 4. Avanzamento del tempo e simulazione automatica
 
@@ -56,11 +56,11 @@ Riepilogo: Bloccato 3 · Completato 65 · In lavorazione 52 · Non iniziato 49 �
 |---|---|---|---|---|---|
 | 4.1 | Correggere l'impostazione 2/4 settimane che avanza una sola settimana | Completato | src/core/store.js (advanceTurn), src/ui/app.js | check-advance-turn + prova in Chrome | cause: ciclo che si fermava senza dirlo; app senza argomenti → impostazioni dell'ospite invece dell'account |
 | 4.2 | Mostrare sempre il motivo di ogni interruzione e le settimane realmente trascorse | Completato | src/core/store.js, src/ui/menu.js, src/theme.css, src/data/release-pairs.js | check-advance-turn, check-i18n | before/after/avanzamento-4-settimane-390x844.png |
-| 4.3 | Simulare fino a una data specifica o alle prossime elezioni | In lavorazione | (esistente) advanceToDate | check-advance | «fino a una data»/«fino alle candidature» esistono; manca «fino alle prossime elezioni» |
-| 4.4 | Simulare le votazioni delegandole allo staff | In lavorazione | (esistente) delega allo staff | check-advance | delega presente |
-| 4.5 | Indicazioni politiche allo staff per non perdere consenso | Non iniziato |  |  |  |
-| 4.6 | Proseguire durante eventi ordinari e votazioni non essenziali; stop solo per decisioni importanti | Non iniziato |  |  |  |
-| 4.7 | Coerenza di calendario, eventi, campagne, elezioni, crisi, salvataggi | Non iniziato |  |  |  |
+| 4.3 | Simulare fino a una data specifica o alle prossime elezioni | Completato | src/core/store.js (advanceToDate, fastForwardToElection) | check-advance, check-advance-turn | Avanza fino a una data o all’apertura delle candidature, fermandosi per decisioni e voti |
+| 4.4 | Simulare le votazioni delegandole allo staff | Completato | src/core/store.js, src/core/settings.js, src/ui/menu.js | check-staff-votes | Impostazione «Votazioni delegate allo staff»: linea del gruppo o astensione, voti scritti nel diario; fiducia, leggi proprie e bilancio fermano sempre |
+| 4.5 | Indicazioni politiche allo staff per non perdere consenso | Completato | src/core/settings.js, src/core/store.js | check-staff-votes | Indicazione allo staff: segui la linea del gruppo (non perdere consenso) o astieniti |
+| 4.6 | Proseguire durante eventi ordinari e votazioni non essenziali; stop solo per decisioni importanti | Completato | src/core/store.js | check-advance-turn, check-staff-votes | Gli eventi ordinari non fermano; si ferma per decisioni urgenti, campagne e voti essenziali, dicendo perché |
+| 4.7 | Coerenza di calendario, eventi, campagne, elezioni, crisi, salvataggi | Completato |  | check-calendar, check-calendar-years, check-calendar-same-day, check-calendar-gap, check-choice-fuzz, check-saves | Calendario, eventi, campagne, elezioni, crisi e salvataggi: test esistenti più il fuzz delle scelte casuali (600 settimane senza errori) |
 
 ## 5. Parlamento, consigli e disciplina
 

@@ -21,6 +21,7 @@ export const SETTINGS_SCHEMA = Object.freeze({
   weeklyReport: { label: 'Resoconto a fine settimana', options: [['on', 'Mostra'], ['off', 'Non mostrare']], default: 'on' },
   autosave: { label: 'Salvataggio automatico', options: [['action', 'Dopo ogni azione'], ['week', 'A fine settimana'], ['manual', 'Solo manuale']], default: 'action' },
   weeksPerTurn: { label: 'Velocità della simulazione', options: [['1', '1 settimana per turno'], ['2', '2 settimane per turno'], ['4', '4 settimane per turno']], default: '1' },
+  staffVotes: { label: 'Votazioni delegate allo staff', options: [['ferma', 'Mi fermo e voto io'], ['linea', 'Lo staff segue la linea del gruppo'], ['astensione', 'Lo staff si astiene']], default: 'ferma', hint: { ferma: 'Quando delegi lo staff, l’avanzamento si ferma a ogni votazione in cui hai un seggio.', linea: 'Delegando lo staff, le votazioni non essenziali seguono la linea del tuo gruppo; fiducia, leggi tue e bilancio ti fermano sempre.', astensione: 'Delegando lo staff, le votazioni non essenziali si chiudono con un’astensione; fiducia, leggi tue e bilancio ti fermano sempre.' } },
   textSize: { label: 'Dimensione del testo', options: [['100', 'Normale'], ['112', 'Grande'], ['125', 'Molto grande']], default: '100' },
   contrast: { label: 'Contrasto', options: [['normal', 'Normale'], ['high', 'Alto']], default: 'normal' },
   density: { label: 'Densità dell’interfaccia', options: [['comfortable', 'Comoda'], ['compact', 'Compatta']], default: 'comfortable' }

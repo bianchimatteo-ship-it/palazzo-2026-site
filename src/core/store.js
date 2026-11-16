@@ -4047,13 +4047,33 @@ function castOpenVoteIn(voteId, choice, { mode = 'simulata' } = {}) {
   return { vote, choice, mode, result, deferred: Boolean(vote.deferred), voteId: vote.voteId };
 }
 // Before a week is closed: null when nothing waits (or the headless voter cast every ballot), otherwise the votes that stop the close.
+// The staff that takes the ballots when the player delegates (the setting «Votazioni delegate allo staff»): only the votes that do not decide anything big. A confidence vote, a bill of the player's own and
+// the budget always wait for the player; the others are cast by the line of the player's group (or as an abstention) and written in the diary.
+let staffDelegating = false;
+const essentialVote = vote => vote.scope === 'fiducia' || Boolean(vote.own) || /bilancio|manovra/i.test(`${vote.kindLabel ?? ''} ${vote.title ?? ''}`);
+function castByStaff(open) {
+  const mode = loadSettings().staffVotes ?? 'ferma';
+  if (!staffDelegating || mode === 'ferma') return open;
+  for (const vote of open) {
+    if (essentialVote(vote)) continue;
+    const choice = mode === 'astensione' ? 'astenuto' : (BALLOTS[vote.line] ? vote.line : 'astenuto');
+    try {
+      castOpenVoteIn(vote.id, choice);
+      const game = deepCopy(state.game);
+      remember(game, { date: state.clock.currentDate, kind: 'voto-staff', text: `Lo staff ha votato per te «${vote.title}»: ${BALLOTS[choice] ?? choice}${mode === 'linea' ? ' (linea del gruppo)' : ' (astensione)'}.`, weight: 0.3 });
+      state = { ...state, game };
+    } catch { /* the vote closed meanwhile */ }
+  }
+  const left = openVotesOf(state);
+  return left.length ? left : null;
+}
 function openVotesBlocking() {
   let open = openVotesOf(state);
   if (!open.length) return null;
-  if (!headlessVoter) return open;
+  if (!headlessVoter) return castByStaff(open);
   for (const vote of open) { const choice = headlessVoter(vote); if (BALLOTS[choice]) castOpenVoteIn(vote.id, choice); }
   open = openVotesOf(state);
-  return open.length ? open : null;
+  return open.length ? castByStaff(open) : null;
 }
 function stopForOpenVotes(open) {
   state = { ...state, ui: { ...state.ui, toast: openVotesNotice(open) } };
@@ -4109,7 +4129,11 @@ export const store = {
   // Advances to a precise future date through the ordinary weeks (stepTime, settleWeeks): no week, event, vote or election is skipped, however far the date. It stops before
   // what only the player can settle (a campaign under way, an urgent matter, a situation) unless the staff takes over (delegate: the week closes it with its default, as it always does).
   // maxWeeks ends the call early (the state is always at the end of a week, the page goes on in pieces). reason: 'data' reached, 'decisione', 'campagna' under way, 'fine' of the career, 'continua' (maxWeeks), 'bloccato' (no progress).
-  advanceToDate(target, { delegate = false, maxWeeks = Infinity } = {}) {
+  advanceToDate(target, options = {}) {
+    staffDelegating = Boolean(options.delegate);
+    try { return store.advanceToDateInner(target, options); } finally { staffDelegating = false; }
+  },
+  advanceToDateInner(target, { delegate = false, maxWeeks = Infinity } = {}) {
     if (!store.hasCareer()) throw new Error('Non c’è una partita in corso.');
     if (state.game.status === 'ended') throw new Error('La carriera è conclusa: inizia una nuova partita.');
     const from = state.clock.currentDate;
@@ -4286,6 +4310,10 @@ export const store = {
   // player, and the call says how many weeks really went by and why it stopped when it is fewer than asked: { requested, weeks, reason, title } with reason 'completato', 'decisione' (an urgent matter or a situation),
   // 'campagna' (the campaign needs the player: the nomination, or the last week before the vote), 'voto' (an open ballot in an assembly where the player sits), 'fine' (the career is over), 'bloccato'.
   advanceTurn(weeks = Number(loadSettings().weeksPerTurn) || 1, { delegate = false } = {}) {
+    staffDelegating = delegate;
+    try { return store.advanceTurnInner(weeks, { delegate }); } finally { staffDelegating = false; }
+  },
+  advanceTurnInner(weeks = 1, { delegate = false } = {}) {
     const requested = Math.max(1, Math.floor(Number(weeks)) || 1);
     let done = 0, reason = 'completato', waiting = null;
     for (let index = 0; index < requested; index++) {
