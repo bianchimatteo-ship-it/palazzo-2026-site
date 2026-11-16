@@ -1,180 +1,285 @@
 # Master checklist — completamento Politicando 2026
 
-Ogni voce parte da *non iniziato*. Uno stato *completato* richiede una prova concreta (test, screenshot, file). Stati: non iniziato · in lavorazione · completato · bloccato · parziale.
+Stati ammessi: **Non iniziato · In lavorazione · Completato · Bloccato**. Una voce è *Completato* solo con prova (file, test, screenshot). Branch `feature/qa-completamento`. Confrontata punto per punto con il documento di lavoro originale (sezioni 1–21) e con le aggiunte del 16/11 (sezione 22).
 
-Ultimo aggiornamento: 2026-11-16 · branch `feature/qa-completamento` (da `feature/ios-admob-android` @ 9eb2ca8).
+Riepilogo: Bloccato 3 · Completato 17 · In lavorazione 10 · Non iniziato 139 · totale 169
 
+
+## 1. Regole operative
+
+| Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
+|---|---|---|---|---|---|
+| 1.1 | Prima di modificare: controllare git status, branch, HEAD, modifiche locali | Completato |  | git status/branch/HEAD controllati a inizio di ogni lavoro |  |
+| 1.2 | Verificare le modifiche successive nel branch feature/ios-admob-android | Completato |  | git fetch + ff-merge di origin/feature/ios-admob-android (18 commit del 15-16/11) | branch feature/qa-completamento da 9eb2ca8 |
+| 1.3 | Non sovrascrivere/perdere lavoro; non toccare main; nessun merge, deploy, pubblicazione | In lavorazione |  |  | nessun merge/deploy/modifica a main finora; regola valida fino alla fine |
+| 1.4 | Non duplicare sistemi esistenti: migliorarli | Non iniziato |  |  |  |
+| 1.5 | Non inventare dati, risultati elettorali, fonti, autorizzazioni, esiti dei test | Non iniziato |  |  |  |
+| 1.6 | Implementare davvero (non solo analisi/piano); lavorare per aree, priorità ai bug bloccanti | Non iniziato |  |  |  |
+| 1.7 | Test mirati durante il lavoro e regressione complessiva alla fine | Non iniziato |  |  |  |
+| 1.8 | Funzioni realmente utilizzabili (non solo una schermata) | Non iniziato |  |  |  |
+| 1.9 | Nessuna modalità per impersonare politici reali | Non iniziato |  |  |  |
+| 1.10 | Creare e aggiornare docs/qa/master-checklist.md con stato, file, test, screenshot | Completato | docs/qa/master-checklist.md | confronto con il documento originale (sez. 1-21) e con le aggiunte del 16/11 (sez. 22) |  |
 
 ## 2. Bug prioritari: candidature ed elezioni
 
-| Punto | Stato | File modificati | Test | Screenshot / note |
-|---|---|---|---|---|
-| 2.1 Scenario vicesegretario + consigliere comunale: candidatura alle Politiche riprodotta | parziale |  | repro in Chrome (/tmp/qa) + 18 combinazioni di candidacyBlock | Riproduzione fedele (livello Vicesegretario + consigliere comunale + politiche aperte + «Candidati ora»): la candidatura si apre e la campagna parte, nessun errore. Segnalazione NON riprodotta: servono dati dell'utente (salvataggio) per proseguire |
-| 2.2 Impedimento ingiustificato alla candidatura corretto (o dimostrato assente) | parziale |  | sweep regole office-engine | nessun impedimento nelle regole per consigliere comunale/vicesegretario; un blocco c'è solo con candidatura già prenotata che si sovrappone (messaggio dato) |
-| 2.3 Blocco/crash dopo «Candidati ora» corretto (o dimostrato assente) | parziale |  | repro Chrome | nessun blocco riprodotto; errori di startCampaign già mostrati come toast |
-| 2.4 Spiegazione dei requisiti non soddisfatti, sempre visibile | parziale | (già presente) src/ui/campaign-mode.js candidacyAccess | check-candidacy-access | motivi già mostrati; non migliorato in questa sessione |
-| 2.5 Incarichi non automaticamente incompatibili; rinuncia gestibile se prevista | non iniziato |  |  |  |
-| 2.6 Campagna senza candidatura: partecipazione chiusa, stato di campagna azzerato, ritorno alla carriera, nessuno stato residuo | non iniziato |  |  |  |
-| 2.7 Notte elettorale: popup iniziale non copre tutto lo schermo; leggibile su smartphone e tablet | non iniziato |  |  |  |
-| 2.8 Notte elettorale: partito del giocatore non mostrato come «Altri» | non iniziato |  |  |  |
-| 2.9 Collegamenti giocatore/candidato/partito/coalizione; voti, percentuali, seggi coerenti | non iniziato |  |  |  |
-| 2.10 Candidato al 6% non eletto con partito senza rappresentanza: collegio, soglie, seggi, posizione in lista spiegati (nessun seggio artificiale) | non iniziato |  |  |  |
+| Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
+|---|---|---|---|---|---|
+| 2.1 | Riprodurre lo scenario vicesegretario + consigliere comunale + candidatura Politiche + «Candidati ora» | In lavorazione | scripts (da aggiungere) | repro in Chrome /tmp/qa | Livello Vicesegretario + consigliere comunale + politiche aperte: la candidatura funziona, nessun errore. Non riprodotto il blocco segnalato |
+| 2.2 | Correggere l'impedimento ingiustificato alla candidatura | Non iniziato |  |  |  |
+| 2.3 | Correggere il blocco/crash dopo «Candidati ora» | Non iniziato |  |  |  |
+| 2.4 | Spiegare sempre i requisiti non soddisfatti; mai un pulsante che si blocca senza spiegazione | Non iniziato |  |  |  |
+| 2.5 | Vicesegretario e consigliere comunale non automaticamente incompatibili; rinuncia gestibile se prevista | Non iniziato |  |  |  |
+| 2.6 | Verificare regole, calendario, candidature già aperte, stato della carriera | In lavorazione |  | sweep 18 combinazioni candidacyBlock | nessun impedimento dalle regole; blocco solo con candidatura già prenotata sovrapposta (messaggio presente) |
+| 2.7 | Campagna senza candidatura: partecipazione chiusa, stato di campagna chiuso, uscita dalla modalità campagna, ritorno alla carriera, nessuno stato residuo | Non iniziato |  |  |  |
+| 2.8 | Notte elettorale: popup iniziale non copre tutto lo schermo; dimensioni, posizione, leggibilità su smartphone e tablet | Non iniziato |  |  |  |
+| 2.9 | Notte elettorale: partito del giocatore non mostrato come «Altri» | Non iniziato |  |  |  |
+| 2.10 | Collegamenti giocatore/candidato/partito/coalizione; voti, percentuali, attribuzione seggi | Non iniziato |  |  |  |
+| 2.11 | Candidato al 6% con partito senza rappresentanza non eletto: collegio, soglie, seggi, posizione in lista; nessun seggio artificiale; spiegazione chiara | Non iniziato |  |  |  |
+| 2.12 | Diagnostica per individuare la causa di blocchi (registro errori dei pulsanti) | Non iniziato |  |  |  |
 
 ## 3. Velocità e reattività dei pulsanti
 
-| Punto | Stato | File modificati | Test | Screenshot / note |
-|---|---|---|---|---|
-| 3.1 Analisi delle cause di ritardo (thread principale, API, timer, render, handler) | non iniziato |  |  |  |
-| 3.2 Feedback visivo immediato alla pressione | non iniziato |  |  |  |
-| 3.3 Prevenzione doppi clic e operazioni duplicate | non iniziato |  |  |  |
-| 3.4 Gestione errori senza interfaccia bloccata | non iniziato |  |  |  |
-| 3.5 Misura dei tempi di risposta nelle principali schermate (prima/dopo) | non iniziato |  |  |  |
+| Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
+|---|---|---|---|---|---|
+| 3.1 | Individuare le cause dei ritardi (thread principale, API/database, timer artificiali, render eccessivi, stato, handler, caricamenti, richieste duplicate) | Non iniziato |  |  |  |
+| 3.2 | Feedback visivo immediato alla pressione | Non iniziato |  |  |  |
+| 3.3 | Avvio tempestivo dell'azione; indicatori di caricamento solo se necessari | Non iniziato |  |  |  |
+| 3.4 | Prevenzione doppi clic/doppie operazioni | Non iniziato |  |  |  |
+| 3.5 | Aggiornamento UI corretto dopo la risposta del server; niente aggiornamenti ottimistici non confermati | Non iniziato |  |  |  |
+| 3.6 | Gestione errori senza interfaccia bloccata | Non iniziato |  |  |  |
+| 3.7 | Misura dei tempi di risposta nelle principali schermate (prima/dopo) | Non iniziato |  |  |  |
+| 3.8 | Non eliminare controlli di sicurezza o attese di sincronizzazione necessarie | Non iniziato |  |  |  |
 
 ## 4. Avanzamento del tempo e simulazione automatica
 
-| Punto | Stato | File modificati | Test | Screenshot / note |
-|---|---|---|---|---|
-| 4.1 Impostazione 2/4 settimane corretta (non avanza una sola settimana) | completato | src/core/store.js (advanceTurn), src/ui/app.js | check-advance-turn + prova in Chrome | cause: (1) il ciclo si fermava a ogni campagna attiva o decisione urgente senza dirlo; (2) l'app passava a store.advanceTurn() senza argomenti, che leggeva le impostazioni dell'ospite invece di quelle dell'account → ora si passano le settimane scelte. Resta voluto: una decisione urgente ferma il tempo |
-| 4.2 Motivo di ogni interruzione e numero di settimane realmente trascorse | completato | src/core/store.js, src/ui/menu.js, src/theme.css, src/data/release-pairs.js | check-advance-turn, check-i18n, prova in Chrome | before/after: avanzamento-4-settimane-390x844.png («Avanzate 1 settimana su 4: mi sono fermato perché…» nel resoconto; IT/EN) |
-| 4.3 Simulare fino a una data o alle prossime elezioni | parziale | (già presente) | check-advance | «fino a una data» e «fino alle candidature» esistono; non «fino alle prossime elezioni» (voto) |
-| 4.4 Votazioni delegate allo staff, con indicazioni politiche | parziale | (già presente) | check-advance | delega allo staff presente; indicazioni politiche allo staff non implementate |
-| 4.5 Simulazione che prosegue durante eventi ordinari e votazioni non essenziali; stop solo per decisioni importanti | non iniziato |  |  |  |
+| Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
+|---|---|---|---|---|---|
+| 4.1 | Correggere l'impostazione 2/4 settimane che avanza una sola settimana | Completato | src/core/store.js (advanceTurn), src/ui/app.js | check-advance-turn + prova in Chrome | cause: ciclo che si fermava senza dirlo; app senza argomenti → impostazioni dell'ospite invece dell'account |
+| 4.2 | Mostrare sempre il motivo di ogni interruzione e le settimane realmente trascorse | Completato | src/core/store.js, src/ui/menu.js, src/theme.css, src/data/release-pairs.js | check-advance-turn, check-i18n | before/after/avanzamento-4-settimane-390x844.png |
+| 4.3 | Simulare fino a una data specifica o alle prossime elezioni | In lavorazione | (esistente) advanceToDate | check-advance | «fino a una data»/«fino alle candidature» esistono; manca «fino alle prossime elezioni» |
+| 4.4 | Simulare le votazioni delegandole allo staff | In lavorazione | (esistente) delega allo staff | check-advance | delega presente |
+| 4.5 | Indicazioni politiche allo staff per non perdere consenso | Non iniziato |  |  |  |
+| 4.6 | Proseguire durante eventi ordinari e votazioni non essenziali; stop solo per decisioni importanti | Non iniziato |  |  |  |
+| 4.7 | Coerenza di calendario, eventi, campagne, elezioni, crisi, salvataggi | Non iniziato |  |  |  |
 
 ## 5. Parlamento, consigli e disciplina
 
-| Punto | Stato | File modificati | Test | Screenshot / note |
-|---|---|---|---|---|
-| 5.1 Votazioni nominative (nome, favorevole/contrario/astenuto/assente) | non iniziato |  |  |  |
-| 5.2 Più astensioni/assenze realistiche; scrutini segreti solo aggregati; totali coerenti | non iniziato |  |  |  |
-| 5.3 Disciplina di gruppo con dissensi realistici | non iniziato |  |  |  |
-| 5.4 Capitale politico: 60% trasferito alla campagna, calcolo mostrato, nessuna duplicazione | completato | src/core/store.js (startCampaign), src/ui/campaign-mode.js, src/data/release-pairs.js | check-campaign-capital; regressione check-campaign/-start/-opening/-depth, check-invariants | before/after: capitale-campagna-390x844.png (60 → 36 + 24, mostrato prima e nel diario) |
+| Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
+|---|---|---|---|---|---|
+| 5.1 | Votazioni nominative: nome e cognome, favorevole/contrario/astenuto/assente | Non iniziato |  |  |  |
+| 5.2 | Aumentare realisticamente astensioni e assenze | Non iniziato |  |  |  |
+| 5.3 | Scrutini segreti: solo risultati aggregati | Non iniziato |  |  |  |
+| 5.4 | Totali coerenti con i componenti dell'assemblea | Non iniziato |  |  |  |
+| 5.5 | Disciplina dei gruppi (grande maggioranza segue l'indicazione) con dissensi e assenze non al 100% | Non iniziato |  |  |  |
+| 5.6 | Indicazioni del giocatore agli altri parlamentari/consiglieri | Non iniziato |  |  |  |
+| 5.7 | 60% del capitale politico alla campagna, calcolo mostrato, nessuna duplicazione, capitale e fondi separati | Completato | src/core/store.js, src/ui/campaign-mode.js, src/data/release-pairs.js | check-campaign-capital + regressione campagna | before/after/capitale-campagna-390x844.png |
 
 ## 6. Iniziative popolari e richieste dei cittadini
 
-| Punto | Stato | File modificati | Test | Screenshot / note |
-|---|---|---|---|---|
-| 6.1 Iniziativa legislativa popolare: articoli, raccolta firme (50.000), costi, avanzamento, esito, passaggio al Parlamento | non iniziato |  |  |  |
-| 6.2 Distinzione tra iniziativa popolare, proposta parlamentare, firme referendarie | non iniziato |  |  |  |
-| 6.3 Richieste di cittadini/associazioni: azioni, competenze, tempi, costi, conseguenze | non iniziato |  |  |  |
+| Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
+|---|---|---|---|---|---|
+| 6.1 | Iniziativa legislativa popolare: anche piccoli partiti senza parlamentari | Non iniziato |  |  |  |
+| 6.2 | Proposta in articoli; organizzazione raccolta; raccolta nazionale e territoriale | Non iniziato |  |  |  |
+| 6.3 | Costi e risorse; avanzamento firme; sostegno dei cittadini; opposizioni e campagne | Non iniziato |  |  |  |
+| 6.4 | Fallimento o raggiungimento dei requisiti (50.000 firme); passaggio alla fase parlamentare | Non iniziato |  |  |  |
+| 6.5 | Distinguere iniziativa popolare, proposta parlamentare, raccolta firme referendaria | Non iniziato |  |  |  |
+| 6.6 | Richieste di cittadini/associazioni: azioni disponibili, competenze, tempi, costi, conseguenze | Non iniziato |  |  |  |
+| 6.7 | Soddisfare direttamente o avviare interrogazioni, mozioni, segnalazioni, proposte | Non iniziato |  |  |  |
 
 ## 7. Leggi, Governo e crisi del Paese
 
-| Punto | Stato | File modificati | Test | Screenshot / note |
-|---|---|---|---|---|
-| 7.1 Catena approvazione → attuazione → effetti sugli indicatori verificata | non iniziato |  |  |  |
-| 7.2 Presidente del Consiglio: crisi evidenziate in Home, urgenze, interventi con costi/tempi/rischi | non iniziato |  |  |  |
+| Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
+|---|---|---|---|---|---|
+| 7.1 | Catena approvazione → attuazione → effetti sugli indicatori verificata | Non iniziato |  |  |  |
+| 7.2 | Leggi con effetti reali su economia, sanità, lavoro, sicurezza, ambiente, immigrazione, istruzione | Non iniziato |  |  |  |
+| 7.3 | Da Presidente del Consiglio: tematiche in crisi in Home, problemi urgenti | Non iniziato |  |  |  |
+| 7.4 | Interventi concreti con costi, tempi, benefici, rischi; collegati agli effetti | Non iniziato |  |  |  |
 
 ## 8. Consiglio dei ministri e gioco da Ministro
 
-| Punto | Stato | File modificati | Test | Screenshot / note |
-|---|---|---|---|---|
-| 8.1 Sezione Consiglio dei ministri nell'area Governo | non iniziato |  |  |  |
-| 8.2 Da Ministro: area ministeriale, proposte, incontri, voto in Consiglio, relazioni | non iniziato |  |  |  |
-| 8.3 Da Presidente del Consiglio: convocazione, ordine del giorno, contrasti tra dicasteri, verifica programma | non iniziato |  |  |  |
-| 8.4 Competenze rispettate (nessun potere non spettante) | non iniziato |  |  |  |
+| Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
+|---|---|---|---|---|---|
+| 8.1 | Sezione Consiglio dei ministri nell'area Governo (interattiva) | Non iniziato |  |  |  |
+| 8.2 | Ministro: area ministeriale, dossier, problemi, obiettivi, priorità del dicastero | Non iniziato |  |  |  |
+| 8.3 | Ministro: proporre provvedimenti, preparare proposte normative, sottoporle al Governo | Non iniziato |  |  |  |
+| 8.4 | Ministro: coordinarsi con il Presidente del Consiglio, interloquire con i colleghi, incontri e riunioni, negoziati | Non iniziato |  |  |  |
+| 8.5 | Ministro: partecipare e votare in Consiglio dei ministri | Non iniziato |  |  |  |
+| 8.6 | Ministro: crisi del settore, Parlamento e cittadini, incarichi dal PdC, relazioni sui risultati, rapporti e conflitti | Non iniziato |  |  |  |
+| 8.7 | Conseguenze su consenso, rapporti, efficacia, governo, stabilità | Non iniziato |  |  |  |
+| 8.8 | PdC: convocare, ordine del giorno, priorità, proposte dei ministri, contrasti, relazioni, negoziare, verificare programma | Non iniziato |  |  |  |
+| 8.9 | Rispetto delle competenze (nessun potere non spettante) | Non iniziato |  |  |  |
 
-## 9. Formazione del Governo e consultazioni
+## 9. Formazione del Governo e consultazioni del Quirinale
 
-| Punto | Stato | File modificati | Test | Screenshot / note |
-|---|---|---|---|---|
-| 9.1 Notizie e comunicazioni istituzionali della Presidenza della Repubblica (cronologia delle consultazioni) | non iniziato |  |  |  |
-| 9.2 Dichiarazioni pubbliche dei gruppi, mandato esplorativo, incarico, nomina (art. 92) | non iniziato |  |  |  |
+| Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
+|---|---|---|---|---|---|
+| 9.1 | Notizie e comunicazioni della Presidenza: apertura consultazioni, calendario, soggetti, colloqui | Non iniziato |  |  |  |
+| 9.2 | Dichiarazioni dei partiti, orientamenti e condizioni pubbliche, mandati esplorativi, esito, incarico, nomina PdC e ministri | Non iniziato |  |  |  |
+| 9.3 | Nessuna preferenza personale/dichiarazione privata inventata del Presidente; distinzione prassi/art. 92 | Non iniziato |  |  |  |
+| 9.4 | Fase più interessante: notizie, cronologia, decisioni, conseguenze | Non iniziato |  |  |  |
 
 ## 10. Promesse elettorali e notifiche
 
-| Punto | Stato | File modificati | Test | Screenshot / note |
-|---|---|---|---|---|
-| 10.1 Registrazione delle promesse da tutte le fonti | non iniziato |  |  |  |
-| 10.2 Promemoria popup non invadenti, con scadenze e azioni | non iniziato |  |  |  |
-| 10.3 Stato dopo l'elezione (mantenuta/parziale/in corso/non mantenuta) | non iniziato |  |  |  |
+| Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
+|---|---|---|---|---|---|
+| 10.1 | Registrare promesse da candidatura, campagna, comizi, dialoghi, programma, trattative | Non iniziato |  |  |  |
+| 10.2 | Promemoria popup: ricordare, evidenziare da mantenere, scadenze/progressi, momenti opportuni, senza ripetizioni, apribili | Non iniziato |  |  |  |
+| 10.3 | Coerenti con la fase di gioco; non interrompono animazioni/votazioni | Non iniziato |  |  |  |
+| 10.4 | Dopo l'elezione: mantenuta/parzialmente/in corso/non mantenuta | Non iniziato |  |  |  |
 
 ## 11. Animazioni, dialoghi e personalità
 
-| Punto | Stato | File modificati | Test | Screenshot / note |
-|---|---|---|---|---|
-| 11.1 Azioni pertinenti all'argomento | non iniziato |  |  |  |
-| 11.2 Pro e contro prima della selezione, coerenti con il motore | non iniziato |  |  |  |
-| 11.3 Barra di apprezzamento (50 neutro, valore iniziale/variazione/finale) | non iniziato |  |  |  |
-| 11.4 Più scene e dialoghi; caratteri (razionale, individualista, pragmatico, carismatico, moderato, ideologico, diplomatico) | non iniziato |  |  |  |
-| 11.5 Animazioni riducibili/disattivabili | non iniziato |  |  |  |
+| Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
+|---|---|---|---|---|---|
+| 11.1 | Azioni pertinenti all'argomento (niente opzioni fuori tema) | Non iniziato |  |  |  |
+| 11.2 | Pro e contro su ogni pulsante, coerenti con il motore | Non iniziato |  |  |  |
+| 11.3 | Barra di apprezzamento: 50 neutro; effetti progressivi; valore iniziale, variazione, finale | Non iniziato |  |  |  |
+| 11.4 | Più varietà/quantità di scene, dialoghi e azioni | Non iniziato |  |  |  |
+| 11.5 | Caratteri (razionale, individualista, pragmatico, carismatico, moderato, ideologico, diplomatico) con effetto reale | Non iniziato |  |  |  |
+| 11.6 | Migliorare grafica, animazioni, transizioni, leggibilità; riduzione/disattivazione animazioni | Non iniziato |  |  |  |
 
 ## 12. Alleanze e coalizioni
 
-| Punto | Stato | File modificati | Test | Screenshot / note |
-|---|---|---|---|---|
-| 12.1 Alleanza ≠ coalizione; «Crea alleanza»; trasformazione esplicita | non iniziato |  |  |  |
-| 12.2 Adesione a una coalizione esistente, rifiuto con motivazione e blocco di 7 giorni | non iniziato |  |  |  |
-| 12.3 Scadenza elettorale per formazione/modifica delle coalizioni | non iniziato |  |  |  |
-| 12.4 Programmi strutturati su 10 temi; compatibilità per posizione; incompatibilità vincolanti | non iniziato |  |  |  |
-| 12.5 Trattative e compromessi con conseguenze | non iniziato |  |  |  |
-| 12.6 Effetti su sondaggi, candidature, risultati, seggi, stabilità; rottura | non iniziato |  |  |  |
-| 12.7 Nuova pagina alleanze/coalizioni (smartphone e tablet) | non iniziato |  |  |  |
-| 12.8 Dodici scenari di test obbligatori | non iniziato |  |  |  |
+| Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
+|---|---|---|---|---|---|
+| 12.1 | Alleanza ≠ coalizione; pulsante «Crea alleanza» | Non iniziato |  |  |  |
+| 12.2 | Alleanza → coalizione solo con approvazione formale per una specifica elezione; alleanza può restare tale; accordi diversi per livelli diversi | Non iniziato |  |  |  |
+| 12.3 | Partito da solo chiede di entrare in coalizione: richiesta formale, condizioni, valutazione, trattative, accettazione/rifiuto, registrazione | Non iniziato |  |  |  |
+| 12.4 | Rifiuto con motivazione comprensibile; stesso richiedente bloccato 7 giorni di gioco | Non iniziato |  |  |  |
+| 12.5 | Scadenza elettorale per formazione/adesioni/programmi/candidature/candidato guida; nessuna fusione improvvisa; modifiche comunicate e registrate | Non iniziato |  |  |  |
+| 12.6 | Programma strutturato per ogni partito su 10 temi (immigrazione, sicurezza, economia/fisco, sanità, lavoro, ambiente/energia, Europa, diritti civili, istituzioni, politica estera) | Non iniziato |  |  |  |
+| 12.7 | Compatibilità calcolata sulle singole posizioni; incompatibilità forti come vere condizioni; compromesso esplicito o fallimento | Non iniziato |  |  |  |
+| 12.8 | Trattative: punti programmatici, modifiche, concessioni, candidature e collegi, candidato guida, incarichi, programma comune, condizioni, rifiuto, interruzione, uscita | Non iniziato |  |  |  |
+| 12.9 | Valutazione per ideologia, convenienza, rapporti, leadership, consenso interno, precedenti; compromessi con conseguenze | Non iniziato |  |  |  |
+| 12.10 | Effetti su sondaggi, consenso, candidature, risultati territoriali, seggi, rapporti, stabilità, fiducia; rottura con conseguenze | Non iniziato |  |  |  |
+| 12.11 | Evitare duplicazioni, coalizioni sovrapposte, partecipazioni incompatibili | Non iniziato |  |  |  |
+| 12.12 | Nuova pagina alleanze/coalizioni: esistenti, coalizioni, aderenti, richieste ricevute/inviate, trattative, programma comune, compatibilità, condizioni, scadenze, storico; smartphone e tablet | Non iniziato |  |  |  |
+| 12.13 | Test 1: alleanza senza partecipazione elettorale | Non iniziato |  |  |  |
+| 12.14 | Test 2: trasformazione esplicita in coalizione | Non iniziato |  |  |  |
+| 12.15 | Test 3: alleanza che resta tale | Non iniziato |  |  |  |
+| 12.16 | Test 4: partito solo chiede di entrare nel centrodestra | Non iniziato |  |  |  |
+| 12.17 | Test 5: rifiuto e nuovo tentativo bloccato 7 giorni | Non iniziato |  |  |  |
+| 12.18 | Test 6: programmi incompatibili non si accordano automaticamente | Non iniziato |  |  |  |
+| 12.19 | Test 7: compromesso programmatico negoziato e approvato | Non iniziato |  |  |  |
+| 12.20 | Test 8: chiusura delle adesioni prima delle elezioni | Non iniziato |  |  |  |
+| 12.21 | Test 9: modifica a pochi giorni dal voto rifiutata | Non iniziato |  |  |  |
+| 12.22 | Test 10: rottura di alleanza/coalizione | Non iniziato |  |  |  |
+| 12.23 | Test 11: elezioni di livelli diversi con accordi diversi | Non iniziato |  |  |  |
+| 12.24 | Test 12: coerenza coalizioni/candidature/sondaggi/risultati/seggi | Non iniziato |  |  |  |
+| 12.25 | Compatibilità con carriere e salvataggi esistenti; un solo motore di alleanze | Non iniziato |  |  |  |
 
 ## 13. Dimissioni, carriera, interfaccia
 
-| Punto | Stato | File modificati | Test | Screenshot / note |
-|---|---|---|---|---|
-| 13.1 Dimissioni da tutti gli incarichi (istituzionali/di partito) con conseguenze mostrate | non iniziato |  |  |  |
-| 13.2 Carriera da semplice iscritto senza incarichi | non iniziato |  |  |  |
-| 13.3 Avatar casuale | non iniziato |  |  |  |
-| 13.4 Ruoli e autorizzazioni delle azioni; chiarezza di schermate e menu | non iniziato |  |  |  |
+| Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
+|---|---|---|---|---|---|
+| 13.1 | Dimissioni da tutti gli incarichi (istituzionali/di partito) con conseguenze prima della conferma | Non iniziato |  |  |  |
+| 13.2 | Carriera da semplice iscritto/militante senza incarichi istituzionali | Non iniziato |  |  |  |
+| 13.3 | Avatar casuale | Non iniziato |  |  |  |
+| 13.4 | Ruoli e autorizzazioni delle azioni controllati | Non iniziato |  |  |  |
+| 13.5 | Schermate e menu più chiari; gioco meno monotono senza perdere contenuti | Non iniziato |  |  |  |
 
 ## 14. Risultati elettorali territoriali
 
-| Punto | Stato | File modificati | Test | Screenshot / note |
-|---|---|---|---|---|
-| 14.1 Consultazione Italia/Regione/Provincia/Comune con coerenza dei totali | non iniziato |  |  |  |
-| 14.2 Dati ufficiali storici con fonte/anno; simulazioni distinte | non iniziato |  |  |  |
-| 14.3 Verifica voti, collegi, soglie e seggi per sistema elettorale | non iniziato |  |  |  |
+| Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
+|---|---|---|---|---|---|
+| 14.1 | Consultazione Italia/Regione/Provincia/Comune; comunali coerenti con i totali superiori | Non iniziato |  |  |  |
+| 14.2 | Dati ufficiali storici con fonte/anno, senza inventare | Non iniziato |  |  |  |
+| 14.3 | Elezioni simulate: risultati territoriali coerenti (consenso, popolazione, caratteristiche locali, partiti, candidati, campagne); ufficiale vs simulato distinti | Non iniziato |  |  |  |
+| 14.4 | Verifica voti, percentuali, collegi, soglie, seggi per ogni sistema elettorale | Non iniziato |  |  |  |
 
-## 15. Guida completa «Come giocare»
+## 15. Guida «Come giocare»
 
-| Punto | Stato | File modificati | Test | Screenshot / note |
-|---|---|---|---|---|
-| 15.1 Manuale interattivo ricercabile su tutte le funzioni | non iniziato |  |  |  |
-| 15.2 Scenari guidati (partito, sindaco, Parlamento, coalizione, Ministro, Presidente del Consiglio) | non iniziato |  |  |  |
-| 15.3 Tutorial iniziale saltabile e riprendibile | non iniziato |  |  |  |
+| Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
+|---|---|---|---|---|---|
+| 15.1 | Manuale interattivo completo in Home su tutte le funzioni elencate (carriera, partiti, staff/capitale/fondi, tempo, sondaggi, candidature, elezioni, alleanze, assemblee, leggi, iniziative, Governo/Ministeri, CdM, crisi, richieste, animazioni, promesse, account/salvataggi) | Non iniziato |  |  |  |
+| 15.2 | Per ogni funzione: come funziona, uso, requisiti, costi, conseguenze, esempi | Non iniziato |  |  |  |
+| 15.3 | Scenari guidati: fondare partito, sindaco, Parlamento, coalizione, Ministro, PdC | Non iniziato |  |  |  |
+| 15.4 | Ricercabile, smartphone e tablet, collegata alle funzioni; tutorial iniziale saltabile e riprendibile | Non iniziato |  |  |  |
 
 ## 16. Traduzioni
 
-| Punto | Stato | File modificati | Test | Screenshot / note |
-|---|---|---|---|---|
-| 16.1 Audit IT/EN completo, nuove funzioni bilingui, test aggiornati | non iniziato |  |  |  |
+| Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
+|---|---|---|---|---|---|
+| 16.1 | Verifica integrale IT/EN (menu, pulsanti, tutorial, dialoghi, eventi, notifiche, animazioni, elezioni, alleanze, Ministeri, errori, contenuti dinamici) | Non iniziato |  |  |  |
+| 16.2 | Ogni nuova funzione bilingue nello stesso intervento; nessuna stringa italiana in EN; audit e test aggiornati | In lavorazione | src/data/release-pairs.js | check-i18n, check-i18n-release, check-i18n-pages | fatto per le funzioni nuove di questa sessione |
 
 ## 17. Statistiche amministrative private
 
-| Punto | Stato | File modificati | Test | Screenshot / note |
-|---|---|---|---|---|
-| 17.1 Dashboard admin (installazioni, DAU/WAU/MAU, andamento, account attivi) con autenticazione lato server | non iniziato |  |  |  |
-| 17.2 Dati aggregati e minimizzati; finalità, base giuridica, conservazione, informativa | non iniziato |  |  |  |
+| Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
+|---|---|---|---|---|---|
+| 17.1 | Dashboard admin: installazioni, DAU, WAU, MAU, andamento, account attivi | Non iniziato |  |  |  |
+| 17.2 | Nessun collegamento visibile nell'app/sito pubblico; autenticazione e autorizzazione lato server | Non iniziato |  |  |  |
+| 17.3 | Installazioni dalle statistiche degli store; utenti attivi aggregati/minimizzati; nessun fingerprinting/IP/clic indiscriminati | Non iniziato |  |  |  |
+| 17.4 | Finalità, base giuridica, conservazione, informativa prima di attivare; nessuna credenziale nel client | Non iniziato |  |  |  |
 
 ## 18. Popup recensione Google Play
 
-| Punto | Stato | File modificati | Test | Screenshot / note |
-|---|---|---|---|---|
-| 18.1 Popup IT/EN con testo e due pulsanti richiesti | completato | src/data/repositories/review-prompt.js, src/ui/app.js, src/data/release-pairs.js | check-review-prompt | after/popup-recensione-it|en-390x844.png |
-| 18.2 Una sola volta per installazione, non al primo avvio, non durante tutorial/elezioni/votazioni/scene | completato | review-prompt.js | check-review-prompt (logica + Chrome) | una volta, non al primo avvio, solo momento tranquillo |
-| 18.3 Registrato come visualizzato prima dell'apertura; persistente (Preferences/locale); limite tecnico documentato | completato | review-prompt.js, docs/qa/review-prompt.md | check-review-prompt | localStorage della WebView; Preferences non aggiunto (stesso limite, documentato) |
+| Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
+|---|---|---|---|---|---|
+| 18.1 | Testo e pulsanti richiesti (IT/EN), link al Play Store | Completato | src/ui/review-card.js, src/data/repositories/review-prompt.js, src/ui/app.js | check-review-prompt | after/popup-recensione-it|en-{390x844,820x1180}.png |
+| 18.2 | Una sola volta per installazione; non al primo avvio; solo dopo uso sufficiente; non durante tutorial/elezioni/votazioni/scene | Completato | review-prompt.js, app.js | check-review-prompt | una volta, non al primo avvio, solo quando quieto (si nasconde con menu/scena/voto) |
+| 18.3 | Registrato come visualizzato prima dell'apertura; non ricompare dopo logout/cambio account/riavvio | Completato | review-prompt.js | check-review-prompt | dopo riavvio e nuova installazione verificati; stesso storage per ogni account |
+| 18.4 | Memoria persistente locale; limite tecnico documentato; nessun fingerprinting; nessun premio/obbligo | Completato | docs/qa/review-prompt.md | check-review-prompt | localStorage WebView; limite di persistenza documentato |
+| 18.5 | Miglioramento grafico: scheda moderna nello stile del gioco, testo, impaginazione, pulsanti, modalità non bloccante | Completato | src/ui/review-card.js, src/theme.css | check-review-prompt (non modale, anchor) | after/popup-recensione-*.png |
+| 18.6 | Verifica funzionamento reale del collegamento al Play Store | Bloccato |  | check-review-prompt verifica href/target/clic (anchor verso la scheda) | play.google.com non raggiungibile da qui e nessun dispositivo Android: l'apertura nell'app Play Store va provata su telefono |
 
 ## 19. AdMob e aggiornamento Android
 
-| Punto | Stato | File modificati | Test | Screenshot / note |
-|---|---|---|---|---|
-| 19.1 Verifica integrazione AdMob nel branch (plugin, ID, banner, interstitial, rewarded, UMP) | completato | (verifica) docs/admob.md | check-admob | integrazione presente nel branch (plugin 8.3.0, ID, banner/interstitial/rewarded, UMP); spenta (ADS_MODE off) |
-| 19.2 Limiti, duplicazioni, offline, attribuzione ricompense; valutazione SSV | parziale | (già presente) | check-admob, check-rewards-sync | limiti, duplicati, offline, accredito Worker verificati; SSV valutata e NON implementata (serve configurazione AdMob del titolare) |
-| 19.3 Annunci reali/live NON attivati; versione e versionCode incrementati | bloccato |  |  | annunci reali/live NON attivati (corretto); versionCode non incrementato: l'ultimo versionCode caricato su Play è sconosciuto (repo: 1) — non lo invento |
-| 19.4 Build Android, avvio reale, AAB (solo se stabile) | bloccato |  |  | nessun Android SDK in questo ambiente: build Gradle, avvio su dispositivo e AAB non eseguibili |
+| Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
+|---|---|---|---|---|---|
+| 19.1 | Verificare l'integrazione nel branch (plugin, ID, banner, interstitial, rewarded, UMP) | Completato | docs/admob.md | check-admob | plugin 8.3.0, ID, banner/interstitial/rewarded, UMP presenti, spenti |
+| 19.2 | ID di test ufficiali durante i test; limiti, duplicazioni, offline, attribuzione ricompense | In lavorazione |  | check-admob, check-rewards-sync | limiti/duplicati/offline/accredito Worker verificati con ID di prova |
+| 19.3 | Valutare SSV lato server | In lavorazione | docs/admob.md |  | SSV valutata, non implementata (serve configurazione AdMob) |
+| 19.4 | Non attivare annunci reali/live; se AdMob non pronto, aggiornamento senza pubblicità | Completato |  | check-admob | ADS_MODE off: nessun annuncio reale |
+| 19.5 | Incrementare versione e versionCode prima dell'AAB | Bloccato |  |  | versionCode attuale su Play sconosciuto (repo: 1): non lo invento |
+| 19.6 | Non modificare inutilmente iOS | Completato |  | git diff | nessuna modifica a ios/ in questo branch |
+| 19.7 | Build Android, avvio reale, AAB solo se stabile, percorso dell'AAB | Bloccato |  |  | nessun Android SDK qui: build Gradle/AAB non eseguibili |
 
-## 20. Screenshot
+## 20. Screenshot (artifacts/qa/screenshots/before|after)
 
-| Punto | Stato | File modificati | Test | Screenshot / note |
-|---|---|---|---|---|
-| 20.1 Screenshot before/after per i 22 punti richiesti | parziale | artifacts/qa/screenshots/{before,after} |  | presenti: popup recensione IT/EN (after), capitale politico (before/after), avanzamento 4 settimane (before/after). Mancano gli altri 19 punti (funzioni non implementate o non verificate) |
+| Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
+|---|---|---|---|---|---|
+| 20.1 | Candidatura alle Politiche | Non iniziato |  |  |  |
+| 20.2 | Messaggio requisiti non soddisfatti | Non iniziato |  |  |  |
+| 20.3 | Notte elettorale | Non iniziato |  |  |  |
+| 20.4 | Avanzamento 2/4 settimane | In lavorazione | artifacts/qa/screenshots |  | before/after presenti |
+| 20.5 | Votazione nominativa | Non iniziato |  |  |  |
+| 20.6 | Scene con pro e contro | Non iniziato |  |  |  |
+| 20.7 | Barra di apprezzamento | Non iniziato |  |  |  |
+| 20.8 | Pagina alleanze e coalizioni | Non iniziato |  |  |  |
+| 20.9 | Trattativa e programma comune | Non iniziato |  |  |  |
+| 20.10 | Raccolta firme | Non iniziato |  |  |  |
+| 20.11 | Richieste dei cittadini | Non iniziato |  |  |  |
+| 20.12 | Crisi di Governo | Non iniziato |  |  |  |
+| 20.13 | Area Ministeri | Non iniziato |  |  |  |
+| 20.14 | Consiglio dei ministri | Non iniziato |  |  |  |
+| 20.15 | Formazione del Governo e consultazioni | Non iniziato |  |  |  |
+| 20.16 | Promemoria delle promesse | Non iniziato |  |  |  |
+| 20.17 | Risultati elettorali territoriali | Non iniziato |  |  |  |
+| 20.18 | Guida completa | Non iniziato |  |  |  |
+| 20.19 | Dimissioni e carriera senza incarichi | Non iniziato |  |  |  |
+| 20.20 | Avatar casuale | Non iniziato |  |  |  |
+| 20.21 | Popup recensione | Completato | artifacts/qa/screenshots/after | check-review-prompt | popup-recensione-it|en-390x844 e 820x1180 |
+| 20.22 | Schermate principali con pulsanti e caricamenti | Non iniziato |  |  |  |
+| 20.23 | Screenshot reali (Playwright/browser/emulatore), senza credenziali/token/dati personali; per ognuno funzione, scenario, dispositivo, risultato | In lavorazione |  |  | solo 4 delle 22 voci hanno screenshot |
 
-## 21. Collaudo finale
+## 21. Collaudo e risultato finale
 
-| Punto | Stato | File modificati | Test | Screenshot / note |
-|---|---|---|---|---|
-| 21.1 Test mirati per ogni modifica; regressione pertinente finale; smartphone/tablet; IT/EN; salvataggi | parziale |  | test mirati per le funzioni toccate; regressione completa non eseguita |  |
-| 21.2 Rapporto finale | parziale | docs/qa/master-checklist.md |  | rapporto: vedi risposta finale |
+| Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
+|---|---|---|---|---|---|
+| 21.1 | Test specifici per ogni modifica; casi limite; compatibilità salvataggi; smartphone/tablet; IT/EN | Non iniziato |  |  |  |
+| 21.2 | Regressioni tra elezioni, campagne, partiti, assemblee, Governo, Ministeri, animazioni, avanzamento, account, ricompense | Non iniziato |  |  |  |
+| 21.3 | Verifica completa pertinente prima della consegna | Non iniziato |  |  |  |
+| 21.4 | Build Android, avvio reale, AAB se stabile, percorso AAB | Non iniziato |  |  |  |
+| 21.5 | Rapporto finale con tutte le richieste e lo stato, file, test, screenshot, problemi residui, passaggi esterni | Non iniziato |  |  |  |
+
+## 22. Ultime aggiunte (messaggio del 16/11)
+
+| Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
+|---|---|---|---|---|---|
+| 22.1 | Rendere il popup recensione più curato (vedi 18.5, 18.6) e aggiornare gli screenshot | Completato |  | check-review-prompt | vedi 18.5/18.6 |
+| 22.2 | Confrontare la checklist punto per punto con il documento originale | Completato | docs/qa/master-checklist.md |  | 169 voci |
+| 22.3 | Riprodurre il bug candidatura con una partita di test e aggiungere diagnostica | Non iniziato |  |  |  |
+| 22.4 | Priorità: reattività pulsanti, candidatura, notte elettorale, alleanze/coalizioni con tutti i test | Non iniziato |  |  |  |
+| 22.5 | Poi: Parlamento, iniziative popolari, Governo, Ministeri, CdM, consultazioni, promesse, animazioni, guida, risultati territoriali, traduzioni, statistiche, AdMob | Non iniziato |  |  |  |
+| 22.6 | Mantenere aggiornati checklist, test, screenshot; non eliminare funzioni; non dichiarare completato senza verifica; nessun deploy/merge/main | Non iniziato |  |  |  |
