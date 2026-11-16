@@ -162,7 +162,7 @@ try {
   for (let step = 2; step <= 5; step++) {
     if (step === 3) {
       ok(await has('[data-starting-office="presidenteConsiglio"]') && await has('[data-starting-office="presidenteRepubblica"]'), 'Su telefono le partenze PdC e PdR sono visibili nella pagina della carriera.');
-      ok(await evaluate('(() => { const body = document.querySelector(".wizard-body"); return body.scrollWidth <= body.clientWidth + 1 && [...document.querySelectorAll(".level-cards .level-card")].length === 8 && [...document.querySelectorAll(".level-cards .level-card")].every(card => getComputedStyle(card).display !== "none" && card.getBoundingClientRect().width > 0); })()'), 'Le otto card del percorso restano visibili e senza overflow orizzontale su 375 px.');
+      ok(await evaluate('(() => { const body = document.querySelector(".wizard-body"); return body.scrollWidth <= body.clientWidth + 1 && [...document.querySelectorAll(".level-cards .level-card")].length === 9 && [...document.querySelectorAll(".level-cards .level-card")].every(card => getComputedStyle(card).display !== "none" && card.getBoundingClientRect().width > 0); })()'), 'Le nove card del percorso restano visibili e senza overflow orizzontale su 375 px.');
     }
     // Screen 5 (difficulty and starting conditions): the conditions are shut under their current choice; opened, the cards and the custom scenario work with taps.
     if (step === 5) {
