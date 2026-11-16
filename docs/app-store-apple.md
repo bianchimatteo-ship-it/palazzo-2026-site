@@ -20,7 +20,7 @@ I requisiti del registro generale non sono tutti requisiti specifici di App Stor
 Non creare segnaposto per i dati legali e non dichiarare chiuso un requisito senza prova o decisione del soggetto responsabile. Il fatto che un requisito non sia specifico di App Store non significa che sia irrilevante per la gestione complessiva del servizio.
 
 ## A. Account (prima di tutto)
-- ☐ ⚠ Scegliere quale genitore si iscrive: serve la maggiore età nella propria area; un minore usa l'Apple Account del genitore [V, developer.apple.com/programs/enroll].
+- ☐ ⚠ **Decisione comunicata il 16/11/2026:** Apple Developer sarà intestato allo stesso genitore che possiede l'account Google Play. Iscrizione individuale del genitore prevista, da completare; il nome legale di quel genitore sarà il venditore pubblico su App Store. Serve Apple Account con 2FA, verifica identità, dati legali corretti e pagamento. Non equivale a chiudere automaticamente i requisiti su offerente del servizio e titolare GDPR [V, documentazione Apple].
 - ☐ ⚠ Individuale o organizzazione. Individuale: il nome legale del genitore è il venditore pubblico [V]. Organizzazione: solo entità giuridica riconosciuta con D-U-N-S, e-mail e sito di dominio; non DBA, ditte fittizie o nomi commerciali [V]. Oggi non risulta alcuna entità: l'organizzazione non è disponibile senza crearne una.
 - ☐ Apple Account del genitore con autenticazione a due fattori; dati reali (nome legale, e-mail, telefono, indirizzo senza caselle postali) [V].
 - ☐ Quota 99 USD/anno (può variare) [V]; il genitore accetta il Program License Agreement [V].
