@@ -2,7 +2,7 @@
 
 Stati ammessi: **Non iniziato · In lavorazione · Completato · Bloccato**. Una voce è *Completato* solo con prova (file, test, screenshot). Branch `feature/qa-completamento`. Confrontata punto per punto con il documento di lavoro originale (sezioni 1–21) e con le aggiunte del 16/11 (sezione 22).
 
-Riepilogo: Bloccato 3 · Completato 108 · In lavorazione 21 · Non iniziato 37 · totale 169
+Riepilogo: Bloccato 3 · Completato 110 · In lavorazione 20 · Non iniziato 36 · totale 169
 
 
 ## 1. Regole operative
@@ -182,9 +182,9 @@ Riepilogo: Bloccato 3 · Completato 108 · In lavorazione 21 · Non iniziato 37 
 
 | Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|---|
-| 14.1 | Consultazione Italia/Regione/Provincia/Comune; comunali coerenti con i totali superiori | In lavorazione | src/core/election-engine.js, src/ui/territory* | check-election-counts, check-seat-allocation, check-territory-legibility, check-italy-map | Verifiche esistenti sui conteggi e sulle mappe; verifica punto per punto ancora da fare |
-| 14.2 | Dati ufficiali storici con fonte/anno, senza inventare | Non iniziato |  |  |  |
-| 14.3 | Elezioni simulate: risultati territoriali coerenti (consenso, popolazione, caratteristiche locali, partiti, candidati, campagne); ufficiale vs simulato distinti | In lavorazione | src/core/election-engine.js, src/ui/territory* | check-election-counts, check-seat-allocation, check-territory-legibility, check-italy-map | Verifiche esistenti sui conteggi e sulle mappe; verifica punto per punto ancora da fare |
+| 14.1 | Consultazione Italia/Regione/Provincia/Comune; comunali coerenti con i totali superiori | Completato | src/core/territory-results.js, src/ui/territory-results-card.js, src/ui/national-view.js, src/core/municipal-rules.js | check-territory-results (20 regioni/110 province/5075 comuni), check-territory-ui, check-territory-browser, check-italy-map | Scheda «Risultati per territorio» in Elezioni › Nazionali: Italia → Regione → Provincia → Comune sulla gerarchia ISTAT; ogni livello somma a quello superiore lista per lista (interi, deterministico). Riguarda le politiche; i voti comunali del gioco sono già per comune. Screenshot: artifacts/qa/screenshots/after/territorio-*.png |
+| 14.2 | Dati ufficiali storici con fonte/anno, senza inventare | Completato | src/ui/national-view.js (mappa «Vincitori 2022 (reale)»), src/data/real/electoral-geography.json | check-italy-map | Dati ufficiali Eligendo 2022 con fonte e data, per collegio e Regione. Limite dei dati: non esiste nel repository un risultato ufficiale per Provincia o Comune, quindi non è mostrato né inventato (la scheda lo dichiara). |
+| 14.3 | Elezioni simulate: risultati territoriali coerenti (consenso, popolazione, caratteristiche locali, partiti, candidati, campagne); ufficiale vs simulato distinti | In lavorazione | src/core/territory-results.js, src/ui/territory-results-card.js, src/ui/national-view.js, src/core/municipal-rules.js | check-territory-results (20 regioni/110 province/5075 comuni), check-territory-ui, check-territory-browser, check-italy-map | Ripartizione proporzionale agli abitanti con scarto regionale del modello dei sondaggi e piccola variazione locale; etichettata «dato simulato». Mancano ancora effetti di candidati e campagne locali a livello di singolo comune. |
 | 14.4 | Verifica voti, percentuali, collegi, soglie, seggi per ogni sistema elettorale | In lavorazione | src/core/election-engine.js, src/ui/territory* | check-election-counts, check-seat-allocation, check-territory-legibility, check-italy-map | Verifiche esistenti sui conteggi e sulle mappe; verifica punto per punto ancora da fare |
 
 ## 15. Guida «Come giocare»

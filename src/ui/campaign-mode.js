@@ -1,15 +1,15 @@
-import { bandDescription, bandOfMunicipality, MUNICIPAL_LEGAL_REFERENCES } from '../core/municipal-rules.js?v=20261116-17';
-import { CAMPAIGN_OBJECTIVES, CAMPAIGN_PHASES, CAMPAIGN_STRATEGIES, DEBATE_TOPICS, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261116-17';
-import { affiliationOf, markForPerson } from './person-marks.js?v=20261116-17';
-import { campaignActivities, campaignMetrics, campaignOpeningNotes, campaignScope, campaignSummary, listStanding, strategyAvailable, strategyFit, strategyOf, strategyStages } from '../core/campaign-engine.js?v=20261116-17';
-import { resultDescription } from '../core/election-engine.js?v=20261116-17';
-import { formatDate } from '../core/time.js?v=20261116-17';
-import { careerLevelLabel } from '../data/regions.js?v=20261116-17';
-import { upcomingElections } from '../core/career-engine.js?v=20261116-17';
-import { candidacyBlock, candidacyLapses, personalCandidacies } from '../core/office-engine.js?v=20261116-17';
-import { candidacyFacts, heldOfficesOf } from '../core/roles.js?v=20261116-17';
-import { mandatePlace, renderElectionReport } from './election-report.js?v=20261116-17';
-import { glyph } from './visuals.js?v=20261116-17';
+import { bandDescription, bandOfMunicipality, MUNICIPAL_LEGAL_REFERENCES } from '../core/municipal-rules.js?v=20261116-18';
+import { CAMPAIGN_OBJECTIVES, CAMPAIGN_PHASES, CAMPAIGN_STRATEGIES, DEBATE_TOPICS, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261116-18';
+import { affiliationOf, markForPerson } from './person-marks.js?v=20261116-18';
+import { campaignActivities, campaignMetrics, campaignOpeningNotes, campaignScope, campaignSummary, listStanding, strategyAvailable, strategyFit, strategyOf, strategyStages } from '../core/campaign-engine.js?v=20261116-18';
+import { resultDescription } from '../core/election-engine.js?v=20261116-18';
+import { formatDate } from '../core/time.js?v=20261116-18';
+import { careerLevelLabel } from '../data/regions.js?v=20261116-18';
+import { upcomingElections } from '../core/career-engine.js?v=20261116-18';
+import { candidacyBlock, candidacyLapses, personalCandidacies } from '../core/office-engine.js?v=20261116-18';
+import { candidacyFacts, heldOfficesOf } from '../core/roles.js?v=20261116-18';
+import { mandatePlace, renderElectionReport } from './election-report.js?v=20261116-18';
+import { glyph } from './visuals.js?v=20261116-18';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const roleLabels={sindaco:'Candidatura a sindaco',consigliere:'Candidato in lista per il consiglio',presidente:'Candidato alla presidenza (Regione o Provincia)',deputato:'Candidato alla Camera',senatore:'Candidato al Senato',uninominale:'Collegio uninominale simulato',eurodeputato:'Candidato al Parlamento europeo'};

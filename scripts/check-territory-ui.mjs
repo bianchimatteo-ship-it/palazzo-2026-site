@@ -1,81 +1,78 @@
-// Local leaders, committees and institutions (Partito › Vita interna, Partito › Territorio, Territori), in Chrome. The pages were long walls of figures; now they open compact:
-// the local leaders are grouped by level (Regione, Provincia, Comune) with the same glyph and tone everywhere, each on one line with name, role, territory, state and the first actions
-// (meet, promote); the interests, the loyalty and grievance meters, the notes and the replacement fold under «Dettagli». The committees open as one card each with name, level, territory,
-// state, the person in charge and the four main actions; the figures and the other actions fold. The institutions carry the glyph and tone of their level. Nothing is removed: every action
-// and every figure is still in the page. No horizontal scroll at 320, 360, 375, 390, 430, 768, 1024 and 1280 px.
+// "Risultati per territorio" in the national page: the card renders the last simulated vote by Region → Province → Comune, in the real hierarchy of the comuni, with the lean of the model, the source line and the sum
+// check; the levels open one inside the other; nothing official is shown below the Region; before a vote or without the ISTAT data the card says why.
 import assert from 'node:assert/strict';
-import { chromeAvailable, createCareerInPage, openCareer, withBrowser } from './lib/browser.mjs';
+import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 
-if (!chromeAvailable) { console.log('Territorio compatto saltato: Chrome non trovato (imposta CHROME_PATH per eseguirlo).'); process.exit(0); }
-const problems = [];
-const check = (condition, message) => { if (!condition) problems.push(message); };
-const WIDTHS = [[320, 640], [360, 800], [375, 812], [390, 844], [430, 932], [768, 1024], [1024, 768], [1280, 800]];
+const mem = new Map();
+globalThis.localStorage = { getItem: key => mem.get(key) ?? null, setItem: (key, value) => mem.set(key, String(value)), removeItem: key => mem.delete(key) };
+globalThis.sessionStorage = { getItem: () => null, setItem() {}, removeItem() {} };
+globalThis.fetch = async url => { const body = await readFile(fileURLToPath(new URL(url)), 'utf8'); return { ok: true, status: 200, json: async () => JSON.parse(body) }; };
+const build = (await readFile(new URL('../index.html', import.meta.url), 'utf8')).match(/main\.js\?v=([^"']+)/)?.[1];
+const v = build ? `?v=${build}` : '?';
+const realData = await import(`../src/data/repositories/real-data.js${v}`);
+await realData.loadRealDatabase();
+await realData.loadRealCollections(['parties', 'coalitions', 'municipalities']);
+const geography = await realData.loadRealDocument('electoralGeography');
+const population = await realData.loadOptionalRealDocument('municipalPopulation');
+const db = () => realData.realDatabase;
+const L = await import(`../src/core/legislature-engine.js${v}`);
+const W = await import(`../src/core/world-engine.js${v}`);
+const R = await import(`../src/core/municipal-rules.js${v}`);
+const TR = await import(`../src/core/territory-results.js${v}`);
+const { territoryResultsCard, regionalLean } = await import(`../src/ui/territory-results-card.js${v}`);
+const parties = new Map([...db().parties, ...db().coalitions].map(item => [item.id, item]));
+const ids = { FDI: 'party-registro-p1-2014-04-ir', PD: 'party-registro-p1-2015-29-ir', M5S: 'party-registro-p1-2022-63-ir', LEGA: 'party-registro-p1-2017-41-ir', FI: 'party-registro-p1-2015-20-ir', AZ: 'party-registro-p1-2019-51-ir', IV: 'party-registro-p1-2019-52-ir', AVS: 'coalition-alleanza-verdi-sinistra', PE: 'party-registro-p1-2018-47-ir', NM: 'party-registro-p1-2020-56-ir', SCN: 'party-registro-p1-2022-67-ir' };
+const worldOf = (shares, governing = []) => W.createWorld({ seedText: 'verifica', date: '2026-09-24', forces: Object.entries(shares).map(([key, share]) => ({ id: ids[key], label: key, share, position: parties.get(ids[key])?.politicalPosition ?? null, governing: governing.includes(key) })), realPoll: null });
+const shares2022 = { FDI: 25.99, PD: 19.07, M5S: 15.43, LEGA: 8.77, FI: 8.11, AZ: 4.7, IV: 3.09, AVS: 3.63, PE: 2.83, NM: 0.91, SCN: 0.76 };
+const world22 = worldOf(shares2022, ['FDI', 'LEGA', 'FI']);
+const coalitions22 = [{ id: 'cdx', label: 'Centrodestra', leaderId: ids.FDI, camp: 'destra', partyIds: [ids.FDI, ids.LEGA, ids.FI, ids.NM] }, { id: 'csx', label: 'Centrosinistra', leaderId: ids.PD, camp: 'sinistra', partyIds: [ids.PD, ids.AVS, ids.PE] }, { id: 'azv', label: 'Azione-IV', leaderId: ids.AZ, camp: 'centro', partyIds: [ids.AZ, ids.IV] }];
+const vote = L.compactResult(L.runNationalVote({ geography, world: world22, coalitions: coalitions22, date: '2022-09-25', noise: false }));
+const last = { ...vote, id: 'politiche-2022-09-25', date: '2022-09-25' };
+const swatch = c => `<i style="background:${c}"></i>`;
+const args = extra => ({ overview: {}, last, geography, municipalities: db().municipalities, swatch, colorOf: () => '#456', labelOf: id => String(id).slice(0, 18), ...extra });
 
-await withBrowser(async browser => {
-  const { evaluate, viewport, goto, waitFor, pause, version, errors } = browser;
-  await createCareerInPage(browser, { party: 'party-futuro-nazionale', level: 'comunale', weeks: 2 });
-  await openCareer(browser);
-  const open = async (tab) => { await evaluate(`(async () => { document.querySelector('[data-nav="partito"]')?.click(); await new Promise(r => setTimeout(r, 500)); document.querySelector('[data-section-tab="partito"][data-section-tab-value="${tab}"]')?.click(); await new Promise(r => setTimeout(r, 700)); return true; })()`); };
+// ---------- without ISTAT data or without a vote the card explains ----------
+R.setMunicipalPopulationIndex(new Map());
+let html = territoryResultsCard(args({}));
+assert.ok(/data-territory-state="missing"/.test(html) && /dati ISTAT/.test(html), 'Senza dati ISTAT lo dice.');
+R.setMunicipalPopulationIndex(R.indexMunicipalPopulation(population));
+html = territoryResultsCard(args({ last: null }));
+assert.ok(/primo voto politico/.test(html), 'Prima del voto lo dice.');
 
-  // the committees are built when the Territorio tab opens (the ISTAT units are loaded then)
-  await open('territorio');
-  await waitFor(() => evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); return (store.getState().game.party?.org?.committees ?? []).length > 3; })()`), 40000);
-  // recruit a local leader in a regional, a provincial and a municipal committee (the game's own action, costs and all)
-  const recruited = await evaluate(`(async () => {
-    const { store } = await import('/src/core/store.js?v=${version}');
-    const committees = store.getState().game.party.org.committees;
-    const done = [];
-    for (const level of ['regione', 'provincia', 'comune']) {
-      const committee = committees.find(item => item.level === level && item.status !== 'dissoluzione' && !item.leader?.player && !(store.getState().game.party.life?.cadres ?? []).some(cadre => cadre.committeeId === item.id));
-      if (!committee) continue;
-      store.partyCadreAction({ action: 'recluta', cadreId: null, committeeId: committee.id });
-      store.advanceTurn(1);
-      done.push(level);
-    }
-    return { done, cadres: (store.getState().game.party.life?.cadres ?? []).length };
-  })()`);
-  check(recruited.cadres >= 2, `Dirigenti reclutati per la prova: ${recruited.cadres}.`);
-  await open('vita');
-  const life = await evaluate(`(() => { const groups = [...document.querySelectorAll('.pl-level')]; const rows = [...document.querySelectorAll('.pl-cadre.pl-compact')]; return {
-    levels: groups.map(group => group.dataset.level), tiles: groups.every(group => group.querySelector('summary .art-tile')), tones: new Set(groups.map(group => group.getAttribute('style'))).size === groups.length,
-    rows: rows.length, firstActions: rows.every(row => row.querySelector(':scope > .pl-actions [data-life-cadre=incontra]') && row.querySelector(':scope > .pl-actions [data-life-cadre=promuovi]')),
-    replaceFolded: rows.every(row => { const button = row.querySelector('[data-life-cadre=sostituisci]'); return !button || (button.closest('details.pl-details') && !button.closest('details.pl-details').open); }),
-    detailsFolded: rows.every(row => !row.querySelector('details.pl-details')?.open), meters: rows.every(row => row.querySelector('details.pl-details')?.textContent.includes('Lealtà') && row.querySelector('details.pl-details')?.textContent.includes('Malcontento')),
-    named: rows.every(row => row.querySelector('header strong')?.textContent.trim() && /·/.test(row.querySelector('header small')?.textContent ?? '')), height: Math.round(document.querySelector('.pl-cadres')?.getBoundingClientRect().height ?? 0) }; })()`);
-  check(life.rows >= 2 && life.levels.length >= 2, `Dirigenti raggruppati per livello (${life.levels.join(', ')}; ${life.rows} righe).`);
-  check(life.tiles && life.tones, 'Ogni livello ha la sua icona e il suo colore.');
-  check(life.firstActions, 'Ogni dirigente ha subito «Incontra» e «Promuovi».');
-  check(life.replaceFolded && life.detailsFolded && life.meters, 'Interessi, lealtà, malcontento e sostituzione restano nel pannello «Dettagli», chiuso all’apertura.');
-  check(life.named, 'Ogni riga dice nome, ruolo e territorio.');
-  // the action still works from the compact row
-  const before = await evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); return (store.getState().game.party.life?.cadres ?? []).find(item => item.status !== 'uscito' && !item.player)?.loyalty ?? null; })()`);
-  await evaluate(`document.querySelector('.pl-cadre [data-life-cadre=incontra]:not([disabled])')?.click(), true`);
-  await pause(600);
-  const after = await evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); const s = store.getState(); return { loyalty: (s.game.party.life?.cadres ?? []).find(item => item.status !== 'uscito' && !item.player)?.loyalty ?? null, toast: s.ui?.toast ?? '' }; })()`);
-  check(before !== null && (after.loyalty !== before || /dirigente|Dirigente/.test(after.toast)), `«Incontra» dalla riga compatta agisce davvero (${before} → ${after.loyalty}; ${after.toast}).`);
+// ---------- the regional lean from the districts ----------
+const lean = regionalLean(L.districtRows(last, 'camera', geography), geography.camera.collegi);
+assert.ok(Object.keys(lean).length >= 18, 'Lo scarto regionale è calcolato per quasi tutte le regioni.');
+const values = Object.values(lean).flatMap(item => Object.values(item));
+assert.ok(values.every(item => item >= 0.4 && item <= 2.5) && values.some(item => item > 1.15) && values.some(item => item < 0.85), 'Scarti contenuti e non tutti uguali.');
 
-  await open('territorio');
-  const terr = await evaluate(`(() => { const cards = [...document.querySelectorAll('.cm-card.cm-compact:not(.is-missing)')]; return { n: cards.length, levels: [...new Set(cards.map(card => card.dataset.level))], tiles: cards.every(card => card.querySelector('header .art-tile')),
-    main: cards.every(card => card.classList.contains('tone-')? true : card.querySelectorAll(':scope > .cm-actions [data-committee-action]').length >= 1), folded: cards.every(card => !card.querySelector('details.cm-details')?.open), figures: cards.every(card => card.querySelector('details.cm-details')?.textContent.includes('Iscritti')),
-    named: cards.every(card => card.querySelector('h4')?.textContent.trim() && card.querySelector('.cm-lead')?.textContent.trim()), colours: new Set(cards.map(card => card.getAttribute('style'))).size }; })()`);
-  check(terr.n >= 3 && terr.levels.length >= 2, `Comitati compatti per livello (${terr.n} schede, ${terr.levels.join(', ')}).`);
-  check(terr.tiles && terr.folded && terr.figures && terr.named, 'Ogni comitato: icona di livello, nome, responsabile, azioni principali; cifre e altre azioni in «Dettagli», chiuso.');
-  check(terr.colours >= 2, 'Livelli diversi, toni diversi.');
+// ---------- Italy → Region → Province → Comune ----------
+const text = value => value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+html = territoryResultsCard(args({}));
+assert.equal((html.match(/data-territory-row/g) ?? []).length, 20, 'Italia: venti regioni.');
+assert.ok(/data-territory-table="italia"/.test(html) && /Somma controllata/.test(html) && /Dato simulato/.test(html) && /non è un dato ufficiale/i.test(html), 'Fonte e somma dichiarate.');
+assert.ok(/Lombardia/.test(html) && /Abitanti/.test(html) && !/undefined|NaN|\[object/.test(html), 'Intestazioni e regioni.');
+const regionCode = html.match(/data-territory-open="(\d+)"/)[1];
+html = territoryResultsCard(args({ terr: regionCode }));
+assert.ok(/data-territory-table="regione"/.test(html) && /Somma controllata/.test(html) && /data-view-filter-value=""[^>]*>Italia</.test(html), 'Regione: province e ritorno a Italia.');
+const provinceKey = html.match(/data-view-filter-value="([^"|]+\|[^"]+)"/)[1];
+html = territoryResultsCard(args({ terr: provinceKey }));
+assert.ok(/data-territory-table="provincia"/.test(html) && /Somma controllata/.test(html) && (html.match(/data-territory-row/g) ?? []).length >= 1, 'Provincia: comuni.');
+assert.ok(!/data-territory-open/.test(html), 'I comuni non si aprono oltre.');
+assert.ok(/aria-current="page"/.test(html), 'Il livello corrente è segnato.');
+// the biggest province lists its biggest comuni first and caps the list
+const lazio = TR.buildHierarchy(R.municipalPopulationIndex(), db().municipalities).find(item => item.name === 'Lazio');
+const romaUnit = lazio.provinces.find(item => item.name === 'Roma');
+assert.ok(romaUnit.comuni.length > 100, `Roma ha i suoi comuni (${romaUnit.comuni.length}).`);
+const big = territoryResultsCard(args({ terr: `${lazio.code}|${romaUnit.code}` }));
+assert.ok(/Roma/.test(big) && (big.match(/data-territory-row/g) ?? []).length <= 40, 'Roma: i comuni più popolosi, al massimo 40.');
+assert.ok(/comuni più popolosi su/.test(text(big)), 'La nota dice che sono i più popolosi.');
+// the same vote gives the same figures (deterministic) and a wrong key falls back to Italy
+assert.equal(territoryResultsCard(args({ terr: provinceKey })), territoryResultsCard(args({ terr: provinceKey })));
+assert.ok(/data-territory-table="italia"/.test(territoryResultsCard(args({ terr: '99|999' }))), 'Un codice sbagliato torna all’Italia.');
+// the headline numbers of Italy: the valid votes of the table are those of the electorate of the vote
+const electorate = L.nationalElectorate(geography, last.turnout);
+const italyTotal = Number(text(territoryResultsCard(args({}))).match(/\(([\d.]+) voti validi simulati\)/)[1].replace(/\./g, ''));
+assert.ok(Math.abs(italyTotal - electorate.valid) < 50, 'Il totale è quello dell’elettorato del voto (a meno degli arrotondamenti).');
 
-  await evaluate(`(async () => { document.querySelector('[data-nav="territori"]')?.click(); await new Promise(r => setTimeout(r, 800)); return true; })()`);
-  const inst = await evaluate(`(() => { const section = document.querySelector('.local-institution'); return section ? { level: section.dataset.level, tone: section.getAttribute('style'), tile: Boolean(section.querySelector('.local-heading .art-tile')) } : null; })()`);
-  check(inst && inst.tile && /--lv:/.test(inst.tone ?? ''), `L’istituzione ha l’icona e il tono del suo livello (${JSON.stringify(inst)}).`);
-
-  // widths
-  for (const [width, height] of WIDTHS) {
-    await viewport(width, height);
-    for (const [label, steps] of [['vita interna', `document.querySelector('[data-nav="partito"]')?.click(); await new Promise(r => setTimeout(r, 400)); document.querySelector('[data-section-tab="partito"][data-section-tab-value="vita"]')?.click();`], ['territorio', `document.querySelector('[data-nav="partito"]')?.click(); await new Promise(r => setTimeout(r, 400)); document.querySelector('[data-section-tab="partito"][data-section-tab-value="territorio"]')?.click();`], ['istituzione', `document.querySelector('[data-nav="territori"]')?.click();`]]) {
-      await evaluate(`(async () => { ${steps} await new Promise(r => setTimeout(r, 700)); return true; })()`);
-      const view = await evaluate(`(() => ({ overflow: document.documentElement.scrollWidth > innerWidth + 1, wide: [...document.querySelectorAll('.page-wrap *')].filter(el => el.getBoundingClientRect().right > innerWidth + 1 && getComputedStyle(el).position !== 'fixed' && !el.closest('.hm-wrap, .table-wrap, [data-scroll-x]')).slice(0, 3).map(el => el.className || el.tagName) }))()`);
-      check(!view.overflow, `${width}px · ${label}: scroll orizzontale (${view.wide.join(', ')}).`);
-    }
-  }
-  check(errors.length === 0, `Errori JavaScript: ${errors.slice(0, 2).join(' | ')}`);
-});
-if (problems.length) { console.error(`Territorio compatto: ${problems.length} problemi.\n${[...new Set(problems)].slice(0, 30).join('\n')}`); process.exit(1); }
-console.log('Dirigenti locali, comitati e istituzioni verificati in Chrome: dirigenti raggruppati per livello (Regione, Provincia, Comune) con icona e tono propri, una riga ciascuno con nome, ruolo, territorio, stato e le prime azioni; interessi, lealtà, malcontento e sostituzione in «Dettagli»; comitati come schede compatte con livello, responsabile e azioni principali, cifre e azioni secondarie richiudibili; istituzioni con icona e tono del livello; nessun scroll orizzontale da 320 a 1280 px.');
+console.log('Risultati per territorio: scheda verificata (Italia → regione → provincia → comune, somma, fonte, stati vuoti).');

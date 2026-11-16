@@ -1,11 +1,11 @@
 // English phrase-book pairs of the last release pass (data/i18n/en-ui-8.js reads `ALL_PAIRS`): the guided programme editor, the days of the Quirinale and the rule on the parties, the government room, the live
 // votes of the assemblies, the party headquarters, the TV name plates and the tutorial. Format as in the phrase-book: [Italian as shown, English]; `#` a number, `{}` a free part.
-import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261116-17';
-import { DEBATE_PAIRS } from './debate-choices.js?v=20261116-17';
-import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261116-17';
-import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261116-17';
-import { ALL_PAIRS as TOPIC_PAIRS } from './activity-scene-topics.js?v=20261116-17';
-import { LAW_TERM_PAIRS } from './law-terms.js?v=20261116-17';
+import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261116-18';
+import { DEBATE_PAIRS } from './debate-choices.js?v=20261116-18';
+import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261116-18';
+import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261116-18';
+import { ALL_PAIRS as TOPIC_PAIRS } from './activity-scene-topics.js?v=20261116-18';
+import { LAW_TERM_PAIRS } from './law-terms.js?v=20261116-18';
 export const ALL_PAIRS = [
   ...GUEST_PAIRS,
   ...DEBATE_PAIRS,
@@ -1045,4 +1045,26 @@ export const ALL_PAIRS = [
   ['l’avversario è preparato', 'the opponent is prepared'],
   ['in una crisi attaccare costa (−10)', 'in a crisis attacking costs (−10)'],
   ['punisce se non sei preparato', 'it punishes you if you are not prepared'],
+  ['RISULTATI PER TERRITORIO · SIMULATO', 'RESULTS BY TERRITORY · SIMULATED'],
+  ['Regioni, province e comuni', 'Regions, provinces and municipalities'],
+  ['Il risultato per territorio compare dopo il primo voto politico della partita.', 'The result by territory appears after the first general election of the game.'],
+  ['I dati ISTAT dei comuni non sono ancora caricati: riapri la pagina tra un momento.', 'The ISTAT data of the municipalities are not loaded yet: reopen the page in a moment.'],
+  ['Come è andato il voto nelle regioni', 'How the vote went in the regions'],
+  ['Le province: {}', 'The provinces: {}'],
+  ['I comuni: {}', 'The municipalities: {}'],
+  ['Abitanti', 'Inhabitants'],
+  ['Voti simulati', 'Simulated votes'],
+  ['Prime liste', 'Leading lists'],
+  ['Italia', 'Italy'],
+  ['Comuni', 'Municipalities'],
+  ['Somma controllata: le regioni sommano l’Italia, lista per lista ({} voti validi simulati).', 'Sum checked: the regions add up to Italy, list by list ({} simulated valid votes).'],
+  ['Somma controllata: le province sommano la regione {}, lista per lista ({} voti validi simulati).', 'Sum checked: the provinces add up to the region {}, list by list ({} simulated valid votes).'],
+  ['Somma controllata: i comuni sommano la provincia {}, lista per lista ({} voti validi simulati).', 'Sum checked: the municipalities add up to the province {}, list by list ({} simulated valid votes).'],
+  ['Somma da verificare: le regioni sommano l’Italia, lista per lista ({} voti validi simulati).', 'Sum to check: the regions add up to Italy, list by list ({} simulated valid votes).'],
+  ['Somma da verificare: le province sommano la regione {}, lista per lista ({} voti validi simulati).', 'Sum to check: the provinces add up to the region {}, list by list ({} simulated valid votes).'],
+  ['Somma da verificare: i comuni sommano la provincia {}, lista per lista ({} voti validi simulati).', 'Sum to check: the municipalities add up to the province {}, list by list ({} simulated valid votes).'],
+  ['I {} comuni più popolosi su {}.', 'The {} most populous municipalities out of {}.'],
+  ['Dato simulato: i voti di lista del voto nazionale della partita, ripartiti per abitanti (ISTAT, 1 gennaio 2026) con lo scarto regionale del modello e una piccola variazione locale.', 'Simulated data: the list votes of the national election of the game, shared by inhabitants (ISTAT, 1 January 2026) with the regional lean of the model and a small local variation.'],
+  ['Non è un dato ufficiale.', 'It is not official data.'],
+  ['I dati reali delle politiche 2022 esistono per collegio: sono nella mappa qui sopra («Vincitori 2022»), non per provincia né per comune.', 'The real data of the 2022 general election exist by district: they are in the map above («2022 winners»), not by province or by municipality.'],
 ];
