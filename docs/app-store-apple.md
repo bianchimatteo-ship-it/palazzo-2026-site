@@ -26,7 +26,7 @@ Stato al 16/11/2026: **Apple Developer non ancora attivato; nessuna build firmat
 
 ## C. App Privacy («nutrition label») [V, app-privacy-details]
 Va dichiarato tutto ciò che si trasmette fuori dal dispositivo oltre il tempo necessario, anche se non è analisi/pubblicità [V]. Con un account, secondo `privacy.html` §3:
-- Contatti: indirizzo e-mail (facoltativo). Identificativi: nome utente e **identificativo casuale del dispositivo** (ricompense). Contenuti: salvataggi e loghi caricati; secondo la classificazione Apple, i salvataggi di gioco rientrano in «Gameplay Content», mentre il tipo corretto per i loghi caricati va verificato. Uso: intervalli di tempo di gioco per le ricompense (da valutare come «Product Interaction»). IP per limitare gli abusi: classificazione Apple da verificare in base all'uso effettivo.
+- Contatti: indirizzo e-mail (facoltativo). Identificativi: nome utente e **identificativo casuale del dispositivo** usato per le ricompense. Contenuti: salvataggi e loghi personalizzati salvati nell’app, classificati come **Gameplay Content** (contenuto di gioco generato dall’utente). Uso: intervalli di tempo di gioco usati per attribuire ricompense, classificati come **Product Interaction**. IP: il Worker usa l’indirizzo di rete per limitare i tentativi ripetuti; Apple indica di classificare gli IP in base all’uso (fra le categorie possibili cita Device ID e dati diagnostici), quindi va confermato dal titolare nel questionario. Collegamento all’identità: i dati dell’account sono collegati all’account; non c’è tracking.
 - Collegati all'identità: sì (account). Tracciamento: nessuno (nessun SDK, nessun dato condiviso per pubblicità).
 - Senza account: nessun dato raccolto.
 - ☐ ⚠ La compila Account Holder/Admin/App Manager [V]; privacy policy URL obbligatorio [V].
@@ -52,7 +52,7 @@ Va dichiarato tutto ciò che si trasmette fuori dal dispositivo oltre il tempo n
 | Voce | Stato |
 |---|---|
 | Icona 1024 senza alfa, splash | ✅ dal marchio del gioco (non più il segnaposto Capacitor); `check-capacitor` lo verifica |
-| `PrivacyInfo.xcprivacy` | ⚠️ nessun tracking dichiarato; classificazione raccolta da riallineare: il manifest attuale usa `OtherUserContent` per i contenuti, ma Apple classifica esplicitamente i salvataggi di gioco come `GameplayContent`; da valutare anche i loghi caricati, il tempo di gioco e l'IP. Generare e verificare il Privacy Report Xcode e confrontarlo con App Privacy Details prima dell'invio. `includePlugins: []` esclude i plugin Capacitor da iOS, ma non sostituisce la verifica di Capacitor e delle API richieste |
+| `PrivacyInfo.xcprivacy` | ⚠️ aggiornato nel branch: `GameplayContent` per salvataggi e loghi personalizzati in-game, `ProductInteraction` per il tempo di gioco trasmesso per le ricompense; email, UserID e DeviceID restano dichiarati. Nessun tracking. Generare e verificare il Privacy Report Xcode e confrontarlo con App Privacy Details prima dell'invio. `includePlugins: []` esclude i plugin Capacitor da iOS, ma non sostituisce la verifica di Capacitor e delle API richieste |
 | `Info.plist` | ✅ `arm64`, iPhone verticale, iPad quattro orientamenti, nessun permesso, nessuna modalità in background |
 | Firma | automatica, nessun team nel repository (lo sceglie il titolare dell'account) |
 | Safe area | ✅ `viewport-fit=cover` + regole iOS; layout verificato dall'utente su simulatore iPhone e iPad |
