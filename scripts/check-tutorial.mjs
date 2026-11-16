@@ -55,6 +55,12 @@ await withBrowser(async browser => {
   check((await card()).expanded === '0', 'I dettagli si richiudono.');
   check(c.buttons.find(([label]) => label === 'Indietro')?.[2] === true, 'Al primo passo «Indietro» è disattivato.');
 
+  // «Vai alla schermata»: shown only when the player is on another page, one pill with an arrow, and it really goes back to the page of the step
+  await evaluate(`location.hash = '#finanze'; true`); await pause(700);
+  check(await evaluate(`Boolean(document.querySelector('[data-tutorial-go].go-button .go-arrow'))`), 'Fuori dalla pagina del passo compare «Vai alla schermata» (pulsante con freccia).');
+  await click('[data-tutorial-go]'); await pause(500);
+  check(await evaluate(`location.hash === '#panoramica' && !document.querySelector('[data-tutorial-go]') && Boolean(document.querySelector('[data-tutorial-card]'))`), '«Vai alla schermata» riporta alla pagina del passo e il tutorial resta aperto.');
+
   // walk forward through the real pages
   const seen = [c.hash];
   for (let step = 2; step <= N; step++) {

@@ -217,11 +217,11 @@ const guideTarget = page => `data-nav="${esc(page)}" data-guide-close`;
 function manualCards(offset) {
   const functions = GUIDE_FUNCTIONS.map((item, i) => {
     const index = offset + i;
-    return `<article class="guide-card guide-manual" id="guida-${index}" data-guide-card="${index}" data-guide-kind="funzione" data-guide-topic="${esc(item.id)}" data-guide-keywords="${esc(item.keywords ?? '')}">${glyph(item.icon, 20)}<div><strong>${esc(item.title)}</strong><dl class="guide-parts">${GUIDE_PARTS.map(([key, label]) => `<div><dt>${esc(label)}</dt><dd>${esc(item[key])}</dd></div>`).join('')}</dl><p><button type="button" class="secondary-button" ${guideTarget(item.page)}>Apri la pagina</button></p></div></article>`;
+    return `<article class="guide-card guide-manual" id="guida-${index}" data-guide-card="${index}" data-guide-kind="funzione" data-guide-topic="${esc(item.id)}" data-guide-keywords="${esc(item.keywords ?? '')}">${glyph(item.icon, 20)}<div><strong>${esc(item.title)}</strong><dl class="guide-parts">${GUIDE_PARTS.map(([key, label]) => `<div><dt>${esc(label)}</dt><dd>${esc(item[key])}</dd></div>`).join('')}</dl><p><button type="button" class="go-button" ${guideTarget(item.page)}><span>Apri la pagina</span><i class="go-arrow" aria-hidden="true"></i></button></p></div></article>`;
   });
   const scenarios = GUIDE_SCENARIOS.map((item, i) => {
     const index = offset + GUIDE_FUNCTIONS.length + i;
-    return `<article class="guide-card guide-scenario" id="guida-${index}" data-guide-card="${index}" data-guide-kind="scenario" data-guide-topic="${esc(item.id)}">${glyph(item.icon, 20)}<div><strong>${esc(item.title)}</strong><p>${esc(item.goal)}</p><ol class="guide-steps">${item.steps.map(([text, page]) => `<li><span>${esc(text)}</span> <button type="button" class="ghost-button" ${guideTarget(page)}>Vai</button></li>`).join('')}</ol></div></article>`;
+    return `<article class="guide-card guide-scenario" id="guida-${index}" data-guide-card="${index}" data-guide-kind="scenario" data-guide-topic="${esc(item.id)}">${glyph(item.icon, 20)}<div><strong>${esc(item.title)}</strong><p>${esc(item.goal)}</p><ol class="guide-steps">${item.steps.map(([text, page]) => `<li><span>${esc(text)}</span> <button type="button" class="go-button" ${guideTarget(page)} aria-label="Vai: ${esc(text)}"><span>Vai</span><i class="go-arrow" aria-hidden="true"></i></button></li>`).join('')}</ol></div></article>`;
   });
   return { functions, scenarios };
 }
