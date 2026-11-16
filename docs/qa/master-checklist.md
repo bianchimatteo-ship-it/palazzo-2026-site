@@ -2,7 +2,7 @@
 
 Stati ammessi: **Non iniziato · In lavorazione · Completato · Bloccato**. Una voce è *Completato* solo con prova (file, test, screenshot). Branch `feature/qa-completamento`. Confrontata punto per punto con il documento di lavoro originale (sezioni 1–21) e con le aggiunte del 16/11 (sezione 22).
 
-Riepilogo: Bloccato 3 · Completato 43 · In lavorazione 18 · Non iniziato 105 · totale 169
+Riepilogo: Bloccato 3 · Completato 48 · In lavorazione 20 · Non iniziato 98 · totale 169
 
 
 ## 1. Regole operative
@@ -78,13 +78,13 @@ Riepilogo: Bloccato 3 · Completato 43 · In lavorazione 18 · Non iniziato 105 
 
 | Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|---|
-| 6.1 | Iniziativa legislativa popolare: anche piccoli partiti senza parlamentari | Non iniziato |  |  |  |
-| 6.2 | Proposta in articoli; organizzazione raccolta; raccolta nazionale e territoriale | Non iniziato |  |  |  |
-| 6.3 | Costi e risorse; avanzamento firme; sostegno dei cittadini; opposizioni e campagne | Non iniziato |  |  |  |
-| 6.4 | Fallimento o raggiungimento dei requisiti (50.000 firme); passaggio alla fase parlamentare | Non iniziato |  |  |  |
-| 6.5 | Distinguere iniziativa popolare, proposta parlamentare, raccolta firme referendaria | Non iniziato |  |  |  |
-| 6.6 | Richieste di cittadini/associazioni: azioni disponibili, competenze, tempi, costi, conseguenze | Non iniziato |  |  |  |
-| 6.7 | Soddisfare direttamente o avviare interrogazioni, mozioni, segnalazioni, proposte | Non iniziato |  |  |  |
+| 6.1 | Iniziativa legislativa popolare: anche piccoli partiti senza parlamentari | Completato | src/core/initiative-engine.js, src/core/store.js, src/ui/initiative-mode.js, src/ui/app.js, src/ui/lazy-views.js, src/theme.css, src/data/release-pairs.js | scripts/check-initiatives.mjs, scripts/check-initiatives-ui.mjs | Basta una carriera qualsiasi (provato con un consigliere comunale, senza parlamentari). artifacts/qa/screenshots/after/iniziative-it-390x844.png, iniziative-it-820x1180.png, iniziative-en-390x844.png |
+| 6.2 | Proposta in articoli; organizzazione raccolta; raccolta nazionale e territoriale | Completato | src/core/initiative-engine.js, src/core/store.js, src/ui/initiative-mode.js, src/ui/app.js, src/ui/lazy-views.js, src/theme.css, src/data/release-pairs.js | scripts/check-initiatives.mjs, scripts/check-initiatives-ui.mjs | Testo in 1-8 articoli; leve: banchetti, piattaforma online, volontari, comuni amici, campagna di sensibilizzazione; firme nazionali e per Regione e per canale |
+| 6.3 | Costi e risorse; avanzamento firme; sostegno dei cittadini; opposizioni e campagne | Completato | src/core/initiative-engine.js, src/core/store.js, src/ui/initiative-mode.js, src/ui/app.js, src/ui/lazy-views.js, src/theme.css, src/data/release-pairs.js | scripts/check-initiatives.mjs, scripts/check-initiatives-ui.mjs | Costo di apertura 400 €, leve con costo iniziale e settimanale dai fondi, avanzamento, ritmo e previsione; sostegno dei cittadini (peso del partito, notorietà, quanto il tema è sentito), campagne contrarie e sostegni di associazioni |
+| 6.4 | Fallimento o raggiungimento dei requisiti (50.000 firme); passaggio alla fase parlamentare | Completato | src/core/initiative-engine.js, src/core/store.js, src/ui/initiative-mode.js, src/ui/app.js, src/ui/lazy-views.js, src/theme.css, src/data/release-pairs.js | scripts/check-initiatives.mjs, scripts/check-initiatives-ui.mjs | Soglia 50.000; deposito rifiutato sotto soglia; verifica con quota di firme valide 88-97% (serve un margine); passaggio al Parlamento (fase simulata: assegnazione, commissione, Aula, approvata/archiviata) con effetti sulla carriera |
+| 6.5 | Distinguere iniziativa popolare, proposta parlamentare, raccolta firme referendaria | Completato | src/core/initiative-engine.js, src/core/store.js, src/ui/initiative-mode.js, src/ui/app.js, src/ui/lazy-views.js, src/theme.css, src/data/release-pairs.js | scripts/check-initiatives.mjs, scripts/check-initiatives-ui.mjs | Tre strade distinte nella pagina: iniziativa popolare, raccolta firme referendaria (500.000; la fase dopo il deposito dichiarata non simulata), proposta parlamentare (pagina Leggi) |
+| 6.6 | Richieste di cittadini/associazioni: azioni disponibili, competenze, tempi, costi, conseguenze | In lavorazione | src/core/local-engine.js (mozioni/interrogazioni locali), src/core/agenda-engine.js | scripts/check-initiatives.mjs (solo parte iniziative) | Le iniziative popolari sono la strada per le richieste dei cittadini; manca ancora la casella «richieste di cittadini e associazioni» con azioni dedicate, competenze, tempi e costi |
+| 6.7 | Soddisfare direttamente o avviare interrogazioni, mozioni, segnalazioni, proposte | In lavorazione | src/core/local-engine.js |  | Mozioni e interrogazioni esistono nei consigli locali; manca il collegamento esplicito dalle richieste dei cittadini |
 
 ## 7. Leggi, Governo e crisi del Paese
 

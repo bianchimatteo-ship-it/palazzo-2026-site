@@ -1439,3 +1439,29 @@ button, a, summary, [role="button"], [data-nav], select, input[type="checkbox"],
 button:not(:disabled):active, a.primary-button:active, a.secondary-button:active, [role="button"]:active, summary:active { transform: scale(.97); filter: brightness(.9); transition: transform .05s ease-out, filter .05s ease-out; }
 .main-nav .nav-item:active, .mobile-tab:active { transform: scale(.96); }
 @media (prefers-reduced-motion: reduce) { button:not(:disabled):active { transform: none; } }
+
+/* Iniziative: raccolta firme (popolare 50.000, referendum 500.000) */
+.ini-page { display: grid; gap: 14px; }
+.ini-kinds { margin: 0; padding-left: 18px; display: grid; gap: 8px; }
+.ini-kinds li span { display: block; opacity: .88; }
+.ini-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+.ini-count { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; font-size: 1.05rem; }
+.ini-count strong { font-size: 1.6rem; }
+.ini-bar { display: block; height: 10px; border-radius: 999px; background: rgba(127, 140, 134, .25); overflow: hidden; margin: 6px 0; }
+.ini-bar i { display: block; height: 100%; background: var(--accent, #7a89ff); border-radius: inherit; }
+.ini-bar.is-full i { background: #4cae7a; }
+.ini-forecast, .ini-cost, .ini-verify, .ini-parliament, .ini-outcome { margin: 8px 0; }
+.ini-warning { margin: 8px 0; color: #d9825b; font-weight: 600; }
+.ini-ready { margin: 8px 0; color: #4cae7a; font-weight: 600; }
+.ini-levers ul, .ini-history ul { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 8px; }
+.ini-lever { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; padding: 10px; border: 1px solid rgba(127, 140, 134, .3); border-radius: 12px; }
+.ini-lever small { display: block; opacity: .8; }
+.ini-lever-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.ini-regions { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px; }
+.ini-regions li { display: grid; grid-template-columns: minmax(90px, 1fr) 2fr auto; gap: 8px; align-items: center; }
+.ini-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.ini-form { display: grid; gap: 10px; }
+.ini-form label { display: grid; gap: 4px; }
+.ini-form input, .ini-form select, .ini-form textarea { width: 100%; box-sizing: border-box; }
+.ini-body button { min-height: 44px; }
+@media (max-width: 520px) { .ini-regions li { grid-template-columns: 1fr 1fr auto; } .ini-lever { flex-direction: column; align-items: stretch; } }

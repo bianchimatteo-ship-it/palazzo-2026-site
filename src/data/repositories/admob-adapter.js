@@ -2,7 +2,7 @@
 // initialises the SDK, and offers a banner, an interstitial and the rewarded video of data/repositories/ads-rewarded.js ({ kind: 'admob', isReady(), show() }).
 // The reward is counted ONLY when the SDK reports that the user earned it (the `onUserEarnedReward` callback: the plugin's `onRewardedVideoAdReward` event / the result of showRewardVideoAd): a closed, failed or skipped video gives nothing.
 // With the mode 'off', on a platform without ids (iOS today) or without the plugin, nothing is called: `available()` says why.
-import { resolveAds } from '../ads-config.js?v=20261116-2';
+import { resolveAds } from '../ads-config.js?v=20261116-7';
 
 const randomId = () => (globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`).replace(/[^\w-]/g, '');
 
