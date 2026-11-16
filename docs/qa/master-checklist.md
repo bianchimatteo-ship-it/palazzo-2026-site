@@ -2,7 +2,7 @@
 
 Stati ammessi: **Non iniziato · In lavorazione · Completato · Bloccato**. Una voce è *Completato* solo con prova (file, test, screenshot). Branch `feature/qa-completamento`. Confrontata punto per punto con il documento di lavoro originale (sezioni 1–21) e con le aggiunte del 16/11 (sezione 22).
 
-Riepilogo: Bloccato 3 · Completato 113 · In lavorazione 19 · Non iniziato 34 · totale 169
+Riepilogo: Bloccato 3 · Completato 117 · In lavorazione 18 · Non iniziato 31 · totale 169
 
 
 ## 1. Regole operative
@@ -191,10 +191,10 @@ Riepilogo: Bloccato 3 · Completato 113 · In lavorazione 19 · Non iniziato 34 
 
 | Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|---|
-| 15.1 | Manuale interattivo completo in Home su tutte le funzioni elencate (carriera, partiti, staff/capitale/fondi, tempo, sondaggi, candidature, elezioni, alleanze, assemblee, leggi, iniziative, Governo/Ministeri, CdM, crisi, richieste, animazioni, promesse, account/salvataggi) | Non iniziato |  |  |  |
-| 15.2 | Per ogni funzione: come funziona, uso, requisiti, costi, conseguenze, esempi | Non iniziato |  |  |  |
-| 15.3 | Scenari guidati: fondare partito, sindaco, Parlamento, coalizione, Ministro, PdC | Non iniziato |  |  |  |
-| 15.4 | Ricercabile, smartphone e tablet, collegata alle funzioni; tutorial iniziale saltabile e riprendibile | In lavorazione | src/ui/menu.js | check-tutorial | Tutorial saltabile e riprendibile verificato; guida completa con ricerca non ancora fatta |
+| 15.1 | Manuale interattivo completo in Home su tutte le funzioni elencate (carriera, partiti, staff/capitale/fondi, tempo, sondaggi, candidature, elezioni, alleanze, assemblee, leggi, iniziative, Governo/Ministeri, CdM, crisi, richieste, animazioni, promesse, account/salvataggi) | Completato | src/data/guide-manual.js, src/ui/menu.js, src/ui/app.js, src/theme.css | check-guide (dati, numeri uguali ai motori, ricerca, link, smartphone e tablet), check-tutorial, check-i18n | Guida «Come giocare»: regole essenziali + manuale di 20 funzioni (carriera, tempo, risorse, partito, attività, sondaggi, alleanze, candidature, campagna, voto, assemblee, leggi, iniziative, richieste, governo, Quirinale, territori, dimissioni, notizie, salvataggi) + 6 scenari. Screenshot: artifacts/qa/screenshots/after/guida-*.png |
+| 15.2 | Per ogni funzione: come funziona, uso, requisiti, costi, conseguenze, esempi | Completato | src/data/guide-manual.js, src/ui/menu.js, src/ui/app.js, src/theme.css | check-guide (dati, numeri uguali ai motori, ricerca, link, smartphone e tablet), check-tutorial, check-i18n | Ogni funzione ha Come funziona / Come si usa / Requisiti / Costi / Conseguenze / Esempio; i numeri citati (50.000 firme, 6 giorni, 7 giorni di rifiuto, costi del partito e delle risposte) sono verificati contro i motori. |
+| 15.3 | Scenari guidati: fondare partito, sindaco, Parlamento, coalizione, Ministro, PdC | Completato | src/data/guide-manual.js, src/ui/menu.js, src/ui/app.js, src/theme.css | check-guide (dati, numeri uguali ai motori, ricerca, link, smartphone e tablet), check-tutorial, check-i18n | Scenari guidati: fondare un partito, diventare sindaco, entrare in Parlamento, costruire una coalizione, diventare ministro, guidare il Governo; ogni passo ha un collegamento «Vai» alla pagina. |
+| 15.4 | Ricercabile, smartphone e tablet, collegata alle funzioni; tutorial iniziale saltabile e riprendibile | Completato | src/data/guide-manual.js, src/ui/menu.js, src/ui/app.js, src/theme.css, src/ui/tutorial.js | check-guide (dati, numeri uguali ai motori, ricerca, link, smartphone e tablet), check-tutorial, check-i18n | Ricercabile (testo e parole chiave), collegata alle pagine (il collegamento chiude il menu), smartphone 390 px e tablet 820 px senza scroll orizzontale; tutorial iniziale saltabile e riprendibile (check-tutorial). |
 
 ## 16. Traduzioni
 

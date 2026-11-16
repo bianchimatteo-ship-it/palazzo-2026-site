@@ -28,6 +28,10 @@ const out = store.resign('ministro');
 assert.equal(out.resigned, 'ministro');
 assert.ok(state().parliament.government.ministers.find(item => item.id === minister.id).endedAt, 'Il ministero è chiuso con la data.');
 assert.ok(!store.resignationPosts().some(item => item.id === 'ministro'), 'Il ministero non è più tra gli incarichi.');
+const { playerRoles } = await import('../src/core/roles.js');
+assert.equal(store.ministryView(), null, 'Senza ministero non c’è più l’area ministeriale (potere perso).');
+assert.ok(!playerRoles(state()).roles.some(([id]) => id === 'ministro'), 'Il ruolo «ministro» non è più nell’elenco dei ruoli.');
+assert.throws(() => store.ministryAction('priorita', { area: 'sanita' }), /ministero|incarico|competenza/i, 'Un’azione da ministro è rifiutata dopo le dimissioni.');
 assert.ok(stats().influence < before.influence, 'L’influenza cala (−2).');
 assert.throws(() => store.resign('ministro'), /non c’è più/, 'Non ci si dimette due volte.');
 assert.ok(state().game.log.some(item => /Ti dimetti: Ministro/.test(item.title)), 'Resta nel registro della carriera.');
@@ -37,6 +41,7 @@ const group = state().parliament.player.groupId;
 assert.ok(group, 'Ha un gruppo.');
 store.resign('parlamento');
 assert.ok(!state().parliament.player?.groupId, 'Il seggio è lasciato: niente più gruppo.');
+assert.ok(!playerRoles(state()).roles.some(([id]) => id === 'parlamentare'), 'Il ruolo «parlamentare» non è più nell’elenco dei ruoli.');
 assert.ok(!store.resignationPosts().some(item => ['parlamento', 'capogruppo', 'commissione'].includes(item.id)), 'Con il seggio finiscono le cariche di gruppo e commissione.');
 assert.ok(state().dataset.offices.filter(item => item.politicianId === state().career.playerId && /dimission/i.test(item.endReason ?? '')).length >= 1, 'L’ufficio del seggio è chiuso con motivo «dimissioni».');
 
