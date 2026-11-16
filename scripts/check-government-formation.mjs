@@ -88,6 +88,13 @@ assert.ok(base.resolved.week <= 12, `La crisi si chiude in poche settimane (${ba
   assert.ok((s.parliament.government.confidenceVotes ?? []).length > 0 || s.parliament.government.formedAt, 'Il nuovo governo ha una data di formazione e un voto di fiducia.');
   assert.equal(s.national.formation.phase, 'completata', 'La formazione è conclusa, senza forzare lo stato del governo.');
   assert.equal(s.national.legislature.number, 19, 'La crisi non cambia legislatura.');
+  // the consultations at the Quirinale: statements of simulated parties, the calendar, no personal preference of the President
+  const talks = s.national.formation.consultations ?? [];
+  assert.ok(talks.length >= 4, `Le consultazioni hanno le dichiarazioni dei partiti (${talks.length}).`);
+  assert.ok(talks.every(item => item.source === 'simulazione' && item.text && ['sostegno', 'esterno', 'opposizione', 'astensione', 'condizionato'].includes(item.orientation)), 'Ogni dichiarazione è di un partito simulato, con il suo orientamento.');
+  assert.ok(talks.some(item => item.orientation === 'condizionato' ? item.condition : true), 'Le condizioni pubbliche citano un tema.');
+  assert.ok((s.national.formation.steps ?? []).some(item => /Calendario delle consultazioni/.test(item.text)) || (s.national.history ?? []).some(item => /Calendario delle consultazioni/.test(item.text ?? '')), 'Il calendario delle consultazioni è raccontato.');
+  assert.ok(!talks.some(item => /Presidente della Repubblica (preferisce|vorrebbe|spera)/.test(item.text)), 'Nessuna preferenza personale inventata del Presidente.');
 }
 
 // A second fall of the Government just formed: new consultations, not the previous crisis counted twice.

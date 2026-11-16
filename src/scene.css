@@ -213,3 +213,4 @@ html[data-scene-motion="full"] .cm-protest .cm-arm { animation: st-arms .45s eas
 .floor-proposers div { min-width: 0; }
 .floor-proposers dt { font-size: .72rem; letter-spacing: .04em; text-transform: uppercase; color: var(--muted, #9aa4a0); }
 .floor-proposers dd { margin: 1px 0 0; font-weight: 700; overflow-wrap: anywhere; }
+.scene-meter-values { grid-column: 1 / -1; opacity: .85; }

@@ -2,13 +2,13 @@
 // elections, coalitions and national campaign, the seats projected on the real map of 2022, the last votes, the new
 // Chambers and the formation of the Government. The map, the seats and the results of 2022 are real data (Eligendo);
 // polls, coalitions, votes, seats and Governments of the game are simulation, and every block says which is which.
-import { districtRows } from '../core/legislature-engine.js?v=20261116-9';
-import { formatDate } from '../core/time.js?v=20261116-9';
-import { ALLIANCE_COLORS, NEUTRAL_COLOR, coalitionColor, forceColor } from './political-colors.js?v=20261116-9';
-import { glyph } from './visuals.js?v=20261116-9';
-import { arrow, badge, bar, card, esc, euro, kpi, num, pct, table } from './sections-kit.js?v=20261116-9';
-import { toneEdge } from '../data/party-brand.js?v=20261116-9';
-import { ABSENT_COLOR, MAP_SCOPES, NO_DATA_COLOR, PRESENCE_NOTE, PROVINCE_INDICATOR_NOTE, italyMapInfo, italyMapSvg, italyMapTable, territoryTallies } from './italy-map.js?v=20261116-9';
+import { districtRows } from '../core/legislature-engine.js?v=20261116-15';
+import { formatDate } from '../core/time.js?v=20261116-15';
+import { ALLIANCE_COLORS, NEUTRAL_COLOR, coalitionColor, forceColor } from './political-colors.js?v=20261116-15';
+import { glyph } from './visuals.js?v=20261116-15';
+import { arrow, badge, bar, card, esc, euro, kpi, num, pct, table } from './sections-kit.js?v=20261116-15';
+import { toneEdge } from '../data/party-brand.js?v=20261116-15';
+import { ABSENT_COLOR, MAP_SCOPES, NO_DATA_COLOR, PRESENCE_NOTE, PROVINCE_INDICATOR_NOTE, italyMapInfo, italyMapSvg, italyMapTable, territoryTallies } from './italy-map.js?v=20261116-15';
 
 export const NATIONAL_MAP_VIEWS = Object.freeze([['proiezione', 'Proiezione di oggi'], ['2022', 'Vincitori 2022 (reale)'], ['voto', 'Ultimo voto della partita']]);
 const NEUTRAL = NEUTRAL_COLOR;
@@ -271,6 +271,8 @@ function formationCard(overview, state) {
   if (!formation) return '';
   const current = FORMATION_ORDER.indexOf(formation.phase);
   const stepper = FORMATION_ORDER.map((phase, index) => `<li class="${formation.phase === 'fallita' ? (index <= Math.max(0, current) ? 'is-done' : '') : index < current ? 'is-done' : index === current ? 'is-current' : ''}"><span>${esc(overview.phases[phase] ?? phase)}</span></li>`).join('');
+  const TONE = { sostegno: 'good', esterno: 'good', opposizione: 'bad', astensione: 'warn', condizionato: 'warn' };
+  const talks = (formation.consultations ?? []).length ? `<div class="nv-consultations" data-formation-consultations><h4>Le consultazioni al Quirinale (simulazione)</h4><ul>${formation.consultations.map(item => `<li data-consultation="${esc(item.partyId)}" data-orientation="${esc(item.orientation)}">${badge(item.orientation === 'sostegno' ? 'Sostegno' : item.orientation === 'esterno' ? 'Sostegno esterno' : item.orientation === 'opposizione' ? 'Opposizione' : item.orientation === 'astensione' ? 'Astensione' : 'Condizione', TONE[item.orientation] ?? 'warn')} <span>${esc(item.text)}</span></li>`).join('')}</ul><small class="sx-note">Dichiarazioni di partiti simulati. Il Presidente della Repubblica non esprime preferenze personali: sente i partiti, verifica chi può avere la fiducia delle Camere e, se serve, conferisce un mandato esplorativo.</small></div>` : '';
   const steps = [...(formation.steps ?? [])].reverse().slice(0, 8).map(item => `<li><time>${esc(shortDay(item.date))}</time><span>${esc(item.text)}</span></li>`).join('');
   const government = state.parliament?.government;
   // The consent the secretary was asked for (coalition, outside support, refusal, no answer) and what the Government finally counts on.
@@ -278,7 +280,7 @@ function formationCard(overview, state) {
   const consent = (formation.consentRequests ?? []).length ? `<ul class="nv-consent" data-formation-consent>${formation.consentRequests.map(item => `<li data-consent-status="${esc(item.status)}"><strong>Consenso del tuo partito</strong> · ${esc(CONSENT_TEXT[item.status] ?? item.status)}${item.majority ? ` (${esc(item.majority)})` : ''}</li>`).join('')}</ul>` : '';
   const status = formation.phase === 'fallita' ? badge('Camere sciolte', 'bad') : formation.phase === 'completata' ? badge('Governo in carica', 'good') : badge(overview.phases[formation.phase] ?? formation.phase, 'warn');
   const chambers = state.parliament?.legislature?.reference === 'simulation' ? ['camera', 'senato'].map(chamber => `<div><h4>${chamber === 'camera' ? 'Camera' : 'Senato'} · gruppi</h4><p class="nv-groups">${(state.parliament.chambers?.[chamber]?.groups ?? []).map(group => `<span class="${group.groupId === state.parliament.player?.groupId ? 'is-player' : ''}">${esc(group.officialName)} <b>${num(group.simulatedSeats, 0)}</b></span>`).join('')}</p></div>`).join('') : '';
-  return card({ fold: { id: 'nv-formazione', icon: 'dome', start: 'closed' }, kicker: `${formation.crisis ? 'CRISI DI GOVERNO' : 'DOPO IL VOTO'} · FORMAZIONE DEL GOVERNO · SIMULAZIONE`, title: government && formation.phase === 'completata' ? government.name : 'Verso il nuovo governo', action: status, body: `<ol class="nv-stepper">${stepper}</ol>${formation.majority ? `<p class="sx-note">Maggioranza: <b>${esc(formation.majority.label ?? 'nuova maggioranza')}</b> (${esc(formation.majority.partyIds.map(labelOf(overview, overview.national.lastPolitiche)).join(', '))}).</p>` : ''}<ol class="nv-log">${consent}${steps}</ol>${chambers ? `<div class="nv-chambers">${chambers}</div>` : ''}<div class="sx-actions"><button class="text-link" data-nav="governo">Palazzo Chigi ${arrow}</button><button class="text-link" data-nav="parlamento">Le nuove Camere ${arrow}</button></div>` });
+  return card({ fold: { id: 'nv-formazione', icon: 'dome', start: 'closed' }, kicker: `${formation.crisis ? 'CRISI DI GOVERNO' : 'DOPO IL VOTO'} · FORMAZIONE DEL GOVERNO · SIMULAZIONE`, title: government && formation.phase === 'completata' ? government.name : 'Verso il nuovo governo', action: status, body: `<ol class="nv-stepper">${stepper}</ol>${formation.majority ? `<p class="sx-note">Maggioranza: <b>${esc(formation.majority.label ?? 'nuova maggioranza')}</b> (${esc(formation.majority.partyIds.map(labelOf(overview, overview.national.lastPolitiche)).join(', '))}).</p>` : ''}${talks}<ol class="nv-log">${consent}${steps}</ol>${chambers ? `<div class="nv-chambers">${chambers}</div>` : ''}<div class="sx-actions"><button class="text-link" data-nav="governo">Palazzo Chigi ${arrow}</button><button class="text-link" data-nav="parlamento">Le nuove Camere ${arrow}</button></div>` });
 }
 function europeanCard(overview) {
   const last = overview.national.lastEuropee;

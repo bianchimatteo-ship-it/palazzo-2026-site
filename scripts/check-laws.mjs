@@ -95,7 +95,7 @@ const allBills = s => [...s.parliament.laws.filter(law => law.auto), ...(s.parli
   // The player's ballot is always expressed: no count without it, no «line of the group» by default, no absence for want of a choice.
   for (const missing of [null, undefined, 'linea', 'assente', 'forse']) assert.throws(() => LM.autoVote(withBill, bill, 'camera', { date: s.clock.currentDate, world: s.world, playerChoice: missing }), /manca il tuo voto/, `Senza il voto del giocatore (${missing}) la votazione non si conta.`);
   assert.deepEqual(Object.keys(LM.PLAYER_VOTE_CHOICES), ['favorevole', 'contrario', 'astenuto'], 'Tre scelte: favorevole, contrario, astenuto.');
-  assert.equal(abstaining.absent, 0, 'L’astensione è un voto espresso, non un’assenza.');
+  assert.equal(abstaining.absent, against.absent, 'L’astensione è un voto espresso, non un’assenza: gli assenti sono gli stessi qualunque sia la scelta del giocatore.');
   assert.throws(() => LM.setPlayerVote(withBill, 'prova-governo', 'forse'), /non valida/);
   assert.throws(() => LM.setPlayerVote(withBill, 'prova-governo', 'linea'), /non valida/, 'La linea del gruppo non è più una scelta di voto.');
   assert.throws(() => LM.setPlayerVote({ ...withBill, laws: [{ ...bill, currentChamber: 'senato' }] }, 'prova-governo', 'contrario'), /Senato/, 'Si vota solo nella propria Camera.');

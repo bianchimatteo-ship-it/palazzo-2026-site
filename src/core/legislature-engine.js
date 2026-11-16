@@ -3,16 +3,16 @@
 // Chambers and their groups, the formation of the Government. Everything that happens is simulation: the real data are
 // the geography, the seats and the 2022 results the vote starts from; parties, coalitions, votes and seats of the game
 // are estimates of the game and never presented as real results.
-import { isElectoral } from './alliance-rules.js?v=20261116-9';
-import { populationReferenceDate, residentsOfItaly } from './municipal-rules.js?v=20261116-9';
-import { actualTurnout } from './electorate.js?v=20261116-9';
-import { uniqueId } from './ids.js?v=20261116-9';
-import { advanceDays, formatDate } from './time.js?v=20261116-9';
-import { axisOf, nationalShares } from './world-engine.js?v=20261116-9';
-import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20261116-9';
-import { archiveGovernment, confidenceBallotMissing, voteGovernmentConfidence } from './parliament-engine.js?v=20261116-9';
-import { seededRandom } from './vote-engine.js?v=20261116-9';
-import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20261116-9';
+import { isElectoral } from './alliance-rules.js?v=20261116-15';
+import { populationReferenceDate, residentsOfItaly } from './municipal-rules.js?v=20261116-15';
+import { actualTurnout } from './electorate.js?v=20261116-15';
+import { uniqueId } from './ids.js?v=20261116-15';
+import { advanceDays, formatDate } from './time.js?v=20261116-15';
+import { axisOf, nationalShares } from './world-engine.js?v=20261116-15';
+import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20261116-15';
+import { archiveGovernment, confidenceBallotMissing, voteGovernmentConfidence } from './parliament-engine.js?v=20261116-15';
+import { seededRandom } from './vote-engine.js?v=20261116-15';
+import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20261116-15';
 
 const SIM = 'simulation';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -935,6 +935,28 @@ export function startFormation(result, { date, number }) {
   const firstSitting = advanceDays(date, LEGISLATURE_RULES.firstSittingDays);
   return { phase: 'insediamento', number, resultId: result.id, votedAt: date, firstSitting, deadline: advanceDays(date, LEGISLATURE_RULES.firstSittingDays + LEGISLATURE_RULES.formationDeadlineWeeks * 7), attempts: 0, majority: null, excluded: [], included: [], steps: [{ date, phase: 'insediamento', text: `Il voto del ${formatDate(date)} elegge le nuove Camere: la prima seduta è fissata per il ${formatDate(firstSitting)}.` }], source: SIM };
 }
+// What the parties say at the consultations at the Quirinale: each force of the world says, by its place in the majority taking shape, whether it supports, supports from outside, stays in opposition,
+// abstains or asks a condition on a theme. The calendar puts the smaller delegations first and the biggest last. Everything is simulated: they are statements of simulated parties, never words of a real
+// person, and the President of the Republic expresses no personal preference (he checks who can have the confidence of the Chambers: art. 92 and 94 of the Constitution, and the practice).
+export const CONSULTATION_THEMES = Object.freeze(['il lavoro', 'la sanità', 'il fisco', 'la scuola', 'l’ambiente', 'la sicurezza', 'i conti pubblici', 'l’Europa']);
+export function consultationStatements({ majority, world, labelOf = id => id, date, seed = 'consultazioni' }) {
+  const parties = (world?.parties ?? []).filter(item => item.active && !item.isPlayer).sort((a, b) => (a.baseline ?? 0) - (b.baseline ?? 0)).slice(-10);
+  const inside = new Set(majority?.partyIds ?? []), outside = new Set(majority?.supportPartyIds ?? []);
+  return parties.map((party, index) => {
+    const rand = seededRandom(`${seed}|${party.id}|${date}`);
+    const label = labelOf(party.id) ?? party.label;
+    let orientation, text, condition = null;
+    if (inside.has(party.id)) { orientation = 'sostegno'; text = `${label} sostiene la maggioranza${majority?.leaderId ? ` intorno a ${labelOf(majority.leaderId)}` : ''}.`; }
+    else if (outside.has(party.id)) { orientation = 'esterno'; text = `${label} garantisce un sostegno esterno, senza ministri.`; }
+    else {
+      const roll = rand();
+      if (roll < 0.5) { orientation = 'opposizione'; text = `${label} annuncia che andrà all’opposizione.`; }
+      else if (roll < 0.75) { orientation = 'astensione'; text = `${label} non esclude di astenersi sulla fiducia.`; }
+      else { orientation = 'condizionato'; condition = CONSULTATION_THEMES[Math.floor(rand() * CONSULTATION_THEMES.length)]; text = `${label} pone una condizione pubblica: ${condition} al primo punto del programma.`; }
+    }
+    return { day: 1 + Math.floor(index * 2 / Math.max(1, parties.length - 1) * 2), partyId: party.id, label, orientation, condition, text, source: 'simulazione' };
+  });
+}
 // One step of the formation, week by week: consultations, mandate, oath, confidence. playerRole: { secretaryOf, seated }.
 // Returns the new formation, the parliament and what the player should be asked (events). The player's answers are
 // kept in the formation: excluded / included (support at the consultations), playerAccepted / playerDeclined (mandate).
@@ -968,6 +990,8 @@ export function formationStep({ formation, parliament, result, world = null, dat
     next.consultationsEnd = advanceDays(date, LEGISLATURE_RULES.consultationDays);
     const majority = find();
     next.majority = majority;
+    next.consultations = consultationStatements({ majority, world, labelOf, date, seed: `${next.number}|${next.attempts ?? 0}` });
+    lines.push(`Calendario delle consultazioni: prima le delegazioni più piccole, per ultime le più grandi; il Presidente della Repubblica ascolta e verifica chi può avere la fiducia delle Camere (nessuna sua preferenza personale: è la prassi dell’articolo 92).`);
     askPresident(majority);
     // The secretary of a party outside the winning coalition says whether it supports the majority taking shape
     // (or the one that would exist with its seats).
@@ -989,7 +1013,14 @@ export function formationStep({ formation, parliament, result, world = null, dat
     // The player's answer at the consultations (support or opposition) is part of the count.
     if (next.presidentChoice === 'dissolve') { step('fallita', 'Hai deciso di sciogliere le Camere: si torna al voto.'); return done({ dissolve: true }); }
     const majority = find();
-    if (!majority) { step('fallita', 'Le consultazioni non trovano una maggioranza in entrambe le Camere: il Presidente della Repubblica scioglie le Camere, si torna al voto.'); return done({ dissolve: true }); }
+    if (!majority && !next.exploratory) {
+      // before dissolving, an exploratory mandate: the President of a Chamber (a simulated figure) checks for a week whether a majority exists
+      next.exploratory = true;
+      next.consultationsEnd = advanceDays(date, 7);
+      step('consultazioni', 'Nessuna maggioranza per ora: il Presidente della Repubblica conferisce un mandato esplorativo al presidente di una Camera (figura simulata), che verifica in una settimana se esiste un’intesa.');
+      return done();
+    }
+    if (!majority) { step('fallita', next.exploratory ? 'Il mandato esplorativo si chiude senza esito: il Presidente della Repubblica scioglie le Camere, si torna al voto.' : 'Le consultazioni non trovano una maggioranza in entrambe le Camere: il Presidente della Repubblica scioglie le Camere, si torna al voto.'); return done({ dissolve: true }); }
     next.majority = majority;
     const leaderIsPlayer = majority.leaderId && majority.leaderId === playerRole.secretaryOf && playerRole.seated;
     if (leaderIsPlayer && !next.playerDeclined && !next.offeredToPlayer) {

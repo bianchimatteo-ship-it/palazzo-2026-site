@@ -8,9 +8,9 @@
 //   - the minister who contests the line in public and, if nobody listens, resigns with a quarrel.
 // The Prime Minister decides: when it is the player, requests, conflicts and meetings wait for him (and turn into their default if he lets them pass); when it is a simulated one, the same
 // rules are answered by chance seeded on the date. Everything is pure: the store passes the parliament and gets it back with the lines to tell.
-import { DATA_SOURCES } from '../data/schema.js?v=20261116-9';
-import { AREA_BY_ID, areasOfPortfolio } from '../data/simulation/policy-rules.js?v=20261116-9';
-import { activeMinisters, assignMinister, changePartner, groupProfile, parliamentInternals } from './parliament-engine.js?v=20261116-9';
+import { DATA_SOURCES } from '../data/schema.js?v=20261116-15';
+import { AREA_BY_ID, areasOfPortfolio } from '../data/simulation/policy-rules.js?v=20261116-15';
+import { activeMinisters, assignMinister, changePartner, groupProfile, parliamentInternals } from './parliament-engine.js?v=20261116-15';
 
 const { getGroup, record } = parliamentInternals;
 const SIM = DATA_SOURCES.SIMULATION;
@@ -193,6 +193,17 @@ export function advanceCabinetLife(input, { date, week = 0, rand = Math.random, 
   return { parliament: next, lines };
 }
 
+// The Prime Minister convenes the Council of Ministers on a matter of his choice (the agenda): the meeting opens now and waits for his decision (approve, postpone, reject). One at a time.
+export function convokeMeeting(parliament, area, date) {
+  const spec = AREA_BY_ID[area];
+  if (!spec) throw new Error('Scegli l’argomento all’ordine del giorno.');
+  const life = lifeOf(parliament.government);
+  if (life.meetings.some(item => !item.decidedAt)) throw new Error('C’è già un Consiglio dei ministri aperto: decidi prima su quello.');
+  const owner = ministerOfArea(parliament.government, area);
+  const meeting = { id: `consiglio-${date}-${area}`, area, topic: spec.label, openedAt: date, decidedAt: null, choice: null, convoked: true, minister: owner?.portfolio ?? null };
+  const next = setLife(parliament, { ...life, lastMeeting: date, meetings: [...life.meetings, meeting].slice(-6) });
+  return { parliament: log(next, date, 'consiglio-convocato', owner ? `Il Presidente del Consiglio convoca il Consiglio dei ministri: all’ordine del giorno ${spec.label.toLowerCase()} (relatore il ministro ${owner.portfolio}).` : `Il Presidente del Consiglio convoca il Consiglio dei ministri: all’ordine del giorno ${spec.label.toLowerCase()}.`, { auto: false, area }), lines: [`Convocato il Consiglio dei ministri su ${spec.label.toLowerCase()}.`] };
+}
 // ---------- the Prime Minister's answers ----------
 export function resolveRequest(parliament, id, choice, date, { auto = false } = {}) {
   const life = lifeOf(parliament.government);

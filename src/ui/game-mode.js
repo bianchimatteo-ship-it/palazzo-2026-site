@@ -1,40 +1,40 @@
-import { invitedShows } from '../core/scene-engine.js?v=20261116-9';
-import { voteCatalog } from '../core/vote-engine.js?v=20261116-9';
-import { openVotesOf } from '../core/lawmaking-engine.js?v=20261116-9';
-import { floorBand } from './floor-view.js?v=20261116-9';
-import { endedHeadline } from './hall-view.js?v=20261116-9';
-import { activityFor, activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20261116-9';
-import { playerRoles } from '../core/roles.js?v=20261116-9';
-import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20261116-9';
-import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, currentObjectiveLabel, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261116-9';
-import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261116-9';
-import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20261116-9';
-import { careerLevelLabel } from '../data/regions.js?v=20261116-9';
-import { advanceDays, formatDate } from '../core/time.js?v=20261116-9';
-import { renderBarometerPanel } from './polls-mode.js?v=20261116-9';
-import { PRESIDENT_ACTIVITIES } from '../data/simulation/presidency-rules.js?v=20261116-9';
-import { politicalCrisis } from '../core/presidency-engine.js?v=20261116-9';
-import { candidacyAccess } from './campaign-mode.js?v=20261116-9';
-import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20261116-9';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261116-9';
-import { societyMood } from '../core/society-engine.js?v=20261116-9';
-import { financeOutlook } from '../core/finance-engine.js?v=20261116-9';
-import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20261116-9';
-import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20261116-9';
-import { activeInstitutions, institutionLabel } from './local-mode.js?v=20261116-9';
-import { renderFinanceCard } from './finance-mode.js?v=20261116-9';
-import { renderStaffBand } from './staff-view.js?v=20261116-9';
-import { planAddButton } from './plan-view.js?v=20261116-9';
-import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20261116-9';
-import { stateBadge, statusChip } from './charts.js?v=20261116-9';
-import { articleHtml, newsMedia, renderNewsroomTabs } from './news-view.js?v=20261116-9';
-import { relevantArticles } from '../core/news-engine.js?v=20261116-9';
-import { identityMark, kindChip } from './party-identity.js?v=20261116-9';
-import { illustration } from './illustrations.js?v=20261116-9';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261116-9';
-import { avatarOf } from '../core/avatar.js?v=20261116-9';
-import { avatarSvg } from './avatar-svg.js?v=20261116-9';
-import { regionPriorities } from '../core/society-engine.js?v=20261116-9';
+import { invitedShows } from '../core/scene-engine.js?v=20261116-15';
+import { voteCatalog } from '../core/vote-engine.js?v=20261116-15';
+import { openVotesOf } from '../core/lawmaking-engine.js?v=20261116-15';
+import { floorBand } from './floor-view.js?v=20261116-15';
+import { endedHeadline } from './hall-view.js?v=20261116-15';
+import { activityFor, activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20261116-15';
+import { playerRoles } from '../core/roles.js?v=20261116-15';
+import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20261116-15';
+import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, currentObjectiveLabel, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261116-15';
+import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261116-15';
+import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20261116-15';
+import { careerLevelLabel } from '../data/regions.js?v=20261116-15';
+import { advanceDays, formatDate } from '../core/time.js?v=20261116-15';
+import { renderBarometerPanel } from './polls-mode.js?v=20261116-15';
+import { PRESIDENT_ACTIVITIES } from '../data/simulation/presidency-rules.js?v=20261116-15';
+import { politicalCrisis } from '../core/presidency-engine.js?v=20261116-15';
+import { candidacyAccess } from './campaign-mode.js?v=20261116-15';
+import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20261116-15';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261116-15';
+import { societyMood } from '../core/society-engine.js?v=20261116-15';
+import { financeOutlook } from '../core/finance-engine.js?v=20261116-15';
+import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20261116-15';
+import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20261116-15';
+import { activeInstitutions, institutionLabel } from './local-mode.js?v=20261116-15';
+import { renderFinanceCard } from './finance-mode.js?v=20261116-15';
+import { renderStaffBand } from './staff-view.js?v=20261116-15';
+import { planAddButton } from './plan-view.js?v=20261116-15';
+import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20261116-15';
+import { stateBadge, statusChip } from './charts.js?v=20261116-15';
+import { articleHtml, newsMedia, renderNewsroomTabs } from './news-view.js?v=20261116-15';
+import { relevantArticles } from '../core/news-engine.js?v=20261116-15';
+import { identityMark, kindChip } from './party-identity.js?v=20261116-15';
+import { illustration } from './illustrations.js?v=20261116-15';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261116-15';
+import { avatarOf } from '../core/avatar.js?v=20261116-15';
+import { avatarSvg } from './avatar-svg.js?v=20261116-15';
+import { regionPriorities } from '../core/society-engine.js?v=20261116-15';
 
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -167,6 +167,16 @@ function prioritiesBand(state, gc, expanded) {
   const priorities = briefing(state, gc, { bare: true });
   const count = (priorities.match(/class="briefing-item /g) ?? []).length;
   return band('PRIORITÀ DELLO STAFF', 'Cosa conta di più', 'Le questioni più urgenti della settimana, in ordine di importanza, con il posto dove agire.', priorities ? folded(priorities, 'briefing-grid', 'priorita', count, 2, 'tutte le priorità', expanded) : '<p class="quiet-copy">Nessuna emergenza: puoi dedicare la settimana a costruire consenso e rapporti.</p>', { className: 'hqc-priorities' });
+}
+// 2c. For the Prime Minister: the themes in crisis of the country, the national ones first and then the regions that suffer most, each with where to act (the Government page).
+function crisisTopicsBand(state) {
+  if (state.parliament?.government?.primeMinister !== 'player' || !['active', 'crisis'].includes(state.parliament.government.status)) return '';
+  const issues = (state.society?.issues ?? []).slice(0, 12);
+  const byTopic = new Map();
+  for (const issue of issues) { const row = byTopic.get(issue.topic) ?? { topic: issue.topic, severity: 0, national: false, regions: [] }; row.severity = Math.max(row.severity, issue.severity); if (issue.scope === 'nazionale') row.national = true; else if (issue.region && !row.regions.includes(issue.region)) row.regions.push(issue.region); byTopic.set(issue.topic, row); }
+  const rows = [...byTopic.values()].sort((a, b) => b.severity - a.severity).slice(0, 5);
+  const body = rows.length ? `<ul class="crisis-topics" data-crisis-topics>${rows.map(row => `<li data-crisis-topic="${esc(row.topic)}"><strong>${esc(row.topic)}</strong> <small>${row.national ? 'problema nazionale' : `in ${row.regions.slice(0, 3).map(esc).join(', ')}${row.regions.length > 3 ? ` e in altre ${row.regions.length - 3} Regioni` : ''}`} · gravità ${row.severity}</small></li>`).join('')}</ul><a class="secondary-button compact" href="#governo">Vai al Governo</a>` : '<p class="quiet-copy">Nessun tema in crisi: i principali indicatori del Paese sono sopra la soglia di allarme.</p>';
+  return band('PRESIDENTE DEL CONSIGLIO', 'Temi in crisi nel Paese', 'I problemi più gravi che ti chiedono una risposta: quelli nazionali e le Regioni che soffrono di più.', body, { id: 'crisis-topics' });
 }
 // 3. What to do, side by side: the decisions of the week and the activities that use the days that are left (the same planner that was a folded detail).
 function decisionsBand(state, expanded) {
@@ -697,6 +707,7 @@ export function renderHeadquarters(state, options = {}) {
     ${liveVoteBand(state)}
     ${resourcesBar(state, gc)}
     ${prioritiesBand(state, gc, expanded)}
+    ${crisisTopicsBand(state)}
     <div class="hqc-board hqc-board-act">
       ${decisionsBand(state, expanded)}
       ${homeFold('attivita', { kicker: 'ATTIVITÀ DELLA SETTIMANA', title: 'Come usi i giorni', icon: 'clock', summary: `${game.week.ap} giorni · ${free} attività` }, activitiesBand(state, gc), { className: 'hqc-foldwrap-act' })}
