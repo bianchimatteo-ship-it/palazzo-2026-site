@@ -629,7 +629,7 @@ const runC = playDays('giorni-beta', { founder: true });
   assert.deepEqual([recordOf(own.id).program, state.game.party.program.areas, state.world.parties.find(item => item.isPlayer).agenda], [['scuola', 'casa'], ['scuola', 'casa'], ['scuola', 'casa']], 'Cambiare il programma in carriera lo aggiorna ovunque.');
   assert.throws(() => run.store.setPartyProgram(['scuola']), /almeno due priorità/, 'Il sistema esistente chiede almeno due priorità.');
   const odds = run.store.allianceOdds(state.world.parties.find(item => !item.isPlayer && item.active).id);
-  assert.ok(odds.reasons.some(item => item.label === 'Programmi a confronto'), 'Il programma pesa nelle probabilità di un’intesa.');
+  assert.ok(odds.reasons.some(item => /^Compatibilità dei programmi/.test(item.label)), 'Il programma pesa nelle probabilità di un’intesa.');
   // Saved and reloaded: the same programme.
   const reloaded = (await import(new URL(`../src/core/store.js?programma=${Date.now()}`, import.meta.url).href)).store.getState();
   assert.deepEqual([reloaded.dataset.parties.find(item => item.id === own.id)?.program, reloaded.game.party.program?.areas, reloaded.world.parties.find(item => item.isPlayer)?.agenda], [['scuola', 'casa'], ['scuola', 'casa'], ['scuola', 'casa']], 'Dopo il ricaricamento il programma è quello salvato.');
