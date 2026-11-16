@@ -54,6 +54,18 @@ export const normalizeAvatar = (value, fallback = DEFAULT_AVATAR) => {
 };
 // The avatar to show for a politician record: its own (an avatar saved before the new traits keeps what it had; a trait that no longer exists, such as the old neutral face, and a missing one
 // take the stable default of the character), or the stable default of a career made before avatars.
+// A random look: every trait is drawn from its own options with the generator given (Math.random in the wizard, a seeded one in the tests). The face (masculine or feminine) is drawn too; beard and moustache
+// are drawn for the masculine face only (a choice of this generator, not a rule of the drawings), glasses one time in four. The proportions of the face stay as they are (the sliders are the player's own choice).
+export function randomAvatar(rand = Math.random, { keepShape = null } = {}) {
+  const pick = field => AVATAR_OPTIONS[field][Math.min(AVATAR_OPTIONS[field].length - 1, Math.floor(rand() * AVATAR_OPTIONS[field].length))].id;
+  const face = pick('face');
+  const masculine = face === 'maschile';
+  const beard = masculine && rand() < 0.4 ? pick('beard') : 'nessuna';
+  const moustache = masculine && beard === 'nessuna' && rand() < 0.2 ? pick('moustache') : 'nessuno';
+  const glasses = rand() < 0.25 ? AVATAR_OPTIONS.glasses[1 + Math.floor(rand() * (AVATAR_OPTIONS.glasses.length - 1))].id : 'nessuno';
+  const out = { face, skin: pick('skin'), hair: pick('hair'), hairstyle: pick('hairstyle'), beard, glasses, jacket: pick('jacket'), eyes: pick('eyes'), expression: pick('expression'), moustache };
+  return normalizeAvatar(keepShape ? { ...out, shape: keepShape } : out);
+}
 export const avatarOf = player => player ? (player.avatar && typeof player.avatar === 'object' && !Array.isArray(player.avatar) ? normalizeAvatar(player.avatar, defaultAvatarFor(player.id)) : defaultAvatarFor(player.id)) : { ...DEFAULT_AVATAR };
 // A value given with a wrong trait is refused; a missing trait is not a problem (it is completed with the default one).
 const shapeOk = value => value?.shape == null || (typeof value.shape === 'object' && !Array.isArray(value.shape) && Object.keys(value.shape).every(key => SHAPE_FIELDS.includes(key) && Number.isInteger(value.shape[key]) && Math.abs(value.shape[key]) <= SHAPE_LIMIT));

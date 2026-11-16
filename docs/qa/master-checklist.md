@@ -2,7 +2,7 @@
 
 Stati ammessi: **Non iniziato · In lavorazione · Completato · Bloccato**. Una voce è *Completato* solo con prova (file, test, screenshot). Branch `feature/qa-completamento`. Confrontata punto per punto con il documento di lavoro originale (sezioni 1–21) e con le aggiunte del 16/11 (sezione 22).
 
-Riepilogo: Bloccato 3 · Completato 110 · In lavorazione 20 · Non iniziato 36 · totale 169
+Riepilogo: Bloccato 3 · Completato 113 · In lavorazione 19 · Non iniziato 34 · totale 169
 
 
 ## 1. Regole operative
@@ -172,9 +172,9 @@ Riepilogo: Bloccato 3 · Completato 110 · In lavorazione 20 · Non iniziato 36 
 
 | Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|---|
-| 13.1 | Dimissioni da tutti gli incarichi (istituzionali/di partito) con conseguenze prima della conferma | Non iniziato |  |  |  |
-| 13.2 | Carriera da semplice iscritto/militante senza incarichi istituzionali | Non iniziato |  |  |  |
-| 13.3 | Avatar casuale | In lavorazione | src/ui/career-wizard.js | check-avatar | Avatar presente; «casuale» da verificare |
+| 13.1 | Dimissioni da tutti gli incarichi (istituzionali/di partito) con conseguenze prima della conferma | Completato | src/core/resignations.js, src/core/career-engine.js (recordResignation), src/core/store.js (resign), src/ui/hall-view.js, src/ui/career-page.js, src/ui/app.js | check-resignations, check-resignations-ui | Carriera › Incarichi e poteri › «Lascia un incarico»: ogni incarico (partito, seggio comunale/provinciale/regionale/europeo, sindaco/presidente, assessore, capogruppo, commissione, parlamentare, ministro, sottosegretario, premier, Presidente della Repubblica) con conseguenze lette prima; conferma che le ripete; annulla non cambia nulla. Screenshot: artifacts/qa/screenshots/after/dimissioni-*.png |
+| 13.2 | Carriera da semplice iscritto/militante senza incarichi istituzionali | Completato | src/core/career-rules.js, src/core/store.js (createCareer), src/ui/career-wizard.js, src/ui/app.js, src/ui/game-mode.js | check-resignations (partenza da iscritto, 20 settimane), check-avatar | Nuova carta «Semplice iscritto» nel wizard (percorso comunale/provinciale/regionale come residenza, nessun seggio né carica dal primo giorno); lo stato è raggiungibile anche dimettendosi da tutti gli incarichi. La Home mostra «Nessun incarico». |
+| 13.3 | Avatar casuale | Completato | src/core/avatar.js (randomAvatar), src/ui/career-wizard.js, src/ui/app.js | check-avatar (4b: 1500 estrazioni valide, tutte le opzioni raggiungibili, deterministico) | Pulsante «Avatar casuale» nell’editor: genera, si può ritoccare o ripremere; le proporzioni scelte restano. |
 | 13.4 | Ruoli e autorizzazioni delle azioni controllati | Non iniziato |  |  |  |
 | 13.5 | Schermate e menu più chiari; gioco meno monotono senza perdere contenuti | Non iniziato |  |  |  |
 

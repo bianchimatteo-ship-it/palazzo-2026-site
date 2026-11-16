@@ -20,7 +20,8 @@ export const STARTING_ROLES = Object.freeze({
 });
 export const STARTING_OFFICES = Object.freeze({
   presidenteConsiglio: { label: 'Presidente del Consiglio' },
-  presidenteRepubblica: { label: 'Presidente della Repubblica — scenario alternativo' }
+  presidenteRepubblica: { label: 'Presidente della Repubblica — scenario alternativo' },
+  iscritto: { label: 'Semplice iscritto — nessun incarico' }
 });
 const isValidDate = value => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return false;
@@ -71,6 +72,7 @@ export function validateCareerStep(draft, step, selectableParties, parliamentary
     const directPresident = draft.startingOffice === 'presidenteRepubblica';
     if (!level) errors.push('Scegli un percorso iniziale.');
     else if (draft.startingOffice && !startingOffice) errors.push('Scegli un punto di partenza valido.');
+    else if (draft.startingOffice === 'iscritto' && !['comunale', 'provinciale', 'regionale'].includes(draft.initialLevel)) errors.push('Chi parte da semplice iscritto sceglie il territorio dove vive: il percorso deve essere comunale, provinciale o regionale.');
     else if (draft.startingOffice === 'presidenteConsiglio' && !externalPremier && !level.chamber) errors.push('Per iniziare da Presidente del Consiglio scegli Camera, Senato o un contesto esterno al Parlamento.');
     else if (draft.initialLevel === 'provinciale' && !hasProvincialLevel({ region: draft.region, provinceCode: draft.provinceCode, provinceType: draft.provinceType })) errors.push(PROVINCIAL_LEVEL_PROBLEM);
     else if (level.chamber && !externalPremier && !directPresident) {

@@ -1816,6 +1816,24 @@ export function quitParty(input, env) {
   return { ctx };
 }
 
+// The consequences of a resignation on the game record (the structures of the office itself are changed by the store): stats once, the party's mood if the role was the party's, the log and the memory.
+// `post` is the entry of core/resignations.js; `leaveRole` turns a party role into a plain membership (a founder or a secretary becomes a member; the party chooses a new guide).
+export function recordResignation(input, env, post, { leaveRole = false } = {}) {
+  const ctx = start(input);
+  const lines = applyEffects(ctx, { stats: post.stats ?? {} });
+  const party = ctx.game.party;
+  if (leaveRole && party) {
+    const was = party.rankTitle;
+    party.affiliation = 'member'; party.rank = 0; party.rankTitle = PARTY_RANKS[0].title;
+    if (post.party?.support) party.support = clamp(party.support + post.party.support);
+    if (party.org && post.party?.cohesion) party.org.cohesion = Math.round(clamp((party.org.cohesion ?? 50) + post.party.cohesion));
+    (party.history ??= []).push({ week: ctx.game.week.index, date: env.currentDate, text: `Lascia l’incarico: ${was}`, source: SIM });
+  }
+  remember(ctx.game, { date: env.currentDate, kind: 'dimissioni', text: `Dimissioni: ${post.label}${post.where ? ` (${post.where})` : ''}`, weight: 1.2 });
+  addLog(ctx.game, env.currentDate, 'carriera', `Ti dimetti: ${post.label}`, lines, 'neutral');
+  return { ctx };
+}
+
 // ---------- the internal life: the player's own moves ----------
 // The request the player answers from the Party page (the same answers as in the agenda).
 export function lifeRespond(input, env, requestId, choice) {

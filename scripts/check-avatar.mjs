@@ -254,6 +254,27 @@ assert.ok(!('legacyGender' in playerOf(load(JSON.stringify(okFile)))), 'Un valor
 assert.doesNotThrow(() => validateEntity('politicians', { id: 'p1', firstName: 'A', lastName: 'B', source: 'user', gender: 'uomo', legacyGender: 'non-binario' }), 'Lo schema conosce legacyGender.');
 lines.push('genere: solo uomo e donna, vecchi valori normalizzati senza perdita');
 
+
+// ---------- 4b. the random avatar ----------
+{
+  const seeded = seed => { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
+  const rand = seeded(7);
+  const seen = Object.fromEntries(A.AVATAR_FIELDS.map(field => [field, new Set()]));
+  for (let n = 0; n < 1500; n++) {
+    const look = A.randomAvatar(rand);
+    assert.ok(A.isValidAvatar(look), 'Ogni avatar casuale è valido (ogni campo ha un valore noto).');
+    if (look.face === 'femminile') assert.ok(look.beard === 'nessuna' && look.moustache === 'nessuno', 'Barba e baffi solo col volto maschile.');
+    for (const field of A.AVATAR_FIELDS) seen[field].add(look[field]);
+    assert.ok(typeof avatarSvg(look) === 'string' && avatarSvg(look).includes('<svg'), 'Ogni avatar casuale si disegna.');
+  }
+  for (const field of A.AVATAR_FIELDS) if (field !== 'beard' && field !== 'moustache') assert.equal(seen[field].size, A.AVATAR_OPTIONS[field].length, `Con molte estrazioni compaiono tutte le opzioni di ${field}.`);
+  assert.deepEqual(A.randomAvatar(seeded(3)), A.randomAvatar(seeded(3)), 'Stesso generatore, stesso avatar.');
+  assert.notDeepEqual(A.randomAvatar(seeded(3)), A.randomAvatar(seeded(4)), 'Generatori diversi, avatar diversi.');
+  const shaped = A.randomAvatar(seeded(5), { keepShape: { w: 2, j: -1, d: 0, s: 1, b: 0, m: 0 } });
+  assert.equal(shaped.shape?.w, 2, 'Le proporzioni scelte dal giocatore restano.');
+  lines.push('avatar casuale: sempre valido e disegnabile, tutte le opzioni raggiungibili, deterministico col generatore, proporzioni conservate');
+}
+
 // ---------- 5. the rendering of the wizard ----------
 const view = d => renderCareerWizard(store.getState(), { ...realisticDraft('2026-09-24'), region: 'Toscana', municipality: 'Siena', municipalityCode: '052032', ...d }, db.parties, () => null, db.parliamentaryGroups, [], [], db.politicians, territory);
 const first = view({ step: 1 });
@@ -404,7 +425,7 @@ await withBrowser(async browser => {
 
   // screen 3: the career path, on its own page
   assert.equal(await t.kicker(), 'PASSAGGIO 03 / 06'); assert.equal(await t.title(), 'Scegli la tua carriera');
-  assert.equal(await evaluate(`document.querySelectorAll('.level-cards .level-card').length`), 8, 'Otto carte: sei percorsi e i due scenari.');
+  assert.equal(await evaluate(`document.querySelectorAll('.level-cards .level-card').length`), 9, 'Nove carte: sei percorsi, i due scenari istituzionali e il semplice iscritto.');
   assert.ok(!(await t.has('.menu-popup')) && (await t.has('.career-wizard')), 'È una pagina del wizard, non un popup.');
   assert.ok(!(await t.has('[data-wizard-region]')) && /Siena/.test(await t.text('.career-where')), 'Il territorio scelto resta in vista, senza ripeterne i campi.');
   assert.ok(!(await t.has('[data-wizard-group-search]')) && !(await t.has('[data-pdc-context]')), 'Per un percorso locale non ci sono opzioni parlamentari.');
@@ -552,7 +573,7 @@ await withBrowser(async browser => {
   assert.equal(await t.title(), 'Choose your career');
   assert.deepEqual(italianWords(await t.text('.wizard-body')), [], 'Inglese: la pagina della carriera non ha parole italiane.');
   assert.ok((await t.overflow()) <= 1, 'Telefono: la pagina della carriera non scorre di lato.');
-  assert.equal(await evaluate(`document.querySelectorAll('.level-cards .level-card').length`), 8);
+  assert.equal(await evaluate(`document.querySelectorAll('.level-cards .level-card').length`), 9);
   assert.deepEqual(errors, [], 'Nessun errore in pagina.');
 }, { language: 'en' });
 console.log(`Avatar e nuovo wizard verificati: ${lines.join('; ')}; in Chrome, in italiano e in inglese e su telefono (375 px), le sei schermate nell’ordine, l’editor con anteprima immediata e sfondo sfocato solo dietro, avanti e indietro, annulla, validazioni, la carriera creata con il suo avatar (distinto dal genere) in Home, Profilo e Parlamento, dopo il riavvio e per una vecchia carriera.`);

@@ -27,7 +27,7 @@ import { renderElectionNight } from './lazy-views.js?v=20261116-18';
 import { PROFESSIONS, chosenPlace, makeCareerDraft, pollScenarioOf, removePartyCriterion, renderCareerWizard, togglePartyOrientation, wizardLogoPreview } from './career-wizard.js?v=20261116-18';
 import { userPartyLogo } from './party-logo.js?v=20261116-18';
 import { WIZARD_VIEWS, validateWizardStep } from '../core/career-rules.js?v=20261116-18';
-import { avatarOf, normalizeAvatar } from '../core/avatar.js?v=20261116-18';
+import { avatarOf, normalizeAvatar, randomAvatar } from '../core/avatar.js?v=20261116-18';
 import { avatarSvg } from './avatar-svg.js?v=20261116-18';
 import { renderElectionsHub } from './lazy-views.js?v=20261116-18';
 import { renderQuirinale } from './lazy-views.js?v=20261116-18';
@@ -1920,6 +1920,13 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       return;
     }
     // The end of a career (retirement), the Hall of Fame and the legacy.
+    const resignButton = event.target.closest('[data-resign]');
+    if (resignButton) {
+      const post = store.resignationPosts().find(item => item.id === resignButton.dataset.resign);
+      if (!post) { render(store.getState(), store.getLastSaved()); return; }
+      confirmThen({ kicker: 'DIMISSIONI', title: `Dimetterti: ${post.label}?`, body: post.lines.join(' '), confirmLabel: 'Dimettiti', tone: 'danger' }, () => store.resign(post.id));
+      return;
+    }
     const retireButton = event.target.closest('[data-retire]');
     if (retireButton) {
       const kind = retireButton.dataset.retire;
@@ -2226,6 +2233,15 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       // A ready colour for the second colour of the logo: it is written in the picker and in its value, and the preview follows.
       const logoSwatch = event.target.closest('[data-logo-secondary]');
       if (logoSwatch) { syncWizardDraft(); wizard.partyLogoSecondaryColor = logoSwatch.dataset.logoSecondary; const top = root.querySelector?.('.wizard-body')?.scrollTop ?? 0; render(store.getState(), store.getLastSaved()); const body = root.querySelector?.('.wizard-body'); if (body) body.scrollTop = top; return; }
+      if (event.target.closest('[data-avatar-random]')) {
+        syncWizardDraft();
+        wizard.avatar = randomAvatar(Math.random, { keepShape: wizard.avatar?.shape ?? null }); wizard.errors = [];
+        const top = root.querySelector?.('.wizard-body')?.scrollTop ?? 0;
+        render(store.getState(), store.getLastSaved());
+        const body = root.querySelector?.('.wizard-body'); if (body) body.scrollTop = top;
+        root.querySelector?.('[data-avatar-random]')?.focus?.({ preventScroll: true });
+        return;
+      }
       if (event.target.closest('[data-avatar-shape-reset]')) {
         syncWizardDraft();
         const { shape, ...rest } = wizard.avatar ?? {};
@@ -2287,7 +2303,10 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       }
       else if (startingOffice) {
         syncWizardDraft();
-        if (startingOffice === 'presidenteRepubblica') {
+        if (startingOffice === 'iscritto') {
+          wizard.initialLevel = ['comunale', 'provinciale', 'regionale'].includes(wizard.initialLevel) ? wizard.initialLevel : 'comunale'; wizard.parliamentStartMode = 'real-context'; wizard.parliamentaryGroupId = ''; wizard.groupQuery = '';
+          wizard.startingRole = wizard.partyMode === 'existing' ? wizard.startingRole ?? 'militante' : null;
+        } else if (startingOffice === 'presidenteRepubblica') {
           wizard.initialLevel = 'comunale'; wizard.parliamentStartMode = 'presidential-scenario'; wizard.parliamentaryGroupId = ''; wizard.groupQuery = '';
           wizard.partyMode = 'independent'; wizard.partyId = ''; wizard.startingRole = null;
         } else {

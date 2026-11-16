@@ -72,7 +72,9 @@ const institutionLinks = state => { const active = activeInstitutions(state); re
 function identity(state, gc, options) {
   const { player, stats } = gc;
   const game = state.game;
-  const office = state.dataset.offices.find(item => item.id === player?.roleId);
+  const roleOffice = state.dataset.offices.find(item => item.id === player?.roleId);
+  // an office that ended with nothing open after it (a resignation, a plain member) is no office: «Nessun incarico»
+  const office = roleOffice?.endDate && !state.dataset.offices.some(item => item.politicianId === player?.id && !item.endDate && item.level !== 'partito') && state.game?.status !== 'ended' ? null : roleOffice;
   const territory = state.dataset.territories.find(item => item.id === player?.territoryId)?.name ?? player?.region ?? 'Italia';
   const status = game.flags?.comebackFrom ? ['Traversata nel deserto', 'danger'] : (stats.reputation ?? 50) < 20 || (game.party && game.party.support < 25) ? ['Carriera in pericolo', 'danger'] : ['Carriera attiva', 'ok'];
   // What each chip speaks of, with the glyph of its kind: the party (in the colour of the career), the parliamentary group, the institution. The party is the one of the game, with its

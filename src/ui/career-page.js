@@ -8,7 +8,7 @@ import { formatDate } from '../core/time.js?v=20261116-18';
 import { startOverview } from '../core/start-engine.js?v=20261116-18';
 import { renderGoals } from './goals-view.js?v=20261116-18';
 import { renderChallenges } from './challenge-view.js?v=20261116-18';
-import { renderRetirement } from './hall-view.js?v=20261116-18';
+import { renderRetirement, resignationsPanel } from './hall-view.js?v=20261116-18';
 import { glyph, officeIcon } from './visuals.js?v=20261116-18';
 import { REPUTATIONS, REPUTATION_IDS } from '../data/simulation/standing-rules.js?v=20261116-18';
 import { renderCareerTimeline, renderMemoryPanel, renderRolesPanel, renderWhyPanel } from './game-mode.js?v=20261116-18';
@@ -187,7 +187,7 @@ export function renderCareerPage(state, { tab = null, timelineFilter = 'tutto', 
       ${blocked.length ? card({ kicker: 'NON ANCORA A PORTATA', title: 'Cosa manca', body: `<ul class="cp-blocked">${blocked.map(track => `<li><span class="cp-track-icon">${glyph(track.icon, 16)}</span><span><strong>${esc(track.label)}: ${esc(track.next.title)}</strong><small>${esc(track.problems?.length ? track.problems.join(' ') : track.blocker ?? track.requirement)}</small></span>${actionButton(track.action, null, false)}</li>`).join('')}</ul>` }) : ''}
       ${card({ kicker: 'STORICO DEI TENTATIVI · SIMULAZIONE', title: `${overview.contests.length} ${overview.contests.length === 1 ? 'tentativo' : 'tentativi'}`, body: contestsTable(overview.contests) })}`;
   } else if (active === 'incarichi') {
-    body = `<div class="sx-grid two">${card({ kicker: 'INCARICHI', title: 'Cosa ricopri', body: officesCard(state, player) })}${card({ kicker: 'RUOLI E POTERI', title: 'Cosa puoi fare adesso', body: renderRolesPanel(state) })}</div>`;
+    body = `<div class="sx-grid two">${card({ kicker: 'INCARICHI', title: 'Cosa ricopri', body: officesCard(state, player) })}${card({ kicker: 'RUOLI E POTERI', title: 'Cosa puoi fare adesso', body: renderRolesPanel(state) })}</div>${state.game.status === 'ended' ? '' : card({ kicker: 'DIMISSIONI', title: 'Lascia un incarico', body: resignationsPanel(state) })}`;
   } else if (active === 'cronologia') {
     body = `<div class="cp-two-col">${card({ kicker: 'CRONOLOGIA · SIMULAZIONE', title: 'La tua carriera, tappa per tappa', body: renderCareerTimeline(state, timelineFilter), className: 'career-timeline-panel' })}${card({ kicker: 'MEMORIA POLITICA', title: 'Quello che non si dimentica', body: renderMemoryPanel(state) })}</div>`;
   } else {

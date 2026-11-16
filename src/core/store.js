@@ -32,7 +32,7 @@ import { END_KINDS, addToHall, careerFacts, hallEntry, legacyBoon, legacyScore, 
 import { COMMITTEE_ACTIONS, committeeSupport, committeesAfterVote, createCommittees } from './committee-engine.js?v=20261116-18';
 import { changePartner } from './parliament-engine.js?v=20261116-18';
 import { governmentSpendingReview, playerSeatedOn, accordApplies, accordConflicts, parliamentInternals, premierGroupOf, answerCommitment, ensureAccord, offerConcession, tickAccord, changeSeats, checkMajority, record as recordParliament, setConfidenceVote, setGroupDirective, createReferenceGovernment, neverHadGovernment, offerGroupSupport, requestGovernmentPost, withdrawGroupSupport, partnerSatisfaction, acceptLawDemand, activeMinisters, amendLawPolicy, askConfidenceOnLaw, groupProfile, issueDecree, majoritySummit, reshuffleMinister, setGovernmentProgram, settlePartnerDemand, withdrawLaw, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20261116-18';
-import { activityProblem, dissolutionWait, situation, addProvincialCalendar, declareAmbition, scheduleEarlyLocalElection, alignLocalCalendar, localCalendarOf, committeeAction, startTreasuryOperation, requestFundsFromParty, payIntoParty, staffChange, staffGive, staffSetStatus, setCommunication, setPartyProgram, addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, assignOrgans, callEarlyCongress, contestPartyRank, createGameState, disciplineGroup, expelDissidents, isSecretary, joinParty, makeInvestment, nextPartyRank, partyInvestment, lifeBreakPact, lifeCadre, lifeCongress, lifeFound, lifeMerge, lifeOverview, lifeRebuild, lifeRename, lifeRespond, partyOpsAvailability, saveForElection, saveReserve, takeReserve, scheduleEarlyElection, setCandidacyRule, setPartyLine, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20261116-18';
+import { activityProblem, dissolutionWait, situation, addProvincialCalendar, declareAmbition, scheduleEarlyLocalElection, alignLocalCalendar, localCalendarOf, committeeAction, startTreasuryOperation, requestFundsFromParty, payIntoParty, staffChange, staffGive, staffSetStatus, setCommunication, setPartyProgram, addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, assignOrgans, callEarlyCongress, contestPartyRank, createGameState, disciplineGroup, expelDissidents, isSecretary, joinParty, makeInvestment, nextPartyRank, partyInvestment, lifeBreakPact, lifeCadre, lifeCongress, lifeFound, lifeMerge, lifeOverview, lifeRebuild, lifeRename, lifeRespond, partyOpsAvailability, saveForElection, saveReserve, takeReserve, scheduleEarlyElection, setCandidacyRule, setPartyLine, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, recordResignation, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20261116-18';
 import { ADVANCE_RULES, AMENDMENT_CAPITAL_COST, COMMUNICATION_STYLES, GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS, PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261116-18';
 import { syncAgendas, advanceLegislativeWeek, amendOthersLaw, amendmentOdds, castFloorVote, floorKeyOf, linkGroupsToParties, setPlayerVote, speakOnLaw, BALLOTS, openVotesNotice, openVotesOf } from './lawmaking-engine.js?v=20261116-18';
 import { seededRandom } from './vote-engine.js?v=20261116-18';
@@ -57,6 +57,7 @@ import { classifyOutcome, nationalListShares, preferenceStanding } from './elect
 import { DIFFICULTIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261116-18';
 import { POLL_EXTENSIONS, WORLD_PARTY_COUNT } from '../data/simulation/polling-rules.js?v=20261116-18';
 import { hasPower as holdsPower } from './office-engine.js?v=20261116-18';
+import { resignationPosts as resignationPostsOf } from './resignations.js?v=20261116-18';
 import { playerRoles, candidacyFacts, heldOfficesOf, institutionTarget as officeTargetOf, isPrimeMinister, officeFactsDetail, officeFactsDetailOf } from './roles.js?v=20261116-18';
 import { activityFor, costProblem, leavePartyFor, sceneFactor, memoryAbout, memoryBalance, memoryWeight, recordWhy, remember, scheduleFollowUp } from './career-engine.js?v=20261116-18';
 import { addLedger, advanceElection, ledgerLabel, affinity, applyPresidentCredit, composeAssembly, createPresidency, dealWithBloc, declareCandidacy, lineText, normalizePresidency, openElection as openPresidentialElection, playerStanding, presidencySchedule, presidentActivityEffects, presidentActivityProblem, politicalCrisis, presidentWeek, presidentialEligibility, proclaim, projection, quorumFor, resignPresidency, setPlayerLine, setPlayerVote as setPresidentialVote, settleLedger, sponsorCandidate, startPlayerPresidency, termEndOf, vetoCandidate, whiteSemester, withdrawCandidacy } from './presidency-engine.js?v=20261116-18';
@@ -5818,6 +5819,42 @@ export const store = {
   renameParty(args) {
     return commitGame(lifeRename({ game: state.game, stats: statsOf(state), parliament: state.parliament }, gameEnv(state), args), 'Nuovo nome registrato');
   },
+  // ---------- resignations: any single office, with its consequences shown first (core/resignations.js) ----------
+  resignationPosts() { return state.game ? resignationPostsOf(state) : []; },
+  resign(postId) {
+    if (!state.game) throw new Error('Nessuna carriera in corso.');
+    const post = resignationPostsOf(state).find(item => item.id === postId);
+    if (!post) throw new Error('Questo incarico non c’è più: la pagina si è aggiornata.');
+    if (post.blocked) throw new Error(post.blocked);
+    if (post.kind === 'presidente') return this.presidentResign();
+    const today = state.clock.currentDate, player = playerOf(state), [kind, instId] = String(postId).split(':');
+    let next = state;
+    const patchInstitution = patch => ({ ...next, local: { ...localOf(next), institutions: localOf(next).institutions.map(item => item.id === instId ? { ...item, ...patch(item) } : item) } });
+    if (kind === 'locale') {
+      const inst = localOf(next).institutions.find(item => item.id === instId && item.status === 'active');
+      if (!inst) throw new Error('Questo incarico non c’è più.');
+      next = { ...next, dataset: inst.kind === 'europa' ? closeTermOffices(next.dataset, player?.id, ELECTION_OF_SCOPE.europa, today, 'dimissioni') : closeLocalTermOffices(next.dataset, player?.id, ELECTION_OF_SCOPE[inst.kind], inst.name, today, 'dimissioni') };
+      next = withLocalLevel(closeInstitution(next, inst.kind, today, 'concluso', { id: inst.id }));
+    } else if (kind === 'capogruppo-locale') next = patchInstitution(() => ({ playerGroupLead: false }));
+    else if (kind === 'commissione-ue') next = patchInstitution(item => ({ ep: { ...item.ep, role: null } }));
+    else if (kind === 'parlamento') {
+      next = next.career.parliamentContext ? endMandate(next, 'Dimissioni da parlamentare') : computeParliamentUpdate(next, leaveParliament(next.parliament, today, 'Dimissioni da parlamentare'), next.ui.toast);
+      next = { ...next, game: { ...next.game, flags: { ...next.game.flags, groupLeader: null } } };
+    } else if (kind === 'capogruppo') next = { ...next, game: { ...next.game, flags: { ...next.game.flags, groupLeader: null } } };
+    else if (kind === 'commissione') {
+      const standing = next.parliament.careerStanding;
+      const parliament = { ...next.parliament, careerStanding: { ...standing, committeeRole: null, roleLevel: 0, position: next.parliament.player?.chamber === 'senato' ? 'Senatore' : 'Deputato', roles: (standing.roles ?? []).map(role => role.endedAt ? role : { ...role, endedAt: today }) } };
+      next = computeParliamentUpdate(next, parliament, next.ui.toast);
+    } else if (kind === 'ministro') {
+      const government = next.parliament.government;
+      next = computeParliamentUpdate(next, { ...next.parliament, government: { ...government, ministers: government.ministers.map(item => item.playerAppointed && !item.endedAt ? { ...item, endedAt: today, endReason: 'Dimissioni' } : item) } }, next.ui.toast);
+    } else if (kind === 'premier') next = computeParliamentUpdate(next, triggerGovernmentCrisis(next.parliament, today), next.ui.toast);
+    else if (kind === 'sottosegretario') next = { ...next, game: { ...next.game, flags: { ...next.game.flags, scenarioOffice: null } } };
+    const result = recordResignation({ game: next.game, stats: statsOf(next), parliament: next.parliament }, gameEnv(next), post, { leaveRole: kind === 'partito' });
+    state = applyGameResult(next, result.ctx, `Ti sei dimesso: ${post.label}`, []);
+    persist(); emit();
+    return { resigned: post.id, label: post.label };
+  },
   leaveParty() {
     const label = state.game.party?.label ?? 'il partito';
     const result = quitParty({ game: state.game, stats: statsOf(state), parliament: state.parliament }, gameEnv(state));
@@ -6902,6 +6939,13 @@ export const store = {
     if (!directPresident && draft.initialLevel === 'provinciale' && world) state = withInstitution(state, simulatedInstitution(state, 'provincia', today));
     // A European career starts with a seat in the European Parliament, in the group of the own party (or non-attached).
     if (!directPresident && draft.initialLevel === 'europeo' && world) state = withInstitution(state, europeanInstitution(state, today));
+    // A plain member starts with no office at all: the councils and the term the territory gives to a local career are closed on the first day, with no consequence on the stats (nothing was lost).
+    if (draft.startingOffice === 'iscritto' && world) {
+      for (const inst of localOf(state).institutions.filter(item => item.status === 'active')) state = closeInstitution(state, inst.kind, today, 'concluso', { id: inst.id });
+      state = { ...state, dataset: { ...state.dataset, offices: state.dataset.offices.map(item => item.politicianId === playerId && !item.endDate && item.level !== 'partito' ? { ...item, endDate: today, endReason: 'inizio come semplice iscritto' } : item) } };
+      state = withLocalLevel(state);
+      if (state.career.currentLevel) state = { ...state, career: { ...state.career, currentLevel: null } };
+    }
     timelineBase = state;
     persist({ force: true }); emit();
     return player;
