@@ -4800,6 +4800,8 @@ export const store = {
     const candidacy = advancementOdds(candidacyKind, { factors: progressionFactors({ game, stats: statsOf(state), parliament: state.parliament }), threshold: 52, game, capital: game.resources.politicalCapital });
     const standingBonus = party?.affiliation === 'member' ? Math.max(-2, Math.min(2.2, (candidacy.score - 52) * 0.06)) : 0;
     const transfer = Math.round(game.resources.funds * 0.6);
+    // The political capital of the career is split too: 60% goes to the campaign (never copied: it leaves the career's own stock), the rest stays; the funds are a different resource and are not touched by this.
+    const capitalBefore = Math.max(0, Math.round(game.resources.politicalCapital ?? 0)), capitalMoved = Math.round(capitalBefore * 0.6), capitalLeft = capitalBefore - capitalMoved;
     // The election fund (plus donors' share) and the party treasury back the candidate too.
     const fundTotal = Math.round((game.finance?.electionFund ?? 0) * 1.15);
     const org = party?.org;
@@ -4809,6 +4811,7 @@ export const store = {
     const home = raceSite ? { region: raceSite.region, provinceCode: raceSite.provinceCode, municipality: raceSite.municipality } : homePlace(state);
     const committees = org?.committees?.length ? committeeSupport(org, { electionType: config.electionType, region: home.region, provinceCode: home.provinceCode, municipality: home.municipality, week: game.week.index, party }) : null;
     candidate.resources.money += transfer + game.prep * 30 + fundTotal + partyFunds + (committees?.funds ?? 0);
+    candidate.resources.politicalCapital = (candidate.resources.politicalCapital ?? 0) + capitalMoved;
     if (committees) { candidate.resources.volunteers += committees.volunteers; candidate.resources.organization = Math.max(0, Math.min(100, candidate.resources.organization + committees.organization)); }
     candidate.resources.volunteers += Math.max(0, Math.round(game.prep / 6 + ((relationValue(game, 'civic') ?? 45) - 45) / 8)) + (hasAsset(game.finance, 'piattaforma') ? 3 : 0);
     candidate.resources.organization = Math.min(100, candidate.resources.organization + Math.round(game.prep / 5));
@@ -4923,15 +4926,16 @@ export const store = {
     campaign.totalDays = Math.max(21, elapsedDays(state.clock.currentDate, election.electionDate));
     campaign.electionDate = election.electionDate;
     campaign.scheduledElectionId = election.id;
-    campaign.preparation = { prep: game.prep, transfer, fund: fundTotal, partyFunds, partyBonus: round2(partyBonus), pollBonus: poll.bonus, pollParts, pollShare: poll.share, allies: poll.allies, moodBonus, memory: { bonus: memoryBonus, highlights: memory.highlights.map(item => ({ text: item.text, tone: item.tone, week: item.week })) }, selection: selection ? { method: selection.method, bonus: selection.bonus } : null, committees, source: 'simulation' };
+    campaign.preparation = { prep: game.prep, transfer, capital: { before: capitalBefore, moved: capitalMoved, left: capitalLeft }, fund: fundTotal, partyFunds, partyBonus: round2(partyBonus), pollBonus: poll.bonus, pollParts, pollShare: poll.share, allies: poll.allies, moodBonus, memory: { bonus: memoryBonus, highlights: memory.highlights.map(item => ({ text: item.text, tone: item.tone, week: item.week })) }, selection: selection ? { method: selection.method, bonus: selection.bonus } : null, committees, source: 'simulation' };
     if (programmes.volunteers || programmes.organization || programmes.selection) campaign.history.unshift({ id: `programmi-${campaign.id}`, day: 0, date: state.clock.currentDate, type: 'preparazione', text: `Programmi finanziati nei mesi scorsi: ${programmes.volunteers ? `+${programmes.volunteers} volontari` : ''}${programmes.organization ? ` · +${programmes.organization} organizzazione` : ''}${programmes.selection ? ` · peso nelle candidature +${programmes.selection}` : ''}`.replace(': ·', ':').replace(/\s+/g, ' '), source: 'simulation' });
     if (committees?.committees.length) campaign.history.unshift({ id: `comitati-${campaign.id}`, day: 0, date: state.clock.currentDate, type: 'preparazione', text: `Comitati del territorio: forza ${committees.strength}/100 · ${committees.volunteers} volontari${committees.gotv ? ` (mobilitazione +${committees.gotv})` : ''}${committees.funds ? ` · ${committees.funds.toLocaleString('it-IT')} € raccolti` : ''} · candidatura ${committees.nomination >= 0 ? '+' : ''}${committees.nomination} · consenso locale ${committees.localSupport >= 0 ? '+' : ''}${committees.localSupport}${committees.control ? ` · responsabili locali: controllo ${committees.control.index}/100 (${committees.control.byStance.tuo + committees.control.byStance['con-te']} con te, ${committees.control.byStance.distante + committees.control.byStance.contro} distanti o contro)` : ''}`, source: 'simulation' });
     if (startMod.notes.length) campaign.history.unshift({ id: `partenza-${campaign.id}`, day: 0, date: state.clock.currentDate, type: 'preparazione', text: `Condizioni di partenza: ${startMod.notes.join(' · ')}`, source: 'simulation' });
-    campaign.history.unshift({ id: `preparazione-${campaign.id}`, day: 0, date: state.clock.currentDate, type: 'preparazione', text: `Preparazione ${game.prep}/100 · ${transfer} € dalla carriera${fundTotal ? ` · ${fundTotal} € dal fondo elettorale` : ''}${partyFunds ? ` · ${partyFunds} € dal partito` : ''} · sostegno interno ${partyBonus >= 0 ? '+' : ''}${round2(partyBonus)} · sondaggi ${poll.bonus >= 0 ? '+' : ''}${poll.bonus}`, source: 'simulation' });
+    campaign.history.unshift({ id: `preparazione-${campaign.id}`, day: 0, date: state.clock.currentDate, type: 'preparazione', text: `Preparazione ${game.prep}/100 · ${transfer} € dalla carriera · capitale politico ${capitalMoved} su ${capitalBefore} (60%) alla campagna, ${capitalLeft} restano${fundTotal ? ` · ${fundTotal} € dal fondo elettorale` : ''}${partyFunds ? ` · ${partyFunds} € dal partito` : ''} · sostegno interno ${partyBonus >= 0 ? '+' : ''}${round2(partyBonus)} · sondaggi ${poll.bonus >= 0 ? '+' : ''}${poll.bonus}`, source: 'simulation' });
     const nextGame = deepCopy({ ...(race ? game : markElectionRunning(game, election.id, campaign.id)), prep: 0 });
     // The candidacy goes on the books: one main competition a year, never two campaigns that touch.
     nextGame.candidacies = [...(nextGame.candidacies ?? []).filter(item => item.id !== election.id), candidacyRecord({ id: election.id, type: config.electionType, label: election.label, windowOpensAt: election.windowOpensAt, electionDate: election.electionDate, early: election.early, kind: race ? 'gara' : 'elezione' })];
     book(nextGame, -transfer, 'campagne', `Fondi trasferiti alla campagna: ${election.label}`, state.clock.currentDate);
+    nextGame.resources.politicalCapital = capitalLeft;
     releaseElectionFund(nextGame, state.clock.currentDate);
     if (partyFunds) treasuryBook(nextGame.party.org, -partyFunds, 'campagne', `Sostegno alla candidatura: ${election.label}`);
     // The choices the player made in the setup (the theme) are the first ones of the campaign's selects.

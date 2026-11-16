@@ -7774,6 +7774,8 @@ export const PHRASES = [
   ["Il tuo parere è importante! Lascia una recensione sincera su Google Play e aiutaci a migliorare il gioco.", "Your opinion matters! Leave an honest review on Google Play and help us improve the game."],
   ["Lascia una recensione", "Leave a review"],
   ["Non ora", "Not now"],
+  ["Capitale politico: # su # (il 60%) passano alla campagna, # restano a te. I fondi sono un’altra risorsa.", "Political capital: # of # (60%) go to the campaign, # stay with you. Funds are a separate resource."],
+  ["capitale politico # su # (60%) alla campagna, # restano", "political capital # of # (60%) to the campaign, # remain"],
   ["{}: l’intervista su {}", "{1}: the interview on {2}"],
   ["{}: la conferenza stampa su {}", "{1}: the press conference on {2}"],
   ["{}: l’ospitata televisiva su {}", "{1}: the TV appearance on {2}"],
