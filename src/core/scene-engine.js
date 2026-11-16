@@ -6,10 +6,10 @@
 // made, the answers are judged on competence, charisma, preparation and political coherence (the credibility of the programme), the rivals attack where the player is weak and answer as their
 // personality and their programme say. Nothing is drawn from the random sequence of the campaign: the little variation of a beat comes from a hash of the scene's seed, so a scene resumed or
 // replayed from the same choices is the same scene. The player's avatar is always the one chosen at the start of the career: the scene may change the face for a moment (expression), never the person.
-import { defaultAvatarFor, genderOf, normalizeAvatar } from './avatar.js?v=20261116-15';
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261116-15';
-import { line, formatOf } from './studio-lines.js?v=20261116-15';
-import { createRallyScene, createVoteScene, rallyChoose, rallyEffects, rallyNode, rallyProgress, voteChoose, voteNode, voteProgress } from './rally-scene.js?v=20261116-15';
+import { defaultAvatarFor, genderOf, normalizeAvatar } from './avatar.js?v=20261116-17';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261116-17';
+import { line, formatOf } from './studio-lines.js?v=20261116-17';
+import { createRallyScene, createVoteScene, rallyChoose, rallyEffects, rallyNode, rallyProgress, voteChoose, voteNode, voteProgress } from './rally-scene.js?v=20261116-17';
 export { createRallyScene, createVoteScene, formatOf };
 
 // Scenes of other kinds (the optional scenes of the weekly activities, core/activity-scenes.js) are loaded on demand and register here: { node, choose, effects, progress }. Nothing of them is in the first screen.
@@ -126,8 +126,9 @@ const reactionLines = (scene, style, result, topic) => {
 };
 
 // ---------- the current beat ----------
+
 // The node to show now: who speaks, what, with which face/gesture/shot, and the choices. A pure function of the scene.
-export function sceneNode(scene) {
+function sceneNodeBase(scene) {
   if (KINDS[scene.kind]) return KINDS[scene.kind].node(scene);
   if (scene.kind === 'comizio') return rallyNode(scene);
   if (scene.kind === 'voto') return voteNode(scene);
@@ -161,6 +162,28 @@ function reactionNode(scene, base, title) {
 // ---------- moving the scene on ----------
 const NEXT = { invito: 'preparazione', preparazione: 'ingresso', ingresso: 'q1', q1: 'r1', r1: 'domanda', domanda: 'risposta-rivale', 'risposta-rivale': 'q2', q2: 'r2', r2: 'attacco', attacco: 'r3', r3: 'chiusura', chiusura: 'esito' };
 // One door for every kind of scene: the beat before is remembered (the stage animates the passage from it), the rest is the builder of the kind.
+// What each way of answering has going for it and against it, read from the same terms that judge() uses (so it never promises what the engine does not do): the stats of the player, the preparation,
+// the promises on the topic, how ready the rival is. Shown on the button as «Pro» and «Contro».
+export function proCon(scene, style, topicId = scene.topic?.id) {
+  if (!STYLES[style]) return null;
+  const { competence, charisma } = stats(scene);
+  const ctx = scene.context;
+  const hasPromise = ctx.promises.some(item => item.topic === topicId && !['non-mantenuta'].includes(item.status));
+  const broken = ctx.promises.some(item => item.topic === topicId && item.status === 'non-mantenuta');
+  const prep = clamp(ctx.prep / 24, 0, 1);
+  const pro = [], contro = [];
+  if (style === 'dati') { (competence >= 55 ? pro : contro).push(`competenza ${Math.round(competence)}/100`); (prep > 0.3 || scene.prepFocus === 'dati' ? pro : contro).push(prep > 0.3 || scene.prepFocus === 'dati' ? 'ti sei preparato' : 'poca preparazione'); contro.push('annoia chi ascolta con il cuore'); }
+  else if (style === 'empatia') { (charisma >= 50 ? pro : contro).push(`carisma ${Math.round(charisma)}/100`); (scene.audience.mood >= 50 ? pro : contro).push(scene.audience.mood >= 50 ? 'il pubblico è con te' : 'il pubblico è freddo'); contro.push('meno concretezza'); }
+  else if (style === 'programma') { (ctx.credibility >= 50 ? pro : contro).push(`credibilità ${Math.round(ctx.credibility)}/100`); (hasPromise ? pro : contro).push(hasPromise ? 'hai una promessa sul tema' : 'nessuna promessa concreta sul tema (−14)'); if (broken) contro.push('una promessa tradita sullo stesso tema (−14)'); contro.push('vale quanto sei credibile: gli avversari possono ricordarti le promesse non mantenute'); }
+  else { (ctx.rivalReadiness < 50 ? pro : contro).push(ctx.rivalReadiness < 50 ? 'l’avversario è impreparato' : 'l’avversario è preparato'); if (ctx.crisis) contro.push('in una crisi attaccare costa (−10)'); contro.push('punisce se non sei preparato'); }
+  return { pro, contro };
+}
+export function sceneNode(scene) {
+  const node = sceneNodeBase(scene);
+  if (!node?.choices || scene.kind === 'comizio' || scene.kind === 'voto' || KINDS[scene.kind]) return node;
+  return { ...node, choices: node.choices.map(choice => STYLES[choice[0]] ? [choice[0], choice[1], choice[2], choice[3], proCon(scene, choice[0])] : choice) };
+}
+
 export function chooseInScene(input, choiceId) {
   const before = input.nodeId;
   let scene;

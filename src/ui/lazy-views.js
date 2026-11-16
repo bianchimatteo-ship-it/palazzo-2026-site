@@ -2,33 +2,33 @@
 // each page renderer is here a small function with the same name and the same arguments as the real one; the first time it is called the module is imported in the background and the page shows a
 // short «loading» block, then the page is drawn again with the real renderer. When a career is opened the modules are fetched in the background (`prefetchViews`), so that the first visit to a page
 // is almost always instant, and the pages seen are in the cache for when the network is missing. Nothing here decides anything: it only delays the code, never the data.
-import { HEMICYCLE_DEFAULTS } from './hemicycle-defaults.js?v=20261116-15';
-import { ARCHIVE_COLLECTIONS } from './archive-collections.js?v=20261116-15';
+import { HEMICYCLE_DEFAULTS } from './hemicycle-defaults.js?v=20261116-17';
+import { ARCHIVE_COLLECTIONS } from './archive-collections.js?v=20261116-17';
 
 export { HEMICYCLE_DEFAULTS, ARCHIVE_COLLECTIONS };
 
 const LOADERS = {
-  'admin-panel': () => import('./admin-panel.js?v=20261116-15'),
-  'agenda-page': () => import('./agenda-page.js?v=20261116-15'),
-  'archive-hub': () => import('./archive-hub.js?v=20261116-15'),
-  'diplomacy-view': () => import('./diplomacy-view.js?v=20261116-15'),
-  'initiative-mode': () => import('./initiative-mode.js?v=20261116-15'),
-  'election-night': () => import('./election-night.js?v=20261116-15'),
-  'elections-hub': () => import('./elections-hub.js?v=20261116-15'),
-  'hemicycle-view': () => import('./hemicycle-view.js?v=20261116-15'),
-  'members-view': () => import('./members-view.js?v=20261116-15'),
-  'parliament-mode': () => import('./parliament-mode.js?v=20261116-15'),
-  'party-page': () => import('./party-page.js?v=20261116-15'),
-  'scene-view': () => import('./scene-view.js?v=20261116-15'),
-  'career-page': () => import('./career-page.js?v=20261116-15'),
-  'observatory-view': () => import('./observatory-view.js?v=20261116-15'),
-  'presidency-view': () => import('./presidency-view.js?v=20261116-15'),
-  'real-laws': () => import('./real-laws.js?v=20261116-15'),
-  'game-mode': () => import('./game-mode.js?v=20261116-15'),
-  'finance-mode': () => import('./finance-mode.js?v=20261116-15'),
-  'society-mode': () => import('./society-mode.js?v=20261116-15'),
-  'organization-mode': () => import('./organization-mode.js?v=20261116-15'),
-  'local-mode': () => import('./local-mode.js?v=20261116-15')
+  'admin-panel': () => import('./admin-panel.js?v=20261116-17'),
+  'agenda-page': () => import('./agenda-page.js?v=20261116-17'),
+  'archive-hub': () => import('./archive-hub.js?v=20261116-17'),
+  'diplomacy-view': () => import('./diplomacy-view.js?v=20261116-17'),
+  'initiative-mode': () => import('./initiative-mode.js?v=20261116-17'),
+  'election-night': () => import('./election-night.js?v=20261116-17'),
+  'elections-hub': () => import('./elections-hub.js?v=20261116-17'),
+  'hemicycle-view': () => import('./hemicycle-view.js?v=20261116-17'),
+  'members-view': () => import('./members-view.js?v=20261116-17'),
+  'parliament-mode': () => import('./parliament-mode.js?v=20261116-17'),
+  'party-page': () => import('./party-page.js?v=20261116-17'),
+  'scene-view': () => import('./scene-view.js?v=20261116-17'),
+  'career-page': () => import('./career-page.js?v=20261116-17'),
+  'observatory-view': () => import('./observatory-view.js?v=20261116-17'),
+  'presidency-view': () => import('./presidency-view.js?v=20261116-17'),
+  'real-laws': () => import('./real-laws.js?v=20261116-17'),
+  'game-mode': () => import('./game-mode.js?v=20261116-17'),
+  'finance-mode': () => import('./finance-mode.js?v=20261116-17'),
+  'society-mode': () => import('./society-mode.js?v=20261116-17'),
+  'organization-mode': () => import('./organization-mode.js?v=20261116-17'),
+  'local-mode': () => import('./local-mode.js?v=20261116-17')
 };
 const modules = new Map();
 const pending = new Map();

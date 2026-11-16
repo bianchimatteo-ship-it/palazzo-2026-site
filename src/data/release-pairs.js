@@ -1,11 +1,11 @@
 // English phrase-book pairs of the last release pass (data/i18n/en-ui-8.js reads `ALL_PAIRS`): the guided programme editor, the days of the Quirinale and the rule on the parties, the government room, the live
 // votes of the assemblies, the party headquarters, the TV name plates and the tutorial. Format as in the phrase-book: [Italian as shown, English]; `#` a number, `{}` a free part.
-import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261116-15';
-import { DEBATE_PAIRS } from './debate-choices.js?v=20261116-15';
-import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261116-15';
-import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261116-15';
-import { ALL_PAIRS as TOPIC_PAIRS } from './activity-scene-topics.js?v=20261116-15';
-import { LAW_TERM_PAIRS } from './law-terms.js?v=20261116-15';
+import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261116-17';
+import { DEBATE_PAIRS } from './debate-choices.js?v=20261116-17';
+import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261116-17';
+import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261116-17';
+import { ALL_PAIRS as TOPIC_PAIRS } from './activity-scene-topics.js?v=20261116-17';
+import { LAW_TERM_PAIRS } from './law-terms.js?v=20261116-17';
 export const ALL_PAIRS = [
   ...GUEST_PAIRS,
   ...DEBATE_PAIRS,
@@ -1026,4 +1026,23 @@ export const ALL_PAIRS = [
   ['ultima mossa {}', 'last move {1}'],
   ['{} dal neutro', '{1} from neutral'],
   ['{}/100', '{1}/100'],
+  ['Pro', 'Pro'],
+  ['Contro', 'Against'],
+  ['competenza {}/100', 'competence {1}/100'],
+  ['ti sei preparato', 'you have prepared'],
+  ['poca preparazione', 'little preparation'],
+  ['annoia chi ascolta con il cuore', 'it bores those who listen with the heart'],
+  ['carisma {}/100', 'charisma {1}/100'],
+  ['il pubblico è con te', 'the audience is with you'],
+  ['il pubblico è freddo', 'the audience is cold'],
+  ['meno concretezza', 'less concreteness'],
+  ['credibilità {}/100', 'credibility {1}/100'],
+  ['hai una promessa sul tema', 'you have a promise on the topic'],
+  ['nessuna promessa concreta sul tema (−14)', 'no concrete promise on the topic (−14)'],
+  ['una promessa tradita sullo stesso tema (−14)', 'a broken promise on the same topic (−14)'],
+  ['vale quanto sei credibile: gli avversari possono ricordarti le promesse non mantenute', 'it is worth as much as you are credible: opponents can remind you of promises not kept'],
+  ['l’avversario è impreparato', 'the opponent is unprepared'],
+  ['l’avversario è preparato', 'the opponent is prepared'],
+  ['in una crisi attaccare costa (−10)', 'in a crisis attacking costs (−10)'],
+  ['punisce se non sei preparato', 'it punishes you if you are not prepared'],
 ];

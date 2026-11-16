@@ -1,6 +1,6 @@
 // English phrase book, part 8 of 8: the administrative area, the account and sign-out screens, the personal logo catalogue, the tutorial invitation and the engine's law-effect and government lines. Same format as part 6: [Italian as shown, English]; `#` stands for a number, `{}` for a free part; in the English a free part is named by its position (`{2}` for the second one).
-import { ALL_PAIRS } from '../studio-lines.js?v=20261116-15';
-import { ALL_PAIRS as ACTIVITY_SCENE_PAIRS } from '../activity-scene-lines.js?v=20261116-15';
+import { ALL_PAIRS } from '../studio-lines.js?v=20261116-17';
+import { ALL_PAIRS as ACTIVITY_SCENE_PAIRS } from '../activity-scene-lines.js?v=20261116-17';
 
 // The explanations of the opening of a general or European campaign (campaign-engine.js campaignOpeningNotes): signed numbers come in both signs.
 function campaignNotePairs() {
@@ -8272,6 +8272,24 @@ export const PHRASES = [
   ["ultima mossa {}", "last move {1}"],
   ["{} dal neutro", "{1} from neutral"],
   ["{}/100", "{1}/100"],
+  ["Pro", "Pro"],
+  ["Contro", "Against"],
+  ["competenza {}/100", "competence {1}/100"],
+  ["ti sei preparato", "you have prepared"],
+  ["annoia chi ascolta con il cuore", "it bores those who listen with the heart"],
+  ["carisma {}/100", "charisma {1}/100"],
+  ["il pubblico è con te", "the audience is with you"],
+  ["il pubblico è freddo", "the audience is cold"],
+  ["meno concretezza", "less concreteness"],
+  ["credibilità {}/100", "credibility {1}/100"],
+  ["hai una promessa sul tema", "you have a promise on the topic"],
+  ["nessuna promessa concreta sul tema (−14)", "no concrete promise on the topic (−14)"],
+  ["una promessa tradita sullo stesso tema (−14)", "a broken promise on the same topic (−14)"],
+  ["vale quanto sei credibile: gli avversari possono ricordarti le promesse non mantenute", "it is worth as much as you are credible: opponents can remind you of promises not kept"],
+  ["l’avversario è impreparato", "the opponent is unprepared"],
+  ["l’avversario è preparato", "the opponent is prepared"],
+  ["in una crisi attaccare costa (−10)", "in a crisis attacking costs (−10)"],
+  ["punisce se non sei preparato", "it punishes you if you are not prepared"],
   ["{}: l’intervista su {}", "{1}: the interview on {2}"],
   ["{}: la conferenza stampa su {}", "{1}: the press conference on {2}"],
   ["{}: l’ospitata televisiva su {}", "{1}: the TV appearance on {2}"],

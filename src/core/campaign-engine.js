@@ -1,12 +1,12 @@
-import { advanceDays } from './time.js?v=20261116-15';
-import { genderOf } from './avatar.js?v=20261116-15';
-import { difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261116-15';
-import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261116-15';
-import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261116-15';
-import { aggregateShares, listVote, mateForce, runFinalElection, runFirstRound, voteScale } from './election-engine.js?v=20261116-15';
-import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261116-15';
-import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261116-15';
-import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261116-15';
+import { advanceDays } from './time.js?v=20261116-17';
+import { genderOf } from './avatar.js?v=20261116-17';
+import { difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261116-17';
+import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261116-17';
+import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261116-17';
+import { aggregateShares, listVote, mateForce, runFinalElection, runFirstRound, voteScale } from './election-engine.js?v=20261116-17';
+import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261116-17';
+import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261116-17';
+import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261116-17';
 
 const SOURCE = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));

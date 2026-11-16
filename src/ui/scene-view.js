@@ -1,14 +1,14 @@
 // The scene on screen (scene-engine.js): a 2D stage drawn in SVG (ui/stage-art.js) — the television studio, the square of a rally, the polling station — with the characters built from the game's own
 // avatars (the player is always the avatar chosen at the start of the career), the poses and the shots decided by core/stage-script.js and played by ui/stage-player.js. Below the stage: the line,
 // the reactions, the choices; above it the controls of the animation (skip, pause, complete / reduced / off). The same scenes with the motion off or reduced: the stage is simply in its final pose.
-import { ASKS, CLOSINGS, REPLIES, STYLES, sceneNode, sceneProgress } from '../core/scene-engine.js?v=20261116-15';
-import { stageBefore, stageOf } from '../core/stage-script.js?v=20261116-15';
-import { renderStageSvg } from './stage-art.js?v=20261116-15';
-import { ROOMS } from './room-art.js?v=20261116-15';
+import { ASKS, CLOSINGS, REPLIES, STYLES, sceneNode, sceneProgress } from '../core/scene-engine.js?v=20261116-17';
+import { stageBefore, stageOf } from '../core/stage-script.js?v=20261116-17';
+import { renderStageSvg } from './stage-art.js?v=20261116-17';
+import { ROOMS } from './room-art.js?v=20261116-17';
 export const SCENE_ROOMS = ROOMS; // the rooms of the optional scenes register themselves when room-art.js is imported
-import { ACTIVITY_SCENES } from '../core/activity-scenes.js?v=20261116-15';
-import { esc } from './charts.js?v=20261116-15';
-import { DEBATE_CHOICES } from '../data/debate-choices.js?v=20261116-15';   // (loading it registers the choices of the debate in the scene engine)
+import { ACTIVITY_SCENES } from '../core/activity-scenes.js?v=20261116-17';
+import { esc } from './charts.js?v=20261116-17';
+import { DEBATE_CHOICES } from '../data/debate-choices.js?v=20261116-17';   // (loading it registers the choices of the debate in the scene engine)
 export const DEBATE_TOPIC_IDS = Object.freeze(Object.keys(DEBATE_CHOICES));
 
 const KIND_LABELS = { risposta: 'Risposta', domanda: 'Domanda', replica: 'Replica', chiusura: 'Chiusura', saluto: 'Saluto', discorso: 'Discorso', contestazione: 'Contestazione' };
@@ -50,7 +50,7 @@ export function renderScene(state, { identity = null, motion = 'off' } = {}) {
   const progress = sceneProgress(scene);
   const { stage, before } = stageData(scene, node);
   const label = `${aria}: ${scene.cast.filter(item => ['giocatore', 'rivale', 'conduttore', 'ospite'].includes(item.role)).map(item => item.name).join(', ')}`;
-  const choices = node.choices.map(([id, text, disabled, detail]) => `<button type="button" class="scene-choice${id === 'continua' || id === 'fine' ? ' primary-button' : ''}" data-scene-choice="${esc(id)}"${disabled ? ' disabled' : ''}><strong>${esc(text)}</strong>${detail ? `<small>${esc(detail)}</small>` : ''}</button>`).join('');
+  const choices = node.choices.map(([id, text, disabled, detail, odds]) => `<button type="button" class="scene-choice${id === 'continua' || id === 'fine' ? ' primary-button' : ''}" data-scene-choice="${esc(id)}"${disabled ? ' disabled' : ''}><strong>${esc(text)}</strong>${detail ? `<small>${esc(detail)}</small>` : ''}${odds ? `<span class="scene-procon" data-procon>${odds.pro.length ? `<em class="pro"><b>Pro</b> ${odds.pro.map(esc).join(' · ')}</em>` : ''}${odds.contro.length ? `<em class="contro"><b>Contro</b> ${odds.contro.map(esc).join(' · ')}</em>` : ''}</span>` : ''}</button>`).join('');
   const why = node.why?.length ? `<div class="scene-why"><b>Perché:</b><ul>${node.why.map(item => `<li>${esc(item)}</li>`).join('')}${Number.isFinite(node.score) ? `<li>Esito: ${node.score}/100</li>` : ''}</ul></div>` : '';
   const extra = (node.lines ?? []).map(line => `<p>${esc(line)}</p>`).join('');
   const preface = `${node.said ? `<p class="scene-said"><b>Hai detto:</b> <i>${esc(node.said)}</i></p>` : ''}${(node.preface ?? []).map(line => `<p class="scene-audience-line">${esc(line)}</p>`).join('')}`;
