@@ -1,10 +1,11 @@
 // The team of the Government (cabinet-life-engine.js): each minister with the grade of the last evaluation, competence, loyalty, bond with the Prime Minister, ambition and pressure; what waits for the
 // Prime Minister (requests, conflicts, the cabinet meeting) with its buttons; the latest decisions. Read only for whoever is not the Prime Minister: the page then tells what is going on.
-import { GRADE_LABELS, cabinetView } from '../core/cabinet-life-engine.js?v=20261116-8';
-import { esc } from './charts.js?v=20261116-8';
-import { glyph } from './visuals.js?v=20261116-8';
-import { avatarSvg } from './avatar-svg.js?v=20261116-8';
-import { defaultAvatarFor } from '../core/avatar.js?v=20261116-8';
+import { GRADE_LABELS, cabinetView } from '../core/cabinet-life-engine.js?v=20261116-20';
+import { esc } from './charts.js?v=20261116-20';
+import { POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261116-20';
+import { glyph } from './visuals.js?v=20261116-20';
+import { avatarSvg } from './avatar-svg.js?v=20261116-20';
+import { defaultAvatarFor } from '../core/avatar.js?v=20261116-20';
 
 const meter = (value, tone = '') => `<b class="cl-meter ${tone}" role="img" aria-label="${esc(String(Math.round(value ?? 0)))}"><i style="width:${Math.max(0, Math.min(100, Number(value) || 0))}%"></i></b>`;
 const gradeChip = grade => grade ? `<span class="cl-grade grade-${esc(grade)}">${esc(GRADE_LABELS[grade])}</span>` : '<span class="cl-grade grade-none">Non ancora valutato</span>';
@@ -43,7 +44,8 @@ export function renderCabinetLife(state) {
     ${premier ? `<span class="cl-actions">${button('conflict', item.id, 'media', 'Media', 'primary-button')}${button('conflict', item.id, 'sostieni-a', `Sostieni ${item.ministerA?.portfolio ?? ''}`)}${button('conflict', item.id, 'sostieni-b', `Sostieni ${item.ministerB?.portfolio ?? ''}`)}</span>${explain([['Media', 'ricomponi lo scontro: nessuno vince.'], ['Sostieni', 'il dicastero scelto ne esce rafforzato, l’altro perde lealtà.'], ['Se non intervieni', 'la stabilità del governo ne risente.']])}` : ''}</li>`).join('');
   const meeting = view.meeting ? `<li><span>${glyph('ministry', 14)} Consiglio dei ministri: si discute di ${esc(view.meeting.topic.toLowerCase())}.</span>
     ${premier ? `<span class="cl-actions">${button('meeting', view.meeting.id, 'approvare', 'Approva', 'primary-button')}${button('meeting', view.meeting.id, 'rinviare', 'Rinvia')}${button('meeting', view.meeting.id, 'respingere', 'Respingi')}</span>${explain([['Approva', 'la proposta passa, se il governo è unito.'], ['Rinvia', 'se ne riparla più avanti, senza costi di reputazione.'], ['Respingi', 'il ministro proponente perde lealtà.']])}` : '<small>Decide il Presidente del Consiglio.</small>'}</li>` : '';
-  const waiting = requests + conflicts + meeting;
+  const convoke = premier && !view.meeting ? `<li data-cabinet-convoke><span>${glyph('ministry', 14)} Convoca il Consiglio dei ministri: scegli l’argomento all’ordine del giorno.</span><span class="cl-actions"><select data-cabinet-agenda>${POLICY_AREAS.map(item => `<option value="${esc(item.id)}">${esc(item.label)}</option>`).join('')}</select>${button('convoca', 'agenda', '', 'Convoca', 'primary-button')}</span></li>` : '';
+  const waiting = requests + conflicts + meeting + convoke;
   const recent = view.recent.map(item => `<li>${esc(item.topic)}: ${item.choice === 'approvare' ? 'approvato' : item.choice === 'rinviare' ? 'rinviato' : 'respinto'}</li>`).join('');
   return `<details class="pm-block pm-fold cabinet-life" data-remember="gov-team"${view.requests.length + view.conflicts.length + (view.meeting ? 1 : 0) ? ' open' : ''}><summary><span class="pm-fold-title">${glyph('users', 16)} <strong>La squadra di governo</strong></span><small>${view.ministers.length} ministri${view.requests.length + view.conflicts.length + (view.meeting ? 1 : 0) ? ` · ${view.requests.length + view.conflicts.length + (view.meeting ? 1 : 0)} da seguire` : ''}</small></summary>
     <div class="cl-body">

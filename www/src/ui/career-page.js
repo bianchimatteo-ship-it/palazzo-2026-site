@@ -1,18 +1,18 @@
 // CARRIERA — the path and the progression: four tracks (institutions, party, Parliament, Government), the odds of
 // every next step with the factors that decide them, offices and powers, the timeline and the goals.
-import { careerOverview } from '../core/career-overview.js?v=20261116-8';
-import { ADVANCEMENT_OUTCOMES } from '../core/progression-engine.js?v=20261116-8';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261116-8';
-import { careerLevelLabel } from '../data/regions.js?v=20261116-8';
-import { formatDate } from '../core/time.js?v=20261116-8';
-import { startOverview } from '../core/start-engine.js?v=20261116-8';
-import { renderGoals } from './goals-view.js?v=20261116-8';
-import { renderChallenges } from './challenge-view.js?v=20261116-8';
-import { renderRetirement } from './hall-view.js?v=20261116-8';
-import { glyph, officeIcon } from './visuals.js?v=20261116-8';
-import { REPUTATIONS, REPUTATION_IDS } from '../data/simulation/standing-rules.js?v=20261116-8';
-import { renderCareerTimeline, renderMemoryPanel, renderRolesPanel, renderWhyPanel } from './game-mode.js?v=20261116-8';
-import { arrow, badge, bar, card, empty, esc, num, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20261116-8';
+import { careerOverview } from '../core/career-overview.js?v=20261116-20';
+import { ADVANCEMENT_OUTCOMES } from '../core/progression-engine.js?v=20261116-20';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261116-20';
+import { careerLevelLabel } from '../data/regions.js?v=20261116-20';
+import { formatDate } from '../core/time.js?v=20261116-20';
+import { startOverview } from '../core/start-engine.js?v=20261116-20';
+import { renderGoals } from './goals-view.js?v=20261116-20';
+import { renderChallenges } from './challenge-view.js?v=20261116-20';
+import { renderRetirement, resignationsPanel } from './hall-view.js?v=20261116-20';
+import { glyph, officeIcon } from './visuals.js?v=20261116-20';
+import { REPUTATIONS, REPUTATION_IDS } from '../data/simulation/standing-rules.js?v=20261116-20';
+import { renderCareerTimeline, renderMemoryPanel, renderRolesPanel, renderWhyPanel } from './game-mode.js?v=20261116-20';
+import { arrow, badge, bar, card, empty, esc, num, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20261116-20';
 
 export const CAREER_TABS = Object.freeze([['percorso', 'Percorso'], ['progressione', 'Progressione'], ['incarichi', 'Incarichi e poteri'], ['cronologia', 'Cronologia'], ['obiettivi', 'Obiettivi']]);
 const STAT_ORDER = ['popularity', 'reputation', 'influence', 'experience', 'notoriety'];
@@ -187,7 +187,7 @@ export function renderCareerPage(state, { tab = null, timelineFilter = 'tutto', 
       ${blocked.length ? card({ kicker: 'NON ANCORA A PORTATA', title: 'Cosa manca', body: `<ul class="cp-blocked">${blocked.map(track => `<li><span class="cp-track-icon">${glyph(track.icon, 16)}</span><span><strong>${esc(track.label)}: ${esc(track.next.title)}</strong><small>${esc(track.problems?.length ? track.problems.join(' ') : track.blocker ?? track.requirement)}</small></span>${actionButton(track.action, null, false)}</li>`).join('')}</ul>` }) : ''}
       ${card({ kicker: 'STORICO DEI TENTATIVI · SIMULAZIONE', title: `${overview.contests.length} ${overview.contests.length === 1 ? 'tentativo' : 'tentativi'}`, body: contestsTable(overview.contests) })}`;
   } else if (active === 'incarichi') {
-    body = `<div class="sx-grid two">${card({ kicker: 'INCARICHI', title: 'Cosa ricopri', body: officesCard(state, player) })}${card({ kicker: 'RUOLI E POTERI', title: 'Cosa puoi fare adesso', body: renderRolesPanel(state) })}</div>`;
+    body = `<div class="sx-grid two">${card({ kicker: 'INCARICHI', title: 'Cosa ricopri', body: officesCard(state, player) })}${card({ kicker: 'RUOLI E POTERI', title: 'Cosa puoi fare adesso', body: renderRolesPanel(state) })}</div>${state.game.status === 'ended' ? '' : card({ kicker: 'DIMISSIONI', title: 'Lascia un incarico', body: resignationsPanel(state) })}`;
   } else if (active === 'cronologia') {
     body = `<div class="cp-two-col">${card({ kicker: 'CRONOLOGIA · SIMULAZIONE', title: 'La tua carriera, tappa per tappa', body: renderCareerTimeline(state, timelineFilter), className: 'career-timeline-panel' })}${card({ kicker: 'MEMORIA POLITICA', title: 'Quello che non si dimentica', body: renderMemoryPanel(state) })}</div>`;
   } else {

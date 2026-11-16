@@ -1,6 +1,6 @@
-import { SUPPORTERS, TRANSFERS, TREASURY_OPERATIONS, TREASURY_OPERATIONS_KEPT } from '../data/simulation/finance-rules.js?v=20261116-8';
-import { treasuryBook } from './organization-engine.js?v=20261116-8';
-import { BUDGET_LINES, DEBT_CRISIS_THRESHOLD, DEBT_WEEKLY_INTEREST, ELECTION_FUND_MATCH, FINANCE_CATEGORIES, FINANCE_SHOCKS, HISTORY_WEEKS, INVESTMENTS, LEDGER_SIZE, RESERVE, RESERVE_BEFORE_REPAYING, ROLE_COST_SHARE } from '../data/simulation/finance-rules.js?v=20261116-8';
+import { SUPPORTERS, TRANSFERS, TREASURY_OPERATIONS, TREASURY_OPERATIONS_KEPT } from '../data/simulation/finance-rules.js?v=20261116-20';
+import { treasuryBook } from './organization-engine.js?v=20261116-20';
+import { BUDGET_LINES, DEBT_CRISIS_THRESHOLD, DEBT_WEEKLY_INTEREST, ELECTION_FUND_MATCH, FINANCE_CATEGORIES, FINANCE_SHOCKS, HISTORY_WEEKS, INVESTMENTS, LEDGER_SIZE, RESERVE, RESERVE_BEFORE_REPAYING, ROLE_COST_SHARE } from '../data/simulation/finance-rules.js?v=20261116-20';
 
 const SIM = 'simulation';
 const blankPeriod = () => ({ income: 0, expense: 0, byCategory: {} });

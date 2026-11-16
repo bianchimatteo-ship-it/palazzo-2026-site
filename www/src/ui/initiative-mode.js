@@ -1,9 +1,9 @@
 // The page «Iniziative»: popular initiatives (50,000 signatures, art. 71) and signatures for a referendum (500,000, art. 75), kept apart from the bills of the members of Parliament («Leggi»).
 // Every button calls the store (startInitiative, organizeInitiative, depositInitiative, withdrawInitiative): nothing is decorative.
-import { INITIATIVE_KINDS, CHANNELS, PARLIAMENTARY_NOTE, SETUP_COST, ESTIMATED_VALID_SHARE, PARLIAMENT_STAGES, overview } from '../core/initiative-engine.js?v=20261116-8';
-import { POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261116-8';
-import { badge, card, empty, esc, kpi } from './sections-kit.js?v=20261116-8';
-import { formatDate } from '../core/time.js?v=20261116-8';
+import { INITIATIVE_KINDS, CHANNELS, PARLIAMENTARY_NOTE, SETUP_COST, ESTIMATED_VALID_SHARE, PARLIAMENT_STAGES, overview } from '../core/initiative-engine.js?v=20261116-20';
+import { POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261116-20';
+import { badge, card, empty, esc, kpi } from './sections-kit.js?v=20261116-20';
+import { formatDate } from '../core/time.js?v=20261116-20';
 
 const number = value => Math.round(Number(value) || 0).toLocaleString('it-IT');
 const STATUS = {
@@ -62,7 +62,20 @@ function formOf(state) {
     <small>Fondi disponibili: ${number(funds)} €. L’apertura copre moduli, autentica e materiali.</small>
   </form>` });
 }
-export function renderInitiatives(state, ctxFor = null) {
+const REQ_STATUS = { aperta: ['In attesa di una tua risposta', 'warning'], 'in-corso': ['In corso', 'warning'], risolta: ['Chiusa', 'good'], scaduta: ['Scaduta', 'bad'], respinta: ['Respinta', 'neutral'] };
+function requestsOf(state, actionsFor) {
+  const list = state.game?.requests ?? [];
+  if (!list.length) return card({ kicker: 'RICHIESTE', title: 'Richieste dei cittadini e delle associazioni', body: '<p class="sx-empty">Ogni tanto cittadini e associazioni della tua Regione ti scrivono per un servizio che soffre. Chiudi qualche settimana: quando arriva una richiesta la trovi qui.</p>' });
+  const cards = list.slice(0, 8).map(request => {
+    const [label, tone] = REQ_STATUS[request.status] ?? [request.status, 'neutral'];
+    const actions = request.status === 'aperta' ? (actionsFor?.(request.id) ?? []) : [];
+    const buttons = actions.map(action => `<button type="button" class="${action.id === 'declina' ? 'ghost-button' : 'secondary-button'} compact" data-req-act="${esc(request.id)}" data-req-action="${esc(action.id)}" data-req-area="${esc(request.area)}"${action.available ? '' : ' disabled aria-disabled="true"'} title="${esc(action.reason ?? action.hint)}">${esc(action.label)}${action.cost.days ? ` · ${action.cost.days} ${action.cost.days === 1 ? 'giorno' : 'giorni'}` : ''}${action.cost.funds ? ` · ${number(action.cost.funds)} €` : ''}${action.cost.capital ? ` · ${action.cost.capital} cap.` : ''}</button>${action.available ? '' : `<small class="req-reason">${esc(action.reason)}</small>`}`).join('');
+    const answer = request.status === 'in-corso' ? `<p class="req-wait" data-req-wait>${esc(request.history[0]?.text ?? '')} La risposta è attesa entro la settimana ${request.answerWeek}.</p>` : request.outcome ? `<p class="req-outcome" data-req-outcome>${esc(request.outcome)}</p>` : '';
+    return `<div class="req-card" data-request-card="${esc(request.id)}" data-request-status="${esc(request.status)}"><div class="ini-head">${badge(label, tone)} <small>${esc(request.areaLabel)} · ${esc(request.region)}</small></div><p class="req-text">${esc(request.text)}</p>${answer}${buttons ? `<div class="req-actions">${buttons}</div>` : ''}</div>`;
+  }).join('');
+  return card({ kicker: 'RICHIESTE', title: 'Richieste dei cittadini e delle associazioni', body: `<p class="quiet-copy">Che cosa puoi fare dipende dagli incarichi che hai: ogni azione ha un costo, un tempo e delle conseguenze.</p>${cards}` });
+}
+export function renderInitiatives(state, ctxFor = null, requestActions = null) {
   if (!state.game) return empty('Crea prima un politico per promuovere un’iniziativa.', '<button class="primary-button" data-action="new-career">Crea il politico</button>');
   const initiatives = state.game.initiatives ?? [];
   const active = initiatives.filter(item => ['raccolta', 'verifica', 'in-parlamento'].includes(item.status));
@@ -72,5 +85,5 @@ export function renderInitiatives(state, ctxFor = null) {
     <li><b>Proposta parlamentare</b><span>${esc(PARLIAMENTARY_NOTE)}</span></li></ul>` });
   const kpis = `<div class="sx-kpis">${kpi({ label: 'Raccolte attive', value: String(active.length) })}${kpi({ label: 'Concluse', value: String(initiatives.length - active.length) })}${kpi({ label: 'Fondi', value: `${number(state.game.resources?.funds ?? 0)} €` })}</div>`;
   const list = initiatives.length ? initiatives.map(item => cardOf(item, state, overview(item, ctxFor ? ctxFor(item) : null))).join('') : card({ kicker: 'RACCOLTE', title: 'Nessuna raccolta firme', body: '<p class="sx-empty">Non hai ancora aperto una raccolta. Compila il modulo qui sotto: serve un titolo, un tema e un testo in articoli.</p>' });
-  return `<div class="ini-page" data-ini-page>${intro}${kpis}${list}${formOf(state)}</div>`;
+  return `<div class="ini-page" data-ini-page>${intro}${requestsOf(state, requestActions)}${kpis}${list}${formOf(state)}</div>`;
 }

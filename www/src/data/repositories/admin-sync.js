@@ -1,6 +1,6 @@
 // Network side of the shared admin archive: read it for every player, write it with the owner's session.
-import { loadAdminArchive, loadSharedArchive, setSharedArchiveTag, setSharedSessionToken, sharedArchiveTag, sharedCopyStored, sharedLogoRef, sharedSessionToken, storeSharedArchive } from './admin-store.js?v=20261116-8';
-import { isNativeApp, nativeApiOrigin } from './account-sync.js?v=20261116-8';
+import { loadAdminArchive, loadSharedArchive, setSharedArchiveTag, setSharedSessionToken, sharedArchiveTag, sharedCopyStored, sharedLogoRef, sharedSessionToken, storeSharedArchive } from './admin-store.js?v=20261116-20';
+import { isNativeApp, nativeApiOrigin } from './account-sync.js?v=20261116-20';
 
 const PRODUCTION_API = 'https://palazzo-2026-site.bianchimatteo657.workers.dev/api/admin';
 // On the Worker (and its local preview) the API is on the same site; GitHub Pages reads it from the Worker.
@@ -97,6 +97,21 @@ export async function publishSharedArchive() {
     if (error.code === 'timeout') throw Object.assign(new Error('Il server non ha risposto in tempo: la pubblicazione non è confermata (le modifiche restano in questo browser, riprova).'), { code: 'timeout' });
     throw error;
   }
+}
+
+// ---- the owner's statistics: aggregate figures only, read with the session of the owner (the server answers 401 to anybody else) ----
+export async function fetchAdminStats(days = 90) {
+  const token = sharedSessionToken();
+  if (!token) throw new Error('Collega prima questo browser come proprietario.');
+  try { return await call(`/stats?days=${encodeURIComponent(days)}`, { method: 'GET', cache: 'no-store', headers: { authorization: `Bearer ${token}` } }, 15000); }
+  catch (error) { if (error.status === 401) closeSharedSession(); throw error; }
+}
+// The install figures come from the store consoles and are typed in by the owner with their source.
+export async function saveStoreInstalls({ day, store, installs, source }) {
+  const token = sharedSessionToken();
+  if (!token) throw new Error('Collega prima questo browser come proprietario.');
+  try { return await call('/stats', { method: 'PUT', headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ day, store, installs: Number(installs), source }) }, 15000); }
+  catch (error) { if (error.status === 401) closeSharedSession(); throw error; }
 }
 
 // ---- the logos of the parties of the catalogue: published by the owner, shown to every player ----

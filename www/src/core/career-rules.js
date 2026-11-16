@@ -1,9 +1,9 @@
-import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel } from '../data/regions.js?v=20261116-8';
-import { isSelectableParty } from '../data/schema.js?v=20261116-8';
-import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261116-8';
-import { startAgeProblems, startProblems } from './start-engine.js?v=20261116-8';
-import { presidentialEligibility } from './presidency-engine.js?v=20261116-8';
-import { avatarProblems } from './avatar.js?v=20261116-8';
+import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel } from '../data/regions.js?v=20261116-20';
+import { isSelectableParty } from '../data/schema.js?v=20261116-20';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261116-20';
+import { startAgeProblems, startProblems } from './start-engine.js?v=20261116-20';
+import { presidentialEligibility } from './presidency-engine.js?v=20261116-20';
+import { avatarProblems } from './avatar.js?v=20261116-20';
 
 // The gender of the character: man or woman. A value of an older career (not specified, non-binary…) is brought to one of the two when the career is loaded, keeping the original in `legacyGender`.
 export const GENDERS = Object.freeze(['uomo', 'donna']);
@@ -20,7 +20,8 @@ export const STARTING_ROLES = Object.freeze({
 });
 export const STARTING_OFFICES = Object.freeze({
   presidenteConsiglio: { label: 'Presidente del Consiglio' },
-  presidenteRepubblica: { label: 'Presidente della Repubblica — scenario alternativo' }
+  presidenteRepubblica: { label: 'Presidente della Repubblica — scenario alternativo' },
+  iscritto: { label: 'Semplice iscritto — nessun incarico' }
 });
 const isValidDate = value => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return false;
@@ -71,6 +72,7 @@ export function validateCareerStep(draft, step, selectableParties, parliamentary
     const directPresident = draft.startingOffice === 'presidenteRepubblica';
     if (!level) errors.push('Scegli un percorso iniziale.');
     else if (draft.startingOffice && !startingOffice) errors.push('Scegli un punto di partenza valido.');
+    else if (draft.startingOffice === 'iscritto' && !['comunale', 'provinciale', 'regionale'].includes(draft.initialLevel)) errors.push('Chi parte da semplice iscritto sceglie il territorio dove vive: il percorso deve essere comunale, provinciale o regionale.');
     else if (draft.startingOffice === 'presidenteConsiglio' && !externalPremier && !level.chamber) errors.push('Per iniziare da Presidente del Consiglio scegli Camera, Senato o un contesto esterno al Parlamento.');
     else if (draft.initialLevel === 'provinciale' && !hasProvincialLevel({ region: draft.region, provinceCode: draft.provinceCode, provinceType: draft.provinceType })) errors.push(PROVINCIAL_LEVEL_PROBLEM);
     else if (level.chamber && !externalPremier && !directPresident) {

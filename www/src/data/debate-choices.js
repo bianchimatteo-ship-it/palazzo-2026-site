@@ -1,6 +1,6 @@
 // The choices of the television debate, per TOPIC (core/scene-engine.js): loaded with the scene page (ui/scene-view.js), never at start — it registers itself in the scene engine, which uses the generic wording
 // where a topic is not here.
-import { setDebateChoices } from '../core/scene-engine.js?v=20261116-8';
+import { setDebateChoices } from '../core/scene-engine.js?v=20261116-20';
 // The choices of the television debate, per TOPIC (core/scene-engine.js): what the player can say depends on what is being talked about — a health debate offers waiting lists, hospitals and funding, an economy
 // debate offers taxes, firms, jobs and debt — instead of the same four approaches every time. The IDs are those of the engine (the style of the answer: dati / empatia / programma / attacco; the question to the
 // rival: conti / coerenza / passato / salta; the reply to an attack: fatti / calma / contrattacco / ignora; the closing: sobrio / appello / sfida), so the effects, the evaluation and the explanation of
@@ -73,7 +73,7 @@ export const DEBATE_CHOICES = Object.freeze({
     },
     replies: {
       fatti: C(P('Rispondi con i dati sulle opere concluse', 'Answer with the data on completed works'), P('Serve preparazione.', 'Preparation is needed.')),
-      calma: C(P('Resta calmo: i tempi di un cantiere non sono catchphrase', 'Stay calm: the times of a site are not catchphrases'), P('Sobrio, ma sembri sulla difensiva.', 'Sober, but you seem defensive.')),
+      calma: C(P('Resta calmo: i tempi di un cantiere non sono catchphrase', 'Stay calm: the times of a site are not slogans'), P('Sobrio, ma sembri sulla difensiva.', 'Sober, but you seem defensive.')),
       contrattacco: C(P('Contrattacca sul consumo di suolo', 'Counter-attack on land consumption'), P('Il pubblico si accende, con rischi.', 'The audience warms up, with risks.')),
       ignora: C(P('Ignora e torna al clima e all’energia', 'Ignore it and go back to climate and energy'), P('Cambi argomento.', 'You change the subject.'))
     },
@@ -123,7 +123,7 @@ export const DEBATE_CHOICES = Object.freeze({
     },
     replies: {
       fatti: C(P('Rispondi con i dati su posti letto e personale', 'Answer with the data on beds and staff'), P('Serve preparazione.', 'Preparation is needed.')),
-      calma: C(P('Resta calmo: la sanità non si governa a catchphrase', 'Stay calm: healthcare is not run on catchphrases'), P('Sobrio, ma sembri sulla difensiva.', 'Sober, but you seem defensive.')),
+      calma: C(P('Resta calmo: la sanità non si governa a catchphrase', 'Stay calm: healthcare is not run on slogans'), P('Sobrio, ma sembri sulla difensiva.', 'Sober, but you seem defensive.')),
       contrattacco: C(P('Contrattacca sulle convenzioni coi privati', 'Counter-attack on the agreements with private providers'), P('Il pubblico si accende, con rischi.', 'The audience warms up, with risks.')),
       ignora: C(P('Ignora e torna alla prevenzione', 'Ignore it and go back to prevention'), P('Cambi argomento.', 'You change the subject.'))
     },
@@ -148,7 +148,7 @@ export const DEBATE_CHOICES = Object.freeze({
     },
     replies: {
       fatti: C(P('Rispondi con i numeri sui reati', 'Answer with the crime figures'), P('Serve preparazione.', 'Preparation is needed.')),
-      calma: C(P('Resta calmo: la sicurezza non è una gara di catchphrase', 'Stay calm: safety is not a catchphrase contest'), P('Sobrio, ma sembri sulla difensiva.', 'Sober, but you seem defensive.')),
+      calma: C(P('Resta calmo: la sicurezza non è una gara di catchphrase', 'Stay calm: safety is not a slogan contest'), P('Sobrio, ma sembri sulla difensiva.', 'Sober, but you seem defensive.')),
       contrattacco: C(P('Contrattacca sui rischi che ha minimizzato', 'Counter-attack on the risks he played down'), P('Il pubblico si accende, con rischi.', 'The audience warms up, with risks.')),
       ignora: C(P('Ignora e torna alla prevenzione sociale', 'Ignore it and go back to social prevention'), P('Cambi argomento.', 'You change the subject.'))
     },
@@ -173,7 +173,7 @@ export const DEBATE_CHOICES = Object.freeze({
     },
     replies: {
       fatti: C(P('Rispondi con i dati su prezzi e stipendi', 'Answer with the data on prices and salaries'), P('Serve preparazione.', 'Preparation is needed.')),
-      calma: C(P('Resta calmo: il carovita non si risolve in uno catchphrase', 'Stay calm: the cost of living is not solved by a catchphrase'), P('Sobrio, ma sembri sulla difensiva.', 'Sober, but you seem defensive.')),
+      calma: C(P('Resta calmo: il carovita non si risolve in uno catchphrase', 'Stay calm: the cost of living is not solved by a slogan'), P('Sobrio, ma sembri sulla difensiva.', 'Sober, but you seem defensive.')),
       contrattacco: C(P('Contrattacca sul debito che lascerebbe', 'Counter-attack on the debt he would leave'), P('Il pubblico si accende, con rischi.', 'The audience warms up, with risks.')),
       ignora: C(P('Ignora e parla del carrello della spesa', 'Ignore it and talk about the shopping basket'), P('Cambi argomento.', 'You change the subject.'))
     },
@@ -198,7 +198,7 @@ export const DEBATE_CHOICES = Object.freeze({
     },
     replies: {
       fatti: C(P('Rispondi con i dati su diplomi e primo impiego', 'Answer with the data on diplomas and first jobs'), P('Serve preparazione.', 'Preparation is needed.')),
-      calma: C(P('Resta calmo: la scuola chiede tempo, non catchphrase', 'Stay calm: school needs time, not catchphrases'), P('Sobrio, ma sembri sulla difensiva.', 'Sober, but you seem defensive.')),
+      calma: C(P('Resta calmo: la scuola chiede tempo, non catchphrase', 'Stay calm: school needs time, not slogans'), P('Sobrio, ma sembri sulla difensiva.', 'Sober, but you seem defensive.')),
       contrattacco: C(P('Contrattacca sulle classi pollaio', 'Counter-attack on overcrowded classes'), P('Il pubblico si accende, con rischi.', 'The audience warms up, with risks.')),
       ignora: C(P('Ignora e parla di università e tirocini', 'Ignore it and talk about university and internships'), P('Cambi argomento.', 'You change the subject.'))
     },

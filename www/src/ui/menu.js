@@ -1,16 +1,17 @@
 // Main menu, how-to-play, settings, save slots and the end-of-week report.
-import { renderTutorialInvite } from './tutorial.js?v=20261116-8';
-import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261116-8';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261116-8';
-import { formatDate } from '../core/time.js?v=20261116-8';
-import { illustration } from './illustrations.js?v=20261116-8';
-import { glyph } from './visuals.js?v=20261116-8';
-import { identityMark, identityVars } from './party-identity.js?v=20261116-8';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261116-8';
-import { hallView } from './hall-view.js?v=20261116-8';
-import { renderLogoCatalog } from './logo-catalog.js?v=20261116-8';
-import { esc, signed } from './charts.js?v=20261116-8';
-import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261116-8';
+import { renderTutorialInvite } from './tutorial.js?v=20261116-20';
+import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261116-20';
+import { GUIDE_FUNCTIONS, GUIDE_SCENARIOS } from '../data/guide-manual.js?v=20261116-20';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261116-20';
+import { formatDate } from '../core/time.js?v=20261116-20';
+import { illustration } from './illustrations.js?v=20261116-20';
+import { glyph } from './visuals.js?v=20261116-20';
+import { identityMark, identityVars } from './party-identity.js?v=20261116-20';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261116-20';
+import { hallView } from './hall-view.js?v=20261116-20';
+import { renderLogoCatalog } from './logo-catalog.js?v=20261116-20';
+import { esc, signed } from './charts.js?v=20261116-20';
+import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261116-20';
 
 const when = iso => { try { return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); } catch { return ''; } };
 // The actions of the opening screen, in order of importance: starting a career and resuming one are the two main ones (drawn apart, below); then what concerns the
@@ -209,8 +210,25 @@ function accountView(account = {}) {
     </details></section>${legalLinks()}`;
 }
 
+// The manual: one card per function (how it works, how to use it, requirements, costs, consequences, example, and a link to the page) and the guided scenarios (steps with links). Every card takes part
+// in the search of the guide (data-guide-card) and in the index (data-guide-index).
+const GUIDE_PARTS = [['how', 'Come funziona'], ['use', 'Come si usa'], ['needs', 'Requisiti'], ['costs', 'Costi'], ['effects', 'Conseguenze'], ['example', 'Esempio']];
+const guideTarget = page => `data-nav="${esc(page)}" data-guide-close`;
+function manualCards(offset) {
+  const functions = GUIDE_FUNCTIONS.map((item, i) => {
+    const index = offset + i;
+    return `<article class="guide-card guide-manual" id="guida-${index}" data-guide-card="${index}" data-guide-kind="funzione" data-guide-topic="${esc(item.id)}" data-guide-keywords="${esc(item.keywords ?? '')}">${glyph(item.icon, 20)}<div><strong>${esc(item.title)}</strong><dl class="guide-parts">${GUIDE_PARTS.map(([key, label]) => `<div><dt>${esc(label)}</dt><dd>${esc(item[key])}</dd></div>`).join('')}</dl><p><button type="button" class="secondary-button" ${guideTarget(item.page)}>Apri la pagina</button></p></div></article>`;
+  });
+  const scenarios = GUIDE_SCENARIOS.map((item, i) => {
+    const index = offset + GUIDE_FUNCTIONS.length + i;
+    return `<article class="guide-card guide-scenario" id="guida-${index}" data-guide-card="${index}" data-guide-kind="scenario" data-guide-topic="${esc(item.id)}">${glyph(item.icon, 20)}<div><strong>${esc(item.title)}</strong><p>${esc(item.goal)}</p><ol class="guide-steps">${item.steps.map(([text, page]) => `<li><span>${esc(text)}</span> <button type="button" class="ghost-button" ${guideTarget(page)}>Vai</button></li>`).join('')}</ol></div></article>`;
+  });
+  return { functions, scenarios };
+}
 function guideView() {
-  return `<h2>Come giocare</h2><p class="section-subtitle">Le regole essenziali, sezione per sezione, con un esempio per ciascuna.</p>${renderTutorialInvite()}<label class="guide-search"><span class="visually-hidden">Cerca nella guida</span><input type="search" data-guide-search placeholder="Cerca un argomento (es. sondaggi, fondi, ballottaggio)…" autocomplete="off" /></label><p class="sheet-empty" data-guide-empty hidden>Nessun argomento corrisponde.</p><nav class="guide-index" aria-label="Sezioni della guida">${HOW_TO.map(([title], index) => `<a href="#guida-${index}" data-guide-jump="guida-${index}" data-guide-index="${index}">${esc(title)}</a>`).join('')}</nav><div class="guide-grid">${HOW_TO.map(([title, icon, text, example], index) => `<article class="guide-card" id="guida-${index}" data-guide-card="${index}">${glyph(icon, 20)}<div><strong>${esc(title)}</strong><p>${esc(text)}</p>${example ? `<p class="guide-example"><b>Esempio</b> ${esc(example)}</p>` : ''}</div></article>`).join('')}</div>`;
+  const manual = manualCards(HOW_TO.length);
+  const titles = [...HOW_TO.map(([title]) => title), ...GUIDE_FUNCTIONS.map(item => item.title), ...GUIDE_SCENARIOS.map(item => item.title)];
+  return `<h2>Come giocare</h2><p class="section-subtitle">Le regole essenziali, il manuale di ogni funzione e gli scenari guidati, con un esempio per ciascuna.</p>${renderTutorialInvite()}<label class="guide-search"><span class="visually-hidden">Cerca nella guida</span><input type="search" data-guide-search placeholder="Cerca un argomento (es. sondaggi, fondi, ballottaggio, dimissioni)…" autocomplete="off" /></label><p class="sheet-empty" data-guide-empty hidden>Nessun argomento corrisponde.</p><nav class="guide-index" aria-label="Sezioni della guida">${titles.map((title, index) => `<a href="#guida-${index}" data-guide-jump="guida-${index}" data-guide-index="${index}">${esc(title)}</a>`).join('')}</nav><h3 class="guide-section-title">Le regole essenziali</h3><div class="guide-grid">${HOW_TO.map(([title, icon, text, example], index) => `<article class="guide-card" id="guida-${index}" data-guide-card="${index}">${glyph(icon, 20)}<div><strong>${esc(title)}</strong><p>${esc(text)}</p>${example ? `<p class="guide-example"><b>Esempio</b> ${esc(example)}</p>` : ''}</div></article>`).join('')}</div><h3 class="guide-section-title">Il manuale delle funzioni</h3><div class="guide-grid">${manual.functions.join('')}</div><h3 class="guide-section-title">Scenari guidati</h3><div class="guide-grid">${manual.scenarios.join('')}</div>`;
 }
 // First opening without an account: the account first, then the first career.
 function welcomeView(account = {}, menu = {}) {
@@ -245,7 +263,7 @@ export function renderConfirmDialog(pending) {
 }
 
 export function settingsView(settings, { error = '', account = null } = {}) {
-  const groups = [['Audio', ['sound', 'volume'], 'megaphone'], ['Interfaccia', ['language', 'interfaceMotion', 'density', 'textSize', 'contrast'], 'globe'], ['Animazioni delle scene', ['sceneMotion'], 'play'], ['Notifiche', ['toasts', 'toastLength', 'weeklyReport', 'newsPopup'], 'alert'], ['Partita', ['autosave', 'weeksPerTurn'], 'clock']];
+  const groups = [['Audio', ['sound', 'volume'], 'megaphone'], ['Interfaccia', ['language', 'interfaceMotion', 'density', 'textSize', 'contrast'], 'globe'], ['Animazioni delle scene', ['sceneMotion'], 'play'], ['Notifiche', ['toasts', 'toastLength', 'weeklyReport', 'newsPopup'], 'alert'], ['Partita', ['autosave', 'weeksPerTurn', 'staffVotes'], 'clock']];
   return `<h2>Impostazioni</h2><p class="section-subtitle">Valgono per tutte le partite in questo browser e si applicano subito; il popup delle notizie settimanali segue l’account con cui hai effettuato l’accesso.</p>
     ${groups.map(([title, keys, icon]) => `<section class="settings-group" data-settings-group="${esc(title)}"><h3>${glyph(icon, 16)} ${esc(title)}</h3>${keys.map(key => { const spec = SETTINGS_SCHEMA[key]; const hint = spec.hint ? `<small class="setting-hint" role="status" data-setting-state="${key}"><b>${esc(spec.options.find(([v]) => v === settings[key])?.[1] ?? '')}.</b> ${esc(spec.hint[settings[key]] ?? '')}${spec.scoped ? ` ${account?.user ? `Vale per l’account «${esc(account.user.username)}».` : 'Vale per questo browser.'}` : ''}</small>` : ''; return `<div class="setting-row ${spec.hint ? 'has-hint' : ''}" data-setting-row="${key}"><span>${esc(spec.label)}</span><div class="segmented" role="group" aria-label="${esc(spec.label)}">${spec.options.map(([value, label]) => `<button data-setting-key="${key}" data-setting-value="${esc(value)}" class="${settings[key] === value ? 'active' : ''}" aria-pressed="${settings[key] === value}"${key === 'language' ? ` lang="${esc(value)}" data-no-translate` : ''}>${esc(label)}</button>`).join('')}</div>${hint}</div>`; }).join('')}</section>`).join('')}
     <section class="settings-group" data-settings-group="Dati"><h3>${glyph('book', 16)} Dati di gioco</h3><div class="setting-actions"><button class="secondary-button" data-menu-action="export">Esporta la partita in corso</button><button class="secondary-button" data-menu-action="diag-copy">Copia il registro diagnostico</button><button class="secondary-button" data-menu-action="diag-clear">Svuota il registro diagnostico</button><label class="secondary-button menu-import-inline"><input type="file" accept="application/json,.json" data-menu-import />Importa una partita</label><button class="secondary-button" data-menu-action="reset-settings">Ripristina le impostazioni</button></div><p class="parliament-note">L’archivio dell’amministratore e i loghi personali restano separati e non vengono toccati.</p></section>

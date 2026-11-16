@@ -1,8 +1,8 @@
-import { ADMIN_FIELDS, POSITIONS, adminArchiveSummary, loadSharedArchive, overrideFor } from '../data/repositories/admin-store.js?v=20261116-8';
-import { affiliationOf, markForPerson } from './person-marks.js?v=20261116-8';
-import { hasSharedSession, sharedApiUrl, sharedLogoUrl, sharedSyncStatus } from '../data/repositories/admin-sync.js?v=20261116-8';
-import { emblem, glyph } from './visuals.js?v=20261116-8';
-import { BASIS_LABELS, electionListOf, groupAffiliation, groupLabel, politicianAffiliation } from '../data/repositories/party-links.js?v=20261116-8';
+import { ADMIN_FIELDS, POSITIONS, adminArchiveSummary, loadSharedArchive, overrideFor } from '../data/repositories/admin-store.js?v=20261116-20';
+import { affiliationOf, markForPerson } from './person-marks.js?v=20261116-20';
+import { hasSharedSession, sharedApiUrl, sharedLogoUrl, sharedSyncStatus } from '../data/repositories/admin-sync.js?v=20261116-20';
+import { emblem, glyph } from './visuals.js?v=20261116-20';
+import { BASIS_LABELS, electionListOf, groupAffiliation, groupLabel, politicianAffiliation } from '../data/repositories/party-links.js?v=20261116-20';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const norm = value => String(value ?? '').toLocaleLowerCase('it-IT').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -140,11 +140,37 @@ function archiveTab() {
 </div>`;
 }
 
+// Statistics: aggregate figures for the owner, nothing about a person. `admin.stats` is { status: 'idle'|'loading'|'error'|'ready', data, error }.
+const fmt = value => Number(value ?? 0).toLocaleString('it-IT');
+function sparkline(points, key, label) {
+  if (!points.length) return '';
+  const max = Math.max(1, ...points.map(item => item[key] ?? 0)), w = 320, h = 70;
+  const step = points.length > 1 ? w / (points.length - 1) : w;
+  const path = points.map((item, index) => `${index ? 'L' : 'M'}${(index * step).toFixed(1)},${(h - 4 - ((item[key] ?? 0) / max) * (h - 8)).toFixed(1)}`).join(' ');
+  return `<svg class="admin-spark" viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(label)}: da ${fmt(points[0][key])} a ${fmt(points.at(-1)[key])}, massimo ${fmt(max)}"><path d="${path}" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>`;
+}
+function statsTab(admin) {
+  const stats = admin.stats ?? { status: 'idle' };
+  const head = '<div class="admin-stats-head"><h3>Statistiche aggregate</h3><p class="admin-note">Solo numeri: nessun nome utente, indirizzo, dispositivo o contenuto di gioco. Conta gli <strong>account</strong>; chi gioca senza account non è contato. Le installazioni vengono dagli store e le inserisci tu.</p><button type="button" class="secondary-button" data-admin-stats-refresh>Aggiorna</button></div>';
+  if (stats.status === 'loading') return `${head}<div class="catalog-state" role="status"><span class="catalog-spinner" aria-hidden="true"></span><strong>Carico le statistiche…</strong></div>`;
+  if (stats.status === 'error') return `${head}<p class="admin-message" role="alert">${esc(stats.error)}</p>`;
+  if (stats.status !== 'ready') return `${head}<p class="admin-note">Premi «Aggiorna» per caricare le cifre dal server.</p>`;
+  const d = stats.data, a = d.activity, cur = a.current;
+  const cards = [['Account registrati', fmt(d.accounts.total)], [`Nuovi account (${d.days} giorni)`, fmt(d.accounts.newInPeriod)], ...(a.enabled && cur ? [['Attivi oggi (DAU)', fmt(cur.dau)], ['Attivi in 7 giorni (WAU)', fmt(cur.wau)], ['Attivi in 30 giorni (MAU)', fmt(cur.mau)]] : [])];
+  const tiles = `<div class="admin-stat-tiles">${cards.map(([label, value]) => `<div class="admin-stat"><span>${esc(label)}</span><strong>${value}</strong></div>`).join('')}</div>`;
+  const activity = a.enabled
+    ? `<section class="admin-stat-block"><h4>Attività degli account</h4><p class="admin-note">${esc(a.note)}</p>${sparkline(a.series, 'dau', 'Attivi al giorno')}<details><summary>Tabella dei dati</summary><div class="sx-table-wrap"><table class="sx-table"><thead><tr><th scope="col">Giorno</th><th scope="col" class="num">DAU</th><th scope="col" class="num">WAU</th><th scope="col" class="num">MAU</th></tr></thead><tbody>${a.series.slice(-30).reverse().map(row => `<tr><th scope="row">${esc(row.day)}</th><td class="num">${fmt(row.dau)}</td><td class="num">${fmt(row.wau)}</td><td class="num">${fmt(row.mau)}</td></tr>`).join('')}</tbody></table></div></details></section>`
+    : `<section class="admin-stat-block" data-stats-off><h4>Attività degli account</h4><p class="admin-note">${esc(a.note)}</p></section>`;
+  const joined = `<section class="admin-stat-block"><h4>Nuovi account al giorno</h4>${sparkline(d.accounts.series, 'newAccounts', 'Nuovi account al giorno')}</section>`;
+  const today = new Date().toISOString().slice(0, 10);
+  const installs = `<section class="admin-stat-block"><h4>Installazioni dagli store</h4><p class="admin-note">${esc(d.installs.note)}</p><div class="admin-stat-tiles">${Object.entries(d.installs.totals).map(([store, total]) => `<div class="admin-stat"><span>${store === 'google-play' ? 'Google Play' : 'App Store'} (${d.days} giorni, inserite)</span><strong>${fmt(total)}</strong></div>`).join('')}</div><form class="admin-installs-form" data-admin-installs-form><label>Giorno<input name="day" type="date" max="${today}" required /></label><label>Store<select name="store"><option value="google-play">Google Play</option><option value="app-store">App Store</option></select></label><label>Installazioni<input name="installs" type="number" min="0" step="1" required /></label><label>Fonte<input name="source" maxlength="120" placeholder="Play Console, report del giorno" required /></label><button type="submit" class="primary-button">Salva la cifra</button></form>${d.installs.rows.length ? `<details><summary>Cifre inserite</summary><ul>${d.installs.rows.slice(0, 40).map(row => `<li>${esc(row.day)} · ${row.store === 'google-play' ? 'Google Play' : 'App Store'}: ${fmt(row.installs)} <small>(${esc(row.source)})</small></li>`).join('')}</ul></details>` : '<p class="admin-note">Nessuna cifra inserita: non se ne inventano.</p>'}</section>`;
+  return `${head}${tiles}${activity}${joined}${installs}`;
+}
 export function renderAdminPanel(admin, context) {
-  const tabs = [['partiti', 'Partiti', 'flag'], ['politici', 'Politici', 'users'], ['archivio', 'Archivio', 'book']];
+  const tabs = [['partiti', 'Partiti', 'flag'], ['politici', 'Politici', 'users'], ['statistiche', 'Statistiche', 'chart'], ['archivio', 'Archivio', 'book']];
   if (!context.unlocked) return `<div class="admin-page">${ownerGate(admin.message, { available: context.available, configured: context.configured, checking: context.checking })}</div>`;
   const hero = `<section class="admin-hero"><div>${glyph('shield', 30)}<div><span class="section-kicker">AREA AMMINISTRATIVA · PROPRIETARIO</span><h2>Dati di partiti e politici</h2><p>Le correzioni diventano un livello separato sopra il dataset reale: i file originali non cambiano mai. Ogni modifica è pubblicata per tutti i giocatori.</p></div></div><button class="secondary-button" data-admin-shared="logout">Esci</button></section>`;
   if (context.loading) return `<div class="admin-page">${hero}<div class="catalog-state" role="status"><span class="catalog-spinner" aria-hidden="true"></span><strong>Carico partiti e parlamentari…</strong></div></div>`;
-  const body = admin.tab === 'politici' ? politiciansTab(admin, context) : admin.tab === 'archivio' ? archiveTab() : partiesTab(admin, context);
+  const body = admin.tab === 'politici' ? politiciansTab(admin, context) : admin.tab === 'archivio' ? archiveTab() : admin.tab === 'statistiche' ? statsTab(admin) : partiesTab(admin, context);
   return `<div class="admin-page">${hero}<nav class="admin-tabs">${tabs.map(([id, label, icon]) => `<button type="button" class="${admin.tab === id ? 'is-active' : ''}" data-admin-tab="${id}">${glyph(icon, 16)} ${label}</button>`).join('')}</nav>${admin.message ? `<p class="admin-message" role="status">${esc(admin.message)}</p>` : ''}${body}</div>`;
 }

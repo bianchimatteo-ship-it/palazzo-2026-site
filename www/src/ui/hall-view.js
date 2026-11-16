@@ -1,10 +1,11 @@
 // HALL OF FAME, retirement and legacy: the careers concluded and what they leave. The Hall belongs to the player and
 // outlives every career; a new career can start from the legacy of one of them (a bounded set of starting conditions,
 // never a change to the world of the game). Also the card of the Career page where a career is concluded.
-import { LEVER_BY_ID, START_PROFILES } from '../data/simulation/start-rules.js?v=20261116-8';
-import { END_KINDS, LEGACY_TIERS, RETIREMENT, boonLines, careerFacts, legacyBoon, legacyScore, legacyTags, retirementProblem, tierOf } from '../core/legacy-engine.js?v=20261116-8';
-import { formatDate } from '../core/time.js?v=20261116-8';
-import { identityMark, partyIdentity } from './party-identity.js?v=20261116-8';
+import { LEVER_BY_ID, START_PROFILES } from '../data/simulation/start-rules.js?v=20261116-20';
+import { END_KINDS, LEGACY_TIERS, RETIREMENT, boonLines, careerFacts, legacyBoon, legacyScore, legacyTags, retirementProblem, tierOf } from '../core/legacy-engine.js?v=20261116-20';
+import { formatDate } from '../core/time.js?v=20261116-20';
+import { resignationPosts } from '../core/resignations.js?v=20261116-20';
+import { identityMark, partyIdentity } from './party-identity.js?v=20261116-20';
 
 const esc = (value = '') => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const leverLabel = id => LEVER_BY_ID[id]?.label ?? id;
@@ -49,6 +50,15 @@ export function hallView(entries = [], context = {}) {
   return `<header class="hall-head"><span class="section-kicker">ARCHIVIO DELLE CARRIERE</span><h2>Hall of Fame</h2><p class="section-subtitle">Le carriere concluse, dalla più alta in giù. Ogni carriera lascia un’eredità politica pesata su ciò che è davvero successo: cariche, mandati, leggi, obiettivi, partito, reputazione e memoria. Una nuova carriera può partire dall’eredità di una di queste, senza toccare il mondo di gioco. La Hall resta nel browser anche se cancelli i salvataggi.</p><p class="hall-count" data-hall-count="${count}"><b>${count}</b> ${count === 1 ? 'carriera conclusa' : 'carriere concluse'}</p></header>
     ${count ? `<div class="hall-list">${entries.map(entry => entryCard(entry, context)).join('')}</div>` : '<div class="hall-empty"><span class="hall-empty-mark" aria-hidden="true">★</span><p class="quiet-copy">Nessuna carriera conclusa. Quando lascerai la politica (Carriera → Percorso), la tua storia entrerà qui con la sua eredità.</p></div>'}
     <details class="hall-howto"><summary>Come si pesa l’eredità</summary><ul class="hall-parts"><li><span>Punteggio da 0 a 100: anni di carriera, carica più alta (in proporzione a quanto è durata), mandati, leggi, obiettivi, partito guidato, reputazione, memoria politica, parola data, scandali e cadute.</span></li>${LEGACY_TIERS.map(item => `<li><span><b>${esc(item.label)}</b> da ${item.min} · ${esc(item.text)}</span></li>`).join('')}<li><span>Gli scenari personalizzati valgono l’85% e la difficoltà pesa sul risultato (facile 90%, difficile 112%).</span></li></ul></details>`;
+}
+
+// ---------- resignations: any single office, with what it costs shown before the confirmation ----------
+export function resignationsPanel(state) {
+  const posts = resignationPosts(state);
+  const body = posts.length
+    ? `<ul class="resign-list">${posts.map(post => `<li class="resign-post" data-resign-post="${esc(post.id)}"><div><strong>${esc(post.label)}</strong><small>${esc(post.where)}</small></div><details><summary>Cosa succede se ti dimetti</summary><ul>${post.lines.map(line => `<li>${esc(line)}</li>`).join('')}</ul></details><div class="hall-retire-action"><button class="secondary-button danger" data-resign="${esc(post.id)}" ${post.blocked ? `disabled title="${esc(post.blocked)}"` : ''}>Dimettiti</button>${post.blocked ? `<em class="decision-block">${esc(post.blocked)}</em>` : ''}</div></li>`).join('')}</ul>`
+    : '<p class="sx-note" data-resign-none>Non hai incarichi: sei un semplice iscritto. Puoi ripartire dall’attività sul territorio, dal partito e dalle candidature quando ci sono.</p>';
+  return `<section class="hall-resign" data-resign-panel><h4>Dimissioni da un incarico</h4><p class="sx-note">Puoi lasciare un incarico alla volta senza chiudere la carriera. Prima di confermare vedi che cosa perdi e che cosa resta: le dimissioni non si annullano.</p>${body}</section>`;
 }
 
 // ---------- the Career page: concluding the career ----------

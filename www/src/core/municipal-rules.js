@@ -67,6 +67,7 @@ export function bandDescription(info) {
 // The index the game works with (set once when the document is loaded): the engines and the views read the class of a comune through bandOfMunicipality.
 let shared = new Map();
 export const setMunicipalPopulationIndex = index => { shared = index instanceof Map ? index : new Map(); };
+export const municipalPopulationIndex = () => shared;
 export const bandOfMunicipality = code => municipalityBandInfo(code, shared);
 
 // ---------- the resident population of a territory (always the sum of the comuni it includes, without duplicates): comune, province, region, Italy ----------
