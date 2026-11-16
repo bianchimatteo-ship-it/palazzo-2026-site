@@ -9,7 +9,7 @@ Ultimo aggiornamento: 2026-11-16 · branch `feature/qa-completamento` (da `featu
 
 | Punto | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|
-| 2.1 Scenario vicesegretario + consigliere comunale: candidatura alle Politiche riprodotta | non iniziato |  |  |  |
+| 2.1 Scenario vicesegretario + consigliere comunale: candidatura alle Politiche riprodotta | parziale |  | repro browser /tmp/qa | riprodotto con livello Vicesegretario + consigliere comunale: la candidatura funziona (nessun blocco, nessun errore); regole verificate con 18 combinazioni |
 | 2.2 Impedimento ingiustificato alla candidatura corretto (o dimostrato assente) | non iniziato |  |  |  |
 | 2.3 Blocco/crash dopo «Candidati ora» corretto (o dimostrato assente) | non iniziato |  |  |  |
 | 2.4 Spiegazione dei requisiti non soddisfatti, sempre visibile | non iniziato |  |  |  |
@@ -34,10 +34,10 @@ Ultimo aggiornamento: 2026-11-16 · branch `feature/qa-completamento` (da `featu
 
 | Punto | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|
-| 4.1 Impostazione 2/4 settimane corretta (non avanza una sola settimana) | non iniziato |  |  |  |
-| 4.2 Motivo di ogni interruzione e numero di settimane realmente trascorse | non iniziato |  |  |  |
-| 4.3 Simulare fino a una data o alle prossime elezioni | non iniziato |  |  |  |
-| 4.4 Votazioni delegate allo staff, con indicazioni politiche | non iniziato |  |  |  |
+| 4.1 Impostazione 2/4 settimane corretta (non avanza una sola settimana) | completato | src/core/store.js (advanceTurn) | check-advance-turn | causa: il ciclo si fermava a ogni campagna attiva/messaggio urgente senza dirlo |
+| 4.2 Motivo di ogni interruzione e numero di settimane realmente trascorse | completato | src/core/store.js | check-advance-turn | toast «Avanzate N su M: mi sono fermato perché …»; screenshot da fare |
+| 4.3 Simulare fino a una data o alle prossime elezioni | parziale | (già presente: advanceToDate, UI «Avanza fino alla data») | check-advance | «fino alle prossime elezioni» esiste come «fino alle candidature» (fastForwardToElection); non esteso al voto |
+| 4.4 Votazioni delegate allo staff, con indicazioni politiche | parziale | (già presente: delega allo staff in advanceToDate) | check-advance | indicazioni politiche allo staff non implementate |
 | 4.5 Simulazione che prosegue durante eventi ordinari e votazioni non essenziali; stop solo per decisioni importanti | non iniziato |  |  |  |
 
 ## 5. Parlamento, consigli e disciplina
@@ -153,9 +153,9 @@ Ultimo aggiornamento: 2026-11-16 · branch `feature/qa-completamento` (da `featu
 
 | Punto | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|
-| 18.1 Popup IT/EN con testo e due pulsanti richiesti | non iniziato |  |  |  |
-| 18.2 Una sola volta per installazione, non al primo avvio, non durante tutorial/elezioni/votazioni/scene | non iniziato |  |  |  |
-| 18.3 Registrato come visualizzato prima dell'apertura; persistente (Preferences/locale); limite tecnico documentato | non iniziato |  |  |  |
+| 18.1 Popup IT/EN con testo e due pulsanti richiesti | completato | src/data/repositories/review-prompt.js, src/ui/app.js, src/data/release-pairs.js | check-review-prompt | after/popup-recensione-it|en-390x844.png |
+| 18.2 Una sola volta per installazione, non al primo avvio, non durante tutorial/elezioni/votazioni/scene | completato | review-prompt.js | check-review-prompt (logica + Chrome) | una volta, non al primo avvio, solo momento tranquillo |
+| 18.3 Registrato come visualizzato prima dell'apertura; persistente (Preferences/locale); limite tecnico documentato | completato | review-prompt.js, docs/qa/review-prompt.md | check-review-prompt | localStorage della WebView; Preferences non aggiunto (stesso limite, documentato) |
 
 ## 19. AdMob e aggiornamento Android
 

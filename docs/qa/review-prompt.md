@@ -1,0 +1,9 @@
+# Invito alla recensione su Google Play
+
+- Testo: «Ti sta piacendo Politicando 2026? Il tuo parere è importante! Lascia una recensione sincera su Google Play e aiutaci a migliorare il gioco.» — pulsanti «Lascia una recensione» (apre `https://play.google.com/store/apps/details?id=it.matteobianchi.politicando2026`) e «Non ora» (chiude). Traduzione inglese in `src/data/release-pairs.js`.
+- Compare **solo nell'app Android** (WebView Capacitor su Android), mai sul sito o su iOS.
+- Condizioni (`src/data/repositories/review-prompt.js`): almeno 3 avvii dell'app (il primo non conta) **e** almeno 8 settimane di gioco; mai con tutorial non concluso, scena, notte elettorale, campagna in corso, voto, menu, finestra o celebrazione aperti. Viene proposto dopo la chiusura del resoconto settimanale.
+- Una sola volta: è registrato come visualizzato **prima** dell'apertura (se non si riesce a registrare, non si mostra). Non ricompare dopo riavvio, logout o cambio account: la memoria è del dispositivo, non dell'account.
+- Nessun premio, nessuna richiesta di cinque stelle, il gioco non si blocca.
+- **Limite tecnico della persistenza:** la memoria è lo storage locale della WebView (`localStorage`, chiave `politicando.review.v1`), come le altre impostazioni del gioco. Sopravvive a riavvii e aggiornamenti; va persa se l'app viene disinstallata o se si cancellano i dati dell'app. Non si usa nessun identificativo hardware né fingerprinting per ricordarlo oltre la disinstallazione: dopo una reinstallazione può comparire di nuovo una volta. (Non è stato aggiunto il plugin `@capacitor/preferences`: avrebbe lo stesso limite e richiederebbe una sincronizzazione nativa.)
+- Test: `node scripts/check-review-prompt.mjs` (logica + finestra reale in Chrome con l'app che si dichiara Android). Screenshot: `artifacts/qa/screenshots/after/popup-recensione-*.png`.

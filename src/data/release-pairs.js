@@ -480,4 +480,9 @@ export const ALL_PAIRS = [
   ['Segui la sorte del governo: se cade, cadi con lui.', 'Follow the government’s fate: if it falls, you fall with it.'],
   ['Un premio civico', 'A civic award'],
   ['Dedicalo ai volontari', 'Dedicate it to the volunteers'],
+  ['IL TUO PARERE', 'YOUR OPINION'],
+  ['Ti sta piacendo Politicando 2026?', 'Are you enjoying Politicando 2026?'],
+  ['Il tuo parere è importante! Lascia una recensione sincera su Google Play e aiutaci a migliorare il gioco.', 'Your opinion matters! Leave an honest review on Google Play and help us improve the game.'],
+  ['Lascia una recensione', 'Leave a review'],
+  ['Non ora', 'Not now'],
 ];

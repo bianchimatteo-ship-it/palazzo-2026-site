@@ -71,6 +71,7 @@ import { resolveInstitution } from './lazy-views.js?v=20261113-8';
 import { createRewardsService } from './rewards-service.js?v=20261113-8';
 import { createAdMobAdapter } from '../data/repositories/admob-adapter.js?v=20261113-8';
 import { createAdsManager, interruptible } from '../data/repositories/ads-manager.js?v=20261113-8';
+import { createReviewPrompt } from '../data/repositories/review-prompt.js?v=20261113-8';
 import { patchRewardsPage, renderRewardNotice, renderRewardsPage } from './rewards-page.js?v=20261113-8';
 
 // The destinations of the game, by theme. On computers the sidebar lists the eight and opens the pages of the current one; on phones the
@@ -1258,7 +1259,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
         else if (data.slotDelete) { const slot = store.listSlots().find(item => item.id === data.slotDelete); assertAvailable(slot?.careerId); confirmThen({ title: 'Eliminare questo salvataggio?', body: `«${slot?.name ?? 'Salvataggio'}» verrà eliminato da questo browser. L’operazione non si può annullare.`, confirmLabel: 'Elimina salvataggio', tone: 'danger' }, () => store.deleteSlot(data.slotDelete)); return; }
         else if (data.settingKey === 'language') { await setLanguage(data.settingValue); settings = loadSettings(settingsScope()); applySettings(); playSound('click'); }
         else if (data.settingKey) { settings = saveSetting(data.settingKey, data.settingValue, settingsScope()); if (data.settingKey === 'newsPopup') { if (data.settingValue === 'off') newsPopup = null; else newsPopupHoldWeek = store.getState().game?.week?.index ?? null; } applySettings(); playSound('click'); }
-        else if ('reportClose' in data) { reportOpen = false; adsManager.onWeekClosed(store.getState()).catch(() => {}); }
+        else if ('reportClose' in data) { reportOpen = false; adsManager.onWeekClosed(store.getState()).catch(() => {}); setTimeout(() => offerReview(), 600); }
         else if (data.accountAction === 'logout') { await leaveAccount(); }
         else if (data.accountAction === 'refresh') { await refreshCloud({ info: true }); }
         else if (data.accountAction === 'probe') { await probeAccount(); }
@@ -2827,6 +2828,16 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   // The rewards of time played: the clock counts only with a career open, the page in the foreground and this tab holding the lease; the page «Ricompense» is patched live, not drawn again every second.
   // Advertising: Android only and only when the mode of data/ads-config.js is not 'off' (it is 'off' in every release): the adapter then does nothing at all, the banners and interstitials never appear and the video button says why it is off.
   // iPhone and iPad: no ids, no plugin: the same code stays silent. The banner follows the page (secondary pages only), the interstitial follows the closing of a week (data/repositories/ads-manager.js).
+  // The invitation to review the game on Google Play (data/repositories/review-prompt.js): Android app only, once for each installation, after enough use, in a quiet moment (after the weekly report is closed).
+  const reviewPrompt = createReviewPrompt({ isPlayStoreApp: () => /Android/i.test(globalThis.navigator?.userAgent ?? '') && isNativeApp() });
+  reviewPrompt.noteLaunch();
+  const offerReview = () => {
+    const state = store.getState();
+    const quiet = Boolean(state.game && !state.scene && !state.night && !state.campaign && !wizard && !menu.open && !pendingConfirm && !reportOpen && !newsPopup && !pendingCelebration(state.game) && onboarding().tour === 'done');
+    if (!reviewPrompt.due({ quiet, weeks: state.game?.week?.index ?? 0 }) || !reviewPrompt.markShown()) return;
+    askConfirm({ kicker: 'IL TUO PARERE', title: 'Ti sta piacendo Politicando 2026?', body: 'Il tuo parere è importante! Lascia una recensione sincera su Google Play e aiutaci a migliorare il gioco.', confirmLabel: 'Lascia una recensione', cancelLabel: 'Non ora' })
+      .then(answer => { reviewPrompt.markAnswered(answer.ok ? 'review' : 'later'); if (answer.ok) globalThis.open?.(reviewPrompt.url, '_blank', 'noopener'); });
+  };
   const adPlatform = /Android/i.test(globalThis.navigator?.userAgent ?? '') && isNativeApp() ? 'android' : 'none';
   const adMob = createAdMobAdapter({ platform: adPlatform });
   const adsManager = createAdsManager({ adapter: adMob });

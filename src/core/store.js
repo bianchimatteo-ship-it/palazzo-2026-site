@@ -4226,12 +4226,33 @@ export const store = {
     lastSaved = 'Nessuna partita salvata'; emit();
   },
   // One turn of play: one or more weeks, stopping early when something needs the player.
-  advanceTurn(weeks = Number(loadSettings().weeksPerTurn) || 1) {
-    for (let index = 0; index < weeks; index++) {
-      if (store.advance(7)?.blocked) break;
+  // «Chiudi settimana» (1, 2 or 4 weeks, the setting weeksPerTurn). The first week always closes (it is what the player asked for: the open matters take their default); the next ones go on while nothing needs the
+  // player, and the call says how many weeks really went by and why it stopped when it is fewer than asked: { requested, weeks, reason, title } with reason 'completato', 'decisione' (an urgent matter or a situation),
+  // 'campagna' (the campaign needs the player: the nomination, or the last week before the vote), 'voto' (an open ballot in an assembly where the player sits), 'fine' (the career is over), 'bloccato'.
+  advanceTurn(weeks = Number(loadSettings().weeksPerTurn) || 1, { delegate = false } = {}) {
+    const requested = Math.max(1, Math.floor(Number(weeks)) || 1);
+    let done = 0, reason = 'completato', waiting = null;
+    for (let index = 0; index < requested; index++) {
       const game = state.game;
-      if (!game || game.status === 'ended' || state.campaign?.status === 'active' || game.inbox.some(item => ['urgente', 'situazione'].includes(item.kind))) break;
+      if (!game || game.status === 'ended') { reason = 'fine'; break; }
+      if (index > 0 && !delegate) {
+        const campaign = state.campaign;
+        if (campaign?.status === 'active' && (campaign.nomination?.status === 'pending' || campaign.day + 14 > campaign.totalDays)) { reason = 'campagna'; waiting = { kind: 'campagna', title: campaign.nomination?.status === 'pending' ? 'la candidatura del partito è da ottenere' : 'manca meno di una settimana al voto' }; break; }
+        const pending = game.inbox.find(entry => ['urgente', 'situazione'].includes(entry.kind) && !((entry.holdUntilWeek ?? 0) > game.week.index));
+        if (pending) { reason = 'decisione'; waiting = { kind: pending.kind, title: pending.title }; break; }
+      }
+      const before = state.clock.currentDate;
+      const out = store.advance(7);
+      if (out?.blocked) { reason = 'voto'; waiting = { kind: 'voto', title: out.votes?.[0]?.title ?? null }; break; }
+      if (state.clock.currentDate <= before) { reason = 'bloccato'; break; }
+      done++;
     }
+    const text = { completato: '', decisione: `una decisione ti aspetta${waiting?.title ? `: ${waiting.title}` : ''}`, campagna: `la campagna ti richiede${waiting?.title ? `: ${waiting.title}` : ''}`, voto: `c’è una votazione aperta in Aula${waiting?.title ? `: ${waiting.title}` : ''}`, fine: 'la carriera è conclusa', bloccato: 'il tempo non è avanzato' }[reason];
+    if (requested > 1 || reason !== 'completato') {
+      const toast = reason === 'completato' ? `Avanzate ${done} settimane` : `Avanzate ${done} ${done === 1 ? 'settimana' : 'settimane'} su ${requested}: mi sono fermato perché ${text}`;
+      state = { ...state, ui: { ...state.ui, toast } }; emit();
+    }
+    return { requested, weeks: done, reason, title: waiting?.title ?? null };
   },
   // Real reference data the simulation builds on (2x1000 and party catalogue). Older saves are brought in line:
   // worlds with invented forces are rebuilt with real parties, a demo party of the player becomes the player's own.
