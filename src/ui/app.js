@@ -2274,7 +2274,8 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
         return;
       }
       const run = () => {
-        store.advanceTurn();
+        // the weeks are the ones of the setting AS THE PLAYER SEES IT (the settings of a signed-in account are kept apart from the guest's): the store would read the guest's, so they are passed in
+        store.advanceTurn(Number(settings.weeksPerTurn) || 1);
         const game = store.getState().game;
         playSound(game?.inbox.some(item => ['urgente', 'situazione'].includes(item.kind)) ? 'alert' : 'week');
         if (settings.weeklyReport === 'on' && game?.lastReport) { reportOpen = true; render(store.getState(), store.getLastSaved()); }

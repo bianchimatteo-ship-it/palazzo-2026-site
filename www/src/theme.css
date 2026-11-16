@@ -1410,3 +1410,5 @@ html[data-ui-motion="off"] .language-gate-button { transition: none; }
 html.platform-ios body { padding-top: env(safe-area-inset-top, 0px); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
 html.platform-ios .sx-tabs, html.platform-ios .gov-nav { top: env(safe-area-inset-top, 0px); }
 html.platform-ios .mobile-sheet-panel, html.platform-ios .wizard-backdrop, html.platform-ios .report-backdrop { padding-top: max(20px, env(safe-area-inset-top, 0px)); }
+.weekly-advance-note { flex: none; margin: 0; padding: 10px 22px; border-top: 1px solid var(--line-strong, var(--line)); background: rgba(240, 207, 133, .08); font-size: .92rem; line-height: 1.4; }
+@media (max-width: 600px) { .weekly-advance-note { padding: 10px 16px; } }

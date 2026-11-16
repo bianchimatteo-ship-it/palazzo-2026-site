@@ -9,10 +9,10 @@ Ultimo aggiornamento: 2026-11-16 · branch `feature/qa-completamento` (da `featu
 
 | Punto | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|
-| 2.1 Scenario vicesegretario + consigliere comunale: candidatura alle Politiche riprodotta | parziale |  | repro browser /tmp/qa | riprodotto con livello Vicesegretario + consigliere comunale: la candidatura funziona (nessun blocco, nessun errore); regole verificate con 18 combinazioni |
-| 2.2 Impedimento ingiustificato alla candidatura corretto (o dimostrato assente) | non iniziato |  |  |  |
-| 2.3 Blocco/crash dopo «Candidati ora» corretto (o dimostrato assente) | non iniziato |  |  |  |
-| 2.4 Spiegazione dei requisiti non soddisfatti, sempre visibile | non iniziato |  |  |  |
+| 2.1 Scenario vicesegretario + consigliere comunale: candidatura alle Politiche riprodotta | parziale |  | repro in Chrome (/tmp/qa) + 18 combinazioni di candidacyBlock | Riproduzione fedele (livello Vicesegretario + consigliere comunale + politiche aperte + «Candidati ora»): la candidatura si apre e la campagna parte, nessun errore. Segnalazione NON riprodotta: servono dati dell'utente (salvataggio) per proseguire |
+| 2.2 Impedimento ingiustificato alla candidatura corretto (o dimostrato assente) | parziale |  | sweep regole office-engine | nessun impedimento nelle regole per consigliere comunale/vicesegretario; un blocco c'è solo con candidatura già prenotata che si sovrappone (messaggio dato) |
+| 2.3 Blocco/crash dopo «Candidati ora» corretto (o dimostrato assente) | parziale |  | repro Chrome | nessun blocco riprodotto; errori di startCampaign già mostrati come toast |
+| 2.4 Spiegazione dei requisiti non soddisfatti, sempre visibile | parziale | (già presente) src/ui/campaign-mode.js candidacyAccess | check-candidacy-access | motivi già mostrati; non migliorato in questa sessione |
 | 2.5 Incarichi non automaticamente incompatibili; rinuncia gestibile se prevista | non iniziato |  |  |  |
 | 2.6 Campagna senza candidatura: partecipazione chiusa, stato di campagna azzerato, ritorno alla carriera, nessuno stato residuo | non iniziato |  |  |  |
 | 2.7 Notte elettorale: popup iniziale non copre tutto lo schermo; leggibile su smartphone e tablet | non iniziato |  |  |  |
@@ -34,10 +34,10 @@ Ultimo aggiornamento: 2026-11-16 · branch `feature/qa-completamento` (da `featu
 
 | Punto | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|
-| 4.1 Impostazione 2/4 settimane corretta (non avanza una sola settimana) | completato | src/core/store.js (advanceTurn) | check-advance-turn | causa: il ciclo si fermava a ogni campagna attiva/messaggio urgente senza dirlo |
-| 4.2 Motivo di ogni interruzione e numero di settimane realmente trascorse | completato | src/core/store.js | check-advance-turn | toast «Avanzate N su M: mi sono fermato perché …»; screenshot da fare |
-| 4.3 Simulare fino a una data o alle prossime elezioni | parziale | (già presente: advanceToDate, UI «Avanza fino alla data») | check-advance | «fino alle prossime elezioni» esiste come «fino alle candidature» (fastForwardToElection); non esteso al voto |
-| 4.4 Votazioni delegate allo staff, con indicazioni politiche | parziale | (già presente: delega allo staff in advanceToDate) | check-advance | indicazioni politiche allo staff non implementate |
+| 4.1 Impostazione 2/4 settimane corretta (non avanza una sola settimana) | completato | src/core/store.js (advanceTurn), src/ui/app.js | check-advance-turn + prova in Chrome | cause: (1) il ciclo si fermava a ogni campagna attiva o decisione urgente senza dirlo; (2) l'app passava a store.advanceTurn() senza argomenti, che leggeva le impostazioni dell'ospite invece di quelle dell'account → ora si passano le settimane scelte. Resta voluto: una decisione urgente ferma il tempo |
+| 4.2 Motivo di ogni interruzione e numero di settimane realmente trascorse | completato | src/core/store.js, src/ui/menu.js, src/theme.css, src/data/release-pairs.js | check-advance-turn, check-i18n, prova in Chrome | before/after: avanzamento-4-settimane-390x844.png («Avanzate 1 settimana su 4: mi sono fermato perché…» nel resoconto; IT/EN) |
+| 4.3 Simulare fino a una data o alle prossime elezioni | parziale | (già presente) | check-advance | «fino a una data» e «fino alle candidature» esistono; non «fino alle prossime elezioni» (voto) |
+| 4.4 Votazioni delegate allo staff, con indicazioni politiche | parziale | (già presente) | check-advance | delega allo staff presente; indicazioni politiche allo staff non implementate |
 | 4.5 Simulazione che prosegue durante eventi ordinari e votazioni non essenziali; stop solo per decisioni importanti | non iniziato |  |  |  |
 
 ## 5. Parlamento, consigli e disciplina
@@ -47,7 +47,7 @@ Ultimo aggiornamento: 2026-11-16 · branch `feature/qa-completamento` (da `featu
 | 5.1 Votazioni nominative (nome, favorevole/contrario/astenuto/assente) | non iniziato |  |  |  |
 | 5.2 Più astensioni/assenze realistiche; scrutini segreti solo aggregati; totali coerenti | non iniziato |  |  |  |
 | 5.3 Disciplina di gruppo con dissensi realistici | non iniziato |  |  |  |
-| 5.4 Capitale politico: 60% trasferito alla campagna, calcolo mostrato, nessuna duplicazione | non iniziato |  |  |  |
+| 5.4 Capitale politico: 60% trasferito alla campagna, calcolo mostrato, nessuna duplicazione | completato | src/core/store.js (startCampaign), src/ui/campaign-mode.js, src/data/release-pairs.js | check-campaign-capital; regressione check-campaign/-start/-opening/-depth, check-invariants | before/after: capitale-campagna-390x844.png (60 → 36 + 24, mostrato prima e nel diario) |
 
 ## 6. Iniziative popolari e richieste dei cittadini
 
@@ -161,20 +161,20 @@ Ultimo aggiornamento: 2026-11-16 · branch `feature/qa-completamento` (da `featu
 
 | Punto | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|
-| 19.1 Verifica integrazione AdMob nel branch (plugin, ID, banner, interstitial, rewarded, UMP) | non iniziato |  |  |  |
-| 19.2 Limiti, duplicazioni, offline, attribuzione ricompense; valutazione SSV | non iniziato |  |  |  |
-| 19.3 Annunci reali/live NON attivati; versione e versionCode incrementati | non iniziato |  |  |  |
-| 19.4 Build Android, avvio reale, AAB (solo se stabile) | non iniziato |  |  |  |
+| 19.1 Verifica integrazione AdMob nel branch (plugin, ID, banner, interstitial, rewarded, UMP) | completato | (verifica) docs/admob.md | check-admob | integrazione presente nel branch (plugin 8.3.0, ID, banner/interstitial/rewarded, UMP); spenta (ADS_MODE off) |
+| 19.2 Limiti, duplicazioni, offline, attribuzione ricompense; valutazione SSV | parziale | (già presente) | check-admob, check-rewards-sync | limiti, duplicati, offline, accredito Worker verificati; SSV valutata e NON implementata (serve configurazione AdMob del titolare) |
+| 19.3 Annunci reali/live NON attivati; versione e versionCode incrementati | bloccato |  |  | annunci reali/live NON attivati (corretto); versionCode non incrementato: l'ultimo versionCode caricato su Play è sconosciuto (repo: 1) — non lo invento |
+| 19.4 Build Android, avvio reale, AAB (solo se stabile) | bloccato |  |  | nessun Android SDK in questo ambiente: build Gradle, avvio su dispositivo e AAB non eseguibili |
 
 ## 20. Screenshot
 
 | Punto | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|
-| 20.1 Screenshot before/after per i 22 punti richiesti | non iniziato |  |  |  |
+| 20.1 Screenshot before/after per i 22 punti richiesti | parziale | artifacts/qa/screenshots/{before,after} |  | presenti: popup recensione IT/EN (after), capitale politico (before/after), avanzamento 4 settimane (before/after). Mancano gli altri 19 punti (funzioni non implementate o non verificate) |
 
 ## 21. Collaudo finale
 
 | Punto | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|
-| 21.1 Test mirati per ogni modifica; regressione pertinente finale; smartphone/tablet; IT/EN; salvataggi | non iniziato |  |  |  |
-| 21.2 Rapporto finale | non iniziato |  |  |  |
+| 21.1 Test mirati per ogni modifica; regressione pertinente finale; smartphone/tablet; IT/EN; salvataggi | parziale |  | test mirati per le funzioni toccate; regressione completa non eseguita |  |
+| 21.2 Rapporto finale | parziale | docs/qa/master-checklist.md |  | rapporto: vedi risposta finale |

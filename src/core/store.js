@@ -4250,8 +4250,8 @@ export const store = {
     const text = { completato: '', decisione: `una decisione ti aspetta${waiting?.title ? `: ${waiting.title}` : ''}`, campagna: `la campagna ti richiede${waiting?.title ? `: ${waiting.title}` : ''}`, voto: `c’è una votazione aperta in Aula${waiting?.title ? `: ${waiting.title}` : ''}`, fine: 'la carriera è conclusa', bloccato: 'il tempo non è avanzato' }[reason];
     if (requested > 1 || reason !== 'completato') {
       const toast = reason === 'completato' ? `Avanzate ${done} settimane` : `Avanzate ${done} ${done === 1 ? 'settimana' : 'settimane'} su ${requested}: mi sono fermato perché ${text}`;
-      state = { ...state, ui: { ...state.ui, toast } }; emit();
-    }
+      state = { ...state, ui: { ...state.ui, toast, advanceNote: toast } }; emit();
+    } else if (state.ui?.advanceNote) { state = { ...state, ui: { ...state.ui, advanceNote: null } }; }
     return { requested, weeks: done, reason, title: waiting?.title ?? null };
   },
   // Real reference data the simulation builds on (2x1000 and party catalogue). Older saves are brought in line:

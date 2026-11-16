@@ -332,6 +332,7 @@ export function renderWeeklyReport(state) {
       ${cards || consensus ? `<div class="report-metrics">${consensus}${cards}</div>` : '<p class="quiet-copy">Settimana stabile: nessun indicatore personale si è mosso.</p>'}
       ${lines.length ? `<h3 class="weekly-sub">I fatti della settimana</h3><ul class="report-lines weekly-lines">${lines.map(line => { const tagged = /^(Senza una tua decisione|Nuova decisione): (.*)$/s.exec(line); return `<li class="weekly-line weekly-${kindOfLine(line)}">${tagged ? `<span class="weekly-tag">${esc(tagged[1])}</span> <span>${esc(tagged[2])}</span>` : esc(line)}</li>`; }).join('')}</ul>` : ''}
     </div>
+    ${state.ui?.advanceNote ? `<p class="weekly-advance-note" data-advance-note>${esc(state.ui.advanceNote)}</p>` : ''}
     <footer class="weekly-foot"><span>${game.inbox.length} decisioni in agenda${urgent ? ` · ${urgent} urgenti` : ''}</span><button class="primary-button" data-report-close>Continua</button></footer>
   </section></div>`;
 }
