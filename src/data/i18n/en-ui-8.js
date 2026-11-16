@@ -1,6 +1,6 @@
 // English phrase book, part 8 of 8: the administrative area, the account and sign-out screens, the personal logo catalogue, the tutorial invitation and the engine's law-effect and government lines. Same format as part 6: [Italian as shown, English]; `#` stands for a number, `{}` for a free part; in the English a free part is named by its position (`{2}` for the second one).
-import { ALL_PAIRS } from '../studio-lines.js?v=20261113-8';
-import { ALL_PAIRS as ACTIVITY_SCENE_PAIRS } from '../activity-scene-lines.js?v=20261113-8';
+import { ALL_PAIRS } from '../studio-lines.js?v=20261116-1';
+import { ALL_PAIRS as ACTIVITY_SCENE_PAIRS } from '../activity-scene-lines.js?v=20261116-1';
 
 // The explanations of the opening of a general or European campaign (campaign-engine.js campaignOpeningNotes): signed numbers come in both signs.
 function campaignNotePairs() {
@@ -7790,6 +7790,12 @@ export const PHRASES = [
   ["c’è una votazione aperta in Aula", "there is an open vote in the Chamber"],
   ["la carriera è conclusa", "the career is over"],
   ["il tempo non è avanzato", "time did not advance"],
+  ["Qualcosa non ha funzionato: l’azione non è stata completata. Puoi riprovare; il dettaglio è nel registro diagnostico (Impostazioni).", "Something went wrong: the action was not completed. You can try again; the details are in the diagnostic log (Settings)."],
+  ["Copia il registro diagnostico", "Copy the diagnostic log"],
+  ["Svuota il registro diagnostico", "Clear the diagnostic log"],
+  ["Registro diagnostico copiato negli appunti.", "Diagnostic log copied to the clipboard."],
+  ["Copia non riuscita: il registro è nello spazio di archiviazione locale (politicando.diag.v1).", "Copy failed: the log is in local storage (politicando.diag.v1)."],
+  ["Registro diagnostico svuotato.", "Diagnostic log cleared."],
   ["{}: l’intervista su {}", "{1}: the interview on {2}"],
   ["{}: la conferenza stampa su {}", "{1}: the press conference on {2}"],
   ["{}: l’ospitata televisiva su {}", "{1}: the TV appearance on {2}"],

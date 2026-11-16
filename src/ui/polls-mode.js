@@ -1,11 +1,12 @@
-import { campaignScope } from '../core/campaign-engine.js?v=20261113-8';
-import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261113-8';
-import { formatDate } from '../core/time.js?v=20261113-8';
-import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261113-8';
-import { distinctSeries, sparkline } from './charts.js?v=20261113-8';
+import { campaignScope } from '../core/campaign-engine.js?v=20261116-1';
+import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261116-1';
+import { formatDate } from '../core/time.js?v=20261116-1';
+import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261116-1';
+import { distinctSeries, sparkline } from './charts.js?v=20261116-1';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-export const pct = (value, digits = 1) => value === null || value === undefined ? '—' : `${Number(value).toLocaleString('it-IT', { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;
+const pctFormats = new Map();
+export const pct = (value, digits = 1) => { if (value === null || value === undefined) return '—'; let nf = pctFormats.get(digits); if (!nf) { nf = new Intl.NumberFormat('it-IT', { minimumFractionDigits: digits, maximumFractionDigits: digits }); pctFormats.set(digits, nf); } return `${nf.format(Number(value))}%`; };
 export const signed = value => `${value > 0 ? '+' : value < 0 ? '−' : '±'}${Math.abs(Number(value) || 0).toLocaleString('it-IT', { maximumFractionDigits: 1 })}`;
 export const shortDate = date => formatDate(date, { day: 'numeric', month: 'short' });
 const decimal = value => Number(value).toLocaleString('it-IT', { maximumFractionDigits: 2 });

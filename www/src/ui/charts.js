@@ -1,13 +1,16 @@
 // Shared building blocks for the simulation screens: numbers, state badges, meters and charts.
 // Charts follow the same rules as the polls page: thin marks, one axis, legend + direct labels,
 // hover tooltips through data-trend / data-tip, text in ink rather than in the series colour.
-import { glyph } from './visuals.js?v=20261113-8';
-import { accentAsGraphic } from './party-identity.js?v=20261113-8';
+import { glyph } from './visuals.js?v=20261116-1';
+import { accentAsGraphic } from './party-identity.js?v=20261116-1';
 
 export const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-export const num = (value, digits = 1) => value === null || value === undefined || Number.isNaN(Number(value)) ? '—' : Number(value).toLocaleString('it-IT', { maximumFractionDigits: digits });
-export const euro = value => `${Math.round(Number(value) || 0).toLocaleString('it-IT')} €`;
-export const signed = (value, digits = 1) => `${value > 0 ? '+' : value < 0 ? '−' : '±'}${Math.abs(Number(value) || 0).toLocaleString('it-IT', { maximumFractionDigits: digits })}`;
+// number formats built once (a new one for each call made a redraw of the polls page slow)
+const formats = new Map();
+const format = (min, max) => { const key = `${min}-${max}`; let nf = formats.get(key); if (!nf) { nf = new Intl.NumberFormat('it-IT', { minimumFractionDigits: min, maximumFractionDigits: max }); formats.set(key, nf); } return nf; };
+export const num = (value, digits = 1) => value === null || value === undefined || Number.isNaN(Number(value)) ? '—' : format(0, digits).format(Number(value));
+export const euro = value => `${format(0, 0).format(Math.round(Number(value) || 0))} €`;
+export const signed = (value, digits = 1) => `${value > 0 ? '+' : value < 0 ? '−' : '±'}${format(0, digits).format(Math.abs(Number(value) || 0))}`;
 
 // Validated categorical slots (same order as the polls) and a single-hue sequential ramp.
 export const SERIES = Object.freeze(['#4A9DB8', '#C4A66A', '#D0805F', '#6FAE8A', '#8E86D8', '#D98BA6', '#B9C2A0', '#7FB8D6']);

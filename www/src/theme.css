@@ -1412,3 +1412,30 @@ html.platform-ios .sx-tabs, html.platform-ios .gov-nav { top: env(safe-area-inse
 html.platform-ios .mobile-sheet-panel, html.platform-ios .wizard-backdrop, html.platform-ios .report-backdrop { padding-top: max(20px, env(safe-area-inset-top, 0px)); }
 .weekly-advance-note { flex: none; margin: 0; padding: 10px 22px; border-top: 1px solid var(--line-strong, var(--line)); background: rgba(240, 207, 133, .08); font-size: .92rem; line-height: 1.4; }
 @media (max-width: 600px) { .weekly-advance-note { padding: 10px 16px; } }
+
+/* ---------- the invitation to review the game on Google Play (ui/review-card.js): a quiet card, never a blocking dialog ---------- */
+.review-card { position: fixed; z-index: 55; left: 12px; right: 12px; bottom: calc(78px + env(safe-area-inset-bottom, 0px)); margin: 0 auto; max-width: 460px; display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; padding: 16px 16px 14px; color: var(--ink-soft, #dcd9cf); background: linear-gradient(160deg, #1b2a22 0%, #121a16 70%); border: 1px solid var(--gold-line, #c09943); border-top-width: 3px; border-radius: 18px; box-shadow: 0 18px 40px rgba(0, 0, 0, .55), 0 0 0 1px rgba(240, 207, 133, .08) inset; opacity: 0; transform: translateY(18px); transition: opacity .22s ease, transform .22s ease; }
+.review-card[hidden] { display: none; }
+.review-card.is-in { opacity: 1; transform: none; }
+.review-card.is-leaving { opacity: 0; transform: translateY(18px); }
+.review-mark { grid-row: span 1; display: grid; place-items: center; width: 52px; height: 52px; border-radius: 14px; background: radial-gradient(circle at 30% 25%, rgba(240, 207, 133, .22), rgba(240, 207, 133, .04)); border: 1px solid rgba(240, 207, 133, .35); }
+.review-copy { min-width: 0; }
+.review-kicker { display: block; font: 800 11px/1 Manrope, sans-serif; letter-spacing: .16em; color: var(--label, #bba880); margin-bottom: 4px; }
+.review-card h2 { margin: 0 0 4px; font: 800 18px/1.25 Manrope, sans-serif; color: #f4efe0; }
+.review-card p { margin: 0; font-size: 14px; line-height: 1.45; }
+.review-card .review-fine { margin-top: 6px; font-size: 12.5px; color: var(--ink-quiet, #acafa0); }
+.review-actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; margin-top: 8px; }
+.review-primary { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 0 18px; border-radius: 12px; font: 800 15px/1 Manrope, sans-serif; text-decoration: none; color: #1b1608; background: linear-gradient(180deg, #f0cf8d, #c9a25a); box-shadow: 0 4px 14px rgba(201, 162, 90, .35); }
+.review-primary:active { transform: translateY(1px); filter: brightness(.95); }
+.review-later { min-height: 46px; padding: 0 14px; border: 0; border-radius: 12px; background: transparent; color: var(--ink-quiet, #acafa0); font: 700 14px/1 Manrope, sans-serif; cursor: pointer; }
+.review-later:hover, .review-later:focus-visible { color: #f4efe0; background: rgba(255, 255, 255, .06); }
+.review-primary:focus-visible, .review-later:focus-visible { outline: 2px solid #f0cf8d; outline-offset: 2px; }
+@media (min-width: 700px) { .review-card { bottom: 24px; max-width: 520px; } }
+html[data-ui-motion="off"] .review-card, html[data-scene-motion="off"] .review-card { transition: none; }
+@media (prefers-reduced-motion: reduce) { .review-card { transition: none; } }
+
+/* Immediate feedback on every press (the action itself may take a moment): the control gives way under the finger, no tap delay, and a gold flash instead of the browser's grey one. */
+button, a, summary, [role="button"], [data-nav], select, input[type="checkbox"], input[type="radio"] { touch-action: manipulation; -webkit-tap-highlight-color: rgba(240, 207, 133, .22); }
+button:not(:disabled):active, a.primary-button:active, a.secondary-button:active, [role="button"]:active, summary:active { transform: scale(.97); filter: brightness(.9); transition: transform .05s ease-out, filter .05s ease-out; }
+.main-nav .nav-item:active, .mobile-tab:active { transform: scale(.96); }
+@media (prefers-reduced-motion: reduce) { button:not(:disabled):active { transform: none; } }

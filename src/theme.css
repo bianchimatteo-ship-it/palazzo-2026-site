@@ -1433,3 +1433,9 @@ html.platform-ios .mobile-sheet-panel, html.platform-ios .wizard-backdrop, html.
 @media (min-width: 700px) { .review-card { bottom: 24px; max-width: 520px; } }
 html[data-ui-motion="off"] .review-card, html[data-scene-motion="off"] .review-card { transition: none; }
 @media (prefers-reduced-motion: reduce) { .review-card { transition: none; } }
+
+/* Immediate feedback on every press (the action itself may take a moment): the control gives way under the finger, no tap delay, and a gold flash instead of the browser's grey one. */
+button, a, summary, [role="button"], [data-nav], select, input[type="checkbox"], input[type="radio"] { touch-action: manipulation; -webkit-tap-highlight-color: rgba(240, 207, 133, .22); }
+button:not(:disabled):active, a.primary-button:active, a.secondary-button:active, [role="button"]:active, summary:active { transform: scale(.97); filter: brightness(.9); transition: transform .05s ease-out, filter .05s ease-out; }
+.main-nav .nav-item:active, .mobile-tab:active { transform: scale(.96); }
+@media (prefers-reduced-motion: reduce) { button:not(:disabled):active { transform: none; } }

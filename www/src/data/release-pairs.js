@@ -1,11 +1,11 @@
 // English phrase-book pairs of the last release pass (data/i18n/en-ui-8.js reads `ALL_PAIRS`): the guided programme editor, the days of the Quirinale and the rule on the parties, the government room, the live
 // votes of the assemblies, the party headquarters, the TV name plates and the tutorial. Format as in the phrase-book: [Italian as shown, English]; `#` a number, `{}` a free part.
-import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261113-8';
-import { DEBATE_PAIRS } from './debate-choices.js?v=20261113-8';
-import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261113-8';
-import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261113-8';
-import { ALL_PAIRS as TOPIC_PAIRS } from './activity-scene-topics.js?v=20261113-8';
-import { LAW_TERM_PAIRS } from './law-terms.js?v=20261113-8';
+import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261116-1';
+import { DEBATE_PAIRS } from './debate-choices.js?v=20261116-1';
+import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261116-1';
+import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261116-1';
+import { ALL_PAIRS as TOPIC_PAIRS } from './activity-scene-topics.js?v=20261116-1';
+import { LAW_TERM_PAIRS } from './law-terms.js?v=20261116-1';
 export const ALL_PAIRS = [
   ...GUEST_PAIRS,
   ...DEBATE_PAIRS,
@@ -484,6 +484,7 @@ export const ALL_PAIRS = [
   ['Ti sta piacendo Politicando 2026?', 'Are you enjoying Politicando 2026?'],
   ['Il tuo parere è importante! Lascia una recensione sincera su Google Play e aiutaci a migliorare il gioco.', 'Your opinion matters! Leave an honest review on Google Play and help us improve the game.'],
   ['Lascia una recensione', 'Leave a review'],
+  ['Nessun obbligo e nessun premio: scrivi quello che pensi davvero.', 'No obligation and no reward: write what you really think.'],
   ['Non ora', 'Not now'],
   ['Capitale politico: # su # (il 60%) passano alla campagna, # restano a te. I fondi sono un’altra risorsa.', 'Political capital: # of # (60%) go to the campaign, # stay with you. Funds are a separate resource.'],
   ['capitale politico # su # (60%) alla campagna, # restano', 'political capital # of # (60%) to the campaign, # remain'],
@@ -500,4 +501,10 @@ export const ALL_PAIRS = [
   ['c’è una votazione aperta in Aula', 'there is an open vote in the Chamber'],
   ['la carriera è conclusa', 'the career is over'],
   ['il tempo non è avanzato', 'time did not advance'],
+  ['Qualcosa non ha funzionato: l’azione non è stata completata. Puoi riprovare; il dettaglio è nel registro diagnostico (Impostazioni).', 'Something went wrong: the action was not completed. You can try again; the details are in the diagnostic log (Settings).'],
+  ['Copia il registro diagnostico', 'Copy the diagnostic log'],
+  ['Svuota il registro diagnostico', 'Clear the diagnostic log'],
+  ['Registro diagnostico copiato negli appunti.', 'Diagnostic log copied to the clipboard.'],
+  ['Copia non riuscita: il registro è nello spazio di archiviazione locale (politicando.diag.v1).', 'Copy failed: the log is in local storage (politicando.diag.v1).'],
+  ['Registro diagnostico svuotato.', 'Diagnostic log cleared.'],
 ];

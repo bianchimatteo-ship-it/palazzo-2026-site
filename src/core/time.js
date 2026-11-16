@@ -1,5 +1,7 @@
 const italianDate = new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
-export const formatDate = (dateString, options) => new Intl.DateTimeFormat('it-IT', options ?? { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${dateString}T12:00:00`));
+// (the formatter is built once for each set of options: building one at every call was the heaviest thing of a page redraw)
+const dateFormats = new Map();
+export const formatDate = (dateString, options) => { const key = options ? JSON.stringify(options) : ''; let format = dateFormats.get(key); if (!format) { format = new Intl.DateTimeFormat('it-IT', options ?? { day: 'numeric', month: 'long', year: 'numeric' }); dateFormats.set(key, format); } return format.format(new Date(`${dateString}T12:00:00`)); };
 export const fullDate = (dateString) => italianDate.format(new Date(`${dateString}T12:00:00`));
 export function advanceDays(dateString, days) {
   const date = new Date(`${dateString}T12:00:00`);

@@ -1,9 +1,10 @@
 // Shared building blocks of the main sections (Elezioni, Carriera, Partito, Agenda): hero, internal tabs,
 // indicators, cards and tables with the same visual language as the rest of POLITICANDO 2026.
-import { glyph } from './visuals.js?v=20261113-8';
+import { glyph } from './visuals.js?v=20261116-1';
 
 export const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-export const num = (value, digits = 1) => value === null || value === undefined || Number.isNaN(Number(value)) ? '—' : Number(value).toLocaleString('it-IT', { maximumFractionDigits: digits });
+const numFormats = new Map();
+export const num = (value, digits = 1) => { if (value === null || value === undefined || Number.isNaN(Number(value))) return '—'; let nf = numFormats.get(digits); if (!nf) { nf = new Intl.NumberFormat('it-IT', { maximumFractionDigits: digits }); numFormats.set(digits, nf); } return nf.format(Number(value)); };
 export const pct = (value, digits = 1) => value === null || value === undefined ? '—' : `${num(value, digits)}%`;
 export const euro = value => `${Math.round(Number(value) || 0).toLocaleString('it-IT')} €`;
 export const signed = (value, digits = 1) => `${value > 0 ? '+' : value < 0 ? '−' : '±'}${Math.abs(Number(value) || 0).toLocaleString('it-IT', { maximumFractionDigits: digits })}`;
