@@ -54,6 +54,7 @@ const names = ['a1', 'a2', 'a3', 'a4', 'a5'];
 const users = []; for (const name of names) users.push(await register(on, `utente-${name}`));
 const ids = sqlite.prepare("SELECT id, username FROM users WHERE username LIKE 'utente-%' ORDER BY username").all();
 const today = worker.romeDay();
+const noon = n => Date.parse(`${dayOf(n)}T12:00:00Z`);   // noon of a day counted by date, never by 24 h steps (the clocks change in Rome)
 const dayOf = n => new Date(Date.parse(`${today}T12:00:00Z`) - n * 86400000).toISOString().slice(0, 10);
 // registering already marks today for each account; add past days by hand through the same function the Worker uses
 for (const [index, row] of ids.entries()) { await worker.noteActivity(on, d1, row.id, Date.now() - (index + 1) * 86400000); await worker.noteActivity(on, d1, row.id, Date.now() - (index + 1) * 86400000); }
@@ -74,16 +75,16 @@ assert.equal(JSON.stringify(stats).includes('utente-a1') || JSON.stringify(stats
 // the 7 and 30 day windows are rolling and exact
 sqlite.exec('DELETE FROM activity_days');
 const u = ids[0].id;
-await worker.noteActivity(on, d1, u, Date.now() - 6 * 86400000);   // inside the week
-await worker.noteActivity(on, d1, ids[1].id, Date.now() - 7 * 86400000);   // just outside the week, inside the month
-await worker.noteActivity(on, d1, ids[2].id, Date.now() - 29 * 86400000);  // last day of the month
-await worker.noteActivity(on, d1, ids[3].id, Date.now() - 30 * 86400000);  // just outside the month
+await worker.noteActivity(on, d1, u, noon(6));   // inside the week
+await worker.noteActivity(on, d1, ids[1].id, noon(7));   // just outside the week, inside the month
+await worker.noteActivity(on, d1, ids[2].id, noon(29));  // last day of the month
+await worker.noteActivity(on, d1, ids[3].id, noon(30));  // just outside the month
 const edge = (await call(on, '/api/admin/stats?days=7', { token: owner })).body.activity.series.at(-1);
 assert.equal(edge.dau, 0); assert.equal(edge.wau, 1, 'La settimana mobile ha 7 giorni: oggi e i sei prima.'); assert.equal(edge.mau, 3, 'Il mese mobile ha 30 giorni: il trentesimo giorno prima non c’è.');
 
 // ---------- 4. retention and deletion ----------
 sqlite.exec('DELETE FROM activity_days');
-await worker.noteActivity(on, d1, u, Date.now() - 500 * 86400000);
+await worker.noteActivity(on, d1, u, noon(500));
 sqlite.prepare('INSERT OR IGNORE INTO activity_days (user_id, day) VALUES (?, ?)').run(u, '2020-01-01');
 await worker.noteActivity(on, d1, u, Date.now());
 assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM activity_days WHERE day < ?").get(dayOf(400)).n, 0, 'Le righe più vecchie di 400 giorni vengono tolte.');
