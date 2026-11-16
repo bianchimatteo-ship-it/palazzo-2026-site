@@ -2354,7 +2354,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     if (nav) {
       if (nav.dataset.archiveJump) archive.tab = nav.dataset.archiveJump;
       // a link of the guide leaves the guide: the menu closes and the page opens
-      if (nav.hasAttribute('data-guide-close') && menu.open) { menu.open = false; menu.view = 'home'; }
+      if (nav.dataset?.guideClose !== undefined && menu.open) { menu.open = false; menu.view = 'home'; }
       // A link into Sondaggi e media may point at one of its views (data-obs-view).
       if (nav.dataset.obsView) { views.tabs.osservatorio = { value: nav.dataset.obsView, context: sectionContext('osservatorio', store.getState()) }; saveViews(); }
       setHash(nav.dataset.nav); await ensurePageData(nav.dataset.nav); return;

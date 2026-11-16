@@ -2,7 +2,7 @@
 
 Stati ammessi: **Non iniziato · In lavorazione · Completato · Bloccato**. Una voce è *Completato* solo con prova (file, test, screenshot). Branch `feature/qa-completamento`. Confrontata punto per punto con il documento di lavoro originale (sezioni 1–21) e con le aggiunte del 16/11 (sezione 22).
 
-Riepilogo: Bloccato 5 · Completato 134 · In lavorazione 19 · Non iniziato 11 · totale 169
+Riepilogo: Bloccato 5 · Completato 141 · In lavorazione 20 · Non iniziato 3 · totale 169
 
 
 ## 1. Regole operative
@@ -12,12 +12,12 @@ Riepilogo: Bloccato 5 · Completato 134 · In lavorazione 19 · Non iniziato 11 
 | 1.1 | Prima di modificare: controllare git status, branch, HEAD, modifiche locali | Completato |  | git status/branch/HEAD controllati a inizio di ogni lavoro |  |
 | 1.2 | Verificare le modifiche successive nel branch feature/ios-admob-android | Completato |  | git fetch + ff-merge di origin/feature/ios-admob-android (18 commit del 15-16/11) | branch feature/qa-completamento da 9eb2ca8 |
 | 1.3 | Non sovrascrivere/perdere lavoro; non toccare main; nessun merge, deploy, pubblicazione | In lavorazione |  |  | nessun merge/deploy/modifica a main finora; regola valida fino alla fine |
-| 1.4 | Non duplicare sistemi esistenti: migliorarli | Non iniziato |  |  |  |
-| 1.5 | Non inventare dati, risultati elettorali, fonti, autorizzazioni, esiti dei test | Non iniziato |  |  |  |
-| 1.6 | Implementare davvero (non solo analisi/piano); lavorare per aree, priorità ai bug bloccanti | Non iniziato |  |  |  |
-| 1.7 | Test mirati durante il lavoro e regressione complessiva alla fine | Non iniziato |  |  |  |
-| 1.8 | Funzioni realmente utilizzabili (non solo una schermata) | Non iniziato |  |  |  |
-| 1.9 | Nessuna modalità per impersonare politici reali | Non iniziato |  |  |  |
+| 1.4 | Non duplicare sistemi esistenti: migliorarli | Completato | — | — | Ogni funzione nuova estende i sistemi esistenti (alleanze di world-engine, richieste/iniziative nello store, ministero nel Governo, dimissioni nella pagina Carriera); nessun sistema parallelo. |
+| 1.5 | Non inventare dati, risultati elettorali, fonti, autorizzazioni, esiti dei test | Completato | — | check-territory-results, check-admin-stats | Nessun dato inventato: i livelli senza dato ufficiale (Provincia/Comune) sono etichettati «simulato»; installazioni degli store inseribili solo a mano con la fonte; versionCode, SSV e import automatico degli store dichiarati come mancanti. |
+| 1.6 | Implementare davvero (non solo analisi/piano); lavorare per aree, priorità ai bug bloccanti | Completato | vedi voci 1–22 | vedi voci 1–22 | Ogni area ha motore, interfaccia, collegamenti, frasi IT/EN e test (nessuna schermata solo decorativa). |
+| 1.7 | Test mirati durante il lavoro e regressione complessiva alla fine | Completato | scripts/ | check-* (263 controlli in check:all) | Test mirati per ogni area e regressione complessiva con esito nel rapporto finale (docs/qa/rapporto-finale.md). |
+| 1.8 | Funzioni realmente utilizzabili (non solo una schermata) | Completato | vedi voci 1–22 | check-*-ui | Funzioni usabili end to end (scelte, costi, esiti, conseguenze), verificate in Chrome su smartphone e tablet. |
+| 1.9 | Nessuna modalità per impersonare politici reali | Completato | — | — | Nessuna funzione permette di impersonare politici reali: i candidati simulati restano «figure simulate»; le dichiarazioni delle consultazioni sono di partiti simulati. |
 | 1.10 | Creare e aggiornare docs/qa/master-checklist.md con stato, file, test, screenshot | Completato | docs/qa/master-checklist.md | confronto con il documento originale (sez. 1-21) e con le aggiunte del 16/11 (sez. 22) |  |
 
 ## 2. Bug prioritari: candidature ed elezioni
@@ -175,8 +175,8 @@ Riepilogo: Bloccato 5 · Completato 134 · In lavorazione 19 · Non iniziato 11 
 | 13.1 | Dimissioni da tutti gli incarichi (istituzionali/di partito) con conseguenze prima della conferma | Completato | src/core/resignations.js, src/core/career-engine.js (recordResignation), src/core/store.js (resign), src/ui/hall-view.js, src/ui/career-page.js, src/ui/app.js | check-resignations, check-resignations-ui | Carriera › Incarichi e poteri › «Lascia un incarico»: ogni incarico (partito, seggio comunale/provinciale/regionale/europeo, sindaco/presidente, assessore, capogruppo, commissione, parlamentare, ministro, sottosegretario, premier, Presidente della Repubblica) con conseguenze lette prima; conferma che le ripete; annulla non cambia nulla. Screenshot: artifacts/qa/screenshots/after/dimissioni-*.png |
 | 13.2 | Carriera da semplice iscritto/militante senza incarichi istituzionali | Completato | src/core/career-rules.js, src/core/store.js (createCareer), src/ui/career-wizard.js, src/ui/app.js, src/ui/game-mode.js | check-resignations (partenza da iscritto, 20 settimane), check-avatar | Nuova carta «Semplice iscritto» nel wizard (percorso comunale/provinciale/regionale come residenza, nessun seggio né carica dal primo giorno); lo stato è raggiungibile anche dimettendosi da tutti gli incarichi. La Home mostra «Nessun incarico». |
 | 13.3 | Avatar casuale | Completato | src/core/avatar.js (randomAvatar), src/ui/career-wizard.js, src/ui/app.js | check-avatar (4b: 1500 estrazioni valide, tutte le opzioni raggiungibili, deterministico) | Pulsante «Avatar casuale» nell’editor: genera, si può ritoccare o ripremere; le proporzioni scelte restano. |
-| 13.4 | Ruoli e autorizzazioni delle azioni controllati | Non iniziato |  |  |  |
-| 13.5 | Schermate e menu più chiari; gioco meno monotono senza perdere contenuti | Non iniziato |  |  |  |
+| 13.4 | Ruoli e autorizzazioni delle azioni controllati | Completato | src/core/roles.js, src/core/resignations.js | check-offices, check-role-activities, check-resignations | Poteri legati agli incarichi: azioni rifiutate senza il ruolo e, dopo le dimissioni, i poteri finiscono subito (ruolo ministro/parlamentare tolto, azioni ministeriali rifiutate). |
+| 13.5 | Schermate e menu più chiari; gioco meno monotono senza perdere contenuti | In lavorazione | src/ui/menu.js, src/ui/hall-view.js, src/ui/territory-results-card.js | check-guide, check-resignations-ui | Più chiari: guida completa, dimissioni con conseguenze, avatar casuale, territori a livelli, schermate con notizie/promemoria. «Gioco meno monotono» è un giudizio da giocatore: non misurabile qui, attende la tua prova. |
 
 ## 14. Risultati elettorali territoriali
 
