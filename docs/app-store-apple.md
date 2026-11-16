@@ -1,6 +1,6 @@
 # Apple App Store — checklist di pubblicazione (13/11/2026)
 
-Stato: **nulla è stato iscritto, costruito o inviato ad Apple.** Non è un parere legale. Ruoli e analisi: `docs/audit-legale-conformita.md` §2–3. Legenda: [V] letto su fonte ufficiale oggi; [NV] da verificare sul testo ufficiale; ☐ da fare; ⚠ decisione dei genitori.
+Stato al 16/11/2026: **Apple Developer non ancora attivato; nessuna build firmata, nessun upload e nessun invio ad Apple.** Su Mac è stata completata una Release build senza firma e creato/verificato un archivio preliminare `.xcarchive` (non caricabile finché non viene firmato). Non è un parere legale. Ruoli e analisi: `docs/audit-legale-conformita.md` §2–3. Legenda: [V] letto su fonte ufficiale oggi; [NV] da verificare sul testo ufficiale; ☐ da fare; ⚠ decisione dei genitori.
 
 ## A. Account (prima di tutto)
 - ☐ ⚠ Scegliere quale genitore si iscrive: serve la maggiore età nella propria area; un minore usa l'Apple Account del genitore [V, developer.apple.com/programs/enroll].
@@ -12,9 +12,9 @@ Stato: **nulla è stato iscritto, costruito o inviato ad Apple.** Non è un pare
 - ☐ Condizioni di trasferimento dell'app tra account e di conversione individuale → organizzazione (Apple rinvia al supporto) [V].
 
 ## B. Conformità e metadati (App Review Guidelines)
-- ☐ 5.1.1: privacy policy raggiungibile nel campo di App Store Connect e **nell'app** [NV]. Stato: collegamento nell'app presente (menu → informazioni legali); URL pubblico `…/privacy.html` (inglese `privacy-en.html`). Le pagine hanno ancora segnaposto: **non inviare finché i requisiti indispensabili non sono chiusi**.
+- ☐ 5.1.1: privacy policy raggiungibile nel campo di App Store Connect e **nell'app** [NV]. Stato: collegamento nell'app presente (menu → informazioni legali); URL pubblico `https://palazzo-2026-site.bianchimatteo657.workers.dev/privacy.html` (inglese `https://palazzo-2026-site.bianchimatteo657.workers.dev/privacy-en.html`); il percorso senza estensione `/privacy` non è nella allowlist del Worker. Le pagine hanno ancora segnaposto: **non inviare finché i requisiti indispensabili non sono chiusi**.
 - ☐ 5.1.1(v): eliminazione dell'account in app [NV]. Presente: Menu → Account → «Elimina il mio account» + pagina web.
-- ☐ 1.5: contatto di supporto raggiungibile (Support URL + e-mail) [V]. Presente: `politicando2026simulazione@gmail.com` nel gioco; serve un Support URL pubblico (la pagina del portale).
+- ☐ 1.5: contatto di supporto raggiungibile (Support URL + e-mail) [V]. Pagina pubblica italiana e inglese aggiunta al branch: `https://palazzo-2026-site.bianchimatteo657.workers.dev/support.html` e `/support-en.html`; **non ancora deployata né verificata online**. Contatto: `politicando2026simulazione@gmail.com`.
 - ☐ 2.3: metadati fedeli, screenshot del gioco reale, età nella descrizione coerente con la classificazione [V]. Nessun logo di partiti di terzi negli screenshot.
 - ☐ 2.3.9: niente dati di persone reali negli account di prova; il gioco non richiede credenziali di prova (si gioca senza account).
 - ☐ 1.2 Contenuti degli utenti [V testo]: i nomi/loghi dei giocatori sono privati, non condivisi con altri; confermare che non si configura UGC. Se si volesse condividere, servirebbero filtri, segnalazione, blocco e contatto.
@@ -40,7 +40,7 @@ Va dichiarato tutto ciò che si trasmette fuori dal dispositivo oltre il tempo n
 - ☐ ⚠ Dichiarazione «trader»: Apple la richiede a chi distribuisce in UE; la gratuità da sola non basta a escluderla [NV, riassunto], consultare il consulente. Se «trader», dati pubblici (nome, indirizzo, telefono, e-mail).
 - ☐ Verificare altri obblighi per la distribuzione in UE (pagina «Distributing apps in the EU») [non letta].
 
-## F. Tecnica (non eseguita qui: serve un Mac con Xcode)
+## F. Tecnica
 - ☐ `npm run build:www && npx cap sync ios`; Xcode 26+; firma con il team del genitore; bundle id: ⚠ decidere prima (oggi Android usa `it.matteobianchi.politicando2026`; il nome di Matteo resta nell'identificativo per sempre).
 - ☐ Test su dispositivo e TestFlight: avvio, account, eliminazione, offline, recupero password, tastiera.
 - ☐ Icone/launch screen iOS (verificare che non siano i segnaposto Capacitor, come era per Android).
@@ -55,15 +55,19 @@ Va dichiarato tutto ciò che si trasmette fuori dal dispositivo oltre il tempo n
 | `PrivacyInfo.xcprivacy` | ✅ app: nessun tracciamento, dati dichiarati da `privacy.html` §3 (e-mail, ID utente, ID dispositivo, contenuto) — **da confermare dal titolare con la privacy label**; manifest dei plugin: nessun plugin nativo su iOS (`includePlugins: []`) |
 | `Info.plist` | ✅ `arm64`, iPhone verticale, iPad quattro orientamenti, nessun permesso, nessuna modalità in background |
 | Firma | automatica, nessun team nel repository (lo sceglie il titolare dell'account) |
-| Safe area | ✅ `viewport-fit=cover` + regole solo iOS (`html.platform-ios`) per notch e Dynamic Island; **da verificare sul simulatore** |
-| iPad | layout a barra laterale già adattivo (820/1024/1180 px verificati in Chrome: nessuno scorrimento orizzontale); da verificare su simulatore e con tocco |
+| Safe area | ✅ `viewport-fit=cover` + regole iOS; layout verificato dall'utente su simulatore iPhone e iPad |
+| iPad | ✅ layout e funzioni verificati dall'utente su simulatore in verticale e orizzontale |
 | Instagram su iOS | ✅ spento (resta il collegamento senza premio); `check-rewards-sync` |
 | AdMob | non presente su iOS; il pacchetto SPM è riallineato a Capacitor 8.5.3 |
 | Login/registrazione/recupero/eliminazione/salvataggi | stessa logica del web, Worker già accetta `capacitor://localhost`; test automatici su web (`check-accounts`, `check-account-deletion`, `check-account-isolation`, `check-saves`); **nessuna prova su iOS** |
-| Build, simulatore, TestFlight | ❌ **non eseguiti: serve un Mac con Xcode** |
+| Build Release / archivio | ✅ Xcode 27.2 + iOS SDK 27.2; `BUILD SUCCEEDED`; `.xcarchive` preliminare senza firma creato e bundle verificato (26 MB, bundle ID/versione corretti) |
 
-### Prove da fare su Mac (non eseguite)
-`npm ci && npm run build:www && npx cap sync ios`, aprire `ios/App/App.xcworkspace` (Xcode 26+), scegliere il team, e provare su: iPhone piccolo (es. SE), iPhone con Dynamic Island, iPad verticale, iPad orizzontale: avvio, registrazione, accesso, recupero password, eliminazione account, tastiera sui moduli, safe area (barra inferiore, titoli), selettore file (loghi), salvataggio e ripresa, modalità aereo (gioco offline), link esterni e `mailto:`, rotazione su iPad, e che iPhone non ruoti.
+### Passaggi tecnici ancora da completare
+- Sincronizzare sul Mac gli aggiornamenti recenti del branch e verificare `npm run check:publication` (include ora le pagine di supporto).
+- Attivare l'Apple Developer Program del genitore, scegliere il Team in Xcode e creare un **nuovo archivio firmato**; l'archivio preliminare senza firma non si carica.
+- Verificare il privacy manifest e le API con required reason dell'app e di ogni dipendenza nell'archivio.
+- Prova su almeno un dispositivo fisico e poi TestFlight; i test su simulatori iPhone/iPad sono già stati confermati dall'utente.
+- App Store Connect: metadati, privacy label, age rating, contatti/trader e screenshot.
 
 ### Scheda dell'App Store (bozza, da far approvare ai genitori)
 **Nome:** POLITICANDO 2026 · **Sottotitolo (≤30):** `Simulazione politica italiana` / `Italian politics simulation`
