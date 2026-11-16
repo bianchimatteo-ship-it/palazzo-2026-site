@@ -22,7 +22,7 @@ const promise = (id, madeWeek, dueWeek, extra = {}) => ({ id, kind: 'programma',
   assert.ok(notStarted.items[0]?.kind === 'avvio', 'Non avviata da sei settimane: promemoria.');
   assert.ok(dueReminders({ promises: Array.from({ length: 6 }, (_, n) => promise(`x${n}`, 1, 8 + n)) }, { week: 3 }).items.length <= REMINDER_RULES.max, 'Al massimo tre promesse per scheda.');
 }
-if (chromeAvailable) await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version }) => {
+if (chromeAvailable) await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version, send, screenshot }) => {
   await createCareerInPage({ evaluate, version }, { weeks: 2 });
   await openCareer({ evaluate, goto, waitFor: wait });
   await evaluate(`localStorage.setItem('politicando.settings.v1', JSON.stringify({ newsPopup: 'off', sceneMotion: 'off', language: 'it', weeklyReport: 'off' })); document.querySelectorAll('[data-report-close],[data-confirm=cancel]').forEach(b => b.click()); true`);
@@ -32,6 +32,7 @@ if (chromeAvailable) await withBrowser(async ({ evaluate, goto, waitFor: wait, p
   await evaluate(`window.__offerReminder?.(); true`); await pause(900);
   assert.ok(await evaluate(`Boolean(document.querySelector('[data-promise-reminder]') && !document.querySelector('[data-promise-reminder]').hidden)`), 'La scheda compare in un momento tranquillo.');
   assert.match(await evaluate(`document.querySelector('[data-promise-reminder]').innerText`), /Ricordati cosa hai promesso/);
+  if (process.env.QA_SHOT_DIR) for (const [w, h] of [[390, 844], [820, 1180]]) { await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 2, mobile: true }); await pause(500); await screenshot(`${process.env.QA_SHOT_DIR}/promemoria-promesse-it-${w}x${h}.png`); }
   await evaluate(`document.querySelector('[data-reminder-later]').click(); true`); await pause(500);
   assert.ok(!(await evaluate(`Boolean(document.querySelector('[data-promise-reminder]'))`)), '«Più tardi» chiude la scheda.');
   await evaluate(`window.__offerReminder?.(); true`); await pause(600);

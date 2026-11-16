@@ -63,6 +63,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, send, screensho
     await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 2, mobile: true }); await pause(500); await open();
     assert.equal(await evaluate('document.documentElement.scrollWidth - document.documentElement.clientWidth <= 1'), true, `${w}px: nessuno scorrimento orizzontale`);
     if (process.env.QA_SHOT_DIR) { await evaluate(`document.querySelector('[data-initiative]')?.scrollIntoView({ block: 'start' }); true`); await pause(400); await screenshot(`${process.env.QA_SHOT_DIR}/iniziative-it-${w}x${h}.png`); }
+    if (process.env.QA_SHOT_DIR && await evaluate(`Boolean(document.querySelector('[data-request-card]'))`)) { await evaluate(`document.querySelector('[data-request-card]').scrollIntoView({ block: 'start' }); true`); await pause(400); await screenshot(`${process.env.QA_SHOT_DIR}/richieste-cittadini-it-${w}x${h}.png`); }
   }
   // English
   await evaluate(`import('/src/core/i18n.js?v=${version}').then(m => m.setLanguage('en')).then(() => true)`); await pause(1200);

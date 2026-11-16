@@ -2,7 +2,7 @@
 
 Stati ammessi: **Non iniziato · In lavorazione · Completato · Bloccato**. Una voce è *Completato* solo con prova (file, test, screenshot). Branch `feature/qa-completamento`. Confrontata punto per punto con il documento di lavoro originale (sezioni 1–21) e con le aggiunte del 16/11 (sezione 22).
 
-Riepilogo: Bloccato 5 · Completato 119 · In lavorazione 18 · Non iniziato 27 · totale 169
+Riepilogo: Bloccato 5 · Completato 134 · In lavorazione 19 · Non iniziato 11 · totale 169
 
 
 ## 1. Regole operative
@@ -239,26 +239,26 @@ Riepilogo: Bloccato 5 · Completato 119 · In lavorazione 18 · Non iniziato 27 
 
 | Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|---|
-| 20.1 | Candidatura alle Politiche | Non iniziato |  |  |  |
-| 20.2 | Messaggio requisiti non soddisfatti | Non iniziato |  |  |  |
+| 20.1 | Candidatura alle Politiche | Completato | src/ui/campaign-mode.js | qa-screenshots candidatura | artifacts/qa/screenshots/after/candidatura-politiche-it-{390x844,820x1180}.png |
+| 20.2 | Messaggio requisiti non soddisfatti | In lavorazione | src/ui/campaign-mode.js | check-candidacy-vice-councillor, check-campaign-excluded (Node) | Il messaggio è coperto dai test sul motore; con le carriere di prova (comunale, regionale, deputato) la schermata non compare mai (la candidatura è consentita), quindi nessuna schermata è stata scattata: serve una carriera che il tuo salvataggio riproduce (2.2/2.3). |
 | 20.3 | Notte elettorale | Completato | src/night.css | check-election-night-ui | Before/after: artifacts/qa/screenshots/{before,after}/notte-elettorale-390x844.png |
 | 20.4 | Avanzamento 2/4 settimane | Completato | src/core/store.js | check-advance-turn | artifacts/qa/screenshots/{before,after}/avanzamento-4-settimane-390x844.png |
-| 20.5 | Votazione nominativa | Non iniziato |  |  |  |
-| 20.6 | Scene con pro e contro | Non iniziato |  |  |  |
-| 20.7 | Barra di apprezzamento | Non iniziato |  |  |  |
+| 20.5 | Votazione nominativa | Completato | src/ui/floor-view.js | qa-screenshots voto, check-floor-ui | artifacts/qa/screenshots/after/votazione-nominativa-it-{390x844,820x1180}.png |
+| 20.6 | Scene con pro e contro | Completato | src/ui/scene-view.js | qa-screenshots scena, check-scene-procon | artifacts/qa/screenshots/after/scena-pro-contro-barra-it-{390x844,820x1180}.png |
+| 20.7 | Barra di apprezzamento | Completato | src/ui/scene-view.js | qa-screenshots scena | artifacts/qa/screenshots/after/scena-pro-contro-barra-it-*.png (barra «Pubblico» con valore e giudizio) |
 | 20.8 | Pagina alleanze e coalizioni | Completato | src/ui/polls-mode.js | check-alliance-ui | artifacts/qa/screenshots/after/alleanze-it-390x844.png, alleanze-it-820x1180.png, alleanze-en-390x844.png |
-| 20.9 | Trattativa e programma comune | Non iniziato |  |  |  |
+| 20.9 | Trattativa e programma comune | Completato | src/ui/polls-mode.js | check-alliance-ui | artifacts/qa/screenshots/after/trattativa-programma-comune-it-{390x844,820x1180}.png |
 | 20.10 | Raccolta firme | Completato | src/ui/initiative-mode.js | check-initiatives-ui | artifacts/qa/screenshots/after/iniziative-it-390x844.png, iniziative-it-820x1180.png, iniziative-en-390x844.png |
-| 20.11 | Richieste dei cittadini | Non iniziato |  |  |  |
-| 20.12 | Crisi di Governo | Non iniziato |  |  |  |
-| 20.13 | Area Ministeri | Non iniziato |  |  |  |
-| 20.14 | Consiglio dei ministri | Non iniziato |  |  |  |
-| 20.15 | Formazione del Governo e consultazioni | Non iniziato |  |  |  |
-| 20.16 | Promemoria delle promesse | Non iniziato |  |  |  |
-| 20.17 | Risultati elettorali territoriali | Non iniziato |  |  |  |
-| 20.18 | Guida completa | Non iniziato |  |  |  |
-| 20.19 | Dimissioni e carriera senza incarichi | Non iniziato |  |  |  |
-| 20.20 | Avatar casuale | Non iniziato |  |  |  |
+| 20.11 | Richieste dei cittadini | Completato | src/ui/initiative-mode.js | check-initiatives-ui | artifacts/qa/screenshots/after/richieste-cittadini-it-{390x844,820x1180}.png |
+| 20.12 | Crisi di Governo | Completato | src/ui/parliament-mode.js | qa-screenshots crisi, check-resignations | artifacts/qa/screenshots/after/crisi-di-governo-it-{390x844,820x1180}.png |
+| 20.13 | Area Ministeri | Completato | src/ui/ministry-view.js | check-ministry-ui | artifacts/qa/screenshots/after/ministero-it-{390x844,820x1180}.png, ministero-en-390x844.png |
+| 20.14 | Consiglio dei ministri | Completato | src/ui/ministry-view.js | check-ministry-ui | artifacts/qa/screenshots/after/consiglio-dei-ministri-it-{390x844,820x1180}.png |
+| 20.15 | Formazione del Governo e consultazioni | Completato | src/ui/national-view.js | qa-screenshots formazione | artifacts/qa/screenshots/after/formazione-governo-consultazioni-it-{390x844,820x1180}.png |
+| 20.16 | Promemoria delle promesse | Completato | src/ui/promise-reminder.js | check-promise-reminders | artifacts/qa/screenshots/after/promemoria-promesse-it-{390x844,820x1180}.png |
+| 20.17 | Risultati elettorali territoriali | Completato | src/ui/territory-results-card.js | check-territory-browser | artifacts/qa/screenshots/after/territorio-{italia,regione,provincia}-{desktop,smartphone}.png |
+| 20.18 | Guida completa | Completato | src/ui/menu.js | check-guide | artifacts/qa/screenshots/after/guida-funzione-desktop.png, guida-scenari-{smartphone,tablet}.png |
+| 20.19 | Dimissioni e carriera senza incarichi | Completato | src/ui/hall-view.js | check-resignations-ui | artifacts/qa/screenshots/after/dimissioni-{elenco,conferma,dopo}-desktop.png, dimissioni-elenco-smartphone.png |
+| 20.20 | Avatar casuale | Completato | src/ui/career-wizard.js | check-avatar | artifacts/qa/screenshots/after/avatar-casuale-it-{390x844,820x1180}.png |
 | 20.21 | Popup recensione | Completato | src/ui/review-card.js | check-review-prompt | artifacts/qa/screenshots/after/popup-recensione-* |
 | 20.22 | Schermate principali con pulsanti e caricamenti | Non iniziato |  |  |  |
 | 20.23 | Screenshot reali (Playwright/browser/emulatore), senza credenziali/token/dati personali; per ognuno funzione, scenario, dispositivo, risultato | In lavorazione | scripts/* |  | Screenshot reali fatti con Chrome headless (Chromium di Playwright) per notte, avanzamento, capitale, alleanze, iniziative, recensione; mancano gli altri argomenti |

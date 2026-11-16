@@ -404,6 +404,21 @@ await withBrowser(async browser => {
   // two columns on a desktop: preview on the left of the controls
   const columns = await evaluate(`(() => { const p = document.querySelector('[data-avatar-preview]').getBoundingClientRect(), c = document.querySelector('.avatar-controls').getBoundingClientRect(); return { left: p.right <= c.left + 1, tall: p.height > 150 }; })()`);
   assert.ok(columns.left && columns.tall, 'Su desktop l’anteprima sta accanto ai controlli.');
+  // the random avatar: a press draws another look (valid, shown at once, focus kept), another press another one
+  {
+    const before = await t.preview();
+    let changed = false;
+    for (let n = 0; n < 4 && !changed; n++) { await t.click('[data-avatar-random]', 80); changed = (await t.preview()) !== before; }
+    assert.ok(changed, 'Il pulsante «Avatar casuale» cambia l’anteprima.');
+    const drawn = (await t.preview()).split('.');
+    assert.equal(drawn.length, A.AVATAR_FIELDS.length, 'L’avatar casuale ha tutti i tratti.');
+    assert.ok(drawn.every((value, index) => A.AVATAR_OPTIONS[A.AVATAR_FIELDS[index]].some(item => item.id === value)), 'Ogni tratto è un’opzione valida.');
+    assert.equal(await evaluate(`document.activeElement?.hasAttribute('data-avatar-random')`), true, 'Il focus resta sul pulsante.');
+    assert.equal(await evaluate(`document.querySelector('.wizard-body').scrollTop`) >= 0, true);
+    if (process.env.QA_SHOT_DIR) for (const [w, h] of [[390, 844], [820, 1180]]) { await browser.send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 2, mobile: true }); await pause(500); await evaluate(`document.querySelector('[data-avatar-editor]')?.scrollIntoView({ block: 'start' }); true`); await pause(300); await browser.screenshot(`${process.env.QA_SHOT_DIR}/avatar-casuale-it-${w}x${h}.png`); }
+    await viewport(1280, 800, false); await pause(300);
+    for (const [field, value] of Object.entries(FEMALE)) await t.click(`[data-avatar-field="${field}"][data-avatar-value="${value}"]`, 60);
+  }
   assert.ok((await t.overflow()) <= 1, 'Nessuno scroll orizzontale.');
   // validations: no name, no step forward
   await t.next();

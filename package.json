@@ -62,6 +62,7 @@
     "check:resignations-ui": "node scripts/check-resignations-ui.mjs",
     "check:guide": "node scripts/check-guide.mjs",
     "check:admin-stats": "node scripts/check-admin-stats.mjs",
+    "qa:screenshots": "node scripts/qa-screenshots.mjs",
     "check:promise-reminders": "node scripts/check-promise-reminders.mjs",
     "check:scene-procon": "node scripts/check-scene-procon.mjs",
     "check:vote-absences": "node scripts/check-vote-absences.mjs",
