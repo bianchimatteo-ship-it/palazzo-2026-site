@@ -2037,3 +2037,14 @@ details[open].program-proposal > .program-proposal-head::after { transform: rota
 .resign-post details ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; }
 .resign-post .hall-retire-action { display: grid; gap: 6px; }
 @media (max-width: 480px) { .resign-post .secondary-button { width: 100%; } }
+
+/* Admin statistics: tiles, sparklines and the install form (aggregates only) */
+.admin-stats-head { display: grid; gap: 8px; margin-bottom: 14px; }
+.admin-stat-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin: 10px 0; }
+.admin-stat { display: grid; gap: 2px; padding: 12px; border: 1px solid var(--line, rgba(255,255,255,.12)); border-radius: 12px; background: var(--surface-2, rgba(255,255,255,.03)); }
+.admin-stat span { font-size: 12px; opacity: .8; }
+.admin-stat strong { font: 800 24px/1.1 Manrope, sans-serif; }
+.admin-stat-block { display: grid; gap: 8px; margin: 18px 0; }
+.admin-spark { width: 100%; max-width: 560px; height: 90px; color: var(--accent, #c9a45c); }
+.admin-installs-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; align-items: end; }
+.admin-installs-form label { display: grid; gap: 4px; font-size: 13px; }

@@ -1312,4 +1312,10 @@ export const ALL_PAIRS = [
   ['Vai', 'Go'],
   ['Le regole essenziali, il manuale di ogni funzione e gli scenari guidati, con un esempio per ciascuna.', 'The essential rules, the manual of every function and the guided scenarios, with an example for each.'],
   ['Cerca un argomento (es. sondaggi, fondi, ballottaggio, dimissioni)…', 'Search a topic (e.g. polls, funds, runoff, resignation)…'],
+  ['Come funziona', 'How it works'],
+  ['Come si usa', 'How to use it'],
+  ['Requisiti', 'Requirements'],
+  ['Costi', 'Costs'],
+  ['Conseguenze', 'Consequences'],
+  ['Esempio', 'Example'],
 ];

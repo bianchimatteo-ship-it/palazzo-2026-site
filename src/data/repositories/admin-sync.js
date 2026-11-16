@@ -99,6 +99,21 @@ export async function publishSharedArchive() {
   }
 }
 
+// ---- the owner's statistics: aggregate figures only, read with the session of the owner (the server answers 401 to anybody else) ----
+export async function fetchAdminStats(days = 90) {
+  const token = sharedSessionToken();
+  if (!token) throw new Error('Collega prima questo browser come proprietario.');
+  try { return await call(`/stats?days=${encodeURIComponent(days)}`, { method: 'GET', cache: 'no-store', headers: { authorization: `Bearer ${token}` } }, 15000); }
+  catch (error) { if (error.status === 401) closeSharedSession(); throw error; }
+}
+// The install figures come from the store consoles and are typed in by the owner with their source.
+export async function saveStoreInstalls({ day, store, installs, source }) {
+  const token = sharedSessionToken();
+  if (!token) throw new Error('Collega prima questo browser come proprietario.');
+  try { return await call('/stats', { method: 'PUT', headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ day, store, installs: Number(installs), source }) }, 15000); }
+  catch (error) { if (error.status === 401) closeSharedSession(); throw error; }
+}
+
 // ---- the logos of the parties of the catalogue: published by the owner, shown to every player ----
 // The address of the logo a party has in the shared catalogue (null when none): it carries the hash, so a new image is a new address and the browser keeps the old one for good (and offline).
 export function sharedLogoUrl(partyId) {

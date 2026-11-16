@@ -12,7 +12,7 @@ import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261116-19
 import { isRealCollectionLoaded, loadRealCollections, optionalDocumentStatus, loadRealCollectionsSettled, pristineRecord, realDataFailures, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20261116-19';
 import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20261116-19';
 import { renderAdminPanel } from './lazy-views.js?v=20261116-19';
-import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, rotateSharedCredential, publishSharedArchive, publishCatalogLogo, refreshSharedArchive, removeCatalogLogo, sharedApiUrl, sharedLogoUrl, sharedSyncStatus, verifySharedSession } from '../data/repositories/admin-sync.js?v=20261116-19';
+import { fetchAdminStats, saveStoreInstalls, closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, rotateSharedCredential, publishSharedArchive, publishCatalogLogo, refreshSharedArchive, removeCatalogLogo, sharedApiUrl, sharedLogoUrl, sharedSyncStatus, verifySharedSession } from '../data/repositories/admin-sync.js?v=20261116-19';
 import { syncLogos, resolveLogoConflict, listLogoConflicts } from '../data/repositories/logo-sync.js?v=20261116-19';
 import { analyzeLogoArchive, applyLogoImport, exportLogosZip, listReplacedLogos, restoreReplacedLogos } from '../data/repositories/logo-archive.js?v=20261116-19';
 import { claimLegacyLogo, deleteLogo, discardLegacyLogo, importGuestLogo, importLogoFromUrl, listGuestLogos, listLegacyLogos, listLogoInfos, loadLogos, logoInfo, logosArePersistent, migrateLegacyLogos, onLogosChange, prepareLogo, releaseLegacyPreviews, resolveLogo, saveLogo } from '../data/repositories/personal-logos.js?v=20261116-19';
@@ -577,6 +577,13 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     unlocked: isAdminVerified(), available: Boolean(sharedApiUrl()), configured: loadSharedArchive()?.configured !== false, checking: admin.checking, loading: catalog.loadingPage === 'amministrazione'
   });
   // Every owner edit re-layers the archive over the real snapshot and redraws.
+  // The owner's statistics: loaded when the tab opens or on «Aggiorna»; a figure that fails says why, nothing is made up.
+  const loadAdminStats = async () => {
+    admin.stats = { status: 'loading' }; render(store.getState(), store.getLastSaved());
+    try { admin.stats = { status: 'ready', data: await fetchAdminStats(90) }; }
+    catch (error) { admin.stats = { status: 'error', error: error.status === 401 ? 'Sessione del proprietario scaduta: inserisci di nuovo il PIN.' : (error.message || 'Statistiche non raggiungibili.') }; }
+    render(store.getState(), store.getLastSaved());
+  };
   const adminDone = message => {
     refreshAdminOverrides(); refreshReference?.(); admin.message = message; render(store.getState(), store.getLastSaved());
     // Connected to the shared archive: the change is published for every player, and the page says "published" only when the server has confirmed it.
@@ -1989,12 +1996,13 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       } catch (error) { admin.message = error.message; }
       render(store.getState(), store.getLastSaved()); return;
     }
-    const adminTarget = event.target.closest('[data-admin-tab],[data-admin-select-party],[data-admin-select-politician],[data-admin-reset-record],[data-admin-reset-field],[data-admin-unlink],[data-admin-link],[data-admin-remove-role],[data-admin-export],[data-admin-clear],[data-admin-more],[data-admin-new-party],[data-admin-cancel-new],[data-admin-hide],[data-admin-restore],[data-admin-delete]');
+    const adminTarget = event.target.closest('[data-admin-tab],[data-admin-stats-refresh],[data-admin-select-party],[data-admin-select-politician],[data-admin-reset-record],[data-admin-reset-field],[data-admin-unlink],[data-admin-link],[data-admin-remove-role],[data-admin-export],[data-admin-clear],[data-admin-more],[data-admin-new-party],[data-admin-cancel-new],[data-admin-hide],[data-admin-restore],[data-admin-delete]');
     if (adminTarget && !isAdminVerified()) { admin.message = 'Sessione del proprietario non verificata.'; render(store.getState(), store.getLastSaved()); return; }
     if (adminTarget) {
       const data = adminTarget.dataset;
       try {
-        if (data.adminTab) { admin.tab = data.adminTab; admin.query = ''; admin.message = ''; admin.listPage = 1; admin.creating = false; render(store.getState(), store.getLastSaved()); }
+        if (data.adminTab) { admin.tab = data.adminTab; admin.query = ''; admin.message = ''; admin.listPage = 1; admin.creating = false; render(store.getState(), store.getLastSaved()); if (data.adminTab === 'statistiche' && admin.stats?.status !== 'ready') loadAdminStats(); }
+        else if ('adminStatsRefresh' in data) loadAdminStats();
         else if (data.adminSelectParty) { admin.partyId = data.adminSelectParty; admin.creating = false; admin.linkQuery = ''; admin.message = ''; render(store.getState(), store.getLastSaved()); }
         else if ('adminMore' in data) { admin.listPage++; render(store.getState(), store.getLastSaved()); }
         else if ('adminNewParty' in data) { admin.creating = true; admin.partyId = null; admin.message = ''; render(store.getState(), store.getLastSaved()); }
@@ -2534,6 +2542,13 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       event.preventDefault();
       const data = Object.fromEntries(new FormData(form));
       try { await openSharedSession(data.pin, data.setupCode ?? ''); await refreshSharedArchive(); refreshAdminOverrides(); refreshReference?.(); admin.message = 'Accesso del proprietario verificato: le modifiche vengono pubblicate per tutti.'; await ensurePageData('amministrazione', true); }
+      catch (error) { admin.message = error.message; }
+      render(store.getState(), store.getLastSaved()); return;
+    }
+    if (form.matches('[data-admin-installs-form]')) {
+      event.preventDefault();
+      const data = Object.fromEntries(new FormData(form));
+      try { await saveStoreInstalls(data); await loadAdminStats(); admin.message = 'Cifra salvata con la sua fonte.'; }
       catch (error) { admin.message = error.message; }
       render(store.getState(), store.getLastSaved()); return;
     }

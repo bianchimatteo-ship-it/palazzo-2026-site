@@ -2,7 +2,7 @@
 
 Stati ammessi: **Non iniziato · In lavorazione · Completato · Bloccato**. Una voce è *Completato* solo con prova (file, test, screenshot). Branch `feature/qa-completamento`. Confrontata punto per punto con il documento di lavoro originale (sezioni 1–21) e con le aggiunte del 16/11 (sezione 22).
 
-Riepilogo: Bloccato 3 · Completato 117 · In lavorazione 18 · Non iniziato 31 · totale 169
+Riepilogo: Bloccato 5 · Completato 119 · In lavorazione 18 · Non iniziato 27 · totale 169
 
 
 ## 1. Regole operative
@@ -207,10 +207,10 @@ Riepilogo: Bloccato 3 · Completato 117 · In lavorazione 18 · Non iniziato 31 
 
 | Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|---|
-| 17.1 | Dashboard admin: installazioni, DAU, WAU, MAU, andamento, account attivi | Non iniziato |  |  |  |
-| 17.2 | Nessun collegamento visibile nell'app/sito pubblico; autenticazione e autorizzazione lato server | Non iniziato |  |  |  |
-| 17.3 | Installazioni dalle statistiche degli store; utenti attivi aggregati/minimizzati; nessun fingerprinting/IP/clic indiscriminati | Non iniziato |  |  |  |
-| 17.4 | Finalità, base giuridica, conservazione, informativa prima di attivare; nessuna credenziale nel client | Non iniziato |  |  |  |
+| 17.1 | Dashboard admin: installazioni, DAU, WAU, MAU, andamento, account attivi | Completato | worker.js, migrations/0009_activity_stats.sql, src/data/repositories/admin-sync.js, src/ui/admin-panel.js, src/ui/app.js, docs/statistiche-admin.md | check-admin-stats, check-account-deletion, check-admin, check-admin-e2e, check-legal | Scheda «Statistiche» nell’area amministrativa: account totali e nuovi per giorno, DAU/WAU/MAU con andamento e tabella, installazioni inserite con fonte. La raccolta dell’attività è spenta di default (ADMIN_STATS) e si accende dopo l’informativa. |
+| 17.2 | Nessun collegamento visibile nell'app/sito pubblico; autenticazione e autorizzazione lato server | Completato | worker.js, migrations/0009_activity_stats.sql, src/data/repositories/admin-sync.js, src/ui/admin-panel.js, src/ui/app.js, docs/statistiche-admin.md | check-admin-stats, check-account-deletion, check-admin, check-admin-e2e, check-legal | Nessun collegamento dal gioco, dal menu o dalle pagine pubbliche; GET/PUT /api/admin/stats rispondono 401 senza la sessione del proprietario (PIN verificato dal server); nessuna credenziale né interruttore nel client. |
+| 17.3 | Installazioni dalle statistiche degli store; utenti attivi aggregati/minimizzati; nessun fingerprinting/IP/clic indiscriminati | Bloccato | worker.js, migrations/0009_activity_stats.sql, src/data/repositories/admin-sync.js, src/ui/admin-panel.js, src/ui/app.js, docs/statistiche-admin.md | check-admin-stats, check-account-deletion, check-admin, check-admin-e2e, check-legal | Fatto: utenti attivi aggregati e minimizzati (solo account e giorno, nessun IP/dispositivo/fingerprinting/clic), installazioni inseribili a mano con fonte. MANCA: l’import automatico delle installazioni richiede le credenziali di Google Play Developer Reporting API / App Store Connect (account di servizio del titolare), che non ho e non devo cercare. |
+| 17.4 | Finalità, base giuridica, conservazione, informativa prima di attivare; nessuna credenziale nel client | Bloccato | docs/statistiche-admin.md, docs/legale-requisiti.json | check-legal | Fatto: finalità, minimizzazione, conservazione (400 giorni), testo proposto di informativa IT/EN, requisito «statistiche-aggregate» nell’elenco legale, raccolta spenta. MANCA la decisione del titolare: valutazione della base giuridica, aggiornamento di privacy.html e impostazione ADMIN_STATS=on. |
 
 ## 18. Popup recensione Google Play
 

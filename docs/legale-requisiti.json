@@ -155,6 +155,15 @@
       "required": true,
       "status": "mancante",
       "provided": null
+    },
+    {
+      "id": "statistiche-aggregate",
+      "title": "Informativa e base giuridica per le statistiche aggregate di attività degli account",
+      "section": "docs/statistiche-admin.md · privacy.html (nuova sezione)",
+      "why": "La scheda «Statistiche» dell'area amministrativa può contare gli account attivi (DAU/WAU/MAU) scrivendo una riga (account, giorno) per ogni giorno di attività. È una nuova finalità di trattamento: servono una valutazione della base giuridica e l'aggiornamento dell'informativa (art. 13 GDPR) prima di accendere la raccolta con ADMIN_STATS=on. Finché non è fornito la raccolta resta spenta; il codice, lo schema e i test sono pronti.",
+      "required": false,
+      "status": "mancante",
+      "provided": null
     }
   ]
 }

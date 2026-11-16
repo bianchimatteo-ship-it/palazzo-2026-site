@@ -145,6 +145,11 @@ const SCHEMA = [
   'CREATE TABLE IF NOT EXISTS translate_budget (id TEXT PRIMARY KEY, day TEXT NOT NULL, day_used INTEGER NOT NULL DEFAULT 0, month TEXT NOT NULL, month_used INTEGER NOT NULL DEFAULT 0, blocked_until INTEGER NOT NULL DEFAULT 0, blocked_reason TEXT, updated_at TEXT)',
   'CREATE TABLE IF NOT EXISTS translate_rate (key TEXT PRIMARY KEY, n INTEGER NOT NULL, window INTEGER NOT NULL)',
   'CREATE TABLE IF NOT EXISTS translate_claims (hash TEXT PRIMARY KEY, at INTEGER NOT NULL)',
+  // The owner's statistics (migrations/0009_activity_stats.sql has the same text): a day of activity of an account (nothing else: no address, no device, no content) and the install figures
+  // the owner types in from the store consoles. Activity is written only while ADMIN_STATS=on (off by default: the privacy notice must say so first, see docs/statistiche-admin.md).
+  'CREATE TABLE IF NOT EXISTS activity_days (user_id TEXT NOT NULL, day TEXT NOT NULL, PRIMARY KEY (user_id, day))',
+  'CREATE INDEX IF NOT EXISTS activity_days_day ON activity_days (day)',
+  'CREATE TABLE IF NOT EXISTS store_installs (day TEXT NOT NULL, store TEXT NOT NULL, installs INTEGER NOT NULL, source TEXT NOT NULL, recorded_at TEXT NOT NULL, PRIMARY KEY (day, store))',
   'CREATE INDEX IF NOT EXISTS sessions_user ON sessions (user_id)',
   'CREATE INDEX IF NOT EXISTS sessions_expiry ON sessions (expires_at)',
   // 0003: what the server knows about the content of each slot (read from the content, not declared), the monotone revision counter and the versions replaced.
@@ -375,6 +380,55 @@ async function openSession(db, userId) {
   await db.prepare('INSERT INTO sessions (token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)').bind(await sha256(token), userId, new Date().toISOString(), Date.now() + ACCOUNT_SESSION_DAYS * 86_400_000).run();
   return token;
 }
+// ---------- the owner's statistics ----------
+// What is counted and why: the ACCOUNTS (a registered player), nothing else. A day of activity is «this account signed in or used its online saves on this day» (Europe/Rome); the row holds the account
+// and the day, no address, no device, no user agent, no content of the game. Players with no account are not counted (nothing identifies them, and nothing is added to identify them). Rows older than
+// ACTIVITY_KEEP_DAYS go away; the rows of an account go with the account. Writing is OFF until the owner sets ADMIN_STATS=on, after the privacy notice has been updated (docs/statistiche-admin.md).
+export const ACTIVITY_KEEP_DAYS = 400;
+export const statsOn = env => env?.ADMIN_STATS === 'on';
+let activityPurgedDay = null;
+export async function noteActivity(env, db, userId, now = Date.now()) {
+  if (!statsOn(env) || !db || !userId) return false;
+  try {
+    const day = romeDay(now);
+    await db.prepare('INSERT OR IGNORE INTO activity_days (user_id, day) VALUES (?, ?)').bind(userId, day).run();
+    if (activityPurgedDay !== day) { activityPurgedDay = day; await db.prepare('DELETE FROM activity_days WHERE day < ?').bind(romeDay(now - ACTIVITY_KEEP_DAYS * 86400000)).run(); }
+    return true;
+  } catch { return false; }   // the statistics never break the service
+}
+const addDaysIso = (day, n) => new Date(Date.parse(`${day}T12:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
+const STORES = ['google-play', 'app-store'];
+// The figures for the owner: accounts (total and new by day), the active accounts per day with the rolling week (7 days) and month (30 days), the installs typed in from the stores. Nothing else.
+export async function adminStats(env, db, { now = Date.now(), days = 90 } = {}) {
+  const today = romeDay(now);
+  const span = Math.min(366, Math.max(7, Math.floor(days)));
+  const from = addDaysIso(today, -(span - 1));
+  const accounts = (await db.prepare('SELECT COUNT(*) AS n FROM users').first())?.n ?? 0;
+  const created = (await db.prepare('SELECT created_at AS at FROM users WHERE created_at >= ?').bind(new Date(Date.parse(`${from}T00:00:00Z`) - 86400000).toISOString()).all()).results ?? [];
+  const joined = new Map();
+  for (const row of created) { const day = romeDay(Date.parse(row.at)); joined.set(day, (joined.get(day) ?? 0) + 1); }
+  const series = [];
+  let activity = { enabled: statsOn(env), series: [], current: null, note: statsOn(env) ? 'Conta gli account che hanno aperto una sessione o usato i salvataggi online nel giorno (fuso Europe/Rome). I giocatori senza account non sono contati.' : 'La raccolta dell’attività è spenta (ADMIN_STATS non è «on»): nessun dato di attività viene scritto finché il titolare non la attiva dopo l’informativa.' };
+  if (statsOn(env)) {
+    const rows = (await db.prepare("WITH RECURSIVE d(day) AS (SELECT ? UNION ALL SELECT date(day, '+1 day') FROM d WHERE day < ?) SELECT d.day AS day, (SELECT COUNT(*) FROM activity_days a WHERE a.day = d.day) AS dau, (SELECT COUNT(DISTINCT a.user_id) FROM activity_days a WHERE a.day > date(d.day, '-7 day') AND a.day <= d.day) AS wau, (SELECT COUNT(DISTINCT a.user_id) FROM activity_days a WHERE a.day > date(d.day, '-30 day') AND a.day <= d.day) AS mau FROM d ORDER BY d.day").bind(from, today).all()).results ?? [];
+    activity.series = rows.map(row => ({ day: row.day, dau: row.dau, wau: row.wau, mau: row.mau }));
+    activity.current = activity.series.at(-1) ?? null;
+  }
+  let day = from;
+  while (day <= today) { series.push({ day, newAccounts: joined.get(day) ?? 0 }); day = addDaysIso(day, 1); }
+  const installs = ((await db.prepare('SELECT day, store, installs, source, recorded_at AS recordedAt FROM store_installs WHERE day >= ? ORDER BY day DESC, store').bind(from).all()).results ?? []);
+  const installTotals = Object.fromEntries(STORES.map(store => [store, installs.filter(row => row.store === store).reduce((sum, row) => sum + row.installs, 0)]));
+  return { generatedAt: new Date(now).toISOString(), days: span, accounts: { total: accounts, newInPeriod: [...joined.values()].reduce((a, b) => a + b, 0), series }, activity, installs: { rows: installs, totals: installTotals, note: 'Le installazioni non si possono dedurre dal gioco: sono le cifre di Google Play Console e App Store Connect, inserite a mano dal titolare con la fonte.' } };
+}
+export async function recordInstalls(db, { day, store, installs, source }, now = Date.now()) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(day)) || day > romeDay(now)) throw Object.assign(new Error('Giorno non valido.'), { status: 400 });
+  if (!STORES.includes(store)) throw Object.assign(new Error('Store non valido.'), { status: 400 });
+  if (!Number.isInteger(installs) || installs < 0 || installs > 10_000_000) throw Object.assign(new Error('Numero di installazioni non valido.'), { status: 400 });
+  const origin = String(source ?? '').trim().slice(0, 120);
+  if (origin.length < 4) throw Object.assign(new Error('Indica la fonte della cifra (per esempio «Play Console, report del giorno»).'), { status: 400 });
+  await db.prepare('INSERT INTO store_installs (day, store, installs, source, recorded_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(day, store) DO UPDATE SET installs = excluded.installs, source = excluded.source, recorded_at = excluded.recorded_at').bind(day, store, installs, origin, new Date(now).toISOString()).run();
+  return { day, store, installs, source: origin };
+}
 async function accountOf(db, request) {
   const token = (request.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
   if (!/^[\da-f]{64}$/.test(token)) return null;
@@ -508,6 +562,7 @@ async function deleteAccountData(db, userId) {
     db.prepare('DELETE FROM email_tokens WHERE user_id = ?').bind(userId),
     db.prepare('DELETE FROM user_emails WHERE user_id = ?').bind(userId),
     db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(userId),
+    db.prepare('DELETE FROM activity_days WHERE user_id = ?').bind(userId),
     db.prepare('DELETE FROM logos WHERE user_id = ?').bind(userId),
     db.prepare('DELETE FROM reward_claims WHERE user_id = ?').bind(userId),
     db.prepare('DELETE FROM reward_time WHERE user_id = ?').bind(userId),
@@ -734,11 +789,13 @@ async function handleAccounts(request, env, url) {
         verification = 'non-configurata';
         if (mail) { try { await sendVerification(env, request, db, id, rawEmail, emailNorm); verification = 'inviata'; } catch { verification = 'non-inviata'; } }
       }
+      await noteActivity(env, db, id);
       return json(request, { username, token: await openSession(db, id), expiresInDays: ACCOUNT_SESSION_DAYS, ...(verification ? { emailVerification: verification } : {}) }, 201);
     }
     const user = await db.prepare('SELECT id, username, salt, hash, iterations FROM users WHERE username = ?').bind(username).first();
     if (!user || !equalStrings(await proofHash(proof, user.salt, user.iterations), user.hash)) { await guard.fail(); return json(request, { error: 'Nome utente o password non corretti.' }, 401); }
     await guard.clear();
+    await noteActivity(env, db, user.id);
     return json(request, { username: user.username, token: await openSession(db, user.id), expiresInDays: ACCOUNT_SESSION_DAYS });
   }
   // ---- recovery of the password: no session, never says whether an account or an address exists ----
@@ -801,6 +858,7 @@ async function handleAccounts(request, env, url) {
     return json(request, { ok: true, message: 'Indirizzo email verificato.' });
   }
   const account = await accountOf(db, request);
+  if (account) await noteActivity(env, db, account.id);
   if (!account) return json(request, { error: 'Sessione scaduta o non valida: accedi di nuovo.' }, 401);
   if (path === '/api/account/logout' && request.method === 'POST') {
     await db.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(account.tokenHash).run();
@@ -1123,6 +1181,17 @@ async function handleApi(request, env) {
     const token = randomToken();
     await env.ADMIN_ARCHIVE.put(`sessione:${token}`, record.epoch, { expirationTtl: SESSION_SECONDS });
     return json(request, { ok: true, token, expiresIn: SESSION_SECONDS, since: record.since });
+  }
+  // The owner's statistics: the same session as the rest of the area (the PIN), nothing for anybody else. The database of the accounts is the one the statistics are made from.
+  if (url.pathname === '/api/admin/stats' && (request.method === 'GET' || request.method === 'PUT')) {
+    if (!await sessionValid(env, request)) return json(request, { error: 'Sessione amministrativa non valida o scaduta.' }, 401);
+    if (!env.ACCOUNTS) return json(request, { error: 'Gli account non sono configurati su questo sito: non c’è nulla da contare.' }, 503);
+    try {
+      await ensureSchema(env.ACCOUNTS);
+      if (request.method === 'GET') return json(request, await adminStats(env, env.ACCOUNTS, { days: Number(url.searchParams.get('days')) || 90 }));
+      const body = await request.json().catch(() => ({}));
+      return json(request, { ok: true, saved: await recordInstalls(env.ACCOUNTS, { day: String(body.day ?? ''), store: String(body.store ?? ''), installs: Number(body.installs), source: body.source }) });
+    } catch (error) { return json(request, { error: error.status ? error.message : 'Errore interno delle statistiche.' }, error.status ?? 500); }
   }
   if (url.pathname === '/api/admin' && request.method === 'PUT') {
     if (!await sessionValid(env, request)) return json(request, { error: 'Sessione amministrativa scaduta: inserisci di nuovo il PIN.' }, 401);
