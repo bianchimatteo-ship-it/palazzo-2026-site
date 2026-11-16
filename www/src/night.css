@@ -108,7 +108,8 @@
   .night-curve { height: 120px; }
   .night .sx-tab { min-height: 44px; }
 }
-.night-shell .toast { top: 12px; bottom: auto; right: 12px; left: auto; max-width: min(92vw, 420px); z-index: 20; }
+.night-shell .toast { top: 12px; bottom: auto !important; right: 12px; left: auto; max-width: min(92vw, 420px); z-index: 20; }
+/* on a phone the general rule of the toast (bottom: above the navigation, !important) used to stretch this one from the top to the bottom: the opening notice covered the whole screen */
 .night-menu-row .ghost-button { min-height: 40px; padding: 0 16px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--panel-2); color: var(--ink); font: 700 14px var(--font-ui); }
 .night-choice { display: block; width: 100%; padding: 12px 14px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--panel-2); color: var(--ink); font: 600 15px/1.35 var(--font-ui); }
 .night-choice:hover, .night-choice:focus-visible { border-color: var(--gold); background: var(--panel-3); }

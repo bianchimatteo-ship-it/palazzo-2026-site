@@ -2,7 +2,7 @@
 
 Stati ammessi: **Non iniziato · In lavorazione · Completato · Bloccato**. Una voce è *Completato* solo con prova (file, test, screenshot). Branch `feature/qa-completamento`. Confrontata punto per punto con il documento di lavoro originale (sezioni 1–21) e con le aggiunte del 16/11 (sezione 22).
 
-Riepilogo: Bloccato 3 · Completato 48 · In lavorazione 20 · Non iniziato 98 · totale 169
+Riepilogo: Bloccato 3 · Completato 57 · In lavorazione 60 · Non iniziato 49 · totale 169
 
 
 ## 1. Regole operative
@@ -25,15 +25,15 @@ Riepilogo: Bloccato 3 · Completato 48 · In lavorazione 20 · Non iniziato 98 �
 | Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|---|
 | 2.1 | Riprodurre lo scenario vicesegretario + consigliere comunale + candidatura Politiche + «Candidati ora» | Completato | scripts/check-candidacy-vice-councillor.mjs | check-candidacy-vice-councillor (ranghi 3, 4, 5; /tmp repro Chrome) | Scenario riprodotto con partita di test: la candidatura parte e non c’è errore; il blocco segnalato non si riproduce. Diagnostica attiva per futuri casi |
-| 2.2 | Correggere l'impedimento ingiustificato alla candidatura | Non iniziato |  |  |  |
-| 2.3 | Correggere il blocco/crash dopo «Candidati ora» | Non iniziato |  |  |  |
-| 2.4 | Spiegare sempre i requisiti non soddisfatti; mai un pulsante che si blocca senza spiegazione | Non iniziato |  |  |  |
-| 2.5 | Vicesegretario e consigliere comunale non automaticamente incompatibili; rinuncia gestibile se prevista | Non iniziato |  |  |  |
+| 2.2 | Correggere l'impedimento ingiustificato alla candidatura | In lavorazione | scripts/check-candidacy-vice-councillor.mjs | check-candidacy-vice-councillor | Il blocco segnalato non si riproduce con vicesegretario + consigliere comunale (ranghi 3, 4, 5: la candidatura parte). Serve il salvataggio dell’utente per confermare |
+| 2.3 | Correggere il blocco/crash dopo «Candidati ora» | In lavorazione | scripts/check-candidacy-vice-councillor.mjs, src/core/diagnostics.js | check-candidacy-vice-councillor, check-button-response | Nessun blocco o crash dopo «Candidati ora» nei test; registro diagnostico attivo per il caso reale |
+| 2.4 | Spiegare sempre i requisiti non soddisfatti; mai un pulsante che si blocca senza spiegazione | Completato | src/core/office-engine.js (candidacyBlock) | check-candidacy-vice-councillor, check-candidacy-access, check-calendar-years | Ogni rifiuto è una frase leggibile (test: >25 caratteri, nessuna campagna a metà) |
+| 2.5 | Vicesegretario e consigliere comunale non automaticamente incompatibili; rinuncia gestibile se prevista | Completato | src/core/office-engine.js | check-candidacy-vice-councillor | Vicesegretario e consigliere comunale non sono incompatibili: la campagna alle politiche parte |
 | 2.6 | Verificare regole, calendario, candidature già aperte, stato della carriera | In lavorazione |  | sweep 18 combinazioni candidacyBlock | nessun impedimento dalle regole; blocco solo con candidatura già prenotata sovrapposta (messaggio presente) |
 | 2.7 | Campagna senza candidatura: partecipazione chiusa, stato di campagna chiuso, uscita dalla modalità campagna, ritorno alla carriera, nessuno stato residuo | Non iniziato |  |  |  |
-| 2.8 | Notte elettorale: popup iniziale non copre tutto lo schermo; dimensioni, posizione, leggibilità su smartphone e tablet | Non iniziato |  |  |  |
+| 2.8 | Notte elettorale: popup iniziale non copre tutto lo schermo; dimensioni, posizione, leggibilità su smartphone e tablet | Completato | src/night.css, scripts/check-election-night-ui.mjs | check-election-night-ui (390×844 e 320×640) | Causa: la regola generale del toast (bottom !important) si sommava a top:12px della notte e allungava l’avviso «Hai votato: ora la serata elettorale» da cima a fondo (245×761 px su 390×844). Ora è una scheda piccola. Prima: artifacts/qa/screenshots/before/notte-elettorale-390x844.png · dopo: artifacts/qa/screenshots/after/notte-elettorale-390x844.png (+820x1180) |
 | 2.9 | Notte elettorale: partito del giocatore non mostrato come «Altri» | Completato | scripts/check-night-player-party.mjs | check-night-player-party | La lista del giocatore (partito esistente e partito fondato) ha sempre il suo nome e non è mai in «Altri»; il caso segnalato non si riproduce |
-| 2.10 | Collegamenti giocatore/candidato/partito/coalizione; voti, percentuali, attribuzione seggi | Non iniziato |  |  |  |
+| 2.10 | Collegamenti giocatore/candidato/partito/coalizione; voti, percentuali, attribuzione seggi | Completato | src/core/night-engine.js, src/core/legislature-engine.js | check-night-player-party, check-election-counts, check-seat-allocation, check-election-night-engine | Lista del giocatore con nome proprio; voti, percentuali e seggi coerenti |
 | 2.11 | Candidato al 6% con partito senza rappresentanza non eletto: collegio, soglie, seggi, posizione in lista; nessun seggio artificiale; spiegazione chiara | Completato | scripts/check-night-player-party.mjs | check-night-player-party | Sotto soglia: nessun seggio, nessun mandato, soglia spiegata nell’esito (partito fondato: 2 notti su 2) |
 | 2.12 | Diagnostica per individuare la causa di blocchi (registro errori dei pulsanti) | Completato | src/core/diagnostics.js, src/ui/app.js, src/ui/menu.js | scripts/check-button-response.mjs | Registro errori e controlli copiabili dal menu |
 
@@ -90,53 +90,53 @@ Riepilogo: Bloccato 3 · Completato 48 · In lavorazione 20 · Non iniziato 98 �
 
 | Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|---|
-| 7.1 | Catena approvazione → attuazione → effetti sugli indicatori verificata | Non iniziato |  |  |  |
-| 7.2 | Leggi con effetti reali su economia, sanità, lavoro, sicurezza, ambiente, immigrazione, istruzione | Non iniziato |  |  |  |
-| 7.3 | Da Presidente del Consiglio: tematiche in crisi in Home, problemi urgenti | Non iniziato |  |  |  |
-| 7.4 | Interventi concreti con costi, tempi, benefici, rischi; collegati agli effetti | Non iniziato |  |  |  |
+| 7.1 | Catena approvazione → attuazione → effetti sugli indicatori verificata | In lavorazione | src/core/government-*.js, src/core/policy*, src/ui/policy-mode.js | check-laws, check-government, check-legislature | Funzione già presente con test; verifica punto per punto con la richiesta ancora da fare (non dichiarata completata) |
+| 7.2 | Leggi con effetti reali su economia, sanità, lavoro, sicurezza, ambiente, immigrazione, istruzione | In lavorazione | src/core/government-*.js, src/core/policy*, src/ui/policy-mode.js | check-government (34 temi, indicatori) | Funzione già presente con test; verifica punto per punto con la richiesta ancora da fare (non dichiarata completata) |
+| 7.3 | Da Presidente del Consiglio: tematiche in crisi in Home, problemi urgenti | In lavorazione | src/core/government-*.js, src/core/policy*, src/ui/policy-mode.js | check-government, check-premier | Funzione già presente con test; verifica punto per punto con la richiesta ancora da fare (non dichiarata completata) |
+| 7.4 | Interventi concreti con costi, tempi, benefici, rischi; collegati agli effetti | In lavorazione | src/core/government-*.js, src/core/policy*, src/ui/policy-mode.js | check-premier, check-government | Funzione già presente con test; verifica punto per punto con la richiesta ancora da fare (non dichiarata completata) |
 
 ## 8. Consiglio dei ministri e gioco da Ministro
 
 | Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|---|
-| 8.1 | Sezione Consiglio dei ministri nell'area Governo (interattiva) | Non iniziato |  |  |  |
-| 8.2 | Ministro: area ministeriale, dossier, problemi, obiettivi, priorità del dicastero | Non iniziato |  |  |  |
-| 8.3 | Ministro: proporre provvedimenti, preparare proposte normative, sottoporle al Governo | Non iniziato |  |  |  |
-| 8.4 | Ministro: coordinarsi con il Presidente del Consiglio, interloquire con i colleghi, incontri e riunioni, negoziati | Non iniziato |  |  |  |
-| 8.5 | Ministro: partecipare e votare in Consiglio dei ministri | Non iniziato |  |  |  |
-| 8.6 | Ministro: crisi del settore, Parlamento e cittadini, incarichi dal PdC, relazioni sui risultati, rapporti e conflitti | Non iniziato |  |  |  |
-| 8.7 | Conseguenze su consenso, rapporti, efficacia, governo, stabilità | Non iniziato |  |  |  |
-| 8.8 | PdC: convocare, ordine del giorno, priorità, proposte dei ministri, contrasti, relazioni, negoziare, verificare programma | Non iniziato |  |  |  |
-| 8.9 | Rispetto delle competenze (nessun potere non spettante) | Non iniziato |  |  |  |
+| 8.1 | Sezione Consiglio dei ministri nell'area Governo (interattiva) | In lavorazione | src/core/cabinet-life-engine.js, src/ui/cabinet-life-view.js | check-cabinet-life, check-cabinet-ui | Squadra di governo, valutazioni, richieste, conflitti e Consiglio dei ministri già presenti con test; verifica punto per punto ancora da fare |
+| 8.2 | Ministro: area ministeriale, dossier, problemi, obiettivi, priorità del dicastero | In lavorazione | src/core/cabinet-life-engine.js, src/ui/cabinet-life-view.js | check-cabinet-life | Squadra di governo, valutazioni, richieste, conflitti e Consiglio dei ministri già presenti con test; verifica punto per punto ancora da fare |
+| 8.3 | Ministro: proporre provvedimenti, preparare proposte normative, sottoporle al Governo | In lavorazione | src/core/cabinet-life-engine.js, src/ui/cabinet-life-view.js | check-cabinet-life | Squadra di governo, valutazioni, richieste, conflitti e Consiglio dei ministri già presenti con test; verifica punto per punto ancora da fare |
+| 8.4 | Ministro: coordinarsi con il Presidente del Consiglio, interloquire con i colleghi, incontri e riunioni, negoziati | In lavorazione | src/core/cabinet-life-engine.js, src/ui/cabinet-life-view.js | check-cabinet-life, check-activity-scenes | Squadra di governo, valutazioni, richieste, conflitti e Consiglio dei ministri già presenti con test; verifica punto per punto ancora da fare |
+| 8.5 | Ministro: partecipare e votare in Consiglio dei ministri | In lavorazione | src/core/cabinet-life-engine.js, src/ui/cabinet-life-view.js | check-cabinet-life | Squadra di governo, valutazioni, richieste, conflitti e Consiglio dei ministri già presenti con test; verifica punto per punto ancora da fare |
+| 8.6 | Ministro: crisi del settore, Parlamento e cittadini, incarichi dal PdC, relazioni sui risultati, rapporti e conflitti | In lavorazione | src/core/cabinet-life-engine.js, src/ui/cabinet-life-view.js | check-cabinet-life | Squadra di governo, valutazioni, richieste, conflitti e Consiglio dei ministri già presenti con test; verifica punto per punto ancora da fare |
+| 8.7 | Conseguenze su consenso, rapporti, efficacia, governo, stabilità | In lavorazione | src/core/cabinet-life-engine.js, src/ui/cabinet-life-view.js | check-cabinet-life | Squadra di governo, valutazioni, richieste, conflitti e Consiglio dei ministri già presenti con test; verifica punto per punto ancora da fare |
+| 8.8 | PdC: convocare, ordine del giorno, priorità, proposte dei ministri, contrasti, relazioni, negoziare, verificare programma | In lavorazione | src/core/cabinet-life-engine.js, src/ui/cabinet-life-view.js | check-cabinet-life, check-cabinet-ui | Squadra di governo, valutazioni, richieste, conflitti e Consiglio dei ministri già presenti con test; verifica punto per punto ancora da fare |
+| 8.9 | Rispetto delle competenze (nessun potere non spettante) | In lavorazione | src/core/cabinet-life-engine.js, src/ui/cabinet-life-view.js | check-cabinet-ui | Squadra di governo, valutazioni, richieste, conflitti e Consiglio dei ministri già presenti con test; verifica punto per punto ancora da fare |
 
 ## 9. Formazione del Governo e consultazioni del Quirinale
 
 | Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|---|
-| 9.1 | Notizie e comunicazioni della Presidenza: apertura consultazioni, calendario, soggetti, colloqui | Non iniziato |  |  |  |
-| 9.2 | Dichiarazioni dei partiti, orientamenti e condizioni pubbliche, mandati esplorativi, esito, incarico, nomina PdC e ministri | Non iniziato |  |  |  |
-| 9.3 | Nessuna preferenza personale/dichiarazione privata inventata del Presidente; distinzione prassi/art. 92 | Non iniziato |  |  |  |
-| 9.4 | Fase più interessante: notizie, cronologia, decisioni, conseguenze | Non iniziato |  |  |  |
+| 9.1 | Notizie e comunicazioni della Presidenza: apertura consultazioni, calendario, soggetti, colloqui | In lavorazione | src/core/cabinet-engine.js, src/core/presidency-engine.js | check-government-formation, check-cabinet | Consultazioni, mandati e formazione presenti con test; verifica punto per punto ancora da fare |
+| 9.2 | Dichiarazioni dei partiti, orientamenti e condizioni pubbliche, mandati esplorativi, esito, incarico, nomina PdC e ministri | In lavorazione | src/core/cabinet-engine.js, src/core/presidency-engine.js | check-government-formation, check-cabinet, check-accords | Consultazioni, mandati e formazione presenti con test; verifica punto per punto ancora da fare |
+| 9.3 | Nessuna preferenza personale/dichiarazione privata inventata del Presidente; distinzione prassi/art. 92 | In lavorazione | src/core/cabinet-engine.js, src/core/presidency-engine.js | check-presidency, check-president-rules | Consultazioni, mandati e formazione presenti con test; verifica punto per punto ancora da fare |
+| 9.4 | Fase più interessante: notizie, cronologia, decisioni, conseguenze | In lavorazione | src/core/cabinet-engine.js, src/core/presidency-engine.js | check-government-formation | Consultazioni, mandati e formazione presenti con test; verifica punto per punto ancora da fare |
 
 ## 10. Promesse elettorali e notifiche
 
 | Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|---|
-| 10.1 | Registrare promesse da candidatura, campagna, comizi, dialoghi, programma, trattative | Non iniziato |  |  |  |
-| 10.2 | Promemoria popup: ricordare, evidenziare da mantenere, scadenze/progressi, momenti opportuni, senza ripetizioni, apribili | Non iniziato |  |  |  |
-| 10.3 | Coerenti con la fase di gioco; non interrompono animazioni/votazioni | Non iniziato |  |  |  |
-| 10.4 | Dopo l'elezione: mantenuta/parzialmente/in corso/non mantenuta | Non iniziato |  |  |  |
+| 10.1 | Registrare promesse da candidatura, campagna, comizi, dialoghi, programma, trattative | In lavorazione | src/core/program-engine.js, src/ui/election-ui | check-program, check-promise-tools | Promesse e verifica a fine mandato presenti con test; promemoria popup da verificare |
+| 10.2 | Promemoria popup: ricordare, evidenziare da mantenere, scadenze/progressi, momenti opportuni, senza ripetizioni, apribili | In lavorazione | src/core/program-engine.js, src/ui/election-ui | check-program-ui | Promesse e verifica a fine mandato presenti con test; promemoria popup da verificare |
+| 10.3 | Coerenti con la fase di gioco; non interrompono animazioni/votazioni | In lavorazione | src/core/program-engine.js, src/ui/election-ui | check-program-ui | Promesse e verifica a fine mandato presenti con test; promemoria popup da verificare |
+| 10.4 | Dopo l'elezione: mantenuta/parzialmente/in corso/non mantenuta | In lavorazione | src/core/program-engine.js, src/ui/election-ui | check-promise-tools, check-program | Promesse e verifica a fine mandato presenti con test; promemoria popup da verificare |
 
 ## 11. Animazioni, dialoghi e personalità
 
 | Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|---|
-| 11.1 | Azioni pertinenti all'argomento (niente opzioni fuori tema) | Non iniziato |  |  |  |
-| 11.2 | Pro e contro su ogni pulsante, coerenti con il motore | Non iniziato |  |  |  |
-| 11.3 | Barra di apprezzamento: 50 neutro; effetti progressivi; valore iniziale, variazione, finale | Non iniziato |  |  |  |
-| 11.4 | Più varietà/quantità di scene, dialoghi e azioni | Non iniziato |  |  |  |
-| 11.5 | Caratteri (razionale, individualista, pragmatico, carismatico, moderato, ideologico, diplomatico) con effetto reale | Non iniziato |  |  |  |
-| 11.6 | Migliorare grafica, animazioni, transizioni, leggibilità; riduzione/disattivazione animazioni | Non iniziato |  |  |  |
+| 11.1 | Azioni pertinenti all'argomento (niente opzioni fuori tema) | In lavorazione | src/core/activity-scenes.js, src/ui/scene-view.js | check-scene-variety, check-scene-topics | Scene e personaggi già verificati da test; verifica punto per punto ancora da fare |
+| 11.2 | Pro e contro su ogni pulsante, coerenti con il motore | In lavorazione | src/core/activity-scenes.js, src/ui/scene-view.js | check-scene | Scene e personaggi già verificati da test; verifica punto per punto ancora da fare |
+| 11.3 | Barra di apprezzamento: 50 neutro; effetti progressivi; valore iniziale, variazione, finale | In lavorazione | src/core/activity-scenes.js, src/ui/scene-view.js | check-scene | Scene e personaggi già verificati da test; verifica punto per punto ancora da fare |
+| 11.4 | Più varietà/quantità di scene, dialoghi e azioni | In lavorazione | src/core/activity-scenes.js, src/ui/scene-view.js | check-scene-variety | Scene e personaggi già verificati da test; verifica punto per punto ancora da fare |
+| 11.5 | Caratteri (razionale, individualista, pragmatico, carismatico, moderato, ideologico, diplomatico) con effetto reale | In lavorazione | src/core/activity-scenes.js, src/ui/scene-view.js | check-scene-identity | Scene e personaggi già verificati da test; verifica punto per punto ancora da fare |
+| 11.6 | Migliorare grafica, animazioni, transizioni, leggibilità; riduzione/disattivazione animazioni | In lavorazione | src/core/activity-scenes.js, src/ui/scene-view.js | check-stage-ui | Scene e personaggi già verificati da test; verifica punto per punto ancora da fare |
 
 ## 12. Alleanze e coalizioni
 
@@ -174,7 +174,7 @@ Riepilogo: Bloccato 3 · Completato 48 · In lavorazione 20 · Non iniziato 98 �
 |---|---|---|---|---|---|
 | 13.1 | Dimissioni da tutti gli incarichi (istituzionali/di partito) con conseguenze prima della conferma | Non iniziato |  |  |  |
 | 13.2 | Carriera da semplice iscritto/militante senza incarichi istituzionali | Non iniziato |  |  |  |
-| 13.3 | Avatar casuale | Non iniziato |  |  |  |
+| 13.3 | Avatar casuale | In lavorazione | src/ui/career-wizard.js | check-avatar | Avatar presente; «casuale» da verificare |
 | 13.4 | Ruoli e autorizzazioni delle azioni controllati | Non iniziato |  |  |  |
 | 13.5 | Schermate e menu più chiari; gioco meno monotono senza perdere contenuti | Non iniziato |  |  |  |
 
@@ -182,10 +182,10 @@ Riepilogo: Bloccato 3 · Completato 48 · In lavorazione 20 · Non iniziato 98 �
 
 | Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|---|
-| 14.1 | Consultazione Italia/Regione/Provincia/Comune; comunali coerenti con i totali superiori | Non iniziato |  |  |  |
+| 14.1 | Consultazione Italia/Regione/Provincia/Comune; comunali coerenti con i totali superiori | In lavorazione | src/core/election-engine.js, src/ui/territory* | check-election-counts, check-seat-allocation, check-territory-legibility, check-italy-map | Verifiche esistenti sui conteggi e sulle mappe; verifica punto per punto ancora da fare |
 | 14.2 | Dati ufficiali storici con fonte/anno, senza inventare | Non iniziato |  |  |  |
-| 14.3 | Elezioni simulate: risultati territoriali coerenti (consenso, popolazione, caratteristiche locali, partiti, candidati, campagne); ufficiale vs simulato distinti | Non iniziato |  |  |  |
-| 14.4 | Verifica voti, percentuali, collegi, soglie, seggi per ogni sistema elettorale | Non iniziato |  |  |  |
+| 14.3 | Elezioni simulate: risultati territoriali coerenti (consenso, popolazione, caratteristiche locali, partiti, candidati, campagne); ufficiale vs simulato distinti | In lavorazione | src/core/election-engine.js, src/ui/territory* | check-election-counts, check-seat-allocation, check-territory-legibility, check-italy-map | Verifiche esistenti sui conteggi e sulle mappe; verifica punto per punto ancora da fare |
+| 14.4 | Verifica voti, percentuali, collegi, soglie, seggi per ogni sistema elettorale | In lavorazione | src/core/election-engine.js, src/ui/territory* | check-election-counts, check-seat-allocation, check-territory-legibility, check-italy-map | Verifiche esistenti sui conteggi e sulle mappe; verifica punto per punto ancora da fare |
 
 ## 15. Guida «Come giocare»
 
@@ -194,13 +194,13 @@ Riepilogo: Bloccato 3 · Completato 48 · In lavorazione 20 · Non iniziato 98 �
 | 15.1 | Manuale interattivo completo in Home su tutte le funzioni elencate (carriera, partiti, staff/capitale/fondi, tempo, sondaggi, candidature, elezioni, alleanze, assemblee, leggi, iniziative, Governo/Ministeri, CdM, crisi, richieste, animazioni, promesse, account/salvataggi) | Non iniziato |  |  |  |
 | 15.2 | Per ogni funzione: come funziona, uso, requisiti, costi, conseguenze, esempi | Non iniziato |  |  |  |
 | 15.3 | Scenari guidati: fondare partito, sindaco, Parlamento, coalizione, Ministro, PdC | Non iniziato |  |  |  |
-| 15.4 | Ricercabile, smartphone e tablet, collegata alle funzioni; tutorial iniziale saltabile e riprendibile | Non iniziato |  |  |  |
+| 15.4 | Ricercabile, smartphone e tablet, collegata alle funzioni; tutorial iniziale saltabile e riprendibile | In lavorazione | src/ui/menu.js | check-tutorial | Tutorial saltabile e riprendibile verificato; guida completa con ricerca non ancora fatta |
 
 ## 16. Traduzioni
 
 | Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|---|
-| 16.1 | Verifica integrale IT/EN (menu, pulsanti, tutorial, dialoghi, eventi, notifiche, animazioni, elezioni, alleanze, Ministeri, errori, contenuti dinamici) | Non iniziato |  |  |  |
+| 16.1 | Verifica integrale IT/EN (menu, pulsanti, tutorial, dialoghi, eventi, notifiche, animazioni, elezioni, alleanze, Ministeri, errori, contenuti dinamici) | In lavorazione | src/data/release-pairs.js | check-i18n, check-i18n-release | Audit: 37.692 testi su 16 pagine e 20 popup, 0 in italiano; verifica integrale di tutti i contenuti dinamici non completata |
 | 16.2 | Ogni nuova funzione bilingue nello stesso intervento; nessuna stringa italiana in EN; audit e test aggiornati | In lavorazione | src/data/release-pairs.js | check-i18n, check-i18n-release, check-i18n-pages | fatto per le funzioni nuove di questa sessione |
 
 ## 17. Statistiche amministrative private
@@ -241,14 +241,14 @@ Riepilogo: Bloccato 3 · Completato 48 · In lavorazione 20 · Non iniziato 98 �
 |---|---|---|---|---|---|
 | 20.1 | Candidatura alle Politiche | Non iniziato |  |  |  |
 | 20.2 | Messaggio requisiti non soddisfatti | Non iniziato |  |  |  |
-| 20.3 | Notte elettorale | Non iniziato |  |  |  |
-| 20.4 | Avanzamento 2/4 settimane | In lavorazione | artifacts/qa/screenshots |  | before/after presenti |
+| 20.3 | Notte elettorale | Completato | src/night.css | check-election-night-ui | Before/after: artifacts/qa/screenshots/{before,after}/notte-elettorale-390x844.png |
+| 20.4 | Avanzamento 2/4 settimane | Completato | src/core/store.js | check-advance-turn | artifacts/qa/screenshots/{before,after}/avanzamento-4-settimane-390x844.png |
 | 20.5 | Votazione nominativa | Non iniziato |  |  |  |
 | 20.6 | Scene con pro e contro | Non iniziato |  |  |  |
 | 20.7 | Barra di apprezzamento | Non iniziato |  |  |  |
-| 20.8 | Pagina alleanze e coalizioni | Non iniziato |  |  |  |
+| 20.8 | Pagina alleanze e coalizioni | Completato | src/ui/polls-mode.js | check-alliance-ui | artifacts/qa/screenshots/after/alleanze-it-390x844.png, alleanze-it-820x1180.png, alleanze-en-390x844.png |
 | 20.9 | Trattativa e programma comune | Non iniziato |  |  |  |
-| 20.10 | Raccolta firme | Non iniziato |  |  |  |
+| 20.10 | Raccolta firme | Completato | src/ui/initiative-mode.js | check-initiatives-ui | artifacts/qa/screenshots/after/iniziative-it-390x844.png, iniziative-it-820x1180.png, iniziative-en-390x844.png |
 | 20.11 | Richieste dei cittadini | Non iniziato |  |  |  |
 | 20.12 | Crisi di Governo | Non iniziato |  |  |  |
 | 20.13 | Area Ministeri | Non iniziato |  |  |  |
@@ -259,17 +259,17 @@ Riepilogo: Bloccato 3 · Completato 48 · In lavorazione 20 · Non iniziato 98 �
 | 20.18 | Guida completa | Non iniziato |  |  |  |
 | 20.19 | Dimissioni e carriera senza incarichi | Non iniziato |  |  |  |
 | 20.20 | Avatar casuale | Non iniziato |  |  |  |
-| 20.21 | Popup recensione | Completato | artifacts/qa/screenshots/after | check-review-prompt | popup-recensione-it|en-390x844 e 820x1180 |
+| 20.21 | Popup recensione | Completato | src/ui/review-card.js | check-review-prompt | artifacts/qa/screenshots/after/popup-recensione-* |
 | 20.22 | Schermate principali con pulsanti e caricamenti | Non iniziato |  |  |  |
-| 20.23 | Screenshot reali (Playwright/browser/emulatore), senza credenziali/token/dati personali; per ognuno funzione, scenario, dispositivo, risultato | In lavorazione |  |  | solo 4 delle 22 voci hanno screenshot |
+| 20.23 | Screenshot reali (Playwright/browser/emulatore), senza credenziali/token/dati personali; per ognuno funzione, scenario, dispositivo, risultato | In lavorazione | scripts/* |  | Screenshot reali fatti con Chrome headless (Chromium di Playwright) per notte, avanzamento, capitale, alleanze, iniziative, recensione; mancano gli altri argomenti |
 
 ## 21. Collaudo e risultato finale
 
 | Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|---|
-| 21.1 | Test specifici per ogni modifica; casi limite; compatibilità salvataggi; smartphone/tablet; IT/EN | Non iniziato |  |  |  |
-| 21.2 | Regressioni tra elezioni, campagne, partiti, assemblee, Governo, Ministeri, animazioni, avanzamento, account, ricompense | Non iniziato |  |  |  |
-| 21.3 | Verifica completa pertinente prima della consegna | Non iniziato |  |  |  |
+| 21.1 | Test specifici per ogni modifica; casi limite; compatibilità salvataggi; smartphone/tablet; IT/EN | In lavorazione | scripts/ | check-* (vedi rapporto) | Regressione parziale eseguita sui test pertinenti; check:all completo non eseguito in questa sessione |
+| 21.2 | Regressioni tra elezioni, campagne, partiti, assemblee, Governo, Ministeri, animazioni, avanzamento, account, ricompense | In lavorazione | scripts/ | check-* (vedi rapporto) | Regressione parziale eseguita sui test pertinenti; check:all completo non eseguito in questa sessione |
+| 21.3 | Verifica completa pertinente prima della consegna | In lavorazione | scripts/ | check-* (vedi rapporto) | Regressione parziale eseguita sui test pertinenti; check:all completo non eseguito in questa sessione |
 | 21.4 | Build Android, avvio reale, AAB se stabile, percorso AAB | Non iniziato |  |  |  |
 | 21.5 | Rapporto finale con tutte le richieste e lo stato, file, test, screenshot, problemi residui, passaggi esterni | Non iniziato |  |  |  |
 
@@ -279,7 +279,7 @@ Riepilogo: Bloccato 3 · Completato 48 · In lavorazione 20 · Non iniziato 98 �
 |---|---|---|---|---|---|
 | 22.1 | Rendere il popup recensione più curato (vedi 18.5, 18.6) e aggiornare gli screenshot | Completato |  | check-review-prompt | vedi 18.5/18.6 |
 | 22.2 | Confrontare la checklist punto per punto con il documento originale | Completato | docs/qa/master-checklist.md |  | 169 voci |
-| 22.3 | Riprodurre il bug candidatura con una partita di test e aggiungere diagnostica | Non iniziato |  |  |  |
-| 22.4 | Priorità: reattività pulsanti, candidatura, notte elettorale, alleanze/coalizioni con tutti i test | Non iniziato |  |  |  |
-| 22.5 | Poi: Parlamento, iniziative popolari, Governo, Ministeri, CdM, consultazioni, promesse, animazioni, guida, risultati territoriali, traduzioni, statistiche, AdMob | Non iniziato |  |  |  |
-| 22.6 | Mantenere aggiornati checklist, test, screenshot; non eliminare funzioni; non dichiarare completato senza verifica; nessun deploy/merge/main | Non iniziato |  |  |  |
+| 22.3 | Riprodurre il bug candidatura con una partita di test e aggiungere diagnostica | Completato | scripts/check-candidacy-vice-councillor.mjs, src/core/diagnostics.js | check-candidacy-vice-councillor | Scenario riprodotto con partita di test; il blocco non si presenta; diagnostica attiva |
+| 22.4 | Priorità: reattività pulsanti, candidatura, notte elettorale, alleanze/coalizioni con tutti i test | In lavorazione |  |  | Reattività, candidatura, notte e alleanze: fatti; restano i punti indicati In lavorazione |
+| 22.5 | Poi: Parlamento, iniziative popolari, Governo, Ministeri, CdM, consultazioni, promesse, animazioni, guida, risultati territoriali, traduzioni, statistiche, AdMob | In lavorazione |  |  | Parlamento (assenze) e iniziative popolari fatte; il resto verificato solo in parte |
+| 22.6 | Mantenere aggiornati checklist, test, screenshot; non eliminare funzioni; non dichiarare completato senza verifica; nessun deploy/merge/main | In lavorazione |  |  | Regola valida fino alla consegna: nessun deploy, merge o modifica a main |

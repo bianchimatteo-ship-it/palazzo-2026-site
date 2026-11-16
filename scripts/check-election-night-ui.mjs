@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { chromeAvailable, createCareerInPage, withBrowser } from './lib/browser.mjs';
 
 if (!chromeAvailable) { console.log('Notte elettorale nel browser saltata: Chrome non trovato (imposta CHROME_PATH per eseguirlo).'); process.exit(0); }
-await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, errors, version }) => {
+await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, screenshot, errors, version }) => {
   const band = process.env.BAND ?? 'oltre-15000';
   const startOver = async () => {
     await createCareerInPage({ evaluate, version }, { level: 'comunale', onboarding: true, extra: `store.fastForwardToElection('comunale'); store.startCampaign({ electionType: 'comunale', role: 'sindaco', objective: 'win', municipalityBand: ${JSON.stringify(band)} }, real.parties ?? []);` });
@@ -43,6 +43,10 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   if (s.night.stage === 'primo-turno') {
     runoffSeen = true;
     await wait(() => evaluate('Boolean(document.querySelector(".night"))'));
+    if (process.env.QA_SHOT_DIR) { await viewport(390, 844, true); await pause(500); await screenshot(`${process.env.QA_SHOT_DIR}/notte-elettorale-390x844.png`); await viewport(820, 1180, true); await pause(500); await screenshot(`${process.env.QA_SHOT_DIR}/notte-elettorale-820x1180.png`); await viewport(1280, 800, false); await pause(300); }
+    // the notice that opens the night ("Hai votato: ora la serata elettorale") is a small card, never a column that covers the screen (it used to stretch from the top to the bottom on a phone)
+    for (const [w, h] of [[390, 844], [320, 640]]) { await viewport(w, h, true); await pause(500); const box = await evaluate(`(() => { const t = document.querySelector('.toast'); if (!t) return null; const r = t.getBoundingClientRect(); return { h: r.height, w: r.width, vh: innerHeight, vw: innerWidth }; })()`); if (box) assert.ok(box.h <= box.vh * 0.25 && box.w <= box.vw * 0.95, `Notifica della notte a ${w}x${h}: ${Math.round(box.w)}x${Math.round(box.h)} px, non copre lo schermo.`); }
+    await viewport(1280, 800, false); await pause(300);
     assert.equal(s.camp.status, 'active', 'Al primo turno la campagna del ballottaggio è ancora aperta.');
     const before = s;
     await frozenCheck('primo turno');

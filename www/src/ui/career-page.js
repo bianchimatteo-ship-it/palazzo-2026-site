@@ -1,18 +1,18 @@
 // CARRIERA — the path and the progression: four tracks (institutions, party, Parliament, Government), the odds of
 // every next step with the factors that decide them, offices and powers, the timeline and the goals.
-import { careerOverview } from '../core/career-overview.js?v=20261116-7';
-import { ADVANCEMENT_OUTCOMES } from '../core/progression-engine.js?v=20261116-7';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261116-7';
-import { careerLevelLabel } from '../data/regions.js?v=20261116-7';
-import { formatDate } from '../core/time.js?v=20261116-7';
-import { startOverview } from '../core/start-engine.js?v=20261116-7';
-import { renderGoals } from './goals-view.js?v=20261116-7';
-import { renderChallenges } from './challenge-view.js?v=20261116-7';
-import { renderRetirement } from './hall-view.js?v=20261116-7';
-import { glyph, officeIcon } from './visuals.js?v=20261116-7';
-import { REPUTATIONS, REPUTATION_IDS } from '../data/simulation/standing-rules.js?v=20261116-7';
-import { renderCareerTimeline, renderMemoryPanel, renderRolesPanel, renderWhyPanel } from './game-mode.js?v=20261116-7';
-import { arrow, badge, bar, card, empty, esc, num, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20261116-7';
+import { careerOverview } from '../core/career-overview.js?v=20261116-8';
+import { ADVANCEMENT_OUTCOMES } from '../core/progression-engine.js?v=20261116-8';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261116-8';
+import { careerLevelLabel } from '../data/regions.js?v=20261116-8';
+import { formatDate } from '../core/time.js?v=20261116-8';
+import { startOverview } from '../core/start-engine.js?v=20261116-8';
+import { renderGoals } from './goals-view.js?v=20261116-8';
+import { renderChallenges } from './challenge-view.js?v=20261116-8';
+import { renderRetirement } from './hall-view.js?v=20261116-8';
+import { glyph, officeIcon } from './visuals.js?v=20261116-8';
+import { REPUTATIONS, REPUTATION_IDS } from '../data/simulation/standing-rules.js?v=20261116-8';
+import { renderCareerTimeline, renderMemoryPanel, renderRolesPanel, renderWhyPanel } from './game-mode.js?v=20261116-8';
+import { arrow, badge, bar, card, empty, esc, num, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20261116-8';
 
 export const CAREER_TABS = Object.freeze([['percorso', 'Percorso'], ['progressione', 'Progressione'], ['incarichi', 'Incarichi e poteri'], ['cronologia', 'Cronologia'], ['obiettivi', 'Obiettivi']]);
 const STAT_ORDER = ['popularity', 'reputation', 'influence', 'experience', 'notoriety'];
