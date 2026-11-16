@@ -2,7 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- Privacy manifest of the app itself (the native dependencies ship their own). Derived from the facts in privacy.html (section 3); the owner of the Apple account must confirm it, together with the App Store privacy label, before submission (docs/app-store-apple.md). No tracking, no advertising SDK in this version. -->
+	<!-- Privacy manifest of the app itself (the native dependencies ship their own). Derived from privacy.html section 3 and Apple's App Privacy categories: email, account username, device identifier, saved careers and in-game user-created logos, and gameplay time spans used for rewards. The App Store privacy label must match these practices. No tracking or advertising SDK in this iOS build. -->
 	<key>NSPrivacyTracking</key>
 	<false/>
 	<key>NSPrivacyTrackingDomains</key>
@@ -49,7 +49,19 @@
 		</dict>
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
-			<string>NSPrivacyCollectedDataTypeOtherUserContent</string>
+			<string>NSPrivacyCollectedDataTypeProductInteraction</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeGameplayContent</string>
 			<key>NSPrivacyCollectedDataTypeLinked</key>
 			<true/>
 			<key>NSPrivacyCollectedDataTypeTracking</key>
