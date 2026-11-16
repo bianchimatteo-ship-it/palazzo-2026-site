@@ -2,6 +2,23 @@
 
 Stato al 16/11/2026: **Apple Developer non ancora attivato; nessuna build firmata, nessun upload e nessun invio ad Apple.** Su Mac è stata completata una Release build senza firma e creato/verificato un archivio preliminare `.xcarchive` (non caricabile finché non viene firmato). Non è un parere legale. Ruoli e analisi: `docs/audit-legale-conformita.md` §2–3. Legenda: [V] letto su fonte ufficiale oggi; [NV] da verificare sul testo ufficiale; ☐ da fare; ⚠ decisione dei genitori.
 
+## Priorità per la prima release iOS (ad-free)
+
+I requisiti del registro generale non sono tutti requisiti specifici di App Store:
+
+| Requisito aperto | Impatto sulla prima release iOS |
+|---|---|
+| `account-apple-developer` | Bloccante: iscrizione dell'adulto titolare, pagamento, accordi e Team di firma |
+| `titolare-trattamento`, `offerente-servizio`, `indirizzo-titolare` | Bloccanti per finalizzare informativa, termini e identità pubblica del servizio; ruoli distinti da validare, non si presumono |
+| `cloudflare-dpa`, `email-fornitore`, `rappresentanza-capacita` | Da chiarire prima di dichiarare in modo definitivo i fornitori e i contratti usati dall'app |
+| `minori`, `eta-pubblico-store` | Da decidere/verificare: pubblico, account 14+, questionario Apple e Paesi di distribuzione |
+| `diritti-asset` | Da documentare: marchio, grafica, font, dati/immagini di terzi e licenza per la distribuzione |
+| `trader-dsa` | Il titolare dell'account deve dichiarare lo status; Apple richiede la dichiarazione anche per chi non distribuisce nell'UE. Se trader, contatti verificati sono pubblicati sulla pagina UE |
+| `account-sviluppatore-play` | Relativo a Google Play: non è un campo né un'iscrizione richiesta da App Store; mantenere comunque coerenti i ruoli del servizio tra gli store |
+| `admob-futuro` | Non blocca la prima release iOS ad-free: AdMob è solo Android e non è incluso nell'app iOS |
+
+Non creare segnaposto per i dati legali e non dichiarare chiuso un requisito senza prova o decisione del soggetto responsabile. Il fatto che un requisito non sia specifico di App Store non significa che sia irrilevante per la gestione complessiva del servizio.
+
 ## A. Account (prima di tutto)
 - ☐ ⚠ Scegliere quale genitore si iscrive: serve la maggiore età nella propria area; un minore usa l'Apple Account del genitore [V, developer.apple.com/programs/enroll].
 - ☐ ⚠ Individuale o organizzazione. Individuale: il nome legale del genitore è il venditore pubblico [V]. Organizzazione: solo entità giuridica riconosciuta con D-U-N-S, e-mail e sito di dominio; non DBA, ditte fittizie o nomi commerciali [V]. Oggi non risulta alcuna entità: l'organizzazione non è disponibile senza crearne una.
