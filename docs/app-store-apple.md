@@ -52,7 +52,7 @@ Va dichiarato tutto ciò che si trasmette fuori dal dispositivo oltre il tempo n
 | Voce | Stato |
 |---|---|
 | Icona 1024 senza alfa, splash | ✅ dal marchio del gioco (non più il segnaposto Capacitor); `check-capacitor` lo verifica |
-| `PrivacyInfo.xcprivacy` | ⚠️ aggiornato nel branch: `GameplayContent` per salvataggi e loghi personalizzati in-game, `ProductInteraction` per il tempo di gioco trasmesso per le ricompense; email, UserID e DeviceID restano dichiarati. Nessun tracking. Generare e verificare il Privacy Report Xcode e confrontarlo con App Privacy Details prima dell'invio. `includePlugins: []` esclude i plugin Capacitor da iOS, ma non sostituisce la verifica di Capacitor e delle API richieste |
+| `PrivacyInfo.xcprivacy` | ⚠️ aggiornato nel branch: `EmailAddress`, `UserID`, `DeviceID`, `ProductInteraction`, `GameplayContent`, `PhotosorVideos` (loghi caricati) e `OtherDataTypes` (prove di autenticazione/sessioni). Lo stesso DeviceID include l'IP temporaneo usato dal Worker per il rate-limit. Nessun tracking. Rigenerare il Privacy Report Xcode dopo la sincronizzazione. `includePlugins: []` esclude i plugin Capacitor da iOS, ma non sostituisce la verifica di Capacitor e delle API richieste |
 | `Info.plist` | ✅ `arm64`, iPhone verticale, iPad quattro orientamenti, nessun permesso, nessuna modalità in background |
 | Firma | automatica, nessun team nel repository (lo sceglie il titolare dell'account) |
 | Safe area | ✅ `viewport-fit=cover` + regole iOS; layout verificato dall'utente su simulatore iPhone e iPad |
