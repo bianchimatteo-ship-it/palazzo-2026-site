@@ -1,5 +1,5 @@
 // The invitation to review the game on Google Play: logic (once per installation, never at the first launch, only after enough use, only when quiet, recorded as shown BEFORE it opens, never again after a restart,
-// logout or change of account, no prize, no obligation) and, in Chrome with the app pretending to be the Android app, the real dialog: exact text, the two buttons, the link, «Non ora» closing it, no second time.
+// logout or change of account, no prize, no obligation) and, in Chrome with the app pretending to be the Android app, the real dialog: exact text, the two buttons, the link, the link, «Non ora» closing it, no second time, no blocking.
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { chromeAvailable, createCareerInPage, openCareer, withBrowser } from './lib/browser.mjs';
@@ -28,7 +28,7 @@ if (!chromeAvailable) { console.log('Promemoria recensione: logica verificata; p
 await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, send, screenshot, errors, version }) => {
   // the page believes it is the Android app of Google Play, with three launches already behind it
   await send('Emulation.setUserAgentOverride', { userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36' });
-  await send('Page.addScriptToEvaluateOnNewDocument', { source: `globalThis.Capacitor = { isNativePlatform: () => true, Plugins: {} }; window.__opened = []; window.open = (...args) => { window.__opened.push(args); return null; }; try { if (!localStorage.getItem('politicando.review.v1') && localStorage.getItem('politicando.test.launches') !== 'x') localStorage.setItem('politicando.review.v1', JSON.stringify({ launches: 2 })); } catch (e) {}` });
+  await send('Page.addScriptToEvaluateOnNewDocument', { source: `globalThis.Capacitor = { isNativePlatform: () => true, Plugins: {} }; window.__opened = [];  try { if (!localStorage.getItem('politicando.review.v1') && localStorage.getItem('politicando.test.launches') !== 'x') localStorage.setItem('politicando.review.v1', JSON.stringify({ launches: 2 })); } catch (e) {}` });
   await createCareerInPage({ evaluate, version }, { weeks: 8 });
   await openCareer({ evaluate, goto, waitFor: wait });
   await evaluate(`localStorage.setItem('politicando.settings.v1', JSON.stringify({ newsPopup: 'off', sceneMotion: 'off', language: 'it', weeklyReport: 'on' })); true`);
@@ -40,22 +40,47 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, send, screensho
   const launches = await evaluate(`JSON.parse(localStorage.getItem('politicando.review.v1')).launches`);
   assert.ok(launches >= 3, `Tre avvii alle spalle (${launches}).`);
   let dialog = null;
-  for (let tries = 0; tries < 6 && !dialog; tries++) { await closeWeek(); dialog = await evaluate(`document.querySelector('.confirm-dialog')?.innerText ?? null`); }
+  for (let tries = 0; tries < 6 && !dialog; tries++) { await closeWeek(); dialog = await evaluate(`document.querySelector('[data-review-card]')?.innerText ?? null`); }
   assert.ok(dialog, 'Dopo abbastanza uso, chiusa la settimana, compare l’invito.');
   assert.match(dialog, /Ti sta piacendo Politicando 2026\?/); assert.match(dialog, /Il tuo parere è importante! Lascia una recensione sincera su Google Play e aiutaci a migliorare il gioco\./);
   assert.match(dialog, /Lascia una recensione/); assert.match(dialog, /Non ora/);
   assert.ok(await evaluate(`Boolean(JSON.parse(localStorage.getItem('politicando.review.v1')).shownAt)`), 'Registrato come visualizzato mentre è aperto.');
+  // the link to the Play Store page: a real link, opened outside the game (the app's WebView hands an external address to the system), with the right address
+  const link = await evaluate(`(() => { const a = document.querySelector('[data-review-open]'); return { href: a.getAttribute('href'), target: a.target, rel: a.rel, tag: a.tagName }; })()`);
+  assert.deepEqual(link, { href: REVIEW_URL, target: '_blank', rel: 'noopener noreferrer', tag: 'A' }, 'Il pulsante è un vero collegamento alla scheda di Google Play.');
+  // it does not block the game: nothing dims the page and the game underneath still takes clicks; it hides while a menu is open and comes back
+  assert.equal(await evaluate(`document.querySelector('.modal-backdrop, .report-backdrop') === null`), true, 'Nessuna finestra modale: il gioco resta utilizzabile.');
+  assert.equal(await evaluate(`(() => { const card = document.querySelector('[data-review-card]'); return card.getAttribute('aria-modal') === 'false' && getComputedStyle(card).position === 'fixed'; })()`), true);
+  await evaluate(`document.querySelector('[data-action=menu]')?.click(); true`); await pause(1500);
+  assert.equal(await evaluate(`document.querySelector('[data-review-card]')?.hidden ?? 'gone'`), true, 'Con il menu aperto l’invito si nasconde.');
+  await evaluate(`document.querySelector('[data-menu=continua], [data-menu-close], [data-action=menu-close]')?.click(); location.hash = '#panoramica'; true`); await pause(1500);
   if (process.env.QA_SHOT_DIR) {
-    await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true }); await pause(500);
-    await screenshot(`${process.env.QA_SHOT_DIR}/popup-recensione-it-390x844.png`);
-    await evaluate(`import('/src/core/i18n.js?v=${version}').then(m => m.setLanguage('en')).then(() => true)`); await pause(900);
-    await screenshot(`${process.env.QA_SHOT_DIR}/popup-recensione-en-390x844.png`);
-    await evaluate(`import('/src/core/i18n.js?v=${version}').then(m => m.setLanguage('it')).then(() => true)`); await pause(600);
+    for (const [name, w, h] of [['390x844', 390, 844], ['820x1180', 820, 1180]]) {
+      await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 2, mobile: true }); await pause(500);
+      await evaluate(`document.querySelector('[data-review-card]') && (document.querySelector('[data-review-card]').hidden = false); true`);
+      await screenshot(`${process.env.QA_SHOT_DIR}/popup-recensione-it-${name}.png`);
+      await evaluate(`import('/src/core/i18n.js?v=${version}').then(m => m.setLanguage('en')).then(() => true)`); await pause(900);
+      await screenshot(`${process.env.QA_SHOT_DIR}/popup-recensione-en-${name}.png`);
+      await evaluate(`import('/src/core/i18n.js?v=${version}').then(m => m.setLanguage('it')).then(() => true)`); await pause(600);
+    }
   }
-  await evaluate(`document.querySelector('[data-confirm=cancel]').click(), true`); await pause(500);
-  assert.equal(await evaluate(`document.querySelector('.confirm-dialog') === null`), true, '«Non ora» chiude l’invito.');
-  assert.equal(await evaluate(`window.__opened.length`), 0, 'Nessuna apertura di Google Play con «Non ora».');
-  for (let tries = 0; tries < 3; tries++) { await closeWeek(); assert.equal(await evaluate(`document.querySelector('.confirm-dialog')?.innerText.includes('Ti sta piacendo') ?? false`), false, 'Non ricompare.'); }
+  // «Lascia una recensione» records the answer and removes the card; the navigation itself is held back here (no network in the test)
+  await evaluate(`document.addEventListener('click', event => { if (event.target.closest('[data-review-open]')) { window.__reviewClicked = event.target.closest('a').href; event.preventDefault(); } }, true); document.querySelector('[data-review-card]').hidden = false; document.querySelector('[data-review-open]').click(); true`); await pause(600);
+  assert.equal(await evaluate(`window.__reviewClicked`), REVIEW_URL, 'Il clic porta all’indirizzo della scheda su Google Play.');
+  assert.equal(await evaluate(`document.querySelector('[data-review-card]') === null`), true, 'Dopo il clic l’invito sparisce.');
+  assert.equal(await evaluate(`JSON.parse(localStorage.getItem('politicando.review.v1')).answer`), 'review');
+  for (let tries = 0; tries < 3; tries++) { await closeWeek(); assert.equal(await evaluate(`document.querySelector('[data-review-card]') === null`), true, 'Non ricompare.'); }
+  // after a reload (a restart of the app) and a logout / another account: still never again
+  await goto(); await wait(() => evaluate('Boolean(document.querySelector("[data-menu=continua]"))'));
+  assert.equal(await evaluate(`JSON.parse(localStorage.getItem('politicando.review.v1')).launches >= 4`), true, 'Gli avvii continuano a contare.');
+  await evaluate('document.querySelector("[data-menu=continua]").click(), true'); await wait(() => evaluate('Boolean(document.querySelector(".page-wrap"))'));
+  for (let tries = 0; tries < 2; tries++) { await closeWeek(); assert.equal(await evaluate(`document.querySelector('[data-review-card]') === null`), true, 'Dopo il riavvio non ricompare.'); }
+  // «Non ora» and Escape are covered by the logic test; the card for «Non ora» in the DOM: a second installation (empty storage) shows it again once
+  await evaluate(`localStorage.setItem('politicando.review.v1', JSON.stringify({ launches: 5 })); true`);
+  for (let tries = 0; tries < 6 && !(await evaluate(`Boolean(document.querySelector('[data-review-card]'))`)); tries++) await closeWeek();
+  assert.equal(await evaluate(`Boolean(document.querySelector('[data-review-card]'))`), true, 'Una nuova installazione (memoria vuota) la mostra una volta.');
+  await evaluate(`document.querySelector('[data-review-later]').click(); true`); await pause(500);
+  assert.equal(await evaluate(`document.querySelector('[data-review-card]') === null && JSON.parse(localStorage.getItem('politicando.review.v1')).answer === 'later'`), true, '«Non ora» chiude l’invito.');
   assert.deepEqual(errors, [], 'Nessun errore JavaScript.');
 }, { voter: true });
 console.log('Promemoria recensione verificato: una sola volta per installazione, mai al primo avvio, dopo abbastanza uso e in un momento tranquillo, registrato prima dell’apertura, testo e pulsanti richiesti, «Non ora» chiude, non ricompare; solo nell’app Android.');

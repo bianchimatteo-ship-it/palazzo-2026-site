@@ -72,6 +72,7 @@ import { createRewardsService } from './rewards-service.js?v=20261113-8';
 import { createAdMobAdapter } from '../data/repositories/admob-adapter.js?v=20261113-8';
 import { createAdsManager, interruptible } from '../data/repositories/ads-manager.js?v=20261113-8';
 import { createReviewPrompt } from '../data/repositories/review-prompt.js?v=20261113-8';
+import { mountReviewCard } from './review-card.js?v=20261113-8';
 import { patchRewardsPage, renderRewardNotice, renderRewardsPage } from './rewards-page.js?v=20261113-8';
 
 // The destinations of the game, by theme. On computers the sidebar lists the eight and opens the pages of the current one; on phones the
@@ -2832,12 +2833,14 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   // The invitation to review the game on Google Play (data/repositories/review-prompt.js): Android app only, once for each installation, after enough use, in a quiet moment (after the weekly report is closed).
   const reviewPrompt = createReviewPrompt({ isPlayStoreApp: () => /Android/i.test(globalThis.navigator?.userAgent ?? '') && isNativeApp() });
   reviewPrompt.noteLaunch();
+  let reviewCard = null;
+  const quietNow = () => { const state = store.getState(); return Boolean(state.game && !state.scene && !state.night && !state.campaign && !wizard && !menu.open && !pendingConfirm && !reportOpen && !newsPopup && !pendingCelebration(state.game) && onboarding().tour === 'done'); };
   const offerReview = () => {
-    const state = store.getState();
-    const quiet = Boolean(state.game && !state.scene && !state.night && !state.campaign && !wizard && !menu.open && !pendingConfirm && !reportOpen && !newsPopup && !pendingCelebration(state.game) && onboarding().tour === 'done');
-    if (!reviewPrompt.due({ quiet, weeks: state.game?.week?.index ?? 0 }) || !reviewPrompt.markShown()) return;
-    askConfirm({ kicker: 'IL TUO PARERE', title: 'Ti sta piacendo Politicando 2026?', body: 'Il tuo parere è importante! Lascia una recensione sincera su Google Play e aiutaci a migliorare il gioco.', confirmLabel: 'Lascia una recensione', cancelLabel: 'Non ora' })
-      .then(answer => { reviewPrompt.markAnswered(answer.ok ? 'review' : 'later'); if (answer.ok) globalThis.open?.(reviewPrompt.url, '_blank', 'noopener'); });
+    if (reviewCard || !reviewPrompt.due({ quiet: quietNow(), weeks: store.getState().game?.week?.index ?? 0 }) || !reviewPrompt.markShown()) return;   // recorded as shown BEFORE the card appears
+    let watch = null;
+    reviewCard = mountReviewCard({ url: reviewPrompt.url, onAnswer: answer => { reviewPrompt.markAnswered(answer); clearInterval(watch); reviewCard = null; } });
+    // the card is only there in a quiet moment: it hides while a scene, a vote, the night, a dialog or a menu is on and comes back after (it never blocks the game)
+    watch = setInterval(() => reviewCard?.setQuiet(quietNow()), 800);
   };
   const adPlatform = /Android/i.test(globalThis.navigator?.userAgent ?? '') && isNativeApp() ? 'android' : 'none';
   const adMob = createAdMobAdapter({ platform: adPlatform });
