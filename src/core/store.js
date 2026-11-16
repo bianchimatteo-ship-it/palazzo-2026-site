@@ -49,7 +49,7 @@ import { candidacyBlock, candidacyLapses, candidacyRecord, incompatibleWith, ins
 import { actTypeOf } from '../data/simulation/local-acts.js?v=20261116-8';
 import { SECTOR_GAINS, competenceIn, gainSector, sectorFloors, standingFactors } from './standing-engine.js?v=20261116-8';
 import { AREA_BY_ID, BILLION_PER_POINT, BUDGET_SESSION, GOVERNMENT_LINES, POLICY_AREAS, SOCIAL_TABLE, SPENDING_REVIEW, areaOf } from '../data/simulation/policy-rules.js?v=20261116-8';
-import { negotiateCompromise as negotiateCompromiseOn, registerCoalition as registerCoalitionOn, programAnalysis as programAnalysisOf, refusedUntil } from './world-engine.js?v=20261116-8';
+import { negotiateCompromise as negotiateCompromiseOn, registerCoalition as registerCoalitionOn, programAnalysis as programAnalysisOf, proposeTerm as proposeTermOn, termOptions as termOptionsOf, requestsView as requestsViewOf, refusedUntil } from './world-engine.js?v=20261116-8';
 import { THEMES as PROGRAM_THEMES, coalitionBlock, coalitionDeadline } from './alliance-rules.js?v=20261116-8';
 import { addAdTransfer, opinionEffect, recordAccordOutcome, settleElectoralTerms, allianceBlock, allianceOf, inviteBlock, inviteOdds, inviteToAlliance, playerAlliance, electionRoster, forceProfiles, mergeCandidates, mergeIntoPlayerForce, renamePlayerForce, setPlayerAgenda, splitPlayerForce, localShares, regionalShares, withRegionalLeans, withLocalCalendar, joinCoalition, acceptAlliance, addWorldEffects, advanceWorld, alignWorldToVote, allianceOdds, applyWorldSignals, axisOf, breakAlliance, campaignPollBonus, createWorld, isLegacyWorld, normalizeWorld, proposeAlliance, setGoverningForces, setPlayerParty, withCanonicalForces, withLatentForces, withPartyIdentities, withPositions } from './world-engine.js?v=20261116-8';
 import { candidacyQuotas, FORMATION_PHASES, LEGISLATURE_RULES, NATIONAL_LINES, acceptMandate, crisisFormation, seatResult, startFormation, buildCoalitions, campaignWeekEffects, coalitionOptions, compactResult, contestedDistricts, createNationalState, europeanListSeats, formationStep, groupOfParty, homeDistricts, legislatureGroups, legislatureTerm, nationalCalendar, nationalHistory, nationalProjection, normalizeNationalState, openLegislature, politicheOutcome, regionalBreakdown, runEuropeanVote, runNationalVote, seatPlayer, voteForces } from './legislature-engine.js?v=20261116-8';
@@ -5410,6 +5410,28 @@ export const store = {
     persist(); emit();
     return result;
   },
+  // The talks inside the alliance for one election (leadership, candidacies, offices, common programme): what can be asked, and the request itself (a day, 2 points of political capital).
+  allianceTalkOptions(electionId = null) {
+    const own = state.world && allianceOf(state.world, state.world.parties.find(item => item.isPlayer)?.id);
+    if (!own) return null;
+    const election = (state.game?.elections ?? []).find(item => item.id === electionId) ?? null;
+    return termOptionsOf(state.world, own.id, election);
+  },
+  proposeAllianceTerm(proposal, electionId = null) {
+    if (!state.game?.party) throw new Error('Serve un partito per trattare.');
+    requireSecretary();
+    const election = (state.game.elections ?? []).find(item => item.id === electionId) ?? null;
+    const own = state.world && allianceOf(state.world, state.world.parties.find(item => item.isPlayer)?.id);
+    if (!own) throw new Error('Il tuo partito non ha un’alleanza con cui trattare.');
+    const game = spendTime(state.game, 1);
+    if (game.resources.politicalCapital < 2) throw new Error('Servono 2 punti di capitale politico per aprire una trattativa.');
+    const result = proposeTermOn(state.world, own.id, { ...proposal, electionId }, state.clock.currentDate, { election });
+    const nextGame = { ...game, resources: { ...game.resources, politicalCapital: game.resources.politicalCapital - 2 } };
+    state = { ...state, world: result.world, game: nextGame, parliament: withCapital(state.parliament, nextGame), ui: { ...state.ui, toast: result.accepted ? `Accordo: ${result.term.text}` : `Richiesta respinta: ${result.reasons[0]}` } };
+    persist(); emit();
+    return result;
+  },
+  allianceRequests() { return state.world ? requestsViewOf(state.world, state.clock.currentDate) : { sent: [], received: [], waiting: [], history: [] }; },
   dismissAllianceReport() { if (state.ui.allianceReport) { state = { ...state, ui: { ...state.ui, allianceReport: null } }; emit(); } },
   // ---------- rewards: time played, the daily reward, rewarded videos ----------
   // Real time played in the open career (counted by the play clock of the page, which only ticks in the foreground): the career keeps it, the blocks that are complete are credited and written to the journal of

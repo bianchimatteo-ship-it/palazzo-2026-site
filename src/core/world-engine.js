@@ -1,5 +1,5 @@
 import { uniqueId } from './ids.js?v=20261116-8';
-import { THEMES, compare as compareProgram, compromise as compromiseOn, positionOf as programPositionOf, refusalBlock, refusalKey, recordRefusal, coalitionBlock, registrationsOf, pairKey as programPairKey } from './alliance-rules.js?v=20261116-8';
+import { HARD_GAP, THEMES, THEME_BY_ID, compare as compareProgram, compromise as compromiseOn, positionOf as programPositionOf, refusalBlock, refusalKey, recordRefusal, coalitionBlock, registrationsOf, pairKey as programPairKey } from './alliance-rules.js?v=20261116-8';
 import { AD_REWARD } from '../data/simulation/reward-rules.js?v=20261116-8';
 import { ITALIAN_REGIONS } from '../data/regions.js?v=20261116-8';
 import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261116-8';
@@ -88,6 +88,7 @@ function draw(world) {
 const gaussian = world => draw(world) + draw(world) + draw(world) - 1.5;
 const fill = (text, place) => String(text).replace('{region}', place.region || 'regione').replace('{municipality}', place.municipality || 'il tuo comune');
 const tieKey = (a, b) => [a, b].sort().join('|');
+const addDays = (date, days) => { const d = new Date(`${date}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().slice(0, 10); };
 // the name of an accord led by a force: an alliance of the player's kind (it carries the list of its coalitions) is an «Alleanza», the accords of the simulation and of old saves are a «Coalizione» as before
 const ledName = (alliance, label) => `${Array.isArray(alliance?.coalitions) ? 'Alleanza' : 'Coalizione'} guidata da ${label}`;
 const LED = /^(?:Coalizione|Alleanza) guidata da /;
@@ -1035,7 +1036,7 @@ function joinCamp(world, camp, party, date, reason, { terms = null, due = null }
   logEvent(world, date, { kind: 'alleanza', icon: 'link', scope: 'nazionale', title: `${names.join(' e ')} ${newcomers.length > 1 ? 'entrano' : 'entra'} nella coalizione di ${leader?.label ?? 'un’altra forza'}`, body: `${reason === 'soglia' ? 'Da soli il rischio è restare sotto la soglia di sbarramento' : reason === 'invito' ? 'L’invito del partito più grande è stato accolto' : 'Programmi e rapporti abbastanza vicini'}${terms ? `; accordo raggiunto: ${terms.text.charAt(0).toLocaleLowerCase('it-IT') + terms.text.slice(1)}, gli alleati concedono` : ''}${previous && !stays.length ? `. L’accordo «${previous.label}» confluisce nella coalizione con i suoi impegni` : ''} (simulazione).`, tone: 'neutral' });
 }
 // The player's party joins a coalition (an invitation accepted), with or without asking for conditions.
-export function joinCoalition(input, allianceId, date, { terms = false, due = null } = {}) {
+function joinCoalitionCore(input, allianceId, date, { terms = false, due = null } = {}) {
   const world = copy(input);
   const player = playerParty(world);
   const alliance = world.alliances.find(item => item.id === allianceId && item.status === 'active');
@@ -1614,6 +1615,7 @@ export function advanceWorld(input, { date, week, stats = {}, deltas = {}, game 
   const approval = world.polls.at(-1)?.government?.approval ?? world.polls.at(-1)?.executive?.approval ?? society?.executive?.approval ?? APPROVAL_NEUTRAL;
   const offers = partyAgents(world, date, { approval, player, playerIsLeader, playerStrategy: player?.strategy ?? null });
   offers.push(...allianceDynamics(world, date, { nationalVoteIn, player, playerIsLeader }));
+  for (const offer of offers.filter(item => ['proposta-alleanza', 'proposta-coalizione'].includes(item.templateId))) if (!(world.requests ?? []).some(item => item.direction === 'ricevuta' && item.partyId === offer.partyId && item.status === 'in-attesa' && item.date >= addDays(date, -28))) logRequest(world, date, { kind: offer.templateId === 'proposta-coalizione' ? 'coalizione' : 'alleanza', direction: 'ricevuta', partyId: offer.partyId, label: offer.label, status: 'in-attesa', reason: null });
   partyLife(world, date, society?.trust ?? world.society?.trust ?? 48);
   // What the events of the previous weeks set in motion comes due; then (often) something new happens.
   advanceChains(world, date, parliament, reactions, lines);
@@ -1882,7 +1884,7 @@ export function allianceOdds(world, forceId, { partySupport = 50, influence = 50
   const blocked = program.hard.length ? `Programmi incompatibili su ${program.hard.map(row => row.label.toLowerCase()).join(', ')}: senza un compromesso negoziato sul tema l’alleanza non è possibile.` : null;
   return { chance: blocked ? 0 : exception ? 0.03 : round2(chance), reasons: reasons.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)), exception, program, blocked };
 }
-export function proposeAlliance(input, forceId, { partySupport = 50, influence = 50, date, memory, difficulty = 0, programOverlap = null }) {
+function proposeAllianceCore(input, forceId, { partySupport = 50, influence = 50, date, memory, difficulty = 0, programOverlap = null }) {
   const world = copy(input);
   const player = playerParty(world);
   const force = world.parties.find(item => item.id === forceId && item.active && !item.isPlayer);
@@ -1969,7 +1971,7 @@ export function inviteOdds(world, forceId, context = {}) {
 }
 // The player's party invites a force into its accord. Returns { world, success, stage, chance, reasons, term, joined, merged }.
 //   stage: 'rifiuto' (the force says no), 'trattativa' (it would join, the talks on its conditions fail), 'adesione'.
-export function inviteToAlliance(input, forceId, { partySupport = 50, influence = 50, date, memory, difficulty = 0, programOverlap = null } = {}) {
+function inviteToAllianceCore(input, forceId, { partySupport = 50, influence = 50, date, memory, difficulty = 0, programOverlap = null } = {}) {
   const world = copy(input);
   const blocked = inviteBlock(world, forceId);
   if (blocked) throw new Error(blocked);
@@ -2095,6 +2097,164 @@ export function registerCoalition(input, allianceId, election, date) {
   if (!reasons.length) alliance.cohesion = clamp((alliance.cohesion ?? 60) + 4, 0, 100);
   return { world, approved: !reasons.length, reasons, record };
 }
+
+// ---------- the talks inside the player's alliance: leadership, candidacies, offices, common programme ----------
+// Once in an alliance the player's party can ask its partners for something specific for an election, and each partner answers by its own interests: weight in the polls, ties, wounds, cohesion and what
+// the request costs it. A request accepted becomes a condition of the alliance («terms», kept or betrayed at the vote: settleElectoralTerms); one refused is told with the reasons, costs some cohesion
+// and the ties with who refused, and cannot be repeated for seven days.
+export const ALLIANCE_OFFICES = Object.freeze({
+  nazionale: [
+    { id: 'vicepresidenza', label: 'Vicepresidenza del Consiglio', value: 3 }, { id: 'economia', label: 'Ministero dell’Economia', value: 3 }, { id: 'interno', label: 'Ministero dell’Interno', value: 3 },
+    { id: 'esteri', label: 'Ministero degli Esteri', value: 3 }, { id: 'lavoro', label: 'Ministero del Lavoro', value: 2 }, { id: 'sanita', label: 'Ministero della Salute', value: 2 },
+    { id: 'ambiente', label: 'Ministero dell’Ambiente', value: 1 }, { id: 'cultura', label: 'Ministero della Cultura', value: 1 }, { id: 'presidenza-camera', label: 'Presidenza della Camera', value: 2 }
+  ],
+  locale: [
+    { id: 'vice', label: 'Vicesindaco o vicepresidente', value: 3 }, { id: 'bilancio', label: 'Assessorato al bilancio', value: 3 }, { id: 'servizi', label: 'Assessorato ai servizi sociali', value: 2 },
+    { id: 'urbanistica', label: 'Assessorato all’urbanistica', value: 2 }, { id: 'cultura', label: 'Assessorato alla cultura', value: 1 }
+  ]
+});
+const OFFICE_SCOPE = type => ['politiche', 'europee'].includes(type) ? 'nazionale' : 'locale';
+const talkRefusalKey = (allianceId, kind, electionId, partyId) => `talk|${allianceId}|${kind}|${electionId ?? '-'}|${partyId ?? '-'}`;
+const talkMembers = (world, alliance) => alliance.partyIds.map(id => world.parties.find(item => item.id === id && item.active)).filter(Boolean);
+// A partner decides on a request: a probability from its interests, a drawn answer, and the reason it gives when it says no.
+function partnerAnswer(world, partner, player, base, { loses = 1, why = 'la richiesta pesa troppo su di lui' } = {}) {
+  // the ties with the player, the wounds of the past (grudges) and the climate inside the alliance (cohesion) weigh on every answer
+  const tie = (world.ties?.[tieKey(player.id, partner.id)] ?? 0) / 300 + ((world.alliances?.find(item => item.status === 'active' && item.partyIds.includes(partner.id))?.cohesion ?? 60) - 60) / 500;
+  const wound = world.grudges?.[tieKey(player.id, partner.id)] ? -0.15 : 0;
+  const chance = clamp(base + tie + wound, 0.03, 0.92);
+  const yes = draw(world) < chance;
+  return { partyId: partner.id, label: partner.label, chance: Math.round(chance * 100) / 100, yes, why: yes ? null : why, loses };
+}
+export function allianceTerms(alliance) { return (alliance?.terms ?? []).filter(item => item.electionId !== undefined || item.kind); }
+export function termOptions(input, allianceId, election = null) {
+  const world = input;
+  const alliance = world.alliances.find(item => item.id === allianceId && item.status === 'active');
+  const player = playerParty(world);
+  if (!alliance || !player) return null;
+  const members = talkMembers(world, alliance);
+  const shares = trueShares(world);
+  const total = members.reduce((sum, item) => sum + (shares.get(item.id) ?? item.baseline ?? 0), 0) || 1;
+  const rows = members.map(item => ({ id: item.id, label: item.label, share: round1(shares.get(item.id) ?? item.baseline ?? 0), fair: Math.round((shares.get(item.id) ?? item.baseline ?? 0) * 100 / total) }));
+  const scope = OFFICE_SCOPE(election?.type ?? 'politiche');
+  const taken = new Set((alliance.terms ?? []).filter(item => item.kind === 'incarico' && item.status === 'aperto' && item.electionId === (election?.id ?? null)).map(item => item.office));
+  const leader = [...rows].sort((a, b) => b.share - a.share)[0] ?? null;
+  const themes = commonProgramOf(world, alliance);
+  const open = (alliance.terms ?? []).filter(item => item.status === 'aperto' && (item.electionId ?? null) === (election?.id ?? null));
+  return { members: rows, leaderId: alliance.leaderId ?? leader?.id ?? null, strongestId: leader?.id ?? null, offices: ALLIANCE_OFFICES[scope].map(item => ({ ...item, taken: taken.has(item.id) })), scope, themes, open, extras: [3, 6, 10] };
+}
+// The common programme: theme by theme where the members agree, where they can negotiate and where they clash for good (the compromises already reached are counted).
+export function commonProgramOf(world, alliance) {
+  const members = talkMembers(world, alliance);
+  return THEMES.map(theme => {
+    const values = members.map(member => ({ id: member.id, label: member.label, value: round1(programPositionOf(world, member, theme.id)) }));
+    const gap = values.length ? Math.max(...values.map(item => item.value)) - Math.min(...values.map(item => item.value)) : 0;
+    const agreed = Boolean(world.compromises?.[`${[...alliance.partyIds].sort().join('+')}|${theme.id}`]) || (alliance.terms ?? []).some(item => item.kind === 'punto-comune' && item.theme === theme.id && item.status === 'aperto');
+    const state = agreed ? 'concordato' : gap >= HARD_GAP && theme.veto ? 'in conflitto' : gap >= 2 ? 'da negoziare' : 'condiviso';
+    return { id: theme.id, label: theme.label, gap: round1(gap), state, values };
+  });
+}
+export function proposeTerm(input, allianceId, proposal, date, { election = null } = {}) {
+  const world = copy(input);
+  const alliance = world.alliances.find(item => item.id === allianceId && item.status === 'active');
+  const player = playerParty(world);
+  if (!alliance || !player || !alliance.partyIds.includes(player.id)) throw new Error('Puoi trattare solo dentro la tua alleanza.');
+  if (!Array.isArray(alliance.terms)) alliance.terms = [];
+  const kind = proposal?.kind;
+  const members = talkMembers(world, alliance);
+  const others = members.filter(item => item.id !== player.id);
+  if (!others.length) throw new Error('Nell’alleanza non ci sono altri partiti con cui trattare.');
+  const electionId = election?.id ?? proposal.electionId ?? null;
+  if (election) { const closed = coalitionBlock(election, date); if (closed) throw new Error(closed.replace('le coalizioni', 'le trattative').replace('Le coalizioni', 'Le trattative')); }
+  const beneficiary = members.find(item => item.id === (proposal.partyId ?? player.id));
+  if (!beneficiary) throw new Error('Il beneficiario non fa parte dell’alleanza.');
+  const key = talkRefusalKey(alliance.id, kind, electionId, kind === 'incarico' ? `${beneficiary.id}:${proposal.office}` : kind === 'punto-comune' ? proposal.theme : beneficiary.id);
+  const cooldown = refusalBlock(world, key, date);
+  if (cooldown) throw new Error(`Richiesta già respinta: ${cooldown}`);
+  const shares = trueShares(world);
+  const share = item => shares.get(item.id) ?? item.baseline ?? 0;
+  const total = members.reduce((sum, item) => sum + share(item), 0) || 1;
+  const strongest = [...members].sort((a, b) => share(b) - share(a))[0];
+  let term, answers = [], cohesionGain = 0;
+  if (kind === 'guida') {
+    if (alliance.partyIds.length < 3 && alliance.kind !== 'coalizione' && !election) { /* an alliance of two also has a lead for the vote */ }
+    term = { kind: 'guida', partyId: beneficiary.id, text: `${beneficiary.label} guida la lista comune`, electionId };
+    for (const partner of others.filter(item => item.id !== beneficiary.id)) {
+      const ratio = share(beneficiary) / Math.max(0.1, share(partner));
+      const base = partner.id === strongest.id && beneficiary.id !== strongest.id ? (ratio >= 0.75 ? 0.35 : 0.08) : ratio >= 1 ? 0.8 : ratio >= 0.6 ? 0.5 : 0.25;
+      answers.push(partnerAnswer(world, partner, player, base, { why: partner.id === strongest.id && beneficiary.id !== strongest.id ? `${partner.label} è il partito più forte e rivendica la guida` : `${beneficiary.label} pesa meno di ${partner.label}: non lo accetta come capofila` }));
+    }
+  } else if (kind === 'collegi') {
+    const extra = [3, 6, 10].includes(Number(proposal.extra)) ? Number(proposal.extra) : 3;
+    term = { kind: 'collegi', partyId: beneficiary.id, extra, text: `${beneficiary.label} ottiene il ${Math.round(share(beneficiary) * 100 / total) + extra}% delle candidature (il suo peso è ${Math.round(share(beneficiary) * 100 / total)}%)`, electionId };
+    for (const partner of others.filter(item => item.id !== beneficiary.id)) answers.push(partnerAnswer(world, partner, player, 0.82 - extra * 0.045, { why: `cedere ${extra} punti di candidature a ${beneficiary.label} è troppo per ${partner.label}` }));
+  } else if (kind === 'incarico') {
+    const scope = OFFICE_SCOPE(election?.type ?? proposal.type ?? 'politiche');
+    const office = ALLIANCE_OFFICES[scope].find(item => item.id === proposal.office);
+    if (!office) throw new Error('Incarico non valido.');
+    if (alliance.terms.some(item => item.kind === 'incarico' && item.status === 'aperto' && item.office === office.id && (item.electionId ?? null) === electionId)) throw new Error(`«${office.label}» è già stato assegnato in questa trattativa.`);
+    const slots = Math.max(1, Math.round(ALLIANCE_OFFICES[scope].length * share(beneficiary) / total));
+    const held = alliance.terms.filter(item => item.kind === 'incarico' && item.status === 'aperto' && item.partyId === beneficiary.id && (item.electionId ?? null) === electionId).length;
+    term = { kind: 'incarico', partyId: beneficiary.id, office: office.id, text: `${beneficiary.label} ottiene: ${office.label}`, electionId };
+    for (const partner of others.filter(item => item.id !== beneficiary.id)) answers.push(partnerAnswer(world, partner, player, 0.9 - office.value * 0.13 - Math.max(0, held + 1 - slots) * 0.3, { why: held + 1 > slots ? `${beneficiary.label} ha già più incarichi di quanti ne giustifichi il suo peso` : `${partner.label} vuole «${office.label}» per sé` }));
+  } else if (kind === 'punto-comune') {
+    const theme = THEME_BY_ID[proposal.theme];
+    if (!theme) throw new Error('Tema non valido.');
+    const row = commonProgramOf(world, alliance).find(item => item.id === theme.id);
+    if (row.state === 'concordato') throw new Error(`Sul tema «${theme.label}» c’è già un punto comune.`);
+    if (row.state === 'condiviso') { term = { kind: 'punto-comune', partyId: player.id, theme: theme.id, text: `Punto comune su ${theme.label.toLowerCase()}`, electionId }; }
+    else {
+      term = { kind: 'punto-comune', partyId: player.id, theme: theme.id, text: `Punto comune su ${theme.label.toLowerCase()}`, electionId };
+      for (const partner of others) answers.push(partnerAnswer(world, partner, player, row.state === 'in conflitto' ? 0.22 : 0.72 - row.gap * 0.1, { why: `su ${theme.label.toLowerCase()} le posizioni distano ${row.gap} punti` }));
+    }
+  } else throw new Error('Tipo di richiesta non valido.');
+  const refusing = answers.filter(item => !item.yes);
+  const accepted = refusing.length === 0;
+  if (accepted) {
+    alliance.terms.push({ ...term, id: `${alliance.id}|${kind}|${alliance.terms.length + 1}|${date}`, date, status: 'aperto', evidence: null, due: election?.electionDate ?? null });
+    if (kind === 'guida') { alliance.leaderId = beneficiary.id; if (alliance.partyIds.length >= 3) alliance.label = ledName(alliance, beneficiary.label); }
+    if (kind === 'punto-comune') {
+      for (const a of members) for (const b of members) if (a.id < b.id) { const gap = Math.abs(programPositionOf(world, a, term.theme) - programPositionOf(world, b, term.theme)); if (gap >= 2) world.compromises = { ...(world.compromises ?? {}), [`${programPairKey(a.id, b.id)}|${term.theme}`]: { date, theme: term.theme } }; }
+      world.compromises = { ...(world.compromises ?? {}), [`${[...alliance.partyIds].sort().join('+')}|${term.theme}`]: { date, theme: term.theme } };
+    }
+    cohesionGain = kind === 'punto-comune' ? 3 : -1;
+    for (const partner of others.filter(item => item.id !== beneficiary.id)) world.ties[tieKey(beneficiary.id, partner.id)] = round1(clamp((world.ties[tieKey(beneficiary.id, partner.id)] ?? 0) - 1.5, -100, 100));
+  } else {
+    for (const item of refusing) world.ties[tieKey(player.id, item.partyId)] = round1(clamp((world.ties[tieKey(player.id, item.partyId)] ?? 0) - 3, -100, 100));
+    cohesionGain = -2;
+    recordRefusal(world, key, date, refusing.map(item => item.why).join('; '));
+  }
+  alliance.cohesion = clamp(Math.round((alliance.cohesion ?? 60) + cohesionGain), 0, 100);
+  const text = accepted ? `Accordo: ${term.text}` : `Richiesta respinta (${term.text}): ${refusing.map(item => `${item.label}: ${item.why}`).join('; ')}`;
+  alliance.history = [...(alliance.history ?? []), { date, text }].slice(-12);
+  logEvent(world, date, { kind: accepted ? 'alleanza' : 'rottura', icon: accepted ? 'link' : 'unlink', scope: 'nazionale', title: accepted ? `${alliance.label}: ${term.text}` : `${alliance.label}: richiesta respinta`, body: `${text} (simulazione).`, tone: accepted ? 'good' : 'bad', partyId: player.id });
+  return { world, accepted, term: accepted ? alliance.terms.at(-1) : term, answers, reasons: refusing.map(item => item.why), retryAfter: accepted ? null : world.refusals?.[key]?.until ?? null };
+}
+// The terms of an alliance a UI shows: open, kept, betrayed.
+export const termsOfAlliance = alliance => (alliance?.terms ?? []).map(item => ({ ...item }));
+
+// ---------- the requests of the player and of the others: a history of what was asked, to whom, and how it ended ----------
+// Every request that reached an answer (an alliance proposed, a force invited, a request to join a coalition, an offer received and accepted) is written once in world.requests (the last 40).
+export function logRequest(world, date, entry) {
+  world.requests = [{ id: `${date}|${entry.direction}|${entry.kind}|${entry.partyId ?? '-'}|${(world.requests ?? []).length + 1}`, date, ...entry }, ...(world.requests ?? [])].slice(0, 40);
+  return world;
+}
+const reasonOf = out => out?.blocked ?? out?.reasons?.filter?.(item => item.delta < 0)?.[0]?.label ?? out?.term?.text ?? null;
+export function proposeAlliance(input, forceId, options) {
+  const out = proposeAllianceCore(input, forceId, options);
+  const force = out.world.parties.find(item => item.id === forceId);
+  logRequest(out.world, options.date, { kind: 'alleanza', direction: 'inviata', partyId: forceId, label: force?.label ?? forceId, status: out.success ? 'accettata' : 'respinta', reason: out.success ? null : reasonOf(out), chance: out.chance ?? null });
+  return out;
+}
+export function inviteToAlliance(input, forceId, options = {}) {
+  const out = inviteToAllianceCore(input, forceId, options);
+  if (out?.world) { const force = out.world.parties.find(item => item.id === forceId); logRequest(out.world, options.date, { kind: 'invito', direction: 'inviata', partyId: forceId, label: force?.label ?? forceId, status: out.success ? 'accettata' : 'respinta', reason: out.success ? null : reasonOf(out) ?? out.reason ?? null }); }
+  return out;
+}
+export function joinCoalition(input, allianceId, date, options = {}) {
+  const out = joinCoalitionCore(input, allianceId, date, options);
+  if (out?.world && !out.already) { const alliance = out.world.alliances.find(item => item.id === allianceId); logRequest(out.world, date, { kind: 'adesione', direction: 'inviata', partyId: allianceId, label: alliance?.label ?? allianceId, status: out.joined ? 'accettata' : 'respinta', reason: out.joined ? null : out.term?.text ?? out.blocked ?? null }); }
+  return out;
+}
 // An offer from another party, accepted by the player.
 export function acceptAlliance(input, forceId, date) {
   const world = copy(input);
@@ -2102,6 +2262,7 @@ export function acceptAlliance(input, forceId, date) {
   const force = world.parties.find(item => item.id === forceId && item.active && !item.isPlayer);
   if (!player || !force || allianceOf(world, player.id) || allianceOf(world, force.id)) return world;
   sealAlliance(world, player, force, date);
+  { const pending = (world.requests ?? []).find(item => item.direction === 'ricevuta' && item.partyId === force.id && item.status === 'in-attesa'); if (pending) { pending.status = 'accettata'; pending.answeredAt = date; } else logRequest(world, date, { kind: 'alleanza', direction: 'ricevuta', partyId: force.id, label: force.label, status: 'accettata', reason: null }); }
   logEvent(world, date, { kind: 'alleanza', icon: 'link', scope: 'nazionale', title: `Intesa tra ${player.label} e ${force.label}`, body: 'Accetti la proposta: nello scenario le due forze si presentano insieme (simulazione).', tone: 'good' });
   return world;
 }
@@ -2174,6 +2335,8 @@ export function settleElectoralTerms(input, { coalitions = [], quotas = {}, date
         if (term.kind === 'veto') { outcome = coalition.partyIds.includes(term.target) ? 'tradito' : 'mantenuto'; evidence = { target: term.target }; }
         else if (term.kind === 'guida') { outcome = coalition.leaderId === term.partyId ? 'mantenuto' : 'tradito'; evidence = { leaderId: coalition.leaderId }; }
         else if (term.kind === 'programma') { const leader = world.parties.find(item => item.id === coalition.leaderId); outcome = leader?.id === term.partyId || leader?.agenda?.includes(term.area) ? 'mantenuto' : 'tradito'; evidence = { leaderId: leader?.id ?? null, agenda: leader?.agenda ?? [] }; }
+        else if (term.kind === 'punto-comune') { outcome = coalition.partyIds.length > 1 && coalition.partyIds.includes(term.partyId) ? 'mantenuto' : 'tradito'; evidence = { theme: term.theme }; }
+        else if (term.kind === 'incarico') { outcome = coalition.partyIds.includes(term.partyId) && coalition.partyIds.length > 1 ? 'mantenuto' : 'tradito'; evidence = { office: term.office }; }
         else if (term.kind === 'collegi') { const q = quotas[term.partyId]; outcome = q && q.boosted > q.base ? 'mantenuto' : 'tradito'; evidence = q ?? {}; }
       }
       term.status = outcome; term.closedAt = date; term.evidence = evidence;
@@ -2274,4 +2437,10 @@ export function mergeCandidates(input, { minTie = 25, maxAxisGap = 1.6 } = {}) {
     .map(item => ({ id: item.id, label: item.label, share: round1(item.baseline), tie: Math.round(input.ties?.[tieKey(own.id, item.id)] ?? 0), axisGap: Math.abs((own.axis ?? 0) - (item.axis ?? 0)), real: item.refSource === 'real' }))
     .filter(item => item.tie >= minTie && item.axisGap <= maxAxisGap && item.share >= Math.max(0.5, own.baseline * 0.3) && item.share <= own.baseline * 1.8 + 1)
     .sort((a, b) => b.tie - a.tie).slice(0, 4);
+}
+
+// What the page of the requests shows: sent, received (waiting ones first, the old ones expire after four weeks) and the history.
+export function requestsView(world, date) {
+  const rows = (world?.requests ?? []).map(item => item.status === 'in-attesa' && date && item.date < addDays(date, -28) ? { ...item, status: 'scaduta' } : item);
+  return { sent: rows.filter(item => item.direction === 'inviata'), received: rows.filter(item => item.direction === 'ricevuta'), waiting: rows.filter(item => item.direction === 'ricevuta' && item.status === 'in-attesa'), history: rows.filter(item => item.status !== 'in-attesa') };
 }

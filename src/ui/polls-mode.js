@@ -233,6 +233,38 @@ function registrationPanel(alliance, options, secretary) {
   }).join('');
   return `<h4>Coalizioni per le elezioni</h4><p class="quiet-copy">L’alleanza è un accordo politico. Diventa coalizione per una elezione solo con una approvazione esplicita e fino al deposito delle liste: dopo, nessuna modifica.</p><ul class="coalition-elections">${items}</ul>`;
 }
+
+// The talks inside the alliance, one block for each election that is still open: leadership, candidacies, offices and the common programme, each with its own button (store.proposeAllianceTerm).
+function talksPanel(alliance, options, secretary) {
+  const elections = (options.coalitionElections?.() ?? []).filter(item => !item.block);
+  if (!elections.length || !options.allianceTalkOptions || alliance.partyIds.length < 2) return '';
+  const blocks = elections.map(election => {
+    const talk = options.allianceTalkOptions(election.id);
+    if (!talk) return '';
+    const member = talk.members.map(item => `<option value="${esc(item.id)}">${esc(item.label)} · ${item.fair}% del peso</option>`).join('');
+    const office = talk.offices.filter(item => !item.taken).map(item => `<option value="${esc(item.id)}">${esc(item.label)}</option>`).join('');
+    const btn = (kind, label) => secretary ? `<button type="button" class="secondary-button compact" data-world-term="${kind}" data-term-election="${esc(election.id)}">${label} · 1 giorno · 2 cap.</button>` : '';
+    const rows = talk.themes.map(row => `<tr data-talk-theme="${esc(row.id)}"><td>${esc(row.label)}</td><td>${esc(row.state)}</td><td>${row.state === 'concordato' ? '' : secretary ? `<button type="button" class="ghost-button compact" data-world-term="punto-comune" data-term-election="${esc(election.id)}" data-term-theme="${esc(row.id)}">Proponi punto comune</button>` : ''}</td></tr>`).join('');
+    const open = talk.open.length ? `<ul class="talk-terms">${talk.open.map(term => `<li>${esc(term.text)}</li>`).join('')}</ul>` : '<p class="quiet-copy">Nessun accordo ancora concordato per questa elezione.</p>';
+    return `<details class="alliance-talk" data-alliance-talk="${esc(election.id)}"><summary><strong>${esc(election.label)}</strong> <small>trattative fino al ${esc(formatDate(election.deadline))}</small></summary>
+      <div class="talk-open"><h5>Concordato</h5>${open}</div>
+      <div class="talk-form" data-term-form><h5>Capolista</h5><label>Chi guida la lista comune<select data-term-party>${member}</select></label>${btn('guida', 'Proponi come capolista')}</div>
+      <div class="talk-form" data-term-form><h5>Candidature</h5><label>Per quale partito<select data-term-party>${member}</select></label><label>Punti di candidature oltre il suo peso<select data-term-extra><option value="3">+3 punti</option><option value="6">+6 punti</option><option value="10">+10 punti</option></select></label>${btn('collegi', 'Chiedi più candidature')}</div>
+      <div class="talk-form" data-term-form><h5>Incarichi</h5><label>Per quale partito<select data-term-party>${member}</select></label><label>Incarico<select data-term-office>${office}</select></label>${btn('incarico', 'Chiedi l’incarico')}</div>
+      <div class="talk-form"><h5>Programma comune</h5><table class="program-table"><thead><tr><th>Tema</th><th>Stato</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
+  }).join('');
+  return `<h4>Trattative nell’alleanza</h4><p class="quiet-copy">Chiedi ai partner capolista, candidature, incarichi e punti del programma: ognuno risponde secondo il suo peso e i rapporti. Gli accordi diventano impegni, verificati al voto. Dopo il deposito delle liste non si tratta più.</p>${blocks}`;
+}
+// What was asked and how it ended: the requests received (the ones waiting first), those sent, and the history.
+function requestsPanel(options) {
+  const view = options.allianceRequests?.();
+  if (!view || (!view.sent.length && !view.received.length)) return '';
+  const STATUS = { accettata: 'accettata', respinta: 'respinta', 'in-attesa': 'in attesa di risposta', scaduta: 'scaduta' };
+  const KIND = { alleanza: 'alleanza', invito: 'invito alla coalizione', adesione: 'richiesta di adesione', coalizione: 'proposta di coalizione' };
+  const row = item => `<li data-request="${esc(item.id)}" data-request-status="${esc(item.status)}"><strong>${esc(item.label)}</strong> <small>${esc(KIND[item.kind] ?? item.kind)} · ${esc(formatDate(item.date))}</small> <span class="badge ${item.status === 'accettata' ? 'badge-good' : item.status === 'respinta' ? 'badge-bad' : ''}">${esc(STATUS[item.status] ?? item.status)}</span>${item.reason ? `<small class="force-strategy">${esc(item.reason)}</small>` : ''}</li>`;
+  const group = (title, items) => items.length ? `<h5>${title}</h5><ul class="request-list">${items.slice(0, 8).map(row).join('')}</ul>` : '';
+  return `<section class="alliance-requests" data-alliance-requests><h4>Richieste</h4>${group('Ricevute', view.received)}${group('Inviate', view.sent)}</section>`;
+}
 const ROLE_REASON = 'Solo il segretario del partito decide intese e coalizioni: si diventa segretari fondando un partito o vincendo un congresso.';
 // «La mia coalizione»: the one place of the accord of the player's party. It reads world.alliances (never the poll: the party may be missing from the last survey) and holds who is in, who leads,
 // what the coalition weighs, its cohesion, the conditions, the history, what is registered for the vote, and the commands (invite, leave).
@@ -278,7 +310,7 @@ export function myCoalitionPanel(state, world, index, poll, options = {}) {
     <ul class="coalition-members">${rows}</ul>
     <p class="coalition-can" data-coalition-can><strong>Cosa puoi fare ora:</strong> ${esc(options.windowClosed ? 'le intese sono ferme fino al voto (inviti e uscite riprendono dopo).' : !secretary ? 'solo il segretario del partito invita o esce dall’accordo; tu puoi migliorare i rapporti con le tue attività.' : `${choices.length ? `invitare uno dei ${choices.length} partiti liberi` : 'nessun partito libero da invitare'} · uscire dall’accordo${alliance.partyIds.length >= 3 ? ' (gli altri restano insieme)' : ' (l’intesa si scioglie)'}.`)}</p>
     ${registeredHtml}
-    ${registrationPanel(alliance, options, secretary)}
+    ${registrationPanel(alliance, options, secretary)}${talksPanel(alliance, options, secretary)}${requestsPanel(options)}
     ${programPanel(members, options, secretary)}
     ${terms ? `<h4>Condizioni e accordi</h4><ul class="coalition-terms">${terms}</ul>` : '<p class="quiet-copy">Nessuna condizione particolare è stata concordata.</p>'}
     ${history ? `<h4>Cronologia</h4><ul class="coalition-history">${history}</ul>` : ''}
@@ -327,7 +359,7 @@ export function forcesGrid(state, world, poll, index, logo, realLeader, secretar
     </article>`;
   }).join('');
   const note = player && !secretary ? '<p class="parliament-note">Alleanze e rotture le decide il segretario del partito: da iscritto o dirigente puoi solo influenzare i rapporti con le tue attività.</p>' : '';
-  return `${note}${player ? myCoalitionPanel(state, world, index, poll, { secretary, windowClosed: options.windowClosed, inviteOdds: options.inviteOdds, programAnalysis: options.programAnalysis, coalitionElections: options.coalitionElections, refusedUntil: options.refusedUntil, inviteBlock: options.inviteBlock }) : ''}<div class="force-grid">${rows}</div>`;
+  return `${note}${player ? myCoalitionPanel(state, world, index, poll, { secretary, windowClosed: options.windowClosed, inviteOdds: options.inviteOdds, programAnalysis: options.programAnalysis, allianceTalkOptions: options.allianceTalkOptions, allianceRequests: options.allianceRequests, coalitionElections: options.coalitionElections, refusedUntil: options.refusedUntil, inviteBlock: options.inviteBlock }) : ''}<div class="force-grid">${rows}</div>`;
 }
 
 // The reason of a way out of the polls, with the figures that decided it: the SIMULATED consensus (what the thresholds read), the weeks it was held, the state it was in and for how long, and
@@ -416,7 +448,7 @@ export function renderPollsPage(state, options = {}) {
       ${panel('TERRITORIO', 'Il tuo partito regione per regione', regionalMap(world, poll))}
       ${panel('CRONACA POLITICA', 'Cosa muove i sondaggi', chronicle(world, 6))}
     </div>
-    ${panel('PARTITI REALI · COMPORTAMENTI SIMULATI', 'Le forze in campo', forcesGrid(state, world, poll, index, logo, options.realLeader, options.secretary, { allianceOdds: options.allianceOdds, inviteOdds: options.inviteOdds, programAnalysis: options.programAnalysis, coalitionElections: options.coalitionElections, refusedUntil: options.refusedUntil, inviteBlock: options.inviteBlock, allianceBlock: options.allianceBlock }))}
+    ${panel('PARTITI REALI · COMPORTAMENTI SIMULATI', 'Le forze in campo', forcesGrid(state, world, poll, index, logo, options.realLeader, options.secretary, { allianceOdds: options.allianceOdds, inviteOdds: options.inviteOdds, programAnalysis: options.programAnalysis, allianceTalkOptions: options.allianceTalkOptions, allianceRequests: options.allianceRequests, coalitionElections: options.coalitionElections, refusedUntil: options.refusedUntil, inviteBlock: options.inviteBlock, allianceBlock: options.allianceBlock }))}
     ${panel('PRESENZA NEI SONDAGGI · SIMULAZIONE', 'Chi entra e chi esce', presencePanel(world))}
     <div class="poll-grid">
       ${panel('ALLEANZE · SIMULATE', 'Intese e rotture', alliances)}

@@ -40,6 +40,15 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, send, screensho
     const after = await S(`return JSON.stringify(store.getState().world.compromises ?? {}) + '|' + store.getState().game.resources.politicalCapital;`);
     assert.notEqual(after.split('|')[1], before.split('|')[1], 'Il compromesso costa capitale politico (3 punti): l’azione è partita.');
   }
+  // the talks inside the alliance: capolista, candidacies, offices, common programme, and the history of the requests
+  assert.ok(await evaluate(`Boolean(document.querySelector('[data-alliance-talk="${info.election}"]'))`), 'Le trattative sono nella pagina, per ogni elezione aperta.');
+  assert.ok(await evaluate(`document.querySelectorAll('[data-alliance-talk="${info.election}"] [data-talk-theme]').length === 10`), 'Il programma comune ha dieci temi.');
+  assert.ok(await evaluate(`Boolean(document.querySelector('[data-alliance-requests] [data-request]'))`), 'Lo storico delle richieste mostra l’alleanza stretta.');
+  const capitalBeforeTalk = await S(`return store.getState().game.resources.politicalCapital;`);
+  await evaluate(`document.querySelector('[data-alliance-talk="${info.election}"]').open = true; (document.querySelector('[data-alliance-talk="${info.election}"] [data-world-term="collegi"]')).click(); true`); await pause(1200);
+  assert.equal(await S(`return store.getState().game.resources.politicalCapital;`), capitalBeforeTalk - 2, 'Una trattativa costa 2 punti di capitale.');
+  assert.match(await evaluate(`document.querySelector('.toast')?.innerText ?? ''`), /Accordo:|Richiesta respinta/, 'L’esito della trattativa è detto in parole.');
+  assert.ok(await S(`const a = store.getState().world.alliances.find(x => x.withPlayer && x.status === 'active'); return (a.terms ?? []).length > 0 || Object.keys(store.getState().world.refusals ?? {}).some(k => k.startsWith('talk|'));`), 'La trattativa lascia un impegno o un rifiuto registrato.');
   // the registration of the alliance as a coalition for the election
   await open();
   await evaluate(`document.querySelector('[data-world-register="${info.election}"]')?.click(); true`); await pause(1500);
@@ -56,8 +65,9 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, send, screensho
   }
   // English
   await evaluate(`import('/src/core/i18n.js?v=${version}').then(m => m.setLanguage('en')).then(() => true)`); await pause(1000);
+  await evaluate(`document.querySelectorAll('[data-my-coalition] details').forEach(item => { item.open = true; }); true`); await pause(300);
   panel = await text();
-  assert.match(panel, /My (alliance|coalition)/); assert.match(panel, /Common programme/); assert.ok(!/Programma comune|Crea alleanza|adesioni fino/.test(panel), 'Nessuna riga italiana nel pannello inglese.');
+  assert.match(panel, /My (alliance|coalition)/); assert.match(panel, /Common programme/); assert.ok(!/Programma comune|Crea alleanza|adesioni fino|Trattative|Capolista|Incarico|Candidature|Ricevute|Inviate|Concordato|Proponi|punti del programma|trattative fino/.test(panel), 'Nessuna riga italiana nel pannello inglese.');
   if (process.env.QA_SHOT_DIR) { await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true }); await pause(400); await evaluate(`document.querySelector('[data-my-coalition]')?.scrollIntoView({ block: 'start' }); true`); await pause(400); await screenshot(`${process.env.QA_SHOT_DIR}/alleanze-en-390x844.png`); }
   assert.deepEqual(errors, [], 'Nessun errore JavaScript.');
 }, { voter: true });

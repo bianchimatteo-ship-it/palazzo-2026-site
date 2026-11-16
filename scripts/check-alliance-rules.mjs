@@ -148,4 +148,58 @@ const allied = until(n => { const w = reseed(base(), n); const out = W.proposeAl
   assert.ok(broken.effects.some(effect => effect.cause === 'rottura'), '10. Un effetto sui sondaggi.');
   lines.push('rottura, elezioni di livelli diversi con accordi diversi, coerenza di coalizioni e invarianti');
 }
-console.log(`Alleanze e coalizioni verificate (${lines.length} gruppi, 12 scenari): ${lines.join(' · ')}.`);
+
+// ---- 13: the talks inside the alliance (leadership, candidacies, offices, common programme) and the history of the requests ----
+{
+  const three = until(n => { let w = reseed(base('centro-destra'), n); const out = W.proposeAlliance(w, 'fdi', { date: DATE, partySupport: 80, influence: 80 }); if (!out.success) return null; const out2 = W.inviteToAlliance(reseed(out.world, n + 5), 'lega', { date: DATE, partySupport: 80, influence: 80 }); return out2.success ? out2.world : null; });
+  const alliance = W.playerAlliance(three);
+  assert.ok(alliance.partyIds.length >= 3, '13. Un’alleanza di tre partiti.');
+  const log = W.requestsView(three, DATE);
+  assert.ok(log.sent.some(item => item.partyId === 'fdi' && item.status === 'accettata') && log.sent.some(item => item.kind === 'invito' && item.partyId === 'lega'), '13. Le richieste inviate e accettate sono nello storico.');
+  const politiche = { id: 'politiche-2027', type: 'politiche', label: 'Elezioni politiche', electionDate: VOTE, windowOpensAt: '2026-11-02', windowClosesAt: CLOSES, status: 'open' };
+  const options = W.termOptions(three, alliance.id, politiche);
+  assert.equal(options.members.length, alliance.partyIds.length); assert.equal(options.strongestId, 'fdi', 'Il partito più forte è identificato.');
+  assert.ok(options.offices.length >= 5 && options.themes.length === 10, 'Incarichi e dieci temi del programma comune sono in lista.');
+  // leadership: the weak party asking the lead is refused by the strongest with the reason; the strongest is accepted by the others
+  let refused = null, accepted = null;
+  for (let n = 0; n < 60 && (!refused || !accepted); n++) {
+    const w = reseed(three, n);
+    if (!refused) { try { const out = W.proposeTerm(w, alliance.id, { kind: 'guida', partyId: 'io', electionId: politiche.id }, DATE, { election: politiche }); if (!out.accepted) refused = out; } catch { /* blocked */ } }
+    if (!accepted) { const out = W.proposeTerm(reseed(three, n + 100), alliance.id, { kind: 'guida', partyId: 'fdi', electionId: politiche.id }, DATE, { election: politiche }); if (out.accepted) accepted = out; }
+  }
+  assert.ok(refused && /rivendica la guida|non lo accetta/.test(refused.reasons[0]), '13. Chiedere la guida senza il peso è rifiutato con il motivo.');
+  assert.ok(W.refusedUntil(refused.world, 'x', DATE) === null && refused.retryAfter, '13. La richiesta respinta non si ripete per sette giorni.');
+  assert.throws(() => W.proposeTerm(refused.world, alliance.id, { kind: 'guida', partyId: 'io', electionId: politiche.id }, DATE, { election: politiche }), /Richiesta già respinta/, '13. Ripetere subito è bloccato.');
+  assert.ok(refused.world.requests === undefined || Array.isArray(refused.world.requests));
+  assert.equal(W.playerAlliance(accepted.world).leaderId, 'fdi', '13. Accettata la guida, il capofila cambia davvero.');
+  assert.ok(W.playerAlliance(accepted.world).terms.some(term => term.kind === 'guida' && term.status === 'aperto'), '13. E diventa una condizione dell’alleanza.');
+  // candidacies: small extras pass more often than large ones; an accepted one boosts the quota of the vote
+  const rate = extra => { let ok = 0; for (let n = 0; n < 80; n++) { try { if (W.proposeTerm(reseed(three, n), alliance.id, { kind: 'collegi', partyId: 'io', extra, electionId: politiche.id }, DATE, { election: politiche }).accepted) ok++; } catch { /* */ } } return ok; };
+  const small = rate(3), large = rate(10);
+  assert.ok(small > large, `13. Più candidature si chiedono, meno si ottengono (${small}/80 contro ${large}/80).`);
+  const withSeats = until(n => { const out = W.proposeTerm(reseed(three, n), alliance.id, { kind: 'collegi', partyId: 'io', extra: 3, electionId: politiche.id }, DATE, { election: politiche }); return out.accepted ? out.world : null; });
+  const registered = W.registerCoalition(withSeats, W.playerAlliance(withSeats).id, politiche, day(DATE, 30));
+  assert.ok(registered.approved, '13. La coalizione con candidature negoziate si registra.');
+  const coalitions = L.buildCoalitions(registered.world);
+  assert.ok(coalitions.some(item => item.partyIds.includes('io') && item.quotaBoost?.io > 1), '13. Le candidature negoziate pesano sulla quota di collegi al voto.');
+  // offices: a second assignment of the same office is blocked; each office has a weight-based answer
+  const gotOffice = until(n => { const out = W.proposeTerm(reseed(three, n), alliance.id, { kind: 'incarico', partyId: 'io', office: 'cultura', electionId: politiche.id }, DATE, { election: politiche }); return out.accepted ? out : null; });
+  assert.throws(() => W.proposeTerm(gotOffice.world, alliance.id, { kind: 'incarico', partyId: 'lega', office: 'cultura', electionId: politiche.id }, DATE, { election: politiche }), /già stato assegnato/, '13. Un incarico assegnato non si dà due volte.');
+  assert.throws(() => W.proposeTerm(three, alliance.id, { kind: 'incarico', partyId: 'io', office: 'inesistente' }, DATE, { election: politiche }), /Incarico non valido/);
+  let bigAccepted = 0; for (let n = 0; n < 60; n++) { try { if (W.proposeTerm(reseed(three, n), alliance.id, { kind: 'incarico', partyId: 'io', office: 'economia', electionId: politiche.id }, DATE, { election: politiche }).accepted) bigAccepted++; } catch { /* */ } }
+  assert.ok(bigAccepted < 40, `13. Un incarico di peso (Economia) a un partito piccolo non passa sempre (${bigAccepted}/60).`);
+  // common programme: themes with a hard conflict are refused, shared ones pass; the point becomes «concordato»
+  const program = W.commonProgramOf(three, alliance);
+  assert.ok(program.every(row => ['condiviso', 'da negoziare', 'in conflitto', 'concordato'].includes(row.state)));
+  const shared = program.find(row => row.state === 'condiviso') ?? program[0];
+  const agreed = W.proposeTerm(reseed(three, 3), alliance.id, { kind: 'punto-comune', theme: shared.id, electionId: politiche.id }, DATE, { election: politiche });
+  if (shared.state === 'condiviso') assert.ok(agreed.accepted && W.commonProgramOf(agreed.world, W.playerAlliance(agreed.world)).find(row => row.id === shared.id).state === 'concordato', '13. Un punto già condiviso diventa un punto comune.');
+  // deadline: after the closing of the lists nothing is negotiated for that election
+  assert.throws(() => W.proposeTerm(three, alliance.id, { kind: 'guida', partyId: 'fdi', electionId: politiche.id }, day(CLOSES, 2), { election: politiche }), /si sono chiuse/, '13. A liste depositate le trattative sono chiuse.');
+  // the terms are kept or betrayed at the vote
+  const settled = W.settleElectoralTerms(gotOffice.world, { coalitions: [{ id: 'c', partyIds: ['io', 'fdi', 'lega'], leaderId: 'fdi' }], quotas: {}, date: VOTE });
+  assert.ok(settled.settled.some(item => item.term.kind === 'incarico' && item.outcome === 'mantenuto'), '13. L’incarico concordato è verificato al voto.');
+  assert.deepEqual(checkInvariants({ world: settled.world }, { scope: 'world' })?.errors ?? [], [], '13. Nessuna incoerenza dopo le trattative.');
+  lines.push('trattative: guida, candidature con peso sulla quota, incarichi, punto comune, richieste respinte bloccate sette giorni, storico delle richieste, termini verificati al voto');
+}
+console.log(`Alleanze e coalizioni verificate (${lines.length} gruppi, 12 scenari più le trattative): ${lines.join(' · ')}.`);
