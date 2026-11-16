@@ -596,3 +596,17 @@
   .poll-sum-toggle .poll-sum-open, .poll-sum-toggle .poll-sum-close, .poll-barometer[open] .poll-sum-close { display: none; }
   .poll-hero-body { padding: 4px 16px 18px; }
 }
+
+/* Alliances and coalitions: the programme theme by theme, the compromises, the coalitions for each election. */
+.coalition-program { margin: 8px 0; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.coalition-program > summary { cursor: pointer; padding: 10px 12px; font-weight: 700; }
+.program-table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+.program-table th, .program-table td { padding: 8px 10px; text-align: left; border-top: 1px solid var(--line); vertical-align: top; }
+.program-table thead th { color: var(--label, #bba880); font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
+.program-table tr.level-incompatibile { background: rgba(186, 100, 69, .12); }
+.program-table tr.level-conflitto { background: rgba(192, 153, 67, .08); }
+.program-table tr.level-compromesso, .program-table tr.level-accordo { background: rgba(70, 157, 108, .08); }
+.program-table .compact { min-height: 36px; padding: 6px 10px; font-size: .85rem; margin-top: 4px; }
+.coalition-elections { list-style: none; margin: 8px 0 12px; padding: 0; display: grid; gap: 8px; }
+.coalition-elections li { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+@media (max-width: 600px) { .program-table thead { display: none; } .program-table tr { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; padding: 8px 10px; border-top: 1px solid var(--line); } .program-table th { grid-column: 1 / -1; border: 0; padding: 0; } .program-table td { border: 0; padding: 0; } .program-table td:last-child { grid-column: 1 / -1; } }

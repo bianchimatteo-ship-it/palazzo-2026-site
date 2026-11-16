@@ -3,15 +3,16 @@
 // Chambers and their groups, the formation of the Government. Everything that happens is simulation: the real data are
 // the geography, the seats and the 2022 results the vote starts from; parties, coalitions, votes and seats of the game
 // are estimates of the game and never presented as real results.
-import { populationReferenceDate, residentsOfItaly } from './municipal-rules.js?v=20261116-1';
-import { actualTurnout } from './electorate.js?v=20261116-1';
-import { uniqueId } from './ids.js?v=20261116-1';
-import { advanceDays, formatDate } from './time.js?v=20261116-1';
-import { axisOf, nationalShares } from './world-engine.js?v=20261116-1';
-import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20261116-1';
-import { archiveGovernment, confidenceBallotMissing, voteGovernmentConfidence } from './parliament-engine.js?v=20261116-1';
-import { seededRandom } from './vote-engine.js?v=20261116-1';
-import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20261116-1';
+import { isElectoral } from './alliance-rules.js?v=20261116-2';
+import { populationReferenceDate, residentsOfItaly } from './municipal-rules.js?v=20261116-2';
+import { actualTurnout } from './electorate.js?v=20261116-2';
+import { uniqueId } from './ids.js?v=20261116-2';
+import { advanceDays, formatDate } from './time.js?v=20261116-2';
+import { axisOf, nationalShares } from './world-engine.js?v=20261116-2';
+import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20261116-2';
+import { archiveGovernment, confidenceBallotMissing, voteGovernmentConfidence } from './parliament-engine.js?v=20261116-2';
+import { seededRandom } from './vote-engine.js?v=20261116-2';
+import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20261116-2';
 
 const SIM = 'simulation';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -141,7 +142,12 @@ export const COALITION_LABELS = Object.freeze({ destra: 'Centrodestra', sinistra
 export function buildCoalitions(world, { playerChoice = null } = {}) {
   const { forces } = voteForces(world);
   if (!forces.length) return [];
-  const allianceWith = id => (world.alliances ?? []).filter(item => item.status === 'active' && item.partyIds.includes(id)).flatMap(item => item.partyIds).filter(other => other !== id);
+  // An alliance of the player's kind that is NOT registered as a coalition for this vote (alliance-rules.js: isElectoral) does not run as one: unless the player chose a coalition by hand, the party runs
+  // on its own list. The alliances of old saves and the poles built for a vote have no list of coalitions and keep running as they did.
+  const own = forces.find(force => force.isPlayer);
+  const standing = own ? (world.alliances ?? []).find(item => item.status === 'active' && item.partyIds.includes(own.id)) : null;
+  if (!playerChoice && standing && Array.isArray(standing.coalitions) && !isElectoral(standing, 'politiche')) playerChoice = 'alone';
+  const allianceWith = id => (world.alliances ?? []).filter(item => isElectoral(item, 'politiche') && item.partyIds.includes(id)).flatMap(item => item.partyIds).filter(other => other !== id);
   // The largest force of each camp leads its coalition, whoever governs.
   // A force that runs alone (the player who chose «Corri da solo», a party with an autonomous strategy) leads no coalition and joins none: it competes under its own ID, never as the only member of a made-up coalition.
   const runsAlone = force => (force.isPlayer && playerChoice === 'alone') || (!force.isPlayer && force.strategy === 'autonoma');
@@ -154,9 +160,9 @@ export function buildCoalitions(world, { playerChoice = null } = {}) {
   // The coalitions negotiated in the world run as they are: around an anchor they are its coalition, otherwise a pole
   // of their own (the player's party follows its secretary's choice).
   const inPlay = new Set(forces.map(force => force.id));
-  const worldCoalitions = (world.alliances ?? []).filter(item => item.status === 'active' && item.partyIds.filter(id => inPlay.has(id)).length >= 2).map(item => item.partyIds.filter(id => inPlay.has(id) && !(forces.find(force => force.id === id)?.isPlayer && playerChoice)));
+  const worldCoalitions = (world.alliances ?? []).filter(item => isElectoral(item, 'politiche') && item.partyIds.filter(id => inPlay.has(id)).length >= 2).map(item => item.partyIds.filter(id => inPlay.has(id) && !(forces.find(force => force.id === id)?.isPlayer && playerChoice)));
   // What the allies granted the player's party entering a coalition counts at the vote: the leadership it was given, a larger share of the candidacies.
-  const grants = (world.alliances ?? []).filter(item => item.status === 'active').flatMap(item => (item.terms ?? []).filter(term => term.status === 'aperto'));
+  const grants = (world.alliances ?? []).filter(item => isElectoral(item, 'politiche')).flatMap(item => (item.terms ?? []).filter(term => term.status === 'aperto'));
   const grantedLead = members => grants.find(term => term.kind === 'guida' && members.includes(term.partyId) && inPlay.has(term.partyId))?.partyId ?? null;
   for (const members of worldCoalitions) {
     const lead = grantedLead(members);

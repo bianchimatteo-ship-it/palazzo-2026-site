@@ -1,8 +1,8 @@
-import { DATA_SOURCES } from '../data/schema.js?v=20261116-1';
-import { AREA_BY_ID, CAMP_PRIORITIES, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, SPENDING_REVIEW, STAGE_WEEKS, areaOf, governmentKindOf } from '../data/simulation/policy-rules.js?v=20261116-1';
-import { BUDGET_SECTORS } from '../data/simulation/project-rules.js?v=20261116-1';
-import { evaluateAdvancement } from './progression-engine.js?v=20261116-1';
-import { groupLine, splitGroupVote } from './vote-engine.js?v=20261116-1';
+import { DATA_SOURCES } from '../data/schema.js?v=20261116-2';
+import { AREA_BY_ID, CAMP_PRIORITIES, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, SPENDING_REVIEW, STAGE_WEEKS, areaOf, governmentKindOf } from '../data/simulation/policy-rules.js?v=20261116-2';
+import { BUDGET_SECTORS } from '../data/simulation/project-rules.js?v=20261116-2';
+import { evaluateAdvancement } from './progression-engine.js?v=20261116-2';
+import { absentOf, groupLine, spreadAbsent, splitGroupVote } from './vote-engine.js?v=20261116-2';
 
 export const CHAMBERS = Object.freeze({
   camera: { label: 'Camera dei deputati', shortLabel: 'Camera', source: DATA_SOURCES.REAL },
@@ -599,6 +599,8 @@ function calculateVote(parliament, law, chamber, currentDate = null) {
     // The votes not in favour split into against and abstentions (vote-engine); the line is what most members do.
     const split = splitGroupVote({ seats: members, yes: votes, confidence: Boolean(law.confidence), seed: `${law.id}|${chamber}|${law.stage}|${(law.votes ?? []).length}|${group.groupId}` });
     let no = split.no, abstain = split.abstain, absent = 0;
+    // Who is not in the hall neither votes for nor against (vote-engine): a real Chamber is never full.
+    { const gone = absentOf({ members, confidence: Boolean(law.confidence), seed: `${law.id}|${chamber}|${law.stage}|${(law.votes ?? []).length}|${group.groupId}` }); if (gone) { const out = spreadAbsent({ yes: votes, no, abstain }, gone); votes = out.yes; no = out.no; abstain = out.abstain; absent = gone; } }
     // The indication of the leader of the player's group moves a part of the group, never all of it.
     let directive = null;
     const given = own ? directiveOf(parliament, 'law', law.id) : null;
@@ -618,7 +620,9 @@ function calculateVote(parliament, law, chamber, currentDate = null) {
     return { groupId: group.groupId, yesVotes: votes, noVotes: no, abstainVotes: abstain, ...(absent ? { absentVotes: absent } : {}), ...(directive ? { directive } : {}), line: seated ? groupLine({ yes: votes, no, abstain }) : groupLine(split), snipers, governing: governing.has(group.groupId), simulatedSeats: group.simulatedSeats, ...(seated ? { playerChoice } : {}), source: DATA_SOURCES.SIMULATION };
   });
   const total = rows.reduce((sum, group) => sum + group.simulatedSeats, 0);
-  const needed = Math.floor(total / 2) + 1;
+  // the majority is counted on the members in the hall: who is away does not make the others' task harder or easier
+  const absentTotal = results.reduce((sum, row) => sum + (row.absentVotes ?? 0), 0);
+  const needed = Math.floor((total - absentTotal) / 2) + 1;
   const against = results.reduce((sum, row) => sum + row.noVotes, 0);
   const abstain = results.reduce((sum, row) => sum + row.abstainVotes, 0);
   const passed = yes >= needed;
@@ -886,7 +890,7 @@ export function voteGovernmentConfidence(parliament, currentDate) {
     let left = risk;
     const byGroup = parliament.chambers[chamber].groups.map((group, index, all) => {
       const seats = group.simulatedSeats;
-      if (!groups.has(group.groupId)) { const split = splitGroupVote({ seats, yes: 0, confidence: true, seed: `${government.id}|fiducia|${currentDate}|${group.groupId}` }); return { groupId: group.groupId, yesVotes: 0, noVotes: split.no, abstainVotes: split.abstain, line: groupLine(split), snipers: 0, governing: false, simulatedSeats: seats, source: DATA_SOURCES.SIMULATION }; }
+      if (!groups.has(group.groupId)) { const split = splitGroupVote({ seats, yes: 0, confidence: true, seed: `${government.id}|fiducia|${currentDate}|${group.groupId}` }); const gone = absentOf({ members: seats, confidence: true, seed: `${government.id}|fiducia|${currentDate}|${group.groupId}` }); const present = spreadAbsent({ yes: 0, no: split.no, abstain: split.abstain }, gone); return { groupId: group.groupId, yesVotes: 0, noVotes: present.no, abstainVotes: present.abstain, ...(gone ? { absentVotes: gone } : {}), line: groupLine(split), snipers: 0, governing: false, simulatedSeats: seats, source: DATA_SOURCES.SIMULATION }; }
       const share = nominal ? Math.round(risk * seats / nominal) : 0;
       const lastMajority = !all.slice(index + 1).some(item => groups.has(item.groupId));
       const defections = Math.min(seats, lastMajority ? left : Math.min(left, share));

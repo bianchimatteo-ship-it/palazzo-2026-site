@@ -80,7 +80,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   assert.equal(await evaluate(`document.querySelector('[data-world-break-disabled]').disabled`), true, 'Ed è disabilitato.');
   assert.match(await text('[data-leave-reason]'), /Solo il segretario del partito decide intese e coalizioni/, 'Con il motivo preciso.');
   assert.equal(await has('[data-world-break]'), false); assert.equal(await has('[data-world-invite-selected]'), false, 'E nemmeno gli inviti.');
-  assert.match(await text('[data-my-coalition]'), /Intesa politica/, 'Un’intesa di due è «Intesa politica».');
+  assert.match(await text('[data-my-coalition]'), /Alleanza politica/, 'Un accordo di due è «Alleanza politica».');
   await evaluate(`document.querySelector('[data-world-break-disabled]').click(); true`); await pause(200);
   assert.equal(await has('[data-confirm="ok"]'), false, 'Il click sul controllo disabilitato non fa nulla.');
 

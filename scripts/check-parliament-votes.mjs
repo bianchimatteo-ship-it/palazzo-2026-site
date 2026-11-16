@@ -42,15 +42,18 @@ const run = choice => {
   const parliament = choice ? PE.setConfidenceVote(crisis, choice, crisis.government.id) : crisis;
   return PE.voteGovernmentConfidence(parliament, date).government.confidenceVotes.at(-1);
 };
-const byLine = run(null), against = run('contrario'), inFavour = run('favorevole'), abstain = run('astenuto'), absent = run('assente');
+// the personal vote is mandatory (never a default): without it the confidence vote is not counted at all
+assert.throws(() => run(null), /manca il tuo voto/, 'Senza il voto personale la fiducia non si conclude.');
+const byLine = run('favorevole'), against = run('contrario'), inFavour = run('favorevole'), abstain = run('astenuto');
+assert.throws(() => run('assente'), /Scegli come votare/, 'Il giocatore non può restare assente: vota favorevole, contrario o astenuto.');
 const mine = vote => vote.votes.find(item => item.chamber === seat.chamber);
-for (const vote of [byLine, against, inFavour, abstain, absent]) for (const chamber of vote.votes) assert.equal(chamber.yes + chamber.against + chamber.abstain + chamber.absent, chamber.total, `${chamber.chamber}: ogni seggio è contato (favorevoli, contrari, astenuti, assenti).`);
+for (const vote of [byLine, against, inFavour, abstain]) for (const chamber of vote.votes) assert.equal(chamber.yes + chamber.against + chamber.abstain + chamber.absent, chamber.total, `${chamber.chamber}: ogni seggio è contato (favorevoli, contrari, astenuti, assenti).`);
 const delta = (a, b) => ({ yes: mine(a).yes - mine(b).yes, no: mine(a).against - mine(b).against });
-const lineChoice = mine(byLine).playerLine ?? 'favorevole';
+const lineChoice = 'favorevole';
 const lineDelta = delta(against, byLine);
 if (lineChoice === 'favorevole') assert.deepEqual(lineDelta, { yes: -1, no: 1 }, 'Un voto contrario sposta esattamente il seggio dai favorevoli ai contrari.');
 else assert.deepEqual(lineDelta, { yes: 0, no: 0 }, 'Se il voto coincide già con la posizione contata il totale non cambia.');
-assert.equal(mine(absent).absent, mine(byLine).absent + 1, 'Chi non partecipa è registrato come assente.');
+assert.equal(mine(abstain).abstain, mine(byLine).abstain + 1, 'L’astensione del giocatore è registrata tra gli astenuti.');
 assert.equal(mine(against).playerChoice, 'contrario');
 // the other Chamber is untouched by the personal vote
 const other = vote => vote.votes.find(item => item.chamber !== seat.chamber);
@@ -59,8 +62,7 @@ assert.deepEqual([other(against).yes, other(against).against], [other(byLine).ye
 // requests for another Government (or expired) never reach a later vote
 assert.throws(() => PE.setConfidenceVote(crisis, 'contrario', 'governo-che-non-e-questo'), /altro governo|scadut/);
 const stale = { ...crisis, government: { ...crisis.government, pendingPlayerVote: 'contrario', pendingPlayerVoteFor: 'governo-precedente' } };
-const staleVote = PE.voteGovernmentConfidence(stale, date).government.confidenceVotes.at(-1);
-assert.equal(mine(staleVote).yes, mine(byLine).yes, 'Una decisione presa per un governo precedente non modifica la votazione di questo.');
+assert.throws(() => PE.voteGovernmentConfidence(stale, date), /manca il tuo voto/, 'Una decisione presa per un governo precedente non vale per questo: il voto resta da dare.');
 const chosen = PE.setConfidenceVote(crisis, 'contrario', crisis.government.id);
 assert.equal(chosen.government.pendingPlayerVoteFor, crisis.government.id);
 const after = PE.voteGovernmentConfidence(chosen, date);
@@ -95,8 +97,11 @@ assert.equal(after.government.pendingPlayerVote, null, 'La scelta è consumata d
   const waiting = { ...crisis, government: { ...crisis.government, crisisOpenedAt: earlier(date), confidenceRequestedAt: date } };
   assert.equal(PE.advanceGovernmentWeek(waiting, date, 0.5).government.status, 'crisis', 'Richiesta della settimana: la votazione non avviene nella stessa chiusura.');
   const later = { ...waiting, government: { ...waiting.government, confidenceRequestedAt: earlier(date) } };
-  assert.notEqual(PE.advanceGovernmentWeek(later, date, 0.5).government.status, 'crisis', 'Alla chiusura successiva la fiducia si vota.');
-  const voted = PE.advanceGovernmentWeek(later, date, 0.5).government;
+  // without the personal ballot the vote of a seated player waits (it is never cast by default); with it, the next close votes it
+  assert.equal(PE.advanceGovernmentWeek(later, date, 0.5).government.status, 'crisis', 'Senza il tuo voto la fiducia attende: nessun voto di default.');
+  const decided = PE.setConfidenceVote(later, 'favorevole', later.government.id);
+  assert.notEqual(PE.advanceGovernmentWeek(decided, date, 0.5).government.status, 'crisis', 'Alla chiusura successiva, con il voto dato, la fiducia si vota.');
+  const voted = PE.advanceGovernmentWeek(decided, date, 0.5).government;
   assert.equal(voted.confidenceRequestedAt, null, 'Dopo il voto la richiesta è chiusa.');
 }
 console.log('Fiducia e direttiva: voto personale, richieste scadute, registrazione dei voti, direttiva con adesioni e dissensi verificati (il consenso del sostegno esterno non è coperto da un test automatico).');

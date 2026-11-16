@@ -2,7 +2,7 @@
 
 Stati ammessi: **Non iniziato · In lavorazione · Completato · Bloccato**. Una voce è *Completato* solo con prova (file, test, screenshot). Branch `feature/qa-completamento`. Confrontata punto per punto con il documento di lavoro originale (sezioni 1–21) e con le aggiunte del 16/11 (sezione 22).
 
-Riepilogo: Bloccato 3 · Completato 17 · In lavorazione 10 · Non iniziato 139 · totale 169
+Riepilogo: Bloccato 3 · Completato 43 · In lavorazione 18 · Non iniziato 105 · totale 169
 
 
 ## 1. Regole operative
@@ -24,7 +24,7 @@ Riepilogo: Bloccato 3 · Completato 17 · In lavorazione 10 · Non iniziato 139 
 
 | Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|---|
-| 2.1 | Riprodurre lo scenario vicesegretario + consigliere comunale + candidatura Politiche + «Candidati ora» | In lavorazione | scripts (da aggiungere) | repro in Chrome /tmp/qa | Livello Vicesegretario + consigliere comunale + politiche aperte: la candidatura funziona, nessun errore. Non riprodotto il blocco segnalato |
+| 2.1 | Riprodurre lo scenario vicesegretario + consigliere comunale + candidatura Politiche + «Candidati ora» | Completato | scripts/check-candidacy-vice-councillor.mjs | check-candidacy-vice-councillor (ranghi 3, 4, 5; /tmp repro Chrome) | Scenario riprodotto con partita di test: la candidatura parte e non c’è errore; il blocco segnalato non si riproduce. Diagnostica attiva per futuri casi |
 | 2.2 | Correggere l'impedimento ingiustificato alla candidatura | Non iniziato |  |  |  |
 | 2.3 | Correggere il blocco/crash dopo «Candidati ora» | Non iniziato |  |  |  |
 | 2.4 | Spiegare sempre i requisiti non soddisfatti; mai un pulsante che si blocca senza spiegazione | Non iniziato |  |  |  |
@@ -32,10 +32,10 @@ Riepilogo: Bloccato 3 · Completato 17 · In lavorazione 10 · Non iniziato 139 
 | 2.6 | Verificare regole, calendario, candidature già aperte, stato della carriera | In lavorazione |  | sweep 18 combinazioni candidacyBlock | nessun impedimento dalle regole; blocco solo con candidatura già prenotata sovrapposta (messaggio presente) |
 | 2.7 | Campagna senza candidatura: partecipazione chiusa, stato di campagna chiuso, uscita dalla modalità campagna, ritorno alla carriera, nessuno stato residuo | Non iniziato |  |  |  |
 | 2.8 | Notte elettorale: popup iniziale non copre tutto lo schermo; dimensioni, posizione, leggibilità su smartphone e tablet | Non iniziato |  |  |  |
-| 2.9 | Notte elettorale: partito del giocatore non mostrato come «Altri» | Non iniziato |  |  |  |
+| 2.9 | Notte elettorale: partito del giocatore non mostrato come «Altri» | Completato | scripts/check-night-player-party.mjs | check-night-player-party | La lista del giocatore (partito esistente e partito fondato) ha sempre il suo nome e non è mai in «Altri»; il caso segnalato non si riproduce |
 | 2.10 | Collegamenti giocatore/candidato/partito/coalizione; voti, percentuali, attribuzione seggi | Non iniziato |  |  |  |
-| 2.11 | Candidato al 6% con partito senza rappresentanza non eletto: collegio, soglie, seggi, posizione in lista; nessun seggio artificiale; spiegazione chiara | Non iniziato |  |  |  |
-| 2.12 | Diagnostica per individuare la causa di blocchi (registro errori dei pulsanti) | Non iniziato |  |  |  |
+| 2.11 | Candidato al 6% con partito senza rappresentanza non eletto: collegio, soglie, seggi, posizione in lista; nessun seggio artificiale; spiegazione chiara | Completato | scripts/check-night-player-party.mjs | check-night-player-party | Sotto soglia: nessun seggio, nessun mandato, soglia spiegata nell’esito (partito fondato: 2 notti su 2) |
+| 2.12 | Diagnostica per individuare la causa di blocchi (registro errori dei pulsanti) | Completato | src/core/diagnostics.js, src/ui/app.js, src/ui/menu.js | scripts/check-button-response.mjs | Registro errori e controlli copiabili dal menu |
 
 ## 3. Velocità e reattività dei pulsanti
 
@@ -66,12 +66,12 @@ Riepilogo: Bloccato 3 · Completato 17 · In lavorazione 10 · Non iniziato 139 
 
 | Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|---|
-| 5.1 | Votazioni nominative: nome e cognome, favorevole/contrario/astenuto/assente | Non iniziato |  |  |  |
-| 5.2 | Aumentare realisticamente astensioni e assenze | Non iniziato |  |  |  |
-| 5.3 | Scrutini segreti: solo risultati aggregati | Non iniziato |  |  |  |
-| 5.4 | Totali coerenti con i componenti dell'assemblea | Non iniziato |  |  |  |
-| 5.5 | Disciplina dei gruppi (grande maggioranza segue l'indicazione) con dissensi e assenze non al 100% | Non iniziato |  |  |  |
-| 5.6 | Indicazioni del giocatore agli altri parlamentari/consiglieri | Non iniziato |  |  |  |
+| 5.1 | Votazioni nominative: nome e cognome, favorevole/contrario/astenuto/assente | Completato | src/core/vote-engine.js, src/core/parliament-engine.js, src/core/lawmaking-engine.js, src/ui/parliament-mode.js, src/ui/aula-view.js | scripts/check-vote-absences.mjs, check-parliament-votes.mjs | Ogni seggio ha un voto (favorevole/contrario/astenuto/assente) legato al nome del parlamentare dell’emiciclo (hemicycle-view) |
+| 5.2 | Aumentare realisticamente astensioni e assenze | Completato | src/core/vote-engine.js, src/core/parliament-engine.js, src/core/lawmaking-engine.js, src/ui/parliament-mode.js, src/ui/aula-view.js | scripts/check-vote-absences.mjs | Assenze medie 9,6% nei voti ordinari (forbice 4-14%), fiducia ≤3%; astensioni già presenti (splitGroupVote). Prima le assenze erano sempre 0 |
+| 5.3 | Scrutini segreti: solo risultati aggregati | Completato | src/core/vote-engine.js | scripts/check-vote-absences.mjs | Voto segreto: solo totali, nessun voto individuale |
+| 5.4 | Totali coerenti con i componenti dell'assemblea | Completato | src/core/vote-engine.js, src/core/parliament-engine.js, src/core/lawmaking-engine.js, src/ui/parliament-mode.js, src/ui/aula-view.js | scripts/check-vote-absences.mjs, check-invariants | Favorevoli+contrari+astenuti+assenti = seggi; maggioranza contata sui presenti |
+| 5.5 | Disciplina dei gruppi (grande maggioranza segue l'indicazione) con dissensi e assenze non al 100% | Completato | src/core/vote-engine.js, src/core/parliament-engine.js, src/core/lawmaking-engine.js, src/ui/parliament-mode.js, src/ui/aula-view.js | scripts/check-vote-absences.mjs | La maggioranza segue la linea del gruppo con dissensi medi <30% e assenze; mai 100% |
+| 5.6 | Indicazioni del giocatore agli altri parlamentari/consiglieri | In lavorazione | src/core/parliament-engine.js (direttiva del capogruppo) | scripts/check-parliament-votes.mjs | Direttive del capogruppo con adesioni parziali esistenti per Parlamento; da estendere ai consigli locali |
 | 5.7 | 60% del capitale politico alla campagna, calcolo mostrato, nessuna duplicazione, capitale e fondi separati | Completato | src/core/store.js, src/ui/campaign-mode.js, src/data/release-pairs.js | check-campaign-capital + regressione campagna | before/after/capitale-campagna-390x844.png |
 
 ## 6. Iniziative popolari e richieste dei cittadini
@@ -142,31 +142,31 @@ Riepilogo: Bloccato 3 · Completato 17 · In lavorazione 10 · Non iniziato 139 
 
 | Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|---|
-| 12.1 | Alleanza ≠ coalizione; pulsante «Crea alleanza» | Non iniziato |  |  |  |
-| 12.2 | Alleanza → coalizione solo con approvazione formale per una specifica elezione; alleanza può restare tale; accordi diversi per livelli diversi | Non iniziato |  |  |  |
-| 12.3 | Partito da solo chiede di entrare in coalizione: richiesta formale, condizioni, valutazione, trattative, accettazione/rifiuto, registrazione | Non iniziato |  |  |  |
-| 12.4 | Rifiuto con motivazione comprensibile; stesso richiedente bloccato 7 giorni di gioco | Non iniziato |  |  |  |
-| 12.5 | Scadenza elettorale per formazione/adesioni/programmi/candidature/candidato guida; nessuna fusione improvvisa; modifiche comunicate e registrate | Non iniziato |  |  |  |
-| 12.6 | Programma strutturato per ogni partito su 10 temi (immigrazione, sicurezza, economia/fisco, sanità, lavoro, ambiente/energia, Europa, diritti civili, istituzioni, politica estera) | Non iniziato |  |  |  |
-| 12.7 | Compatibilità calcolata sulle singole posizioni; incompatibilità forti come vere condizioni; compromesso esplicito o fallimento | Non iniziato |  |  |  |
-| 12.8 | Trattative: punti programmatici, modifiche, concessioni, candidature e collegi, candidato guida, incarichi, programma comune, condizioni, rifiuto, interruzione, uscita | Non iniziato |  |  |  |
-| 12.9 | Valutazione per ideologia, convenienza, rapporti, leadership, consenso interno, precedenti; compromessi con conseguenze | Non iniziato |  |  |  |
-| 12.10 | Effetti su sondaggi, consenso, candidature, risultati territoriali, seggi, rapporti, stabilità, fiducia; rottura con conseguenze | Non iniziato |  |  |  |
-| 12.11 | Evitare duplicazioni, coalizioni sovrapposte, partecipazioni incompatibili | Non iniziato |  |  |  |
-| 12.12 | Nuova pagina alleanze/coalizioni: esistenti, coalizioni, aderenti, richieste ricevute/inviate, trattative, programma comune, compatibilità, condizioni, scadenze, storico; smartphone e tablet | Non iniziato |  |  |  |
-| 12.13 | Test 1: alleanza senza partecipazione elettorale | Non iniziato |  |  |  |
-| 12.14 | Test 2: trasformazione esplicita in coalizione | Non iniziato |  |  |  |
-| 12.15 | Test 3: alleanza che resta tale | Non iniziato |  |  |  |
-| 12.16 | Test 4: partito solo chiede di entrare nel centrodestra | Non iniziato |  |  |  |
-| 12.17 | Test 5: rifiuto e nuovo tentativo bloccato 7 giorni | Non iniziato |  |  |  |
-| 12.18 | Test 6: programmi incompatibili non si accordano automaticamente | Non iniziato |  |  |  |
-| 12.19 | Test 7: compromesso programmatico negoziato e approvato | Non iniziato |  |  |  |
-| 12.20 | Test 8: chiusura delle adesioni prima delle elezioni | Non iniziato |  |  |  |
-| 12.21 | Test 9: modifica a pochi giorni dal voto rifiutata | Non iniziato |  |  |  |
-| 12.22 | Test 10: rottura di alleanza/coalizione | Non iniziato |  |  |  |
-| 12.23 | Test 11: elezioni di livelli diversi con accordi diversi | Non iniziato |  |  |  |
-| 12.24 | Test 12: coerenza coalizioni/candidature/sondaggi/risultati/seggi | Non iniziato |  |  |  |
-| 12.25 | Compatibilità con carriere e salvataggi esistenti; un solo motore di alleanze | Non iniziato |  |  |  |
+| 12.1 | Alleanza ≠ coalizione; pulsante «Crea alleanza» | Completato | src/core/alliance-rules.js, src/core/world-engine.js, src/core/store.js, src/ui/polls-mode.js, src/ui/app.js, src/polls.css | scripts/check-alliance-rules.mjs, scripts/check-alliance-ui.mjs | artifacts/qa/screenshots/after/alleanze-it-390x844.png, alleanze-it-820x1180.png, alleanze-en-390x844.png |
+| 12.2 | Alleanza → coalizione solo con approvazione formale per una specifica elezione; alleanza può restare tale; accordi diversi per livelli diversi | Completato | src/core/alliance-rules.js, src/core/world-engine.js, src/core/store.js, src/ui/polls-mode.js, src/ui/app.js, src/polls.css | scripts/check-alliance-rules.mjs (scenari 2, 3, 11) | artifacts/qa/screenshots/after/alleanze-it-390x844.png, alleanze-it-820x1180.png, alleanze-en-390x844.png |
+| 12.3 | Partito da solo chiede di entrare in coalizione: richiesta formale, condizioni, valutazione, trattative, accettazione/rifiuto, registrazione | In lavorazione | src/core/alliance-rules.js, src/core/world-engine.js, src/core/store.js, src/ui/polls-mode.js, src/ui/app.js, src/polls.css | scripts/check-alliance-rules.mjs (scenario 4) | Richiesta, valutazione e rifiuto/registrazione funzionano nel motore; manca la pagina «richieste ricevute/inviate/storico» e la trattativa a più turni |
+| 12.4 | Rifiuto con motivazione comprensibile; stesso richiedente bloccato 7 giorni di gioco | Completato | src/core/alliance-rules.js, src/core/world-engine.js, src/core/store.js, src/ui/polls-mode.js, src/ui/app.js, src/polls.css | scripts/check-alliance-rules.mjs (scenario 5), scripts/check-alliance-ui.mjs | Blocco di 7 giorni di gioco con data mostrata nella scheda del partito |
+| 12.5 | Scadenza elettorale per formazione/adesioni/programmi/candidature/candidato guida; nessuna fusione improvvisa; modifiche comunicate e registrate | In lavorazione | src/core/alliance-rules.js, src/core/world-engine.js, src/core/store.js, src/ui/polls-mode.js, src/ui/app.js, src/polls.css | scripts/check-alliance-rules.mjs (scenari 8, 9, 11) | Scadenza = deposito delle liste di ciascuna elezione (tutti i livelli) con blocco motivato; manca la negoziazione di candidature/candidato guida/collegi entro la scadenza |
+| 12.6 | Programma strutturato per ogni partito su 10 temi (immigrazione, sicurezza, economia/fisco, sanità, lavoro, ambiente/energia, Europa, diritti civili, istituzioni, politica estera) | Completato | src/core/alliance-rules.js, src/core/world-engine.js, src/core/store.js, src/ui/polls-mode.js, src/ui/app.js, src/polls.css | scripts/check-alliance-rules.mjs (scenario 6), scripts/check-alliance-ui.mjs | artifacts/qa/screenshots/after/alleanze-it-390x844.png, alleanze-it-820x1180.png, alleanze-en-390x844.png |
+| 12.7 | Compatibilità calcolata sulle singole posizioni; incompatibilità forti come vere condizioni; compromesso esplicito o fallimento | Completato | src/core/alliance-rules.js, src/core/world-engine.js, src/core/store.js, src/ui/polls-mode.js, src/ui/app.js, src/polls.css | scripts/check-alliance-rules.mjs (scenari 6, 7), scripts/check-alliance-ui.mjs | Incompatibilità forti (distanza ≥4) bloccano la registrazione finché non c’è un compromesso |
+| 12.8 | Trattative: punti programmatici, modifiche, concessioni, candidature e collegi, candidato guida, incarichi, programma comune, condizioni, rifiuto, interruzione, uscita | In lavorazione | src/core/alliance-rules.js, src/core/world-engine.js, src/core/store.js, src/ui/polls-mode.js, src/ui/app.js, src/polls.css | scripts/check-alliance-rules.mjs (scenario 7) | Compromesso su un tema e uscita funzionano; mancano candidature/collegi, candidato guida, incarichi e interruzione a più turni |
+| 12.9 | Valutazione per ideologia, convenienza, rapporti, leadership, consenso interno, precedenti; compromessi con conseguenze | In lavorazione | src/core/alliance-rules.js, src/core/world-engine.js, src/core/store.js, src/ui/polls-mode.js, src/ui/app.js, src/polls.css | scripts/check-alliance-rules.mjs (scenari 4-7) | Valutazione per collocazione, programma, rapporti e rancori; mancano consenso interno e precedenti dedicati |
+| 12.10 | Effetti su sondaggi, consenso, candidature, risultati territoriali, seggi, rapporti, stabilità, fiducia; rottura con conseguenze | In lavorazione | src/core/alliance-rules.js, src/core/world-engine.js, src/core/store.js, src/ui/polls-mode.js, src/ui/app.js, src/polls.css | scripts/check-alliance-rules.mjs (scenario 12), scripts/check-coalition-invites.mjs | Effetti su sondaggi, bonus campagna, coalizioni al voto e seggi verificati; mancano risultati territoriali dedicati |
+| 12.11 | Evitare duplicazioni, coalizioni sovrapposte, partecipazioni incompatibili | In lavorazione | src/core/alliance-rules.js, src/core/world-engine.js, src/core/store.js, src/ui/polls-mode.js, src/ui/app.js, src/polls.css | scripts/check-alliance-rules.mjs (scenario 12) | Un solo accordo per partito; coalizione solo se registrata; da estendere a sovrapposizioni tra livelli |
+| 12.12 | Nuova pagina alleanze/coalizioni: esistenti, coalizioni, aderenti, richieste ricevute/inviate, trattative, programma comune, compatibilità, condizioni, scadenze, storico; smartphone e tablet | In lavorazione | src/core/alliance-rules.js, src/core/world-engine.js, src/core/store.js, src/ui/polls-mode.js, src/ui/app.js, src/polls.css, src/ui/observatory-view.js | scripts/check-alliance-ui.mjs | Pannello alleanza/programma/coalizioni per elezione con scadenze, smartphone e tablet; mancano richieste ricevute/inviate e storico completo. artifacts/qa/screenshots/after/alleanze-it-390x844.png, alleanze-it-820x1180.png, alleanze-en-390x844.png |
+| 12.13 | Test 1: alleanza senza partecipazione elettorale | Completato | scripts/check-alliance-rules.mjs | check-alliance-rules, scenario 1 |  |
+| 12.14 | Test 2: trasformazione esplicita in coalizione | Completato | scripts/check-alliance-rules.mjs | check-alliance-rules, scenario 2 |  |
+| 12.15 | Test 3: alleanza che resta tale | Completato | scripts/check-alliance-rules.mjs | check-alliance-rules, scenario 3 |  |
+| 12.16 | Test 4: partito solo chiede di entrare nel centrodestra | Completato | scripts/check-alliance-rules.mjs | check-alliance-rules, scenario 4 |  |
+| 12.17 | Test 5: rifiuto e nuovo tentativo bloccato 7 giorni | Completato | scripts/check-alliance-rules.mjs | check-alliance-rules, scenario 5 |  |
+| 12.18 | Test 6: programmi incompatibili non si accordano automaticamente | Completato | scripts/check-alliance-rules.mjs | check-alliance-rules, scenario 6 |  |
+| 12.19 | Test 7: compromesso programmatico negoziato e approvato | Completato | scripts/check-alliance-rules.mjs | check-alliance-rules, scenario 7 |  |
+| 12.20 | Test 8: chiusura delle adesioni prima delle elezioni | Completato | scripts/check-alliance-rules.mjs | check-alliance-rules, scenario 8 |  |
+| 12.21 | Test 9: modifica a pochi giorni dal voto rifiutata | Completato | scripts/check-alliance-rules.mjs | check-alliance-rules, scenario 9 |  |
+| 12.22 | Test 10: rottura di alleanza/coalizione | Completato | scripts/check-alliance-rules.mjs | check-alliance-rules, scenario 10 |  |
+| 12.23 | Test 11: elezioni di livelli diversi con accordi diversi | Completato | scripts/check-alliance-rules.mjs | check-alliance-rules, scenario 11 |  |
+| 12.24 | Test 12: coerenza coalizioni/candidature/sondaggi/risultati/seggi | Completato | scripts/check-alliance-rules.mjs | check-alliance-rules, scenario 12 |  |
+| 12.25 | Compatibilità con carriere e salvataggi esistenti; un solo motore di alleanze | In lavorazione | src/core/alliance-rules.js, src/core/world-engine.js, src/core/store.js, src/ui/polls-mode.js, src/ui/app.js, src/polls.css | scripts/check-saves.mjs, check-world.mjs, check-coalition-invites.mjs, check-alliance-exit*.mjs | Salvataggi precedenti senza «coalitions» mantengono la semantica elettorale vecchia; un solo motore (world-engine); verifica finale con check:all |
 
 ## 13. Dimissioni, carriera, interfaccia
 

@@ -49,7 +49,7 @@ const hard = allianceOdds(world, 'pd', { difficulty: DIFFICULTIES.difficile.alli
 assert.ok(hard.chance < close.chance, 'In Difficile gli alleati sono più esigenti.');
 // Across the whole spectrum only as a motivated exception.
 const extreme = createWorld({ seedText: 'estremi', date: '2026-09-24', playerParty: { id: 'io', label: 'Il mio partito', position: 'estrema sinistra', founder: true }, forces: [...forces, { id: 'far', label: 'Estrema destra A', share: 1, position: 'estrema destra' }], realPoll });
-assert.equal(allianceOdds(extreme, 'fdi', {}).chance, 0.03, 'Accordi incoerenti praticamente impossibili senza un motivo eccezionale.');
+{ const odds = allianceOdds(extreme, 'fdi', {}); assert.ok(odds.chance <= 0.03, 'Accordi incoerenti praticamente impossibili senza un motivo eccezionale.'); assert.ok(odds.blocked && /incompatibili/.test(odds.blocked), 'Estrema sinistra ed estrema destra hanno programmi incompatibili: serve un compromesso, non basta il punteggio.'); }
 let attempt = proposeAlliance(world, 'pd', { date: '2026-09-24' });
 assert.ok(Array.isArray(attempt.reasons) && attempt.world.events[0].body.length > 20, 'La risposta spiega il perché.');
 

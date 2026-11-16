@@ -40,7 +40,7 @@ const coherent = (world, label) => {
   for (const alliance of active(world)) {
     assert.ok(alliance.partyIds.every(id => world.parties.some(item => item.id === id && item.active)), `${label}: ${alliance.label}: tutti i membri esistono.`);
     if (alliance.leaderId) assert.ok(alliance.partyIds.includes(alliance.leaderId), `${label}: ${alliance.label}: la guida è un membro.`);
-    if (/^Coalizione guidata da /.test(alliance.label)) assert.ok(alliance.partyIds.map(id => world.parties.find(item => item.id === id).label).some(name => alliance.label === `Coalizione guidata da ${name}`), `${label}: il nome indica un membro (${alliance.label}).`);
+    if (/^(?:Coalizione|Alleanza) guidata da /.test(alliance.label)) assert.ok(alliance.partyIds.map(id => world.parties.find(item => item.id === id).label).some(name => (alliance.label === `Coalizione guidata da ${name}` || alliance.label === `Alleanza guidata da ${name}`)), `${label}: il nome indica un membro (${alliance.label}).`);
   }
 };
 // An intesa of the player's party with `partner`, tried with different draws.
@@ -58,8 +58,8 @@ function invite(world, id, want = true) {
 let world = intesa(base(), 'pd');
 {
   const own = W.playerAlliance(world);
-  assert.deepEqual([...own.partyIds].sort(), ['io', 'pd']); assert.match(own.label, /^Intesa /);
-  assert.equal(W.allianceKind(world, own).kind, 'intesa', 'A due è un’intesa.');
+  assert.deepEqual([...own.partyIds].sort(), ['io', 'pd']); assert.match(own.label, /^Alleanza /);
+  assert.equal(W.allianceKind(world, own).kind, 'alleanza', 'A due è un’alleanza (non ancora una coalizione elettorale).');
   assert.equal(W.inviteBlock(world, 'm5s'), null, 'Da alleato si può invitare un terzo partito.');
   assert.match(W.inviteBlock(base(), 'pd') ?? '', /Prima concludi un’intesa/, 'Senza alleanza non si invita: prima si propone un’intesa.');
   assert.match(W.inviteBlock(world, 'pd') ?? '', /già nella tua coalizione/, 'Un membro non si invita due volte.');
@@ -67,8 +67,8 @@ let world = intesa(base(), 'pd');
   world = third.world;
   const coalition = W.playerAlliance(world);
   assert.equal(coalition.partyIds.length, 3); assert.ok(coalition.partyIds.includes('m5s'));
-  assert.equal(W.allianceKind(world, coalition).kind, 'coalizione', 'Alla seconda adesione l’intesa diventa coalizione.');
-  assert.match(coalition.label, /^Coalizione guidata da /, 'Il nome segue.');
+  assert.equal(W.allianceKind(world, coalition).kind, 'alleanza', 'Alla seconda adesione l’alleanza si allarga ma NON diventa coalizione elettorale da sola (serve la registrazione per un’elezione).');
+  assert.match(coalition.label, /^Alleanza guidata da /, 'Il nome segue.');
   assert.equal(coalition.leaderId, 'pd', 'La guida è il partito più grande, o chi l’ha ottenuta in trattativa.');
   assert.ok(coalition.history.some(item => /Centrosinistra B/.test(item.text)), 'La storia registra l’ingresso.');
   assert.ok(world.events.some(item => item.kind === 'alleanza' && /Centrosinistra B/.test(item.title)), 'La cronaca racconta l’adesione.');
@@ -78,7 +78,7 @@ let world = intesa(base(), 'pd');
   assert.equal(W.playerAlliance(world).partyIds.length, 4, 'Nessun limite a due membri: la coalizione cresce a quattro.');
   const fifth = invite(world, 'az'); world = fifth.world;
   assert.equal(W.playerAlliance(world).partyIds.length, 5, '…e a cinque.');
-  assert.equal(W.allianceKind(world, W.playerAlliance(world)).kind, 'coalizione');
+  assert.equal(W.allianceKind(world, W.playerAlliance(world)).kind, 'alleanza');
   assert.ok(W.playerAlliance(world).withPlayer === true);
   coherent(world, '5 membri');
   lines.push('intesa a 2 → coalizione a 3, 4, 5 (nome, membri, guida, tipo, storia, cronaca)');
@@ -99,7 +99,7 @@ const five = world;
   assert.ok(oddsWarm.chance > odds.chance && odds.chance > oddsCold.chance, `Rapporti e rancori pesano (${oddsWarm.chance} > ${odds.chance} > ${oddsCold.chance}).`);
   assert.ok(oddsCold.reasons.some(item => /Rancori con Centrosinistra A/.test(item.label) && item.delta < 0), 'Il rancore con un membro è una ragione.');
   assert.ok(W.inviteOdds(start, 'm5s', { memory: { good: 0, bad: 3 } }).chance < odds.chance, 'La memoria di rotture passate pesa.');
-  assert.equal(W.inviteOdds(start, 'fdi', {}).chance, 0.03, 'Una forza lontana accetta solo per eccezione.');
+  assert.ok(W.inviteOdds(start, 'fdi', {}).chance <= 0.03, 'Una forza lontana accetta solo per eccezione (o non accetta se i programmi sono incompatibili).');
   // refusals: the coalition stays as it was, the relation with the force drops, the chronicle says why
   const refused = invite(start, 'fdi', false);
   assert.equal(refused.stage, 'rifiuto'); assert.deepEqual(active(refused.world).find(item => item.partyIds.includes('io')).partyIds.sort(), ['io', 'pd']);
@@ -160,10 +160,10 @@ const five = world;
   assert.ok(out.parties.filter(item => rest.partyIds.includes(item.id)).every(item => item.playerRelation < five.parties.find(p => p.id === item.id).playerRelation), 'I rapporti con gli ex alleati ne risentono.');
   coherent(out, 'uscita del giocatore');
   // the player is the leader (a condition obtained): his exit hands the leadership to the largest member and renames the coalition
-  const led = structuredClone(five); const own = W.playerAlliance(led); own.leaderId = 'io'; own.label = 'Coalizione guidata da Il mio partito';
+  const led = structuredClone(five); const own = W.playerAlliance(led); own.leaderId = 'io'; own.label = 'Alleanza guidata da Il mio partito';
   const left = W.breakAlliance(led, own.id, '2026-11-01');
   const after = left.alliances.find(item => item.id === own.id);
-  assert.equal(after.leaderId, 'pd', 'Uscito il leader, guida il più grande dei rimasti.'); assert.equal(after.label, 'Coalizione guidata da Centrosinistra A', 'E il nome lo segue.');
+  assert.equal(after.leaderId, 'pd', 'Uscito il leader, guida il più grande dei rimasti.'); assert.equal(after.label, 'Alleanza guidata da Centrosinistra A', 'E il nome lo segue.');
   assert.ok(after.history.some(item => /La guida passa a Centrosinistra A/.test(item.text)));
   coherent(left, 'uscita del leader');
   // a member walks out on his own: the coalition loses its farthest member when cohesion collapses, the leader and the others stay
@@ -211,12 +211,15 @@ const five = world;
   assert.ok(bonusFour.allies > bonusTwo.allies && bonusFour.alliesTerm > bonusTwo.alliesTerm, `Gli alleati della campagna crescono con i membri (${bonusTwo.allies}% → ${bonusFour.allies}%).`);
   assert.ok(bonusFour.bonus >= bonusTwo.bonus, 'E il bonus con loro.');
   // electoral coalitions: the four run together, the player's party with them
-  const coalitions = L.buildCoalitions(four);
+  // an alliance of the player runs as a coalition only once registered for the election (alliance-rules.js)
+  const politicheElection = { id: 'politiche-test', type: 'politiche', label: 'Elezioni politiche', electionDate: '2027-09-26', windowOpensAt: '2026-11-02', windowClosesAt: '2027-08-22', status: 'open' };
+  const register = world => { const own = W.playerAlliance(world); const out = W.registerCoalition(world, own.id, politicheElection, DATE); assert.equal(out.approved, true, `Coalizione approvata: ${out.reasons?.join('; ')}`); return out.world; };
+  const coalitions = L.buildCoalitions(register(four));
   const home = L.coalitionOf(coalitions, 'io');
   assert.ok(home && ['io', 'pd', 'm5s', 'avs'].every(id => home.partyIds.includes(id)), 'Alle politiche i quattro corrono nella stessa coalizione.');
   // seats: the coalition is one list at the vote. Inviting a small centre force that would run alone takes its votes into the coalition of the player's party.
   const vote = world => { const list = L.buildCoalitions(world); const result = L.runNationalVote({ world, coalitions: list, date: '2027-03-01', seed: 'inviti', noise: false }); const mine = L.coalitionOf(list, 'io'); return { list, mine, row: result.camera.coalitions.find(item => item.id === mine?.id) ?? null, result }; };
-  const before = vote(two), grown = vote(invite(two, 'az').world);
+  const before = vote(register(two)), grown = vote(register(invite(two, 'az').world));
   assert.ok(!before.mine?.partyIds.includes('az'), 'Da sola la forza del centro non è nella coalizione del giocatore.');
   assert.ok(grown.mine?.partyIds.includes('az') && grown.mine.partyIds.includes('io'), 'Invitata, corre nella sua coalizione elettorale.');
   assert.ok(grown.row && before.row && grown.row.share > before.row.share && grown.row.seats >= before.row.seats, `Il voto nazionale conta la coalizione ampliata (${before.row?.share}% e ${before.row?.seats} seggi → ${grown.row?.share}% e ${grown.row?.seats}).`);
@@ -243,14 +246,14 @@ const five = world;
   const setCapital = value => { store.getState().game.resources.politicalCapital = value; };
   const grid = (extra = {}) => { const current = store.getState(); return UI.forcesGrid(current, current.world, W.latestPoll(current.world), UI.partyIndex(current.world), () => null, () => null, true, { allianceOdds: id => store.allianceOdds(id), inviteOdds: id => store.inviteOdds(id), inviteBlock: id => store.inviteBlock(id), allianceBlock: id => store.allianceBlock(id), ...extra }); };
   const before = grid();
-  assert.ok(/Proponi un’intesa/.test(before) && !/Invita nella coalizione/.test(before) && !/Visualizza coalizione/.test(before), 'Da autonomo: «Proponi un’intesa», non «Invita» né «Visualizza coalizione».');
+  assert.ok(/Crea alleanza/.test(before) && !/Invita nella coalizione/.test(before) && !/Visualizza coalizione/.test(before), 'Da autonomo: «Proponi un’intesa», non «Invita» né «Visualizza coalizione».');
   let signed = null;
   for (const partner of candidates.slice(0, 6)) { setCapital(40); if (store.allianceBlock(partner.id)) continue; const result = store.proposeAlliance(partner.id); if (result.success) { signed = partner; break; } }
   assert.ok(signed, 'Si conclude una prima intesa.');
   assert.ok(W.allianceOf(store.getState().world, player.id)?.partyIds.length === 2);
   const allied = grid();
-  assert.ok(/Invita nella coalizione/.test(allied) && !/Proponi un’intesa/.test(allied), 'Da alleato: «Invita nella coalizione» al posto di «Proponi un’intesa».');
-  assert.ok(/data-my-coalition=/.test(allied) && /La mia coalizione/.test(allied) && /Coesione/.test(allied) && /Esci dall’accordo/.test(allied) && /Intesa politica/.test(allied), '«La mia coalizione» mostra membri, coesione, i comandi e il tipo.');
+  assert.ok(/Invita nella coalizione/.test(allied) && !/Crea alleanza/.test(allied), 'Da alleato: «Invita nella coalizione» al posto di «Proponi un’intesa».');
+  assert.ok(/data-my-coalition=/.test(allied) && /La mia alleanza/.test(allied) && /Coesione/.test(allied) && /Esci dall’accordo/.test(allied) && /Alleanza politica/.test(allied), '«La mia coalizione» mostra membri, coesione, i comandi e il tipo.');
   assert.equal((allied.match(/data-coalition-member=/g) ?? []).length, 2, 'La coalizione è in un solo pannello, senza ripetizioni sulle schede.');
   assert.equal((allied.match(/data-my-coalition=/g) ?? []).length, 1);
   assert.ok(/Probabilità che accetti/.test(allied), 'Ogni invito mostra le probabilità e le ragioni.');
@@ -265,13 +268,13 @@ const five = world;
   let result = null, tried = 0;
   const odds = store.inviteOdds(target.id);
   assert.ok(odds.reasons.length >= 3 && odds.chance > 0, 'Le probabilità sono motivate.');
-  for (const option of left.slice(0, 6)) { setCapital(40); const before = capital(); const outcome = store.inviteToAlliance(option.id); tried++; assert.equal(capital(), before - 4, 'Un invito costa 4 punti di capitale politico.'); const report = store.getState().ui.allianceReport; assert.ok(report && report.partyId === option.id && report.reasons.length >= 3 && typeof report.success === 'boolean', 'L’esito resta con le ragioni.'); if (outcome.success) { result = outcome; break; } else assert.ok(!W.allianceOf(store.getState().world, option.id) || W.allianceOf(store.getState().world, option.id) !== W.playerAlliance(store.getState().world), 'Un rifiuto non cambia la coalizione.'); }
+  for (const option of left.slice(0, 6)) { setCapital(40); const before = capital(); let outcome; try { outcome = store.inviteToAlliance(option.id); } catch (error) { if (/respinta di recente/.test(error.message)) continue; throw error; } tried++; assert.equal(capital(), before - 4, 'Un invito costa 4 punti di capitale politico.'); const report = store.getState().ui.allianceReport; assert.ok(report && report.partyId === option.id && report.reasons.length >= 3 && typeof report.success === 'boolean', 'L’esito resta con le ragioni.'); if (outcome.success) { result = outcome; break; } else assert.ok(!W.allianceOf(store.getState().world, option.id) || W.allianceOf(store.getState().world, option.id) !== W.playerAlliance(store.getState().world), 'Un rifiuto non cambia la coalizione.'); }
   assert.ok(result?.success, `Un invito riesce (${tried} tentativi).`);
   const grown = W.playerAlliance(store.getState().world);
   const afterInvite = grid();
   assert.ok(/data-alliance-report/.test(afterInvite) && /Perché/.test(afterInvite) && /Probabilità di successo/.test(afterInvite), 'La pagina mostra l’esito dell’invito con le ragioni.');
-  assert.ok((afterInvite.match(/data-coalition-member=/g) ?? []).length >= 3 && /Coalizione politica/.test(afterInvite), 'La coalizione ampliata ha tutti i membri nel pannello ed è «Coalizione politica».');
-  assert.ok(grown.partyIds.length >= 3 && W.allianceKind(store.getState().world, grown).kind === 'coalizione');
+  assert.ok((afterInvite.match(/data-coalition-member=/g) ?? []).length >= 3 && /Alleanza politica/.test(afterInvite), 'La coalizione ampliata ha tutti i membri nel pannello ed è un’«Alleanza politica» (non ancora coalizione elettorale).');
+  assert.ok(grown.partyIds.length >= 3 && W.allianceKind(store.getState().world, grown).kind === 'alleanza');
   assert.deepEqual(doubleMembership(store.getState().world), []);
   assert.ok(checkInvariants(store.getState()).issues.every(item => !/appartiene a due accordi|due accordi/.test(item.message)), 'Lo stato non ha doppie appartenenze.');
   // the vote of the lists: the window blocks invitations and exits

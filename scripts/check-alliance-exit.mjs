@@ -67,8 +67,8 @@ const exit = (world, date = '2026-11-01') => W.breakAlliance(structuredClone(wor
     assert.ok(rest.history.some(item => /esce dall’accordo: gli altri restano insieme/.test(item.text)), 'La cronologia dice chi è uscito.');
     assert.ok(out.events[0].kind === 'rottura' && /restano insieme/.test(out.events[0].body), 'E la cronaca.');
     assert.ok(rest.partyIds.every(id => out.grudges[['io', id].sort().join('|')] >= 50 && out.parties.find(item => item.id === id).playerRelation < world.parties.find(item => item.id === id).playerRelation), 'Rapporti più freddi e rancori con tutti i rimasti.');
-    if (size === 3) { assert.equal(W.allianceKind(out, rest).kind, 'intesa'); assert.match(rest.label, /^Intesa /, 'Rimasti in due, tornano a essere un’intesa e il nome lo dice.'); }
-    else { assert.equal(W.allianceKind(out, rest).kind, 'coalizione'); assert.match(rest.label, /^Coalizione guidata da /); }
+    if (size === 3) { assert.equal(W.allianceKind(out, rest).kind, 'alleanza'); assert.match(rest.label, /^Alleanza /, 'Rimasti in due, tornano a essere un’intesa e il nome lo dice.'); }
+    else { assert.equal(W.allianceKind(out, rest).kind, 'alleanza'); assert.match(rest.label, /^Alleanza guidata da /); }
     coherent(out, `coalizione di ${size}`);
   }
   lines.push('uscita da intesa e da coalizioni di 3, 4, 5 (gli altri restano, nome e tipo, coesione, rapporti, rancori, cronologia, sondaggi)');
@@ -77,9 +77,9 @@ const exit = (world, date = '2026-11-01') => W.breakAlliance(structuredClone(wor
 // ---------- 2. the leader leaves; a member walks out; the leader is the largest of the rest ----------
 {
   const world = grow(['pd', 'm5s', 'avs']);
-  const led = structuredClone(world); const own = W.playerAlliance(led); own.leaderId = 'io'; own.label = 'Coalizione guidata da Il mio partito';
+  const led = structuredClone(world); const own = W.playerAlliance(led); own.leaderId = 'io'; own.label = 'Alleanza guidata da Il mio partito';
   const out = W.breakAlliance(led, own.id, '2026-11-01'); const after = out.alliances.find(item => item.id === own.id);
-  assert.equal(after.leaderId, 'pd'); assert.equal(after.label, 'Coalizione guidata da Centrosinistra A'); assert.ok(after.history.some(item => /La guida passa a Centrosinistra A/.test(item.text)));
+  assert.equal(after.leaderId, 'pd'); assert.equal(after.label, 'Alleanza guidata da Centrosinistra A'); assert.ok(after.history.some(item => /La guida passa a Centrosinistra A/.test(item.text)));
   coherent(out, 'uscita del leader');
   lines.push('uscita del capofila: guida e nome passano al più grande');
 }
@@ -171,7 +171,7 @@ const exit = (world, date = '2026-11-01') => W.breakAlliance(structuredClone(wor
   const opts = secretary => ({ secretary, windowClosed: false, inviteOdds: () => ({ chance: 0.4, reasons: [] }), inviteBlock: () => null, allianceOdds: () => null });
   const html = UI.forcesGrid(state, world, poll, index, () => null, () => null, true, opts(true));
   assert.equal((html.match(/data-my-coalition=/g) ?? []).length, 1, 'Un solo pannello «La mia coalizione».');
-  assert.ok(/La mia coalizione/.test(html) && /Coalizione politica/.test(html) && /Capofila/.test(html) && /Coesione/.test(html) && /data-world-break=/.test(html) && /data-world-invite-selected/.test(html), 'Membri, tipo, capofila, coesione, comandi per invitare e uscire.');
+  assert.ok(/La mia alleanza/.test(html) && /Alleanza politica/.test(html) && /Capofila/.test(html) && /Coesione/.test(html) && /data-world-break=/.test(html) && /data-world-invite-selected/.test(html), 'Membri, tipo, capofila, coesione, comandi per invitare e uscire.');
   assert.equal((html.match(/data-coalition-member=/g) ?? []).length, 3, 'Niente ripetizioni sulle schede dei membri.');
   assert.ok(!/data-world-break="[^"]*"[\s\S]*data-world-break="/.test(html), 'Un solo comando di uscita.');
   // the party is not in the last survey: the panel does not depend on it
@@ -188,7 +188,7 @@ const exit = (world, date = '2026-11-01') => W.breakAlliance(structuredClone(wor
   const two = grow(['pd']);
   const registered = { ...state, world: two, national: { campaign: { electionDate: '2027-09-26', fixed: true, coalitions: [{ id: 'coalizione-pd', label: 'Centrosinistra', partyIds: ['pd', 'm5s', 'io'] }] } } };
   const html2 = UI.forcesGrid(registered, two, W.latestPoll(two), UI.partyIndex(two), () => null, () => null, true, opts(true));
-  assert.ok(/Intesa politica/.test(html2) && /data-coalition-registered/.test(html2) && /Coalizione registrata per le politiche/.test(html2) && /Liste depositate: la composizione non cambia fino al voto/.test(html2) && /L’accordo politico oggi è diverso/.test(html2), 'Intesa politica, coalizione politica e coalizione registrata per l’elezione sono distinte.');
+  assert.ok(/Alleanza politica/.test(html2) && /data-coalition-registered/.test(html2) && /Coalizione registrata per le politiche/.test(html2) && /Liste depositate: la composizione non cambia fino al voto/.test(html2) && /L’accordo politico oggi è diverso/.test(html2), 'Intesa politica, coalizione politica e coalizione registrata per l’elezione sono distinte.');
   lines.push('pagina: un solo pannello «La mia coalizione», indipendente dai sondaggi, ruolo con motivo, finestra, intesa / coalizione politica / coalizione registrata');
 }
 
@@ -212,7 +212,7 @@ const exit = (world, date = '2026-11-01') => W.breakAlliance(structuredClone(wor
   live.alliances.push({ id: 'alleanza-giocatore-prova', label: `Intesa ${player.label} – ${partner.label}`, partyIds: [player.id, partner.id], cohesion: 66, since: date(), status: 'active', withPlayer: true, motive: 'prova', source: 'simulation' });
   const setCapital = value => { store.getState().game.resources.politicalCapital = value; store.getState().game.week.ap = 7; };
   const second = live.parties.find(item => item.active && !item.isPlayer && item.id !== partner.id && W.isSurveyed(item) && !W.allianceOf(live, item.id) && !store.inviteBlock(item.id));
-  if (second) for (let n = 0; n < 12 && W.playerAlliance(store.getState().world).partyIds.length < 3; n++) { setCapital(40); if (store.inviteBlock(second.id)) break; store.inviteToAlliance(second.id); }
+  if (second) for (let n = 0; n < 12 && W.playerAlliance(store.getState().world).partyIds.length < 3; n++) { setCapital(40); if (store.inviteBlock(second.id)) break; try { store.inviteToAlliance(second.id); } catch (error) { if (/respinta di recente/.test(error.message)) { try { store.advance(7); } catch { break; } } else if (/depositate/.test(error.message)) break; else throw error; } }
   const alliedBefore = W.playerAlliance(store.getState().world);
   assert.ok(alliedBefore.partyIds.length >= 2);
   // one week at a time to the filing of the lists

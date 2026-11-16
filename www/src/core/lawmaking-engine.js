@@ -5,11 +5,11 @@
 // it needs or puts the question of confidence; the bills of the opposition often never reach the floor. The player sits
 // in one Chamber: speaks, amends and casts a personal vote on every bill there — and the vote has consequences.
 // Everything here is simulation (source: simulation); the groups of the real XIX legislature keep their real reference.
-import { DATA_SOURCES } from '../data/schema.js?v=20261116-1';
-import { AREA_BY_ID, DECREE_RULES, FINANCING, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261116-1';
-import { amendLawPolicy, campOfAxis, cohesiveShare, confidenceBallotMissing, directiveOf, governingGroupIds, groupDirectiveEffect, groupProfile, parliamentInternals, playerSeatedOn } from './parliament-engine.js?v=20261116-1';
-import { openLocalFloors, playerVotesIn } from './local-engine.js?v=20261116-1';
-import { groupLine, splitGroupVote } from './vote-engine.js?v=20261116-1';
+import { DATA_SOURCES } from '../data/schema.js?v=20261116-2';
+import { AREA_BY_ID, DECREE_RULES, FINANCING, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261116-2';
+import { amendLawPolicy, campOfAxis, cohesiveShare, confidenceBallotMissing, directiveOf, governingGroupIds, groupDirectiveEffect, groupProfile, parliamentInternals, playerSeatedOn } from './parliament-engine.js?v=20261116-2';
+import { openLocalFloors, playerVotesIn } from './local-engine.js?v=20261116-2';
+import { absentOf, groupLine, spreadAbsent, splitGroupVote } from './vote-engine.js?v=20261116-2';
 
 const { getGroup, allGroups, record, replaceLaw, demandFor, contentAffinity, setRelation } = parliamentInternals;
 const SIM = DATA_SOURCES.SIMULATION;
@@ -240,6 +240,8 @@ export function autoVote(parliament, law, chamber, { date, world = null, playerC
     let votes = Math.round(others * cohesiveShare(support));
     const split = splitGroupVote({ seats: others, yes: votes, confidence: Boolean(law.confidence), seed: `${law.id}|${chamber}|${(law.votes ?? []).length}|${group.groupId}` });
     let no = split.no, abstain = split.abstain, absent = 0;
+    // Who is not in the hall neither votes for nor against (vote-engine): a real Chamber is never full.
+    { const gone = absentOf({ members: others, confidence: Boolean(law.confidence), seed: `${law.id}|${chamber}|${(law.votes ?? []).length}|${group.groupId}` }); if (gone) { const out = spreadAbsent({ yes: votes, no, abstain }, gone); votes = out.yes; no = out.no; abstain = out.abstain; absent = gone; } }
     // The indication of the leader of the player's group (the bills of the weekly sessions too): a part of the group follows it, the rest keeps its line.
     let directive = null;
     const given = own ? directiveOf(parliament, 'law', law.id) : null;
@@ -258,7 +260,9 @@ export function autoVote(parliament, law, chamber, { date, world = null, playerC
     return { groupId: group.groupId, yesVotes: votes, noVotes: no, abstainVotes: abstain, ...(absent ? { absentVotes: absent } : {}), ...(directive ? { directive } : {}), line: groupLine({ yes: votes, no, abstain }), governing: governing.has(group.groupId), simulatedSeats: group.simulatedSeats, ...(own ? { playerChoice: choice } : {}) };
   });
   const total = rows.reduce((sum, group) => sum + group.simulatedSeats, 0);
-  const needed = Math.floor(total / 2) + 1;
+  // the majority is counted on the members in the hall (vote-engine: absences)
+  const absentTotal = byGroup.reduce((sum, row) => sum + (row.absentVotes ?? 0), 0);
+  const needed = Math.floor((total - absentTotal) / 2) + 1;
   const passed = yes >= needed;
   // The player's vote decides when, without it, the outcome would have been the opposite.
   const decisive = Boolean(choice) && (choice === 'favorevole' ? passed && yes === needed : !passed && yes === needed - 1);

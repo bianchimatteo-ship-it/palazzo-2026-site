@@ -31,6 +31,24 @@ export function splitGroupVote({ seats, yes, confidence = false, seed = 'voto' }
   const abstain = Math.min(rest, Math.round(rest * share));
   return { yes, no: rest - abstain, abstain };
 }
+// Members who are not in the hall for a vote. A real Chamber is never full: on an ordinary vote roughly one member in ten is away (illness, commitments, a strategic absence); a question of
+// confidence calls everybody (a few percent). The number is drawn from the vote's own seed, so the same vote has the same absences in every reading.
+export function absentOf({ members, confidence = false, seed = 'assenti' }) {
+  const random = seededRandom(`${seed}|assenti`);
+  const rate = confidence ? 0.008 + random() * 0.02 : 0.05 + random() * 0.09;
+  return Math.max(0, Math.min(members, Math.round(members * rate)));
+}
+// The absences come out of the three buckets of a group in proportion (largest remainder), never below zero: who is away neither votes for nor against.
+export function spreadAbsent({ yes, no, abstain }, absent) {
+  const total = yes + no + abstain;
+  if (!absent || total <= 0) return { yes, no, abstain };
+  const take = Math.min(absent, total);
+  const exact = [yes, no, abstain].map(value => value * take / total);
+  const base = exact.map(Math.floor);
+  let left = take - base.reduce((a, b) => a + b, 0);
+  exact.map((value, index) => ({ index, rest: value - Math.floor(value) })).sort((a, b) => b.rest - a.rest || a.index - b.index).forEach(item => { if (left > 0) { base[item.index]++; left--; } });
+  return { yes: Math.max(0, yes - base[0]), no: Math.max(0, no - base[1]), abstain: Math.max(0, abstain - base[2]) };
+}
 // The group line: what most of its members do.
 export function groupLine({ yes = 0, no = 0, abstain = 0 }) {
   if (yes >= no && yes >= abstain) return 'favorevole';
@@ -47,13 +65,14 @@ export function voteSummary(vote, { seed = null } = {}) {
     const split = Number.isFinite(row.noVotes) && Number.isFinite(row.abstainVotes) ? { yes, no: row.noVotes, abstain: row.abstainVotes } : splitGroupVote({ seats, yes, confidence: vote.confidence, seed: `${key}|${row.groupId}` });
     const line = row.line ?? groupLine(split);
     const withLine = split[{ favorevole: 'yes', contrario: 'no', astenuto: 'abstain' }[line]];
-    return { groupId: row.groupId, seats, ...split, line, dissent: Math.max(0, seats - withLine), snipers: row.snipers ?? 0, governing: Boolean(row.governing), playerChoice: row.playerChoice ?? null };
+    const absent = row.absentVotes ?? 0;
+    return { groupId: row.groupId, seats, ...split, absent, line, dissent: Math.max(0, seats - absent - withLine), snipers: row.snipers ?? 0, governing: Boolean(row.governing), playerChoice: row.playerChoice ?? null };
   });
   const against = groups.length ? groups.reduce((sum, row) => sum + row.no, 0) : Math.max(0, (vote.total ?? 0) - (vote.yes ?? 0));
   const abstain = groups.reduce((sum, row) => sum + row.abstain, 0);
   return {
     id: vote.id ?? null, chamber: vote.chamber, date: vote.date ?? null, kind: vote.kind ?? 'legge', label: vote.label ?? null,
-    yes: vote.yes ?? groups.reduce((sum, row) => sum + row.yes, 0), against, abstain, total: vote.total ?? groups.reduce((sum, row) => sum + row.seats, 0),
+    yes: vote.yes ?? groups.reduce((sum, row) => sum + row.yes, 0), against, abstain, absent: groups.reduce((sum, row) => sum + row.absent, 0), total: vote.total ?? groups.reduce((sum, row) => sum + row.seats, 0),
     needed: vote.needed ?? null, passed: Boolean(vote.passed), secret: Boolean(vote.secret), confidence: Boolean(vote.confidence), forced: Boolean(vote.forced),
     snipers: groups.reduce((sum, row) => sum + row.snipers, 0), dissent: groups.reduce((sum, row) => sum + row.dissent, 0), groups, source: 'simulation'
   };
