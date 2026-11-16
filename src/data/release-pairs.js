@@ -1,11 +1,11 @@
 // English phrase-book pairs of the last release pass (data/i18n/en-ui-8.js reads `ALL_PAIRS`): the guided programme editor, the days of the Quirinale and the rule on the parties, the government room, the live
 // votes of the assemblies, the party headquarters, the TV name plates and the tutorial. Format as in the phrase-book: [Italian as shown, English]; `#` a number, `{}` a free part.
-import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261116-8';
-import { DEBATE_PAIRS } from './debate-choices.js?v=20261116-8';
-import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261116-8';
-import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261116-8';
-import { ALL_PAIRS as TOPIC_PAIRS } from './activity-scene-topics.js?v=20261116-8';
-import { LAW_TERM_PAIRS } from './law-terms.js?v=20261116-8';
+import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261116-9';
+import { DEBATE_PAIRS } from './debate-choices.js?v=20261116-9';
+import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261116-9';
+import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261116-9';
+import { ALL_PAIRS as TOPIC_PAIRS } from './activity-scene-topics.js?v=20261116-9';
+import { LAW_TERM_PAIRS } from './law-terms.js?v=20261116-9';
 export const ALL_PAIRS = [
   ...GUEST_PAIRS,
   ...DEBATE_PAIRS,
@@ -814,4 +814,61 @@ export const ALL_PAIRS = [
   ['Delegando lo staff, le votazioni non essenziali si chiudono con un’astensione; fiducia, leggi tue e bilancio ti fermano sempre.', 'When delegating to the staff, non-essential votes end in an abstention; confidence votes, your own bills and the budget always stop you.'],
   ['Lo staff ha votato per te «{}»: {} (linea del gruppo).', 'The staff voted for you on “{1}”: {2} (group line).'],
   ['Lo staff ha votato per te «{}»: {} (astensione).', 'The staff voted for you on “{1}”: {2} (abstention).'],
+  ['RICHIESTE', 'REQUESTS'],
+  ['Richieste dei cittadini e delle associazioni', 'Requests from citizens and associations'],
+  ['Ogni tanto cittadini e associazioni della tua Regione ti scrivono per un servizio che soffre. Chiudi qualche settimana: quando arriva una richiesta la trovi qui.', 'Now and then citizens and associations in your Region write to you about a service that is struggling. Close a few weeks: when a request arrives you will find it here.'],
+  ['Che cosa puoi fare dipende dagli incarichi che hai: ogni azione ha un costo, un tempo e delle conseguenze.', 'What you can do depends on the offices you hold: every action has a cost, a time and consequences.'],
+  ['In attesa di una tua risposta', 'Waiting for your answer'],
+  ['In corso', 'In progress'],
+  ['Chiusa', 'Closed'],
+  ['Scaduta', 'Expired'],
+  ['Respinta', 'Refused'],
+  ['Un gruppo di cittadini', 'A group of citizens'],
+  ['Un’associazione del territorio', 'A local association'],
+  ['Un comitato di quartiere', 'A neighbourhood committee'],
+  ['Un sindacato', 'A trade union'],
+  ['Una categoria di lavoratori', 'A category of workers'],
+  ['Un’assemblea di genitori', 'An assembly of parents'],
+  ['Segnala all’ufficio competente', 'Report it to the competent office'],
+  ['Presenta un’interrogazione', 'File a question'],
+  ['Deposita una mozione', 'File a motion'],
+  ['Inserisci l’impegno nel tuo programma', 'Add the commitment to your programme'],
+  ['Avvia una raccolta di firme', 'Start a signature drive'],
+  ['Intervieni direttamente', 'Intervene directly'],
+  ['Rispondi che non è di tua competenza', 'Reply that it is not your responsibility'],
+  ['{} giorno', '{1} day'],
+  ['{} giorni', '{1} days'],
+  ['{} cap.', '{1} cap.'],
+  ['Una lettera all’ufficio che se ne occupa: lo può fare chiunque, la risposta non è garantita.', 'A letter to the office that deals with it: anyone can do it, an answer is not guaranteed.'],
+  ['Chiede conto all’esecutivo: serve un seggio in un consiglio o in Parlamento.', 'It asks the executive to account for itself: you need a seat in a council or in Parliament.'],
+  ['Impegna l’assemblea a intervenire: serve un seggio e la maggioranza può respingerla.', 'It commits the assembly to act: you need a seat and the majority can reject it.'],
+  ['Diventa una promessa del programma: dovrai mantenerla, e i cittadini lo verificheranno.', 'It becomes a promise of the programme: you will have to keep it, and citizens will check.'],
+  ['Apre una iniziativa popolare con questo tema (il costo di apertura è quello della raccolta): serve un testo in articoli.', 'It opens a popular initiative on this theme (the opening cost is that of the drive): you need a text in articles.'],
+  ['Un intervento del tuo ufficio, pagato con i fondi: migliora davvero il servizio. Serve guidare un esecutivo.', 'An action by your office, paid for with funds: it really improves the service. You need to lead an executive.'],
+  ['Chiude la richiesta con una risposta cortese: i cittadini non la dimenticheranno.', 'It closes the request with a polite reply: citizens will not forget it.'],
+  ['Serve un seggio in un’assemblea (interrogazioni).', 'You need a seat in an assembly (questions).'],
+  ['Serve un seggio in un’assemblea (mozioni).', 'You need a seat in an assembly (motions).'],
+  ['Serve guidare un esecutivo (sindaco, presidente, assessore con delega, ministro).', 'You need to lead an executive (mayor, president, councillor with a portfolio, minister).'],
+  ['Serve un partito.', 'You need a party.'],
+  ['Servono {} € di fondi.', 'You need {1} € of funds.'],
+  ['Servono {} punti di capitale politico.', 'You need {1} points of political capital.'],
+  ['Azione non valida.', 'Invalid action.'],
+  ['La richiesta non è più aperta.', 'The request is no longer open.'],
+  ['Azione non disponibile.', 'Action not available.'],
+  ['Richiesta non trovata.', 'Request not found.'],
+  ['{} in {} chiede interventi su «{}»: l’indicatore nella Regione è {}/100 e le persone lo sentono.', '{1} in {2} asks for action on “{3}”: the indicator in the Region is {4}/100 and people feel it.'],
+  ['{} in {} chiede interventi su {}.', '{1} in {2} asks for action on {3}.'],
+  ['Hai risposto che non è di tua competenza.', 'You replied that it is not your responsibility.'],
+  ['L’impegno è nel tuo programma: ora va mantenuto.', 'The commitment is in your programme: now it must be kept.'],
+  ['È partita una raccolta di firme su questo tema.', 'A signature drive has started on this theme.'],
+  ['Nessuno ha risposto: la richiesta è scaduta e chi l’aveva fatta se lo ricorda.', 'Nobody answered: the request has expired and those who made it will remember.'],
+  ['{}: la richiesta è stata accolta.', '{1}: the request was accepted.'],
+  ['{}: la richiesta non ha avuto seguito.', '{1}: the request had no follow-up.'],
+  ['Richiesta scaduta: {} in {}', 'Request expired: {1} in {2}'],
+  ['Richiesta accolta: {} in {}', 'Request accepted: {1} in {2}'],
+  ['Nessun seguito alla richiesta su {}', 'No follow-up to the request on {1}'],
+  ['Nuova richiesta: {} su {}', 'New request: {1} on {2}'],
+  ['{} La risposta è attesa entro la settimana {}.', '{1} The answer is expected by week {2}.'],
+  ['{} La risposta arriva fra qualche settimana.', '{1} The answer will arrive in a few weeks.'],
+  ['Richiesta su {} in {}: {}', 'Request on {1} in {2}: {3}'],
 ];

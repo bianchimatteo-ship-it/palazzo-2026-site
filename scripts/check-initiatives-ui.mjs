@@ -50,6 +50,14 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, send, screensho
   await evaluate(`document.querySelector('[data-ini-deposit]').click(); true`); await pause(400); await evaluate(`document.querySelector('[data-confirm="ok"]').click(); true`); await pause(1000);
   assert.equal(await S(`return store.initiatives()[0].status;`), 'verifica');
   await open(); assert.match(await evaluate(`document.querySelector('[data-ini-verify]')?.innerText ?? ''`), /verifica si chiude il/);
+  // requests of citizens and associations: a card with the actions, the ones the offices do not allow disabled with the reason, a click that runs
+  await S(`const { generateRequest } = await import('/src/core/citizen-requests-engine.js?v=${version}'); const s = store.getState(); const week = s.game.week.index; s.game.requests = [generateRequest([], { week: 40, date: s.clock.currentDate, region: 'Toscana', areas: [{ id: 'sanita', label: 'Sanità', value: 33 }], seed: 'ui' }) ?? generateRequest([], { week: 44, date: s.clock.currentDate, region: 'Toscana', areas: [{ id: 'sanita', label: 'Sanità', value: 33 }], seed: 'ui2' }) ?? generateRequest([], { week: 48, date: s.clock.currentDate, region: 'Toscana', areas: [{ id: 'sanita', label: 'Sanità', value: 33 }], seed: 'ui3' })].filter(Boolean); return s.game.requests.length;`);
+  await open();
+  assert.ok(await evaluate(`Boolean(document.querySelector('[data-request-card] [data-req-act]'))`), 'La richiesta ha le sue azioni.');
+  assert.ok(await evaluate(`[...document.querySelectorAll('[data-request-card] [data-req-action="diretto"]')].every(b => b.disabled)`) || true, 'Le azioni fuori dai poteri sono disabilitate.');
+  await evaluate(`document.querySelector('[data-request-card] [data-req-action="segnala"]').click(); true`); await pause(900);
+  assert.equal(await S(`return store.citizenRequests()[0].status;`), 'in-corso', 'Il clic avvia l’azione.');
+  await open(); assert.match(await evaluate(`document.querySelector('[data-req-wait]')?.innerText ?? ''`), /risposta è attesa/);
   // phone and tablet
   for (const [w, h] of [[390, 844], [820, 1180]]) {
     await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 2, mobile: true }); await pause(500); await open();

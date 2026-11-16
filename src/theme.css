@@ -1465,3 +1465,8 @@ button:not(:disabled):active, a.primary-button:active, a.secondary-button:active
 .ini-form input, .ini-form select, .ini-form textarea { width: 100%; box-sizing: border-box; }
 .ini-body button { min-height: 44px; }
 @media (max-width: 520px) { .ini-regions li { grid-template-columns: 1fr 1fr auto; } .ini-lever { flex-direction: column; align-items: stretch; } }
+.req-card { padding: 12px; border: 1px solid rgba(127, 140, 134, .3); border-radius: 12px; margin: 8px 0; display: grid; gap: 6px; }
+.req-text { margin: 0; }
+.req-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.req-actions button { min-height: 44px; }
+.req-reason { display: block; opacity: .75; }
