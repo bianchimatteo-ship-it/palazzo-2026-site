@@ -1585,3 +1585,12 @@ button:not(:disabled):active, a.primary-button:active, a.secondary-button:active
 
 .guide-sum small { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .guide-fold[open] > summary .guide-sum small { display: none; }
+/* the semantic colour of the new sections, in one place: alliances and coalitions violet (diplomacy), initiatives and signature drives orange (campaigns), referendums blue (institutions), agreements green, crises red */
+.my-coalition { border-left: 4px solid var(--sem-diplomacy); padding-left: 12px; }
+.my-coalition [data-coalition-state], .coalition-terms li.is-kept { color: var(--sem-good); }
+.my-coalition [data-coalition-crisis] { border-left: 3px solid var(--sem-bad); }
+.ini-page .ini-head + .ini-progress .ini-bar i { background: var(--sem-campaign); }
+.ini-bar.is-full i { background: var(--sem-good); }
+.ini-ready { color: var(--sem-good); } .ini-warning { color: var(--sem-bad); }
+.statute-row { border-left-color: var(--sem-institution); }
+.ref-card .sx-card { border-left-width: 4px; }
