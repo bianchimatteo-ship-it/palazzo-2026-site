@@ -73,6 +73,17 @@ const TOPICS = {
     const seen = await aim(); console.log('crisi: elemento della crisi trovato =', seen);
     for (const [w, h, tag] of SIZES) await k.shot('crisi-di-governo', w, h, tag, aim);
   } },
+  // 20.x the «Vai» / «Apri la pagina» buttons of the guide and of the tutorial (before/after of the redesign)
+  vai: { level: 'deputato', async run(k) {
+    await k.click('[data-action=menu]'); await k.click('[data-menu=guida]');
+    await k.wait(() => k.has('[data-guide-search]'), 10000);
+    const open = () => k.evaluate(`(() => { const card = document.querySelector('[data-guide-topic="iniziative"]'); card?.querySelectorAll('details').forEach(d => { d.open = true; }); card?.scrollIntoView({ block: 'start' }); return true; })()`);
+    for (const [w, h, tag] of SIZES) await k.shot('guida-pulsanti-vai', w, h, tag, open);
+    await k.click('.tutorial-invite [data-tutorial=start]'); await k.pause(600);
+    await k.evaluate(`location.hash = '#finanze'; true`); await k.pause(900);
+    const expand = async () => { if (!await k.evaluate(`Boolean(document.querySelector('.tutorial-details') && document.querySelector('.tutorial-details').getBoundingClientRect().height > 0)`)) await k.click('[data-tutorial=toggle]'); await k.pause(500); };
+    for (const [w, h, tag] of SIZES) await k.shot('tutorial-pulsante-vai', w, h, tag, expand);
+  } },
   // 20.15 the formation of the Government and the consultations at the Quirinale after a vote
   formazione: { level: 'deputato', async run(k, b) {
     await k.evaluate(`(async () => {
