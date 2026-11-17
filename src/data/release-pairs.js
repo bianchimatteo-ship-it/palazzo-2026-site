@@ -1557,4 +1557,5 @@ export const ALL_PAIRS = [
   ["Coordinamento provinciale (figura simulata) guida il comitato di {} (stato: perdita-controllo) e vuole essere candidato alle prossime elezioni. Il malcontento è a #/# e la fedeltà a #/#: se se ne va porta via iscritti e volontari.", "Provincial coordinator (simulated figure) leads the committee of {1} (status: loss of control) and wants to be a candidate in the next elections. Discontent is at {2}/{3} and loyalty at {4}/{5}: if they leave they take members and volunteers with them."],
   ["Regione {}: via libera all’opera Potenziamento di strutture sanitarie (case di…", "{1} Region: green light for the project Strengthening of health facilities (case di…"],
   ["Senza il sostegno esterno","Without the external support"],
+  ["La reazione del pubblico è negativa: l’attività non ottiene i risultati sperati.", "The public reaction is negative: the activity does not get the hoped-for results."],
 ];

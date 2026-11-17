@@ -592,7 +592,15 @@ export function activityProblem(ctx, env, activity) {
 // institution (`local`: the whole intended effect, a pressure that falls is as intended as a stability that rises). Negative numbers are costs and stay what they are; funds and the treasury are never scaled.
 const SCALED_KEYS = ['stats', 'relations', 'contacts', 'groups', 'party', 'group', 'government', 'org'];
 const scaleUp = (value, factor) => Number.isFinite(value) && value > 0 ? Math.round(value * factor * 100) / 100 : value;
-export const sceneFactor = edge => Math.max(0.2, Math.min(1.8, 1 + edge / 10));
+// The verdict of a scene (`edge`, from −6 to +6) as the factor of what the activity gives: a good verdict (3 and over) gives more than the plain activity (up to 1.8×), an intermediate one is proportional (from 0 to
+// the plain effect), and a bad one (under −3: the public reacted badly) gives NO benefit at all and turns the gains into a loss (down to −0.8×): the animation, the reaction, the verdict and the numbers tell the same thing.
+export const sceneFactor = edge => {
+  const e = Math.max(-6, Math.min(6, Number(edge) || 0));
+  if (e >= 3) return Math.min(1.8, 1.2 + (e - 3) * 0.2);
+  if (e >= 0) return 0.7 + e * (0.5 / 3);
+  if (e >= -3) return Math.max(0, 0.7 + e * (0.7 / 3));
+  return Math.max(-0.8, (e + 3) / 3);
+};
 export const scaleEffects = (effects, factor) => {
   if (!effects) return effects;
   const out = { ...effects };
@@ -629,11 +637,16 @@ export function performActivity(input, env, activityId, targetId = null, options
     lines.push(activity.risk.label);
     applyEffects(ctx, activity.risk.effects, targetId, lines, { date: env.currentDate });
     tone = 'bad';
+  } else if (factor !== null && options.sceneEdge < -3) {
+    // a scene that went badly is told as such even when the activity has no named risk: the diary, the toast and the numbers say the same
+    lines.push('La reazione del pubblico è negativa: l’attività non ottiene i risultati sperati.');
+    tone = 'bad';
   }
   schedule(ctx.game, activity.later, activity.label);
   // What the player decided in the scene beyond the plain activity (the consequences of each move: relations, standing, costs) and the commitments he took: applied here, in the same pass and on the same
   // account as the activity, so nothing is paid or recorded twice and «Partecipa», «Simula» and the plain activity share the same engine.
-  if (options.extras) applyEffects(ctx, options.extras, targetId, lines, { date: env.currentDate, fundsLabel: activity.label, source: activity.label });
+  // the benefits of the moves follow the verdict too (none when the public reacted badly, at most a little more than their face value when it went well); what they cost stays what it is
+  if (options.extras) applyEffects(ctx, factor === null ? options.extras : scaleEffects(options.extras, Math.max(0, Math.min(1.2, factor))), targetId, lines, { date: env.currentDate, fundsLabel: activity.label, source: activity.label });
   for (const later of options.commitments ?? []) schedule(ctx.game, later, activity.label);
   // What the activity does to the institution where the player sits (a council is not part of the career state: the store applies it).
   const specials = [];
