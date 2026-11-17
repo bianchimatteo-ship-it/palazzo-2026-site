@@ -3300,6 +3300,7 @@ function referendumWeek(s, date) {
     return item;
   });
   if (!changed) return { state: s, lines, changed: false };
+  list = [...list.filter(referendumActive), ...list.filter(item => !referendumActive(item)).slice(0, 30)];   // the concluded ones are kept (a history), the oldest go after thirty
   let game = { ...game0, referendums: list };
   game.log = [...list.filter(item => item.closedAt === date).map(item => ({ id: `diario-referendum-${item.id}-${date}`, week, date, kind: 'carriera', title: `Referendum${item.kind === 'costituzionale' ? ' costituzionale' : ' abrogativo'}: ${item.kind === 'abrogativo' ? item.target.title : item.title}`, lines: [item.outcome], tone: item.carried ? 'good' : 'neutral', source: DATA_SOURCES.SIMULATION })), ...(game.log ?? [])].slice(0, 400);
   for (const item of list.filter(entry => entry.closedAt === date)) remember(game, { date, kind: `referendum-${item.status}`, text: item.outcome, weight: item.side ? 1 : 0.5 });

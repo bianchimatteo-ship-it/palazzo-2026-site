@@ -105,7 +105,7 @@ assert.throws(() => make({ kind: 'sconosciuto' }), /Tipo di iniziativa non valid
   const ref = make({ kind: 'referendum', articles: [] });
   const done = { ...ref, signatures: { ...ref.signatures, total: 560000 } };
   const out = E.settleVerification({ ...E.depositInitiative(done, { date: '2027-03-01' }), verification: { share: 0.93, valid: 520000, until: '2027-03-15' } }, { date: '2027-03-15' });
-  assert.equal(out.initiative.status, 'depositata'); assert.match(out.initiative.outcome, /non è simulata/, 'Il referendum dichiara che la fase successiva non è simulata.');
+  assert.equal(out.initiative.status, 'depositata'); assert.match(out.initiative.outcome, /Cassazione.*Corte costituzionale.*voto/, 'Il referendum rimanda alla fase successiva (Cassazione, Corte costituzionale, voto) della pagina Referendum.');
   let phased = null; const ends = { approvata: 0, archiviata: 0 };
   for (let n = 0; n < 50; n++) {
     let ini = { ...make(), id: `iniziativa-aula-${n}`, status: 'in-parlamento', signatures: { total: 58000, byRegion: {}, byChannel: {} }, parliament: { chamber: 'camera', enteredAt: '2027-02-01', stage: 'assegnata', weeks: 0 } };

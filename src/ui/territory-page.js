@@ -5,6 +5,7 @@ import { addsUp, territoryBreakdown } from '../core/territory-results.js?v=20261
 import { OTHERS, hierarchyFor, territoryInputs } from './territory-results-card.js?v=20261117-3';
 import { badge, card, empty, esc, num, pct } from './sections-kit.js?v=20261117-3';
 import { formatDate } from '../core/time.js?v=20261117-3';
+import { territoryPaint } from './national-view.js?v=20261117-3';
 
 export const PAGE_SIZE = 25;
 const SORTS = [['popolazione', 'più abitanti'], ['nome', 'ordine alfabetico'], ['voti', 'più voti simulati']];
@@ -94,7 +95,7 @@ function comparisonCard(votes, selected) {
   return card({ kicker: 'CONFRONTO TRA CONSULTAZIONI · SIMULATO', title: `${name(first)} e ${name(second)}`, body: `<form class="tp-compare" data-territory-compare-form><label>Primo voto<select name="a">${options.replace(`value="${list.indexOf(first)}"`, `value="${list.indexOf(first)}" selected`)}</select></label><label>Secondo voto<select name="b">${options.replace(`value="${list.indexOf(second)}"`, `value="${list.indexOf(second)}" selected`)}</select></label><button type="submit" class="secondary-button">Confronta</button></form><div class="sx-table-wrap"><table class="sx-table" data-territory-compare="table"><thead><tr><th scope="col">Lista</th><th scope="col" class="num">${esc(formatDate(first.date))}</th><th scope="col" class="num">${esc(formatDate(second.date))}</th><th scope="col" class="num">Differenza</th></tr></thead><tbody>${body}</tbody></table></div><p class="sx-note">Le liste sono confrontate per nome; chi non c’era in uno dei due voti ha un trattino. Dato simulato dalla partita.</p>` });
 }
 
-export function renderTerritoryPage(state, overview, { geography = null, municipalities = [], filters = {}, swatch, colorOf, labelOf } = {}) {
+export function renderTerritoryPage(state, overview, { geography = null, municipalities = [], filters = {}, swatch = null, colorOf = null, labelOf = null } = {}) {
   if (!state.game) return empty('Crea prima un politico per vedere i risultati per territorio.', '<button class="primary-button" data-action="new-career">Crea il politico</button>');
   const last = overview?.national?.lastPolitiche ?? null;
   const hierarchy = hierarchyFor(municipalities);
@@ -102,6 +103,7 @@ export function renderTerritoryPage(state, overview, { geography = null, municip
   const compare = comparisonCard(overview?.national?.votes ?? [], filters.terrCompare);
   if (!last) return `<div class="territory-page" data-territory-page-root>${status}${card({ kicker: 'RISULTATI PER TERRITORIO', title: 'Ancora nessun voto politico', body: '<p class="sx-empty" role="status" data-territory-state="missing">Dopo le prossime elezioni politiche simulate qui trovi i risultati per regione, provincia e comune. Nel frattempo la mappa della centrale elettorale mostra la proiezione di oggi, che non è un risultato.</p><button type="button" class="secondary-button" data-nav="elezioni">Vai alla centrale elettorale</button>' })}${compare}</div>`;
   if (!hierarchy) return `<div class="territory-page" data-territory-page-root>${status}${card({ kicker: 'RISULTATI PER TERRITORIO', title: 'Dati ISTAT in caricamento', body: '<p class="sx-empty" role="status" data-territory-state="missing">I dati ISTAT dei comuni non sono ancora caricati: riapri la pagina tra un momento.</p>' })}${compare}</div>`;
+  if (!swatch || !colorOf || !labelOf) ({ swatch, colorOf, labelOf } = territoryPaint(overview));   // the colours and names of the lists come from the national page (a lazy chunk of its own)
   const { totals, lean } = territoryInputs(last, geography);
   const [regionCode = '', provinceCode = ''] = String(filters.terr ?? '').split('|');
   const q = String(filters.terrQ ?? '');

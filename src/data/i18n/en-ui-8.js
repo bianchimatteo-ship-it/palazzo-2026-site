@@ -9463,6 +9463,8 @@ export const PHRASES = [
   ["Approvata senza i due terzi: entro il", "Approved without two thirds: by"],
   ["si può chiedere il referendum (un quinto dei membri di una Camera, # elettori o cinque Consigli regionali). Se nessuno lo chiede, la riforma entra in vigore. Non c’è quorum.", "the referendum can be requested (a fifth of the members of a Chamber, # voters or five Regional Councils). If nobody requests it, the reform enters into force. There is no quorum."],
   ["si può chiedere il referendum (un quinto dei membri di una Camera, 500.000 elettori o cinque Consigli regionali). Se nessuno lo chiede, la riforma entra in vigore. Non c’è quorum.", "the referendum can be requested (a fifth of the members of a Chamber, 500,000 voters or five Regional Councils). If nobody requests it, the reform enters into force. There is no quorum."],
+  ["Governo in carica all’avvio ha la fiducia di # gruppi; la stabilità è a #/#.", "The government in office at the start has the confidence of # groups; stability is at #/#."],
+  ["Governo in carica all’avvio ha la fiducia di # gruppi (di cui # dall’esterno); la stabilità è a #/#.", "The government in office at the start has the confidence of # groups (# from outside); stability is at #/#."],
   ["{}: l’intervista su {}", "{1}: the interview on {2}"],
   ["{}: la conferenza stampa su {}", "{1}: the press conference on {2}"],
   ["{}: l’ospitata televisiva su {}", "{1}: the TV appearance on {2}"],
