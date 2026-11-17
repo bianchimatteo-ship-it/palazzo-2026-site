@@ -1631,7 +1631,7 @@ details.accord-panel.pm-fold { padding: 0; }
 /* ---------- Carriera e Agenda: un colore per famiglia (sempre accompagnato da icona e nome), priorità riconoscibili ---------- */
 :root {
   --cat-elezioni: #e0675a; --cat-candidature: #e8a23d; --cat-partito: #d06aa1; --cat-istituzioni: #3db5c4;
-  --cat-decisioni: #9a85e0; --cat-impegni: #c4a66a; --cat-risorse: #5fb58a; --cat-tutto: #8fb0bb; --cat-urgente: #ff7a6b;
+  --cat-decisioni: #9a85e0; --cat-impegni: #c4a66a; --cat-risorse: #5fb58a; --cat-tutto: #c4a66a; --cat-urgente: #ff7a6b;
   --trk-istituzioni: #3db5c4; --trk-partito: #d06aa1; --trk-parlamento: #5b9bd5; --trk-governo: #c4a66a;
 }
 [data-cat] { --c: var(--cat-tutto); }

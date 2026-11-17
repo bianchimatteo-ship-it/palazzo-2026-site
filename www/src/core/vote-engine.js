@@ -27,7 +27,7 @@ export function splitGroupVote({ seats, yes, confidence = false, seed = 'voto' }
   const support = seats ? yes / seats : 0;
   const closeness = 1 - Math.abs(2 * support - 1);
   const random = seededRandom(seed);
-  const share = confidence ? 0.02 + random() * 0.03 : clamp(0.04 + closeness * 0.22 + (random() - 0.5) * 0.08, 0.02, 0.4);
+  const share = confidence ? 0.02 + random() * 0.03 : clamp(0.03 + closeness * 0.17 + (random() - 0.5) * 0.06, 0.015, 0.32);
   const abstain = Math.min(rest, Math.round(rest * share));
   return { yes, no: rest - abstain, abstain };
 }
@@ -35,7 +35,7 @@ export function splitGroupVote({ seats, yes, confidence = false, seed = 'voto' }
 // confidence calls everybody (a few percent). The number is drawn from the vote's own seed, so the same vote has the same absences in every reading.
 export function absentOf({ members, confidence = false, seed = 'assenti' }) {
   const random = seededRandom(`${seed}|assenti`);
-  const rate = confidence ? 0.008 + random() * 0.02 : 0.05 + random() * 0.09;
+  const rate = confidence ? 0.008 + random() * 0.02 : 0.04 + random() * 0.07;
   return Math.max(0, Math.min(members, Math.round(members * rate)));
 }
 // The absences come out of the three buckets of a group in proportion (largest remainder), never below zero: who is away neither votes for nor against.

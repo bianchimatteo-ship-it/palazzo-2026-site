@@ -5,21 +5,21 @@
 //                      the vote with its quorum) is NOT simulated by this module and the page says so;
 //   · parlamentare   — a bill of a member of Parliament: that is the page «Leggi» (parliament-engine.js), never this module.
 // Everything is pure and deterministic: the same initiative, the same week and the same context give the same signatures. The state lives in game.initiatives (a plain array of records).
-import { seededRandom } from './vote-engine.js?v=20261117-3';
+import { seededRandom } from './vote-engine.js?v=20261117-4';
 
 export const INITIATIVE_KINDS = Object.freeze({
-  popolare: { id: 'popolare', label: 'Iniziativa legislativa popolare', basis: 'art. 71 Cost.', required: 50000, weeks: 26, depositMargin: 1.08, articles: { min: 1, max: 8 }, short: 'Un testo scritto dai cittadini, firmato da almeno 50.000 elettori e depositato in una Camera.' },
-  referendum: { id: 'referendum', label: 'Raccolta firme referendaria', basis: 'art. 75 Cost.', required: 500000, weeks: 13, depositMargin: 1.05, articles: { min: 0, max: 0 }, short: 'La raccolta di 500.000 firme per un referendum abrogativo. La fase dopo il deposito non è simulata.' }
+  popolare: { id: 'popolare', label: 'Iniziativa legislativa popolare', basis: 'art. 71 Cost.', required: 50000, weeks: 26, depositMargin: 1.15, articles: { min: 1, max: 8 }, short: 'Un testo scritto dai cittadini, firmato da almeno 50.000 elettori e depositato in una Camera.' },
+  referendum: { id: 'referendum', label: 'Raccolta firme referendaria', basis: 'art. 75 Cost.', required: 500000, weeks: 13, depositMargin: 1.12, articles: { min: 0, max: 0 }, short: 'La raccolta di 500.000 firme per un referendum abrogativo. La fase dopo il deposito non è simulata.' }
 });
 export const PARLIAMENTARY_NOTE = 'Una proposta parlamentare la presenta un membro del Parlamento: si fa dalla pagina «Leggi», non da qui.';
 // How the collection is organised: what each lever costs and how many signatures a week it brings (an order of magnitude, simulated).
 export const CHANNELS = Object.freeze({
   banchetti: { id: 'banchetti', label: 'Banchetti di raccolta', unit: 'banchetto', setup: 150, weekly: 25, perWeek: 90, max: 40, hint: 'Un banchetto in piazza o al mercato: tavolino, modulo e volontari.' },
   online: { id: 'online', label: 'Piattaforma online', unit: 'piattaforma', setup: 500, weekly: 40, perWeek: 520, max: 1, hint: 'Firma con identità digitale: raggiunge tutti, ma costa e fa discutere.' },
-  volontari: { id: 'volontari', label: 'Volontari del partito', unit: 'volontario', setup: 0, weekly: 0, perWeek: 9, max: 400, hint: 'Iscritti che raccolgono firme tra amici e vicini: dipendono dalla forza del partito.' },
+  volontari: { id: 'volontari', label: 'Volontari del partito', unit: 'volontario', setup: 0, weekly: 2, perWeek: 9, max: 400, hint: 'Iscritti che raccolgono firme tra amici e vicini: dipendono dalla forza del partito. Costano 2 € a settimana ciascuno (rimborsi, materiali, trasporti).' },
   comuni: { id: 'comuni', label: 'Comuni amici (autenticazione)', unit: 'comune', setup: 100, weekly: 10, perWeek: 70, max: 60, hint: 'Un ufficio comunale che autentica le firme: serve un rapporto con l’amministrazione.' }
 });
-export const ESTIMATED_VALID_SHARE = 0.93; // the share of signatures that survives the check (the real figure is drawn between 0.88 and 0.97)
+export const ESTIMATED_VALID_SHARE = 0.92; // the share of signatures that survives the check (the real figure is drawn between 0.88 and 0.97): with the recommended margin (+15 % / +12 %) even the worst draw passes
 export const SETUP_COST = Object.freeze({ popolare: 400, referendum: 4000 });
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
 const hash = value => [...String(value)].reduce((n, char) => (Math.imul(n, 31) + char.charCodeAt(0)) >>> 0, 2166136261) || 1;
@@ -126,12 +126,17 @@ export function advanceCollection(input, ctx) {
     initiative = record(initiative, ctx.date, `Campagna contraria: la raccolta rallenta (−${initiative.opposition}%).`);
   } else if (initiative.opposition > 0 && (!initiative.oppositionUntil || initiative.oppositionUntil <= ctx.date)) {
     initiative.opposition = 0; initiative.oppositionUntil = null;
+  } else if (roll > 0.88 && roll <= 0.92 && (ctx.notoriety ?? 0) >= 20) {
+    initiative.boosts.push({ factor: 1.25, until: addDays(ctx.date, 14), why: 'copertura mediatica' });
+    events.push({ tone: 'good', text: `La stampa parla della raccolta «${initiative.title}»: per due settimane le firme crescono del 25%.` });
+    initiative = record(initiative, ctx.date, 'Copertura mediatica: +25% di firme per due settimane.');
   } else if (roll > 0.94) {
     initiative.boosts.push({ factor: 1.2, until: addDays(ctx.date, 21), why: 'sostegno di un’associazione' });
     events.push({ tone: 'good', text: `Un’associazione rilancia la raccolta «${initiative.title}»: per tre settimane le firme crescono del 20%.` });
     initiative = record(initiative, ctx.date, 'Sostegno di un’associazione: +20% di firme per tre settimane.');
   }
-  const noise = 0.85 + rand() * 0.3;
+  // the ordinary variation of a week is small (±5 %): the bigger moves come from recognisable events, told in the history (a campaign against, an association, the press, the party mobilised)
+  const noise = 0.95 + rand() * 0.1;
   const gained = Math.round(weeklyRate(initiative, ctx) * noise);
   // the territory: each region gives in proportion to its electorate, the home region and the regions with a strong committee give more
   const regions = (ctx.regions ?? []).filter(item => item.share > 0);
@@ -194,7 +199,7 @@ export function settleVerification(input, { date }) {
   if (initiative.kind === 'referendum') {
     initiative.status = 'depositata';
     initiative.closedAt = date;
-    initiative.outcome = `Firme valide: ${valid.toLocaleString('it-IT')}. La richiesta di referendum è depositata; la fase successiva (Corte di cassazione, Corte costituzionale, voto) non è simulata in questa versione.`;
+    initiative.outcome = `Firme valide: ${valid.toLocaleString('it-IT')}. La richiesta di referendum è depositata: ora la verifica dell’Ufficio centrale presso la Cassazione, il giudizio della Corte costituzionale e il voto (pagina «Referendum»).`;
     events.push({ tone: 'good', text: `Referendum «${initiative.title}»: ${valid.toLocaleString('it-IT')} firme valide, richiesta depositata.`, ended: 'depositata' });
     return { initiative: record(initiative, date, initiative.outcome), events };
   }

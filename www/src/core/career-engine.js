@@ -1,42 +1,42 @@
-import { uniqueId } from './ids.js?v=20261117-3';
-import { advanceDays, formatDate, nextMunicipalVote, nextProvincialVote, nextRegionalVote } from './time.js?v=20261117-3';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261117-3';
-import { CALENDAR_RULES, harmonizeElections, pickRoundDate, settleOpenRounds } from './calendar-planner.js?v=20261117-3';
-import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20261117-3';
+import { uniqueId } from './ids.js?v=20261117-4';
+import { advanceDays, formatDate, nextMunicipalVote, nextProvincialVote, nextRegionalVote } from './time.js?v=20261117-4';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261117-4';
+import { CALENDAR_RULES, harmonizeElections, pickRoundDate, settleOpenRounds } from './calendar-planner.js?v=20261117-4';
+import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20261117-4';
 import {
   APPOINTMENTS, CAREER_EVENTS, CURRENT_TEMPLATES, EARLY_ELECTION_AFTER_WEEKS, ELECTION_SCHEDULE,
   FORCED_EVENTS, LEGACY_RIVAL_NAMES, SIMULATED_RIVAL_LABEL, FOUNDER_RANK, LEVEL_FIRST_ELECTION, OFFICE_INCOME, PARTY_RANKS, RELATION_TEMPLATES, STAT_LABELS,
-  AGENDA_CAPS, SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS, ROUND_RULES } from '../data/simulation/career-rules.js?v=20261117-3';
-import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20261117-3';
-import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20261117-3';
-import { ITALIAN_REGIONS, hasProvincialLevel } from '../data/regions.js?v=20261117-3';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261117-3';
-import { createMandate, setMandateStatus, staffWeek, updateMandate } from './staff-engine.js?v=20261117-3';
-import { beginOperation, book, buyInvestment, contributeToParty, createFinance, depositElectionFund, depositReserve, hasAsset, normalizeFinance, releaseReserve, requestPartyFunds, settleFinanceWeek, settleOperations, settleTransfers, supporterIncome, treasuryOperation } from './finance-engine.js?v=20261117-3';
-import { addMembers, advanceOrganization, allocateCurrentPortfolios, applyOrgEffects, createOrganization, isPartyLeader, normalizeCurrentProfiles, normalizeOrganization, rememberCurrent, treasuryBook } from './organization-engine.js?v=20261117-3';
-import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20261117-3';
-import { HARD_CATEGORIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261117-3';
-import { AREA_GROUPS, macroAreaOf } from '../data/simulation/policy-rules.js?v=20261117-3';
-import { advancementOdds, evaluateAdvancement, progressionFactors } from './progression-engine.js?v=20261117-3';
-import { advanceCommittees, applyCommitteeAction, applyLocalEvent, COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, committeeActionCost, foundCommittee, leaderStance, scaleOf, territorialControl } from './committee-engine.js?v=20261117-3';
-import { europeanElectionDate, legislatureTerm, LEGISLATURE_RULES, sundayOnOrBefore } from './legislature-engine.js?v=20261117-3';
-import { CADRE_ACTIONS, CONGRESS_ACTIONS, LIFE_MEMORY_KINDS, LIFE_SITUATIONS, SPLINTER_NAMES } from '../data/simulation/party-life-rules.js?v=20261117-3';
-import { DAILY_EVENTS } from '../data/simulation/daily-events.js?v=20261117-3';
-import { eventDay, pickWeighted, reactionRelevance } from './event-engine.js?v=20261117-3';
-import { heldOffices, localOffices } from './office-engine.js?v=20261117-3';
-import { worksSignals } from './local-works-engine.js?v=20261117-3';
-import { SECTOR_GAINS, advanceStanding, applyStandingEffects, createStanding, gainSector, normalizeStanding, sectorValue, standingOf } from './standing-engine.js?v=20261117-3';
-import { EVENT_SECTORS } from '../data/simulation/standing-rules.js?v=20261117-3';
-import { affiliationOf, scenarioCapitalGain, scenarioGrowth, scenarioInit, scenarioOf } from './scenario-engine.js?v=20261117-3';
-import { PRESIDENCY_SITUATIONS } from '../data/simulation/presidency-rules.js?v=20261117-3';
-import { START_SITUATIONS } from '../data/simulation/start-rules.js?v=20261117-3';
-import { AMBITION_BROKEN, AMBITION_COST, AMBITION_KEPT, OBJECTIVE_BY_ID, OBJECTIVE_SITUATIONS } from '../data/simulation/objective-rules.js?v=20261117-3';
-import { ambitionProblem, bump, bumpAmbition, bumpDecision, expiredAmbitions, isClassicObjective, objectiveBase, objectiveStatus } from './objective-engine.js?v=20261117-3';
-import { advanceStart, hasStart, startBase, startFundsFactor, startInit, startSpecial } from './start-engine.js?v=20261117-3';
-import { advanceLife, breakPact, cadreAction, cadreDecision, congressActionsOf, congressWork, createLife, honourCadrePromises, honourListPacts, lapseAnswer, lifeOverview, normalizeLife, resolveCongress, respondRequest, startRebuild } from './party-life-engine.js?v=20261117-3';
-import { enterNewParty, foundParty, mergeParties, OP_COSTS, partyOpsAvailability, renameParty, splitOff } from './party-ops-engine.js?v=20261117-3';
+  AGENDA_CAPS, SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS, ROUND_RULES } from '../data/simulation/career-rules.js?v=20261117-4';
+import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20261117-4';
+import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20261117-4';
+import { ITALIAN_REGIONS, hasProvincialLevel } from '../data/regions.js?v=20261117-4';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261117-4';
+import { createMandate, setMandateStatus, staffWeek, updateMandate } from './staff-engine.js?v=20261117-4';
+import { beginOperation, book, buyInvestment, contributeToParty, createFinance, depositElectionFund, depositReserve, hasAsset, normalizeFinance, releaseReserve, requestPartyFunds, settleFinanceWeek, settleOperations, settleTransfers, supporterIncome, treasuryOperation } from './finance-engine.js?v=20261117-4';
+import { addMembers, advanceOrganization, allocateCurrentPortfolios, applyOrgEffects, createOrganization, isPartyLeader, normalizeCurrentProfiles, normalizeOrganization, rememberCurrent, treasuryBook } from './organization-engine.js?v=20261117-4';
+import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20261117-4';
+import { HARD_CATEGORIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261117-4';
+import { AREA_GROUPS, macroAreaOf } from '../data/simulation/policy-rules.js?v=20261117-4';
+import { advancementOdds, evaluateAdvancement, progressionFactors } from './progression-engine.js?v=20261117-4';
+import { advanceCommittees, applyCommitteeAction, applyLocalEvent, COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, committeeActionCost, foundCommittee, leaderStance, scaleOf, territorialControl } from './committee-engine.js?v=20261117-4';
+import { europeanElectionDate, legislatureTerm, LEGISLATURE_RULES, sundayOnOrBefore } from './legislature-engine.js?v=20261117-4';
+import { CADRE_ACTIONS, CONGRESS_ACTIONS, LIFE_MEMORY_KINDS, LIFE_SITUATIONS, SPLINTER_NAMES } from '../data/simulation/party-life-rules.js?v=20261117-4';
+import { DAILY_EVENTS } from '../data/simulation/daily-events.js?v=20261117-4';
+import { eventDay, pickWeighted, reactionRelevance } from './event-engine.js?v=20261117-4';
+import { heldOffices, localOffices } from './office-engine.js?v=20261117-4';
+import { worksSignals } from './local-works-engine.js?v=20261117-4';
+import { SECTOR_GAINS, advanceStanding, applyStandingEffects, createStanding, gainSector, normalizeStanding, sectorValue, standingOf } from './standing-engine.js?v=20261117-4';
+import { EVENT_SECTORS } from '../data/simulation/standing-rules.js?v=20261117-4';
+import { affiliationOf, scenarioCapitalGain, scenarioGrowth, scenarioInit, scenarioOf } from './scenario-engine.js?v=20261117-4';
+import { PRESIDENCY_SITUATIONS } from '../data/simulation/presidency-rules.js?v=20261117-4';
+import { START_SITUATIONS } from '../data/simulation/start-rules.js?v=20261117-4';
+import { AMBITION_BROKEN, AMBITION_COST, AMBITION_KEPT, OBJECTIVE_BY_ID, OBJECTIVE_SITUATIONS } from '../data/simulation/objective-rules.js?v=20261117-4';
+import { ambitionProblem, bump, bumpAmbition, bumpDecision, expiredAmbitions, isClassicObjective, objectiveBase, objectiveStatus } from './objective-engine.js?v=20261117-4';
+import { advanceStart, hasStart, startBase, startFundsFactor, startInit, startSpecial } from './start-engine.js?v=20261117-4';
+import { advanceLife, breakPact, cadreAction, cadreDecision, congressActionsOf, congressWork, createLife, honourCadrePromises, honourListPacts, lapseAnswer, lifeOverview, normalizeLife, resolveCongress, respondRequest, startRebuild } from './party-life-engine.js?v=20261117-4';
+import { enterNewParty, foundParty, mergeParties, OP_COSTS, partyOpsAvailability, renameParty, splitOff } from './party-ops-engine.js?v=20261117-4';
 // The decisions of the party's internal life join the situation events; the daily events join the procedural ones.
-import { RIVAL_SITUATIONS } from '../data/simulation/rival-life-rules.js?v=20261117-3';
+import { RIVAL_SITUATIONS } from '../data/simulation/rival-life-rules.js?v=20261117-4';
 const SITUATIONS = { ...RIVAL_SITUATIONS, ...SITUATION_EVENTS, ...LIFE_SITUATIONS, ...PRESIDENCY_SITUATIONS, ...START_SITUATIONS, ...OBJECTIVE_SITUATIONS };
 const EVENT_POOL = [...CAREER_EVENTS, ...DAILY_EVENTS];
 
@@ -592,7 +592,15 @@ export function activityProblem(ctx, env, activity) {
 // institution (`local`: the whole intended effect, a pressure that falls is as intended as a stability that rises). Negative numbers are costs and stay what they are; funds and the treasury are never scaled.
 const SCALED_KEYS = ['stats', 'relations', 'contacts', 'groups', 'party', 'group', 'government', 'org'];
 const scaleUp = (value, factor) => Number.isFinite(value) && value > 0 ? Math.round(value * factor * 100) / 100 : value;
-export const sceneFactor = edge => Math.max(0.2, Math.min(1.8, 1 + edge / 10));
+// The verdict of a scene (`edge`, from −6 to +6) as the factor of what the activity gives: a good verdict (3 and over) gives more than the plain activity (up to 1.8×), an intermediate one is proportional (from 0 to
+// the plain effect), and a bad one (under −3: the public reacted badly) gives NO benefit at all and turns the gains into a loss (down to −0.8×): the animation, the reaction, the verdict and the numbers tell the same thing.
+export const sceneFactor = edge => {
+  const e = Math.max(-6, Math.min(6, Number(edge) || 0));
+  if (e >= 3) return Math.min(1.8, 1.2 + (e - 3) * 0.2);
+  if (e >= 0) return 0.7 + e * (0.5 / 3);
+  if (e >= -3) return Math.max(0, 0.7 + e * (0.7 / 3));
+  return Math.max(-0.8, (e + 3) / 3);
+};
 export const scaleEffects = (effects, factor) => {
   if (!effects) return effects;
   const out = { ...effects };
@@ -629,11 +637,16 @@ export function performActivity(input, env, activityId, targetId = null, options
     lines.push(activity.risk.label);
     applyEffects(ctx, activity.risk.effects, targetId, lines, { date: env.currentDate });
     tone = 'bad';
+  } else if (factor !== null && options.sceneEdge < -3) {
+    // a scene that went badly is told as such even when the activity has no named risk: the diary, the toast and the numbers say the same
+    lines.push('La reazione del pubblico è negativa: l’attività non ottiene i risultati sperati.');
+    tone = 'bad';
   }
   schedule(ctx.game, activity.later, activity.label);
   // What the player decided in the scene beyond the plain activity (the consequences of each move: relations, standing, costs) and the commitments he took: applied here, in the same pass and on the same
   // account as the activity, so nothing is paid or recorded twice and «Partecipa», «Simula» and the plain activity share the same engine.
-  if (options.extras) applyEffects(ctx, options.extras, targetId, lines, { date: env.currentDate, fundsLabel: activity.label, source: activity.label });
+  // the benefits of the moves follow the verdict too (none when the public reacted badly, at most a little more than their face value when it went well); what they cost stays what it is
+  if (options.extras) applyEffects(ctx, factor === null ? options.extras : scaleEffects(options.extras, Math.max(0, Math.min(1.2, factor))), targetId, lines, { date: env.currentDate, fundsLabel: activity.label, source: activity.label });
   for (const later of options.commitments ?? []) schedule(ctx.game, later, activity.label);
   // What the activity does to the institution where the player sits (a council is not part of the career state: the store applies it).
   const specials = [];

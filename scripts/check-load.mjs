@@ -18,7 +18,10 @@ import { moduleGraph } from './lib/module-graph.mjs';
 // reached, not designed away: the page loads the same graph, compressed size and depth are unchanged in their limits.
 // modules 160 → 170, raw 5.00 → 5.15 MB, compressed 1.25 → 1.30 MB (17/11/2026): the QA completion work added the resignations module, the guide manual (functions and scenarios), the alliance/territory
 // helpers and their texts (+4 modules, +~100 KB raw, +~13 KB compressed); announced by modulepreload with the rest, depth (14) and the 4x-CPU timings are unchanged.
-const BUDGET = { modules: 170, raw: 5_150_000, compressed: 1_300_000, depth: 18 };
+// raw 5.15 → 5.30 MB (17/11/2026; modules 167 of 170 and compressed 1.29 of 1.30 MB are inside the old limits): the improvement work added the referendum engine (abrogative and constitutional, ~32 KB), the statutes register and the weekly steps of
+// referendums, the activities with allies and the initiative bills in the store (+~35 KB), the alliance-activities and birth-date modules and the English texts of all of it (+~85 KB of dictionary); the pages
+// (referendums, results by territory) are lazy chunks and are not counted. Announced by modulepreload with the rest; depth and the 4x-CPU timings are unchanged.
+const BUDGET = { modules: 170, raw: 5_300_000, compressed: 1_300_000, depth: 18 };
 const graph = await moduleGraph();
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const stamp = html.match(/main\.js\?v=([^"']+)/)?.[1];

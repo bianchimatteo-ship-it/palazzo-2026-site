@@ -1,11 +1,11 @@
-import { uniqueId } from './ids.js?v=20261117-3';
-import { HARD_GAP, THEMES, THEME_BY_ID, compare as compareProgram, compromise as compromiseOn, positionOf as programPositionOf, refusalBlock, refusalKey, recordRefusal, coalitionBlock, registrationsOf, pairKey as programPairKey } from './alliance-rules.js?v=20261117-3';
-import { AD_REWARD } from '../data/simulation/reward-rules.js?v=20261117-3';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261117-3';
-import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261117-3';
-import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261117-3';
-import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261117-3';
-import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261117-3';
+import { uniqueId } from './ids.js?v=20261117-4';
+import { HARD_GAP, THEMES, THEME_BY_ID, compare as compareProgram, compromise as compromiseOn, positionOf as programPositionOf, refusalBlock, refusalKey, recordRefusal, coalitionBlock, registrationsOf, pairKey as programPairKey } from './alliance-rules.js?v=20261117-4';
+import { AD_REWARD } from '../data/simulation/reward-rules.js?v=20261117-4';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261117-4';
+import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261117-4';
+import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261117-4';
+import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261117-4';
+import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261117-4';
 export { houseEffect };
 
 // The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.
@@ -1877,8 +1877,9 @@ export function allianceOdds(world, forceId, { partySupport = 50, influence = 50
   add('La tua influenza', (influence - 50) / 250);
   if (allianceOf(world, force.id)) add(`${force.label} è già in un’altra intesa`, -0.25);
   if (force.crisis) add(`${force.label} è in crisi e cerca sponde`, 0.1);
-  if (difficulty) add('Difficoltà della partita', difficulty);
-  const chance = clamp(0.22 + reasons.reduce((sum, item) => sum + item.delta, 0), 0.03, 0.9);
+  // The difficulty of the career is not a reason a party gives for accepting or refusing: the decision rests on the programmes, the relations, the consensus, the interests, the strategy, the precedents and the convenience above (the `difficulty` option only shifts the odds below, silently).
+  // the level of the career still sets how exacting the allies are, as a plain shift of the odds: it is never given as the reason of an acceptance or of a refusal
+  const chance = clamp(0.22 + reasons.reduce((sum, item) => sum + item.delta, 0) + (difficulty || 0), 0.03, 0.9);
   // Very distant forces only agree as a motivated exception: two small forces, or a force in crisis.
   const exception = gap >= 4 && !(own < 3 && theirs < 3) && !force.crisis;
   const blocked = program.hard.length ? `Programmi incompatibili su ${program.hard.map(row => row.label.toLowerCase()).join(', ')}: senza un compromesso negoziato sul tema l’alleanza non è possibile.` : null;
@@ -2146,8 +2147,9 @@ export function termOptions(input, allianceId, election = null) {
 export function commonProgramOf(world, alliance) {
   const members = talkMembers(world, alliance);
   return THEMES.map(theme => {
-    const values = members.map(member => ({ id: member.id, label: member.label, value: round1(programPositionOf(world, member, theme.id)) }));
-    const gap = values.length ? Math.max(...values.map(item => item.value)) - Math.min(...values.map(item => item.value)) : 0;
+    const values = members.map(member => { const at = programPositionOf(world, member, theme.id); return { id: member.id, label: member.label, value: Number.isFinite(at) ? round1(at) : null }; });
+    const known = values.filter(item => item.value !== null);
+    const gap = known.length ? Math.max(...known.map(item => item.value)) - Math.min(...known.map(item => item.value)) : 0;
     const agreed = Boolean(world.compromises?.[`${[...alliance.partyIds].sort().join('+')}|${theme.id}`]) || (alliance.terms ?? []).some(item => item.kind === 'punto-comune' && item.theme === theme.id && item.status === 'aperto');
     const state = agreed ? 'concordato' : gap >= HARD_GAP && theme.veto ? 'in conflitto' : gap >= 2 ? 'da negoziare' : 'condiviso';
     return { id: theme.id, label: theme.label, gap: round1(gap), state, values };
@@ -2213,7 +2215,7 @@ export function proposeTerm(input, allianceId, proposal, date, { election = null
     alliance.terms.push({ ...term, id: `${alliance.id}|${kind}|${alliance.terms.length + 1}|${date}`, date, status: 'aperto', evidence: null, due: election?.electionDate ?? null });
     if (kind === 'guida') { alliance.leaderId = beneficiary.id; if (alliance.partyIds.length >= 3) alliance.label = ledName(alliance, beneficiary.label); }
     if (kind === 'punto-comune') {
-      for (const a of members) for (const b of members) if (a.id < b.id) { const gap = Math.abs(programPositionOf(world, a, term.theme) - programPositionOf(world, b, term.theme)); if (gap >= 2) world.compromises = { ...(world.compromises ?? {}), [`${programPairKey(a.id, b.id)}|${term.theme}`]: { date, theme: term.theme } }; }
+      for (const a of members) for (const b of members) if (a.id < b.id) { const gap = Math.abs((programPositionOf(world, a, term.theme) ?? NaN) - (programPositionOf(world, b, term.theme) ?? NaN)); if (gap >= 2) world.compromises = { ...(world.compromises ?? {}), [`${programPairKey(a.id, b.id)}|${term.theme}`]: { date, theme: term.theme } }; }
       world.compromises = { ...(world.compromises ?? {}), [`${[...alliance.partyIds].sort().join('+')}|${term.theme}`]: { date, theme: term.theme } };
     }
     cohesionGain = kind === 'punto-comune' ? 3 : -1;

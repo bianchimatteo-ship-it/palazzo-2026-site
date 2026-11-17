@@ -5,11 +5,11 @@
 // it needs or puts the question of confidence; the bills of the opposition often never reach the floor. The player sits
 // in one Chamber: speaks, amends and casts a personal vote on every bill there — and the vote has consequences.
 // Everything here is simulation (source: simulation); the groups of the real XIX legislature keep their real reference.
-import { DATA_SOURCES } from '../data/schema.js?v=20261117-3';
-import { AREA_BY_ID, DECREE_RULES, FINANCING, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261117-3';
-import { amendLawPolicy, campOfAxis, cohesiveShare, confidenceBallotMissing, directiveOf, governingGroupIds, groupDirectiveEffect, groupProfile, parliamentInternals, playerSeatedOn } from './parliament-engine.js?v=20261117-3';
-import { openLocalFloors, playerVotesIn } from './local-engine.js?v=20261117-3';
-import { absentOf, groupLine, spreadAbsent, splitGroupVote } from './vote-engine.js?v=20261117-3';
+import { DATA_SOURCES } from '../data/schema.js?v=20261117-4';
+import { AREA_BY_ID, DECREE_RULES, FINANCING, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261117-4';
+import { statuteBlock, statutesOf, amendLawPolicy, campOfAxis, cohesiveShare, confidenceBallotMissing, directiveOf, governingGroupIds, groupDirectiveEffect, groupProfile, parliamentInternals, playerSeatedOn } from './parliament-engine.js?v=20261117-4';
+import { openLocalFloors, playerVotesIn } from './local-engine.js?v=20261117-4';
+import { absentOf, groupLine, seededRandom, spreadAbsent, splitGroupVote } from './vote-engine.js?v=20261117-4';
 
 const { getGroup, allGroups, record, replaceLaw, demandFor, contentAffinity, setRelation } = parliamentInternals;
 const SIM = DATA_SOURCES.SIMULATION;
@@ -142,6 +142,8 @@ function generateBills(parliament, { date, rand, society, world }) {
   const government = next.government;
   const partyLabel = id => world?.parties?.find(item => item.id === id)?.label ?? null;
   const add = spec => {
+    // a law already in force on the same area with the same instrument (or with the same title) is not brought back: it would give the same advantages twice
+    if ((spec.kind ?? 'ddl') === 'ddl' && statuteBlock(next, { area: spec.area, instrument: spec.design?.instrument, title: spec.title }, date)) return null;
     const law = newLaw(next, spec);
     next = record({ ...next, laws: [...(next.laws ?? []), law] }, date, 'legge-presentata', `${spec.sponsor.label} presenta “${law.title}”.`, { lawId: law.id, sponsor: spec.sponsor.kind, auto: true });
     created.push(law);
@@ -496,6 +498,42 @@ export function compactLegislature(parliament) {
 // ---------- one week of the Chambers ----------
 // ctx: { date, rand, world, society }. Returns { parliament, events, lines }: the events are for the career (the
 // player's votes, the bills coming to the floor of the player's Chamber).
+// ---------- the order of the simulated country: the laws in force ----------
+// A law approved for good enters the register of the laws in force (`parliament.statutes`: title, content, date, origin, status) and keeps its effects on the policies of the country (legislativeEffects).
+// The same law cannot be approved again for the same effects: a bill on the same area with the same instrument (or the same title) is blocked while the statute is in force, until the end of the
+// legislature or at least two years; it stays possible to AMEND or REPEAL it with a new procedure of its own (`policy.amends` / `policy.repeals`), which is another bill with another content.
+export { statuteBlock, statutesOf };
+export function registerStatutes(input, date) {
+  const fresh = (input.laws ?? []).filter(law => law.stage === 'approved' && !law.registered);
+  if (!fresh.length) return input;
+  let statutes = [...(input.statutes ?? [])];
+  const laws = (input.laws ?? []).map(law => {
+    if (law.stage !== 'approved' || law.registered) return law;
+    if (law.policy?.repeals) statutes = statutes.map(item => item.id === law.policy.repeals ? { ...item, status: 'abrogata', repealedAt: date, repealedBy: law.title } : item);
+    else if (law.policy?.amends) statutes = statutes.map(item => item.id === law.policy.amends ? { ...item, amendedAt: date, amendments: [...(item.amendments ?? []), { date, title: law.title, text: law.summary }] } : item);
+    else statutes.push({ id: `statuto-${law.id}`, lawId: law.id, number: statutes.length + 1, title: law.title, summary: String(law.summary ?? '').slice(0, 320), area: law.policy?.area ?? null, instrument: law.policy?.instrument ?? null, kind: law.kind, origin: law.sponsor?.label ?? law.origin ?? 'Parlamento', approvedAt: date, legislature: input.legislature?.number ?? null, status: 'vigente', blockable: law.kind === 'ddl', policy: law.policy ?? null, amendments: [], source: SIM });
+    return { ...law, registered: true };
+  });
+  const added = statutes.length - (input.statutes ?? []).length;
+  let next = { ...input, laws, statutes: statutes.slice(-200) };
+  for (const law of fresh) next = record(next, date, 'legge-in-vigore', law.policy?.repeals ? `“${law.title}” è approvata: la legge che abroga entra in vigore.` : `“${law.title}” è approvata ed entra nell’ordinamento (${added ? 'archivio delle leggi in vigore' : 'modifica'}).`, { lawId: law.id, source: SIM });
+  return next;
+}
+// A popular initiative that has passed the check of the signatures becomes a bill of its own (art. 71 Cost.): assigned to the Chamber, examined in committee, discussed and voted like every other bill.
+export function introduceInitiativeBill(parliament, { id, title, summary, area, date, chamber }) {
+  const rand = seededRandom(`${id}|disegno`);
+  const law = newLaw(parliament, { sponsor: { kind: 'popolare', groupId: null, partyId: null, label: 'Iniziativa popolare' }, area, kind: 'ddl', design: designFor(0, area, rand), title, summary, date, chamber, origin: 'popolare' });
+  law.calendared = true; law.initiativeId = id; law.auto = true;
+  law.journal = [{ date, text: 'Iniziativa legislativa popolare: assegnata alla Camera competente.' }];
+  return { parliament: record({ ...parliament, laws: [...(parliament.laws ?? []), law] }, date, 'legge-presentata', `Iniziativa popolare “${title}”: depositata ${chamber === 'camera' ? 'alla Camera' : 'al Senato'} con le firme di 50.000 elettori.`, { lawId: law.id, sponsor: 'popolare', auto: true }), law };
+}
+// Where a bill is (in the open laws or in the archive) and how it ended.
+export function lawState(parliament, lawId) {
+  const law = (parliament?.laws ?? []).find(item => item.id === lawId);
+  if (law) return { stage: law.stage, chamber: law.currentChamber, open: !CLOSED.includes(law.stage), law };
+  const archived = (parliament?.lawArchive ?? []).find(item => item.id === lawId);
+  return archived ? { stage: archived.stage, chamber: null, open: false, law: archived } : null;
+}
 export function advanceLegislativeWeek(input, ctx) {
   if (!input?.chambers?.camera?.groups?.length || !input?.chambers?.senato?.groups?.length) return { parliament: input, events: [], lines: [] };
   let parliament = syncAgendas(linkGroupsToParties(input, ctx.world), ctx.world);
@@ -539,6 +577,7 @@ export function advanceLegislativeWeek(input, ctx) {
       events.push({ type: 'voto-in-arrivo', lawId: law.id, title: law.title, sponsor: law.sponsor, kind: law.kind, line, decided: Boolean(law.pendingPlayerVote), margin: forecast.margin, yes: forecast.yes, needed: forecast.needed, confidence: Boolean(law.confidence), date: law.nextStepAt, finalVote: law.stage === 'final-vote', important: law.sponsor?.kind === 'governo' || law.kind !== 'ddl' || law.confidence || Math.abs(forecast.margin) <= 6 || Boolean(law.playerStance || law.playerDeal || law.playerAmendments?.length) || law.sponsor?.groupId === seat.groupId });
     }
   }
+  parliament = registerStatutes(parliament, ctx.date);
   return { parliament: compactLegislature(parliament), events, lines };
 }
 

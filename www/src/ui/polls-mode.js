@@ -1,8 +1,8 @@
-import { campaignScope } from '../core/campaign-engine.js?v=20261117-3';
-import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261117-3';
-import { formatDate } from '../core/time.js?v=20261117-3';
-import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261117-3';
-import { distinctSeries, sparkline } from './charts.js?v=20261117-3';
+import { campaignScope } from '../core/campaign-engine.js?v=20261117-4';
+import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261117-4';
+import { formatDate } from '../core/time.js?v=20261117-4';
+import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261117-4';
+import { distinctSeries, sparkline } from './charts.js?v=20261117-4';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const pctFormats = new Map();
@@ -207,7 +207,27 @@ function exitReport(report) {
   return `<aside class="alliance-report is-bad" data-alliance-report="uscita" role="status"><div><strong>${esc(title)}</strong>${report.cause === 'crisi' ? '<small><span>Crisi di coesione: gli altri membri non reggono più la distanza dal tuo partito.</span></small>' : ''}<ul class="alliance-odds-reasons">${lines}</ul></div><button type="button" class="text-link" data-alliance-report-dismiss>Chiudi</button></aside>`;
 }
 // The programme of the player's party against each partner, theme by theme: positions, gap and level, the hard conflicts (conditions to negotiate), and a compromise button for each conflict.
-const LEVEL_LABEL = { accordo: 'in accordo', differenza: 'differenza', conflitto: 'conflitto', incompatibile: 'incompatibile', compromesso: 'compromesso' };
+const LEVEL_LABEL = { accordo: 'in accordo', differenza: 'differenza', conflitto: 'conflitto', incompatibile: 'incompatibile', compromesso: 'compromesso', 'non-rilevato': 'dato non disponibile' };
+// Concrete activities with the allies: a meeting, a programme table, a territorial initiative, a press conference, a mobilisation. Each has cost, duration and odds that depend on the allies.
+const ACTIVITY_STATUS = { 'in-corso': ['In corso', 'warn'], riuscita: ['Riuscita', 'good'], parziale: ['A metà', 'neutral'], fallita: ['Fallita', 'bad'], annullata: ['Annullata', 'neutral'] };
+function activitiesPanel(alliance, members, options, secretary) {
+  const kinds = options.allyKinds?.();
+  if (!kinds) return '';
+  const partners = members.filter(member => !member.isPlayer);
+  const mine = (options.allyActivities?.() ?? []).filter(item => item.allianceId === alliance.id);
+  const open = mine.filter(item => item.status === 'in-corso');
+  const funds = options.funds ?? 0, capital = options.capital ?? 0;
+  const rows = Object.values(kinds).map(kind => {
+    const partner = kind.target === 'partner' ? `<select data-ally-partner="${esc(kind.id)}" aria-label="Alleato">${partners.map(member => `<option value="${esc(member.id)}">${esc(member.label)}</option>`).join('')}</select>` : `<small>con tutti gli alleati</small>`;
+    const odds = options.allyOdds?.(kind.id, kind.target === 'partner' ? partners[0]?.id ?? null : null);
+    const cost = [kind.cost.funds ? `${kind.cost.funds.toLocaleString('it-IT')} €` : '', kind.cost.capital ? `${kind.cost.capital} capitale politico` : '', `${kind.cost.days} ${kind.cost.days === 1 ? 'giorno' : 'giorni'}`].filter(Boolean).join(' · ');
+    const blocked = !secretary || funds < kind.cost.funds || capital < kind.cost.capital || open.length >= 2 || open.some(item => item.kind === kind.id);
+    const why = !secretary ? 'Solo il segretario può farlo.' : open.length >= 2 ? 'Due attività sono già in corso.' : open.some(item => item.kind === kind.id) ? 'Già in corso.' : funds < kind.cost.funds ? 'Fondi insufficienti.' : capital < kind.cost.capital ? 'Capitale politico insufficiente.' : '';
+    return `<li class="ally-activity" data-ally-kind="${esc(kind.id)}"><div><strong>${esc(kind.label)}</strong><small>${esc(kind.hint)}</small><small>${esc(cost)} · dura ${kind.weeks} ${kind.weeks === 1 ? 'settimana' : 'settimane'}${odds ? ` · probabilità di riuscita circa ${Math.round(odds.chance * 100)}%` : ''}</small>${why ? `<small class="force-strategy">${esc(why)}</small>` : ''}</div><div class="ally-activity-do">${partner}<button type="button" class="primary-button compact" data-ally-start="${esc(kind.id)}"${blocked ? ' disabled aria-disabled="true"' : ''}>Avvia</button></div></li>`;
+  }).join('');
+  const history = mine.slice(0, 6).map(item => { const [label, tone] = ACTIVITY_STATUS[item.status] ?? [item.status, 'neutral']; return `<li class="ally-run tone-${tone}" data-ally-run="${esc(item.status)}"><span class="badge">${esc(label)}</span> <strong>${esc(item.label)}</strong> ${item.status === 'in-corso' ? `<small>fino alla settimana ${item.endsWeek}</small>` : `<small>${esc(item.text ?? '')}</small>`}</li>`; }).join('');
+  return `<details class="ally-activities" data-ally-activities><summary>Attività con gli alleati${open.length ? ` · ${open.length} in corso` : ''}</summary><p class="quiet-copy">Fare cose insieme tiene unita l’alleanza: quando va bene salgono coesione e rapporti, quando va male le tensioni crescono. L’esito dipende dalla coesione, dai rapporti con gli alleati e dai programmi.</p><ul class="ally-activity-list">${rows}</ul>${history ? `<h4>Ultime attività</h4><ul class="ally-run-list">${history}</ul>` : ''}</details>`;
+}
 function programPanel(members, options, secretary) {
   if (!options.programAnalysis) return '';
   const partners = members.filter(member => !member.isPlayer);
@@ -312,6 +332,7 @@ export function myCoalitionPanel(state, world, index, poll, options = {}) {
     ${registeredHtml}
     ${registrationPanel(alliance, options, secretary)}${talksPanel(alliance, options, secretary)}${requestsPanel(options)}
     ${programPanel(members, options, secretary)}
+    ${activitiesPanel(alliance, members, options, secretary)}
     ${terms ? `<h4>Condizioni e accordi</h4><ul class="coalition-terms">${terms}</ul>` : '<p class="quiet-copy">Nessuna condizione particolare è stata concordata.</p>'}
     ${history ? `<h4>Cronologia</h4><ul class="coalition-history">${history}</ul>` : ''}
     <div class="coalition-actions">${invite}${leave}</div></section>`;

@@ -22,7 +22,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .icon-button:hover { border-color: var(--accent); color: var(--accent); }
 .advance-button, .primary-button { background: var(--accent); color: var(--accent-ink); font-weight: 750; border: 0; }
 .advance-button:hover, .primary-button:hover { background: var(--gold-soft); color: var(--accent-ink); }
-.advance-button:disabled, .primary-button:disabled { background: var(--line); color: #8c907b; transform: none; cursor: not-allowed; }
+/* Disabled gold stays gold (dimmed, with dark text), never grey: the palette of the game is the gold of the main actions and the dark of the secondary ones. */
+.advance-button:disabled, .primary-button:disabled { background: rgba(196,166,106,.34); color: rgba(26,21,7,.62); transform: none; cursor: not-allowed; }
+/* Every button of the game has one of the two looks. A button that no rule of its own styles (a bare «button», a local class) gets the dark one, never the browser's grey: the selector has no weight, so every
+   specific rule of the game wins over it. */
+:where(button, input[type="button"], input[type="submit"], input[type="reset"]) { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line-strong); border-radius: var(--radius, 6px); font-family: var(--font-ui, inherit); font-weight: 700; }
+:where(button, input[type="button"], input[type="submit"], input[type="reset"]):hover:not(:disabled) { border-color: var(--accent); color: #fff; }
+:where(button, input[type="button"], input[type="submit"], input[type="reset"]):disabled { opacity: .5; cursor: not-allowed; }
 .secondary-button { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line-strong); }
 .secondary-button:hover:not(:disabled) { border-color: var(--accent); color: #fff; }
 .secondary-button:disabled { opacity: .5; cursor: not-allowed; }
@@ -1493,3 +1499,98 @@ button:not(:disabled):active, a.primary-button:active, a.secondary-button:active
 .guide-steps .go-button { margin-left: 8px; min-height: 36px; vertical-align: middle; }
 .tutorial-actions .go-button { min-height: 44px; }
 @media (prefers-reduced-motion: reduce) { .go-button { transition: none; } .go-button:active { transform: none; } }
+
+/* The path of a citizens' request: received → taken in charge → started → outcome (green satisfied, red failed or ignored, neutral rejected). */
+.req-path { display: flex; flex-wrap: wrap; gap: 4px; list-style: none; margin: 8px 0; padding: 0; counter-reset: req; }
+.req-path li { counter-increment: req; padding: 4px 10px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--panel-2); color: var(--ink-3); font-size: 12px; font-weight: 650; }
+.req-path li.is-done { border-color: rgba(95,181,138,.55); color: #8fd1ae; }
+.req-path li.is-now { border-color: var(--accent); background: var(--accent-soft); color: var(--gold-light); }
+.req-path li.is-now.is-realizzata { border-color: rgba(95,181,138,.7); background: rgba(95,181,138,.16); color: #9fe0bd; }
+.req-path li.is-now.is-fallita, .req-path li.is-now.is-ignorata { border-color: rgba(214,106,94,.7); background: rgba(214,106,94,.14); color: #f0a79d; }
+
+/* Semantic colours of the institutional sections (alliances, coalitions, initiatives, signatures, referendums, statutes): green = success/agreements, red = conflicts/crises, blue = institutions, violet = diplomacy, orange = activities and campaigns, gold = the main action. Only the new sections use them. */
+:root { --sem-good: #4cae7a; --sem-bad: #d9625b; --sem-institution: #5a8fd8; --sem-diplomacy: #9a7ad6; --sem-campaign: #e0944a; --sem-main: #d9b24c; }
+.ref-page .ref-card { display: block; }
+.ref-tone-abrogativo { border-left: 4px solid var(--sem-campaign); }
+.ref-tone-costituzionale { border-left: 4px solid var(--sem-institution); }
+.ref-compare { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.ref-col { padding: 12px; border-radius: 12px; border: 1px solid rgba(127, 140, 134, .3); }
+.ref-col h4 { margin: 0 0 6px; }
+.ref-col ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.ref-question { font-weight: 700; margin: 8px 0; overflow-wrap: anywhere; }
+.ref-path { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; margin: 4px 0 10px; }
+.ref-path li { padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(127, 140, 134, .4); font-size: .85rem; opacity: .75; }
+.ref-path li.is-done { border-color: var(--sem-good); opacity: 1; }
+.ref-path li.is-now { border-color: var(--sem-main); background: rgba(217, 178, 76, .16); opacity: 1; font-weight: 700; }
+.ref-bars { display: grid; grid-template-columns: auto 1fr auto; gap: 6px 10px; align-items: center; margin: 8px 0; }
+.ref-bars .ini-bar { margin: 0; }
+.ref-bar.is-yes i { background: var(--sem-good); }
+.ref-bar.is-no i { background: var(--sem-bad); }
+.ref-sides, .ref-actions, .ref-routes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; }
+.ref-actions button small { display: block; opacity: .8; font-weight: 400; }
+.ref-events { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px; }
+.ref-events li.good { color: var(--sem-good); } .ref-events li.bad { color: var(--sem-bad); }
+.ref-figures { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px; }
+.ref-councils fieldset, .ref-scope { border: 1px solid rgba(127, 140, 134, .3); border-radius: 12px; padding: 10px; display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.ref-scope { grid-template-columns: 1fr; }
+.ref-region.is-used { opacity: .6; }
+.ref-outcome { font-weight: 600; margin: 8px 0; }
+.statute-board .statute-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 8px; }
+.statute-row { display: grid; gap: 6px; padding: 10px; border: 1px solid rgba(127, 140, 134, .3); border-left: 4px solid var(--sem-institution); border-radius: 12px; }
+.statute-row.is-abrogata { border-left-color: var(--sem-bad); opacity: .85; }
+.statute-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 520px) { .ref-bars { grid-template-columns: auto 1fr; } .ref-bars b { grid-column: 2; } .ref-actions button, .ref-routes button { width: 100%; } }
+.ally-activities { margin: 10px 0; border: 1px solid rgba(127, 140, 134, .3); border-left: 4px solid var(--sem-campaign); border-radius: 12px; padding: 8px 12px; }
+.ally-activities > summary { cursor: pointer; font-weight: 700; }
+.ally-activity-list, .ally-run-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 8px; }
+.ally-activity { display: flex; flex-wrap: wrap; gap: 8px 12px; justify-content: space-between; align-items: center; padding: 10px; border: 1px solid rgba(127, 140, 134, .25); border-radius: 10px; }
+.ally-activity small { display: block; opacity: .85; }
+.ally-activity-do { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ally-run.tone-good { border-left: 3px solid var(--sem-good); padding-left: 8px; } .ally-run.tone-bad { border-left: 3px solid var(--sem-bad); padding-left: 8px; }
+@media (max-width: 520px) { .ally-activity { flex-direction: column; align-items: stretch; } .ally-activity-do select, .ally-activity-do button { width: 100%; } }
+.territory-page { display: grid; gap: 14px; }
+.tp-controls { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); align-items: end; }
+.tp-controls label { display: grid; gap: 4px; }
+.tp-controls .tp-search { grid-column: 1 / -1; }
+.tp-controls input, .tp-controls select { width: 100%; box-sizing: border-box; min-height: 44px; }
+.tp-hits ul { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 6px; }
+.tp-hits li small { opacity: .8; display: block; }
+.tp-status { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.tp-leads { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 6px; }
+.tp-leads li { display: grid; grid-template-columns: minmax(110px, 1.2fr) 2fr auto; gap: 8px; align-items: center; }
+.tp-bar { display: block; height: 10px; border-radius: 999px; background: rgba(127, 140, 134, .25); overflow: hidden; }
+.tp-bar i { display: block; height: 100%; border-radius: inherit; }
+.tp-pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 10px 0; }
+.tp-compare { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 10px; }
+.tp-compare label { display: grid; gap: 4px; }
+.tp-table td.num, .tp-table th.num { white-space: nowrap; }
+@media (max-width: 520px) { .tp-leads li { grid-template-columns: 1fr auto; } .tp-leads .tp-bar { grid-column: 1 / -1; } .tp-pager { justify-content: center; } }
+.birth-field { border: 1px solid rgba(127, 140, 134, .35); border-radius: 12px; padding: 10px 12px; margin: 0; display: grid; gap: 8px; }
+.birth-field legend { padding: 0 6px; font-weight: 600; }
+.birth-row { display: grid; grid-template-columns: 1fr 2fr 1.4fr; gap: 10px; }
+.birth-row label { display: grid; gap: 4px; }
+.birth-row input, .birth-row select { width: 100%; box-sizing: border-box; min-height: 48px; font-size: 1.05rem; }
+.birth-hint { opacity: .9; } .birth-hint.is-error { color: var(--sem-bad, #d9625b); font-weight: 600; opacity: 1; }
+@media (max-width: 360px) { .birth-row { grid-template-columns: 1fr 1.6fr 1.2fr; gap: 6px; } }
+.guide-card:has(.guide-fold):not([hidden]) { display: block; padding: 0; }
+.guide-fold { display: block; }
+.guide-fold > summary { list-style: none; display: flex; gap: 12px; align-items: flex-start; padding: 14px; cursor: pointer; min-height: 44px; }
+.guide-fold > summary::-webkit-details-marker { display: none; }
+.guide-fold > summary::after { content: ''; margin-left: auto; align-self: center; width: 8px; height: 8px; border-right: 2px solid var(--accent); border-bottom: 2px solid var(--accent); transform: rotate(45deg); transition: transform .15s; flex: none; }
+.guide-fold[open] > summary::after { transform: rotate(-135deg); }
+.guide-sum { display: grid; gap: 2px; min-width: 0; }
+.guide-sum small { color: var(--ink-2); font-size: 12.5px; line-height: 1.4; }
+.guide-body { padding: 0 14px 14px 46px; }
+@media (max-width: 520px) { .guide-body { padding-left: 14px; } }
+
+.guide-sum small { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.guide-fold[open] > summary .guide-sum small { display: none; }
+/* the semantic colour of the new sections, in one place: alliances and coalitions violet (diplomacy), initiatives and signature drives orange (campaigns), referendums blue (institutions), agreements green, crises red */
+.my-coalition { border-left: 4px solid var(--sem-diplomacy); padding-left: 12px; }
+.my-coalition [data-coalition-state], .coalition-terms li.is-kept { color: var(--sem-good); }
+.my-coalition [data-coalition-crisis] { border-left: 3px solid var(--sem-bad); }
+.ini-page .ini-head + .ini-progress .ini-bar i { background: var(--sem-campaign); }
+.ini-bar.is-full i { background: var(--sem-good); }
+.ini-ready { color: var(--sem-good); } .ini-warning { color: var(--sem-bad); }
+.statute-row { border-left-color: var(--sem-institution); }
+.ref-card .sx-card { border-left-width: 4px; }

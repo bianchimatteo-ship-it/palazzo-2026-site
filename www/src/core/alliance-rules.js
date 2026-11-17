@@ -33,12 +33,14 @@ const addDays = (date, days) => new Date(Date.parse(`${date}T12:00:00Z`) + days 
 export function positionOf(world, party, themeId) {
   const fixed = world?.programPositions?.[party?.id]?.[themeId];
   if (Number.isFinite(fixed)) return fixed;
-  const axis = Number.isFinite(party?.axis) ? party.axis : 0;
+  // No documented collocazione and nothing fixed by the player: the position is NOT known (null), never an invented middle one.
+  if (!Number.isFinite(party?.axis)) return null;
+  const axis = party.axis;
   const own = ((hashOf(`${party?.id}|${themeId}`) % 3) - 1) * 0.5;
   return round1(clamp(axis * (FACTOR[themeId] ?? 0.8) + (Math.abs(axis) >= 3 ? 0 : own), -3, 3));
 }
 export const programOf = (world, party) => Object.fromEntries(THEMES.map(theme => [theme.id, positionOf(world, party, theme.id)]));
-export const stanceText = (themeId, value) => { const theme = THEME_BY_ID[themeId]; return value <= -1.5 ? theme.low : value >= 1.5 ? theme.high : 'posizione intermedia'; };
+export const stanceText = (themeId, value) => { const theme = THEME_BY_ID[themeId]; if (!Number.isFinite(value)) return 'posizione non rilevata'; return value <= -1.5 ? theme.low : value >= 1.5 ? theme.high : 'posizione intermedia'; };
 const levelOf = gap => gap <= 1 ? 'accordo' : gap <= 2 ? 'differenza' : gap < HARD_GAP ? 'conflitto' : 'incompatibile';
 
 // The programme of two forces compared theme by theme: the rows with the positions, the gap and the level, the overall compatibility (0..1, weighted) and the hard conflicts still to be negotiated.
@@ -48,13 +50,16 @@ export function compare(world, a, b) {
   const rows = THEMES.map(theme => {
     const agreed = settled[theme.id];
     const pa = agreed ? agreed.value : positionOf(world, a, theme.id), pb = agreed ? agreed.value : positionOf(world, b, theme.id);
+    // a theme where one of the two positions is not documented is told as such: it counts neither as agreement nor as conflict, and not in the score
+    if (!Number.isFinite(pa) || !Number.isFinite(pb)) return { id: theme.id, label: theme.label, a: pa, b: pb, aText: stanceText(theme.id, pa), bText: stanceText(theme.id, pb), gap: null, level: 'non-rilevato', veto: theme.veto, weight: theme.weight, compromise: null };
     const gap = round1(Math.abs(pa - pb));
     return { id: theme.id, label: theme.label, a: pa, b: pb, aText: stanceText(theme.id, pa), bText: stanceText(theme.id, pb), gap, level: agreed ? 'compromesso' : levelOf(gap), veto: theme.veto, weight: theme.weight, compromise: agreed ?? null };
   });
-  const max = rows.reduce((sum, row) => sum + row.weight * 6, 0);
-  const score = 1 - rows.reduce((sum, row) => sum + row.weight * row.gap, 0) / max;
+  const known = rows.filter(row => row.level !== 'non-rilevato');
+  const max = known.reduce((sum, row) => sum + row.weight * 6, 0);
+  const score = max ? 1 - known.reduce((sum, row) => sum + row.weight * row.gap, 0) / max : 0.5;
   return {
-    rows, score: Math.round(score * 100) / 100,
+    rows, score: Math.round(score * 100) / 100, missing: rows.length - known.length,
     agreements: rows.filter(row => row.level === 'accordo' || row.level === 'compromesso'),
     conflicts: rows.filter(row => row.level === 'conflitto' || row.level === 'incompatibile'),
     hard: rows.filter(row => row.veto && row.level === 'incompatibile')

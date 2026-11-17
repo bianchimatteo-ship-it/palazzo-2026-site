@@ -56,14 +56,20 @@ export const normalizeAvatar = (value, fallback = DEFAULT_AVATAR) => {
 // take the stable default of the character), or the stable default of a career made before avatars.
 // A random look: every trait is drawn from its own options with the generator given (Math.random in the wizard, a seeded one in the tests). The face (masculine or feminine) is drawn too; beard and moustache
 // are drawn for the masculine face only (a choice of this generator, not a rule of the drawings), glasses one time in four. The proportions of the face stay as they are (the sliders are the player's own choice).
-export function randomAvatar(rand = Math.random, { keepShape = null } = {}) {
+// `gender` (the one chosen in the wizard: 'uomo' / 'donna', also 'maschile' / 'femminile'): the face follows it, the other traits stay random; with another or no value the face is drawn too.
+const FACE_OF_GENDER = Object.freeze({ uomo: 'maschile', maschile: 'maschile', donna: 'femminile', femminile: 'femminile' });
+export function randomAvatar(rand = Math.random, { keepShape = null, gender = null } = {}) {
   const pick = field => AVATAR_OPTIONS[field][Math.min(AVATAR_OPTIONS[field].length - 1, Math.floor(rand() * AVATAR_OPTIONS[field].length))].id;
-  const face = pick('face');
+  const drawn = pick('face');
+  const face = FACE_OF_GENDER[String(gender ?? '').toLowerCase()] ?? drawn;
   const masculine = face === 'maschile';
   const beard = masculine && rand() < 0.4 ? pick('beard') : 'nessuna';
   const moustache = masculine && beard === 'nessuna' && rand() < 0.2 ? pick('moustache') : 'nessuno';
   const glasses = rand() < 0.25 ? AVATAR_OPTIONS.glasses[1 + Math.floor(rand() * (AVATAR_OPTIONS.glasses.length - 1))].id : 'nessuno';
-  const out = { face, skin: pick('skin'), hair: pick('hair'), hairstyle: pick('hairstyle'), beard, glasses, jacket: pick('jacket'), eyes: pick('eyes'), expression: pick('expression'), moustache };
+  const hairstyle = pick('hairstyle');
+  // a receding hairline is a masculine style: for a feminine face the next style of the list is taken (the variety stays)
+  const hairs = AVATAR_OPTIONS.hairstyle, hairstyleId = face === 'femminile' && hairstyle === 'stempiato' ? hairs[(hairs.findIndex(item => item.id === hairstyle) + 1) % hairs.length].id : hairstyle;
+  const out = { face, skin: pick('skin'), hair: pick('hair'), hairstyle: hairstyleId, beard, glasses, jacket: pick('jacket'), eyes: pick('eyes'), expression: pick('expression'), moustache };
   return normalizeAvatar(keepShape ? { ...out, shape: keepShape } : out);
 }
 export const avatarOf = player => player ? (player.avatar && typeof player.avatar === 'object' && !Array.isArray(player.avatar) ? normalizeAvatar(player.avatar, defaultAvatarFor(player.id)) : defaultAvatarFor(player.id)) : { ...DEFAULT_AVATAR };
