@@ -67,7 +67,7 @@ import { CADRE_ACTIONS } from '../data/simulation/party-life-rules.js?v=20261117
 import { TREASURY_OPERATIONS } from '../data/simulation/finance-rules.js?v=20261117-3';
 import { FINANCING as MINISTRY_FINANCING, MINISTRY_RULES, answerCrisis as answerMinistryCrisis, holdSession, lobbyColleague, newMinistry, openProposals, prepareProposal, respondAssignment, setPriority as setMinistryPriority, submitProposal, tickMinistry, withdrawProposal } from './ministry-engine.js?v=20261117-3';
 import { dueReminders, markReminded } from './promise-reminders.js?v=20261117-3';
-import { REQUEST_RULES, actionsFor as requestActionsFor, advanceRequest, generateRequest, openRequests, takeAction as takeRequestAction } from './citizen-requests-engine.js?v=20261117-3';
+import { REQUEST_RULES, actionsFor as requestActionsFor, advanceRequest, generateRequest, linkOf as requestLinkOf, openRequests, takeAction as takeRequestAction } from './citizen-requests-engine.js?v=20261117-3';
 import { INITIATIVE_KINDS, advanceCollection, advanceParliamentPhase, createInitiative, depositInitiative as depositInitiativeRecord, endingEffects as initiativeEnding, isActive as initiativeActive, organize as organizeInitiativeRecord, overview as initiativeOverview, settleVerification, weeklyCost as initiativeWeeklyCost, withdraw as withdrawInitiativeRecord } from './initiative-engine.js?v=20261117-3';
 import { advanceSociety, applyBudgetPlan, applyLawToSociety, applySocialTable, applySpendingReview, calibrateWeights, createSociety, explainMood, measureDesign, mediaEvent, normalizeSociety, provisionalBudget, publicBudgetChoice, regionAttention, revokeMeasure, scheduleRegionalEffects, segmentAttention, societyMood, societyShock, observatorySociety } from './society-engine.js?v=20261117-3';
 import { ACTIVITY_MEDIA, INDICATORS, ISSUE_TOPICS, SEGMENTS } from '../data/simulation/society-rules.js?v=20261117-3';
@@ -1814,12 +1814,16 @@ function tickSociety(s, date, report) {
     const fresh = generateRequest(list, { week: report.week, date, region, areas: requestAreas({ ...s, game, society }), seed: s.career?.id ?? 'carriera' });
     if (fresh) { list.unshift(fresh); lines.push(fresh.text); promiseNotes.push({ kind: 'richiesta', title: `Nuova richiesta: ${fresh.requesterLabel} su ${fresh.areaLabel.toLowerCase()}`, tone: 'good' }); }
     game.requests = list.map(item => {
-      const out = advanceRequest(item, { week: report.week, date, influence: playerStat(s, 'influence', 50), seed: s.career?.id ?? 'carriera' });
+      const link = item.linked ? requestLinkOf(item, { promises: game.promises ?? [], initiatives: game.initiatives ?? [] }) : null;
+      const out = advanceRequest(item, { week: report.week, date, influence: playerStat(s, 'influence', 50), seed: s.career?.id ?? 'carriera', link });
+      if (link?.id && !out.request.initiativeId) out.request.initiativeId = link.id;
+      // a step of the cycle that is not an ending (taken in charge, started): the diary tells it
+      if (out.step) { lines.push(out.step); remember(game, { date, kind: 'richiesta-fase', text: `Richiesta su ${item.areaLabel.toLowerCase()} in ${item.region}: ${out.step}`, region: item.region, weight: 0.3 }); }
       if (out.effects) {
         deltas.reputation += out.effects.reputation ?? 0; deltas.popularity = (deltas.popularity ?? 0) + (out.effects.popularity ?? 0); deltas.notoriety = (deltas.notoriety ?? 0) + (out.effects.notoriety ?? 0);
         if (out.effects.attention && item.region) society = regionAttention(society, item.region, out.effects.attention);
         if (out.indicator) { const spec = AREA_BY_ID[item.area]?.regional ?? {}; society = scheduleRegionalEffects(society, { region: item.region, indicators: Object.fromEntries(Object.keys(spec).map(id => [id, out.indicator])), phase: 4, lasting: true, cause: `Intervento diretto: ${item.areaLabel}` }); }
-        if (out.headline) { lines.push(out.headline); promiseNotes.push({ kind: 'richiesta', title: out.headline, tone: out.tone === 'bad' ? 'bad' : 'good' }); remember(game, { date, kind: 'richiesta-chiusa', text: out.request.outcome, region: item.region, weight: 0.5 }); }
+        if (out.headline) { lines.push(out.headline); promiseNotes.push({ kind: 'richiesta', title: out.headline, tone: out.tone === 'bad' ? 'bad' : 'good' }); remember(game, { date, kind: 'richiesta-chiusa', text: out.request.outcome, region: item.region, weight: 0.5 }); game.log = [{ id: `diario-richiesta-${item.id}-${report.week}`, week: report.week, date, kind: 'richiesta', title: out.headline, lines: [out.request.outcome], tone: out.tone === 'bad' ? 'bad' : 'good', source: DATA_SOURCES.SIMULATION }, ...(game.log ?? [])].slice(0, 400); }
       }
       return out.request;
     }).slice(0, 40);
@@ -4716,8 +4720,17 @@ export const store = {
     state = { ...state, game: spent, parliament: withCapital(state.parliament, spent) };
     let program = null;
     if (actionId === 'promessa') {
-      try { program = store.makePromise({ area: current.area, scope: 'candidato', instrument: 'investimento', ambition: 'media', region: current.region, source: `richiesta ${current.id}` }); }
-      catch (error) { state = { ...state, ui: { ...state.ui, toast: error.message } }; }
+      try {
+        program = store.makePromise({ area: current.area, scope: 'candidato', instrument: 'investimento', ambition: 'media', region: current.region, source: `richiesta ${current.id}` });
+        // the request is bound to the promise: it is satisfied only when the promise is kept
+        const bound = deepCopy(state.game); bound.requests = requestsOf(bound).map(item => item.id === id ? { ...item, promiseId: program.promise.id } : item);
+        state = { ...state, game: bound };
+      }
+      catch (error) {
+        // without a promise there is nothing to wait for: the request goes back to the player, who can choose another answer
+        const back = deepCopy(state.game); back.requests = requestsOf(back).map(item => item.id === id ? { ...current } : item);
+        state = { ...state, game: back, ui: { ...state.ui, toast: error.message } };
+      }
     }
     state = applyStatDeltas(state, { reputation: out.effects.reputation ?? 0 });
     if (actionId !== 'promessa' || !program) state = { ...state, ui: { ...state.ui, toast: out.request.status === 'in-corso' ? `${out.request.history[0].text} La risposta arriva fra qualche settimana.` : out.request.outcome } };

@@ -1499,3 +1499,11 @@ button:not(:disabled):active, a.primary-button:active, a.secondary-button:active
 .guide-steps .go-button { margin-left: 8px; min-height: 36px; vertical-align: middle; }
 .tutorial-actions .go-button { min-height: 44px; }
 @media (prefers-reduced-motion: reduce) { .go-button { transition: none; } .go-button:active { transform: none; } }
+
+/* The path of a citizens' request: received → taken in charge → started → outcome (green satisfied, red failed or ignored, neutral rejected). */
+.req-path { display: flex; flex-wrap: wrap; gap: 4px; list-style: none; margin: 8px 0; padding: 0; counter-reset: req; }
+.req-path li { counter-increment: req; padding: 4px 10px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--panel-2); color: var(--ink-3); font-size: 12px; font-weight: 650; }
+.req-path li.is-done { border-color: rgba(95,181,138,.55); color: #8fd1ae; }
+.req-path li.is-now { border-color: var(--accent); background: var(--accent-soft); color: var(--gold-light); }
+.req-path li.is-now.is-realizzata { border-color: rgba(95,181,138,.7); background: rgba(95,181,138,.16); color: #9fe0bd; }
+.req-path li.is-now.is-fallita, .req-path li.is-now.is-ignorata { border-color: rgba(214,106,94,.7); background: rgba(214,106,94,.14); color: #f0a79d; }
