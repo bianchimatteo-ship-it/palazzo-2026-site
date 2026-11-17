@@ -1,10 +1,10 @@
-import { mountApp } from './ui/app.js?v=20261117-4';
-import { refreshSharedArchive } from './data/repositories/admin-sync.js?v=20261117-4';
-import { isNativeApp } from './data/repositories/account-sync.js?v=20261117-4';
-import { store } from './core/store.js?v=20261117-4';
-import { isRealCollectionLoaded, loadRealCollectionsSettled, loadRealDatabase, loadOptionalRealDocument, loadRealDocument, realDatabase, realDataUrls, refreshAdminOverrides } from './data/repositories/real-data.js?v=20261117-4';
-import { PARTY_LINK_COLLECTIONS, governingEntityIds } from './data/repositories/party-links.js?v=20261117-4';
-import { referenceGovernmentSpec } from './data/repositories/government-reference.js?v=20261117-4';
+import { mountApp } from './ui/app.js?v=20261117-5';
+import { refreshSharedArchive } from './data/repositories/admin-sync.js?v=20261117-5';
+import { isNativeApp } from './data/repositories/account-sync.js?v=20261117-5';
+import { store } from './core/store.js?v=20261117-5';
+import { isRealCollectionLoaded, loadRealCollectionsSettled, loadRealDatabase, loadOptionalRealDocument, loadRealDocument, realDatabase, realDataUrls, refreshAdminOverrides } from './data/repositories/real-data.js?v=20261117-5';
+import { PARTY_LINK_COLLECTIONS, governingEntityIds } from './data/repositories/party-links.js?v=20261117-5';
+import { referenceGovernmentSpec } from './data/repositories/government-reference.js?v=20261117-5';
 
 const BUILD = new URL(import.meta.url).searchParams.get('v');
 // iPhone and iPad (WKWebView, viewport-fit=cover): the content may run under the notch, the Dynamic Island and the home indicator, so the iOS-only rules of theme.css (class platform-ios) keep it inside the safe area.

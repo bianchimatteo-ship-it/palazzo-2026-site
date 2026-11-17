@@ -1,8 +1,8 @@
-import { campaignScope } from '../core/campaign-engine.js?v=20261117-4';
-import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261117-4';
-import { formatDate } from '../core/time.js?v=20261117-4';
-import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261117-4';
-import { distinctSeries, sparkline } from './charts.js?v=20261117-4';
+import { campaignScope } from '../core/campaign-engine.js?v=20261117-5';
+import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261117-5';
+import { formatDate } from '../core/time.js?v=20261117-5';
+import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261117-5';
+import { distinctSeries, sparkline } from './charts.js?v=20261117-5';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const pctFormats = new Map();
@@ -380,7 +380,7 @@ export function forcesGrid(state, world, poll, index, logo, realLeader, secretar
     </article>`;
   }).join('');
   const note = player && !secretary ? '<p class="parliament-note">Alleanze e rotture le decide il segretario del partito: da iscritto o dirigente puoi solo influenzare i rapporti con le tue attività.</p>' : '';
-  return `${note}${player ? myCoalitionPanel(state, world, index, poll, { secretary, windowClosed: options.windowClosed, inviteOdds: options.inviteOdds, programAnalysis: options.programAnalysis, allianceTalkOptions: options.allianceTalkOptions, allianceRequests: options.allianceRequests, coalitionElections: options.coalitionElections, refusedUntil: options.refusedUntil, inviteBlock: options.inviteBlock }) : ''}<div class="force-grid">${rows}</div>`;
+  return `${note}${player ? myCoalitionPanel(state, world, index, poll, { secretary, windowClosed: options.windowClosed, allyKinds: options.allyKinds, allyActivities: options.allyActivities, allyOdds: options.allyOdds, funds: options.funds, capital: options.capital, inviteOdds: options.inviteOdds, programAnalysis: options.programAnalysis, allianceTalkOptions: options.allianceTalkOptions, allianceRequests: options.allianceRequests, coalitionElections: options.coalitionElections, refusedUntil: options.refusedUntil, inviteBlock: options.inviteBlock }) : ''}<div class="force-grid">${rows}</div>`;
 }
 
 // The reason of a way out of the polls, with the figures that decided it: the SIMULATED consensus (what the thresholds read), the weeks it was held, the state it was in and for how long, and
@@ -469,7 +469,7 @@ export function renderPollsPage(state, options = {}) {
       ${panel('TERRITORIO', 'Il tuo partito regione per regione', regionalMap(world, poll))}
       ${panel('CRONACA POLITICA', 'Cosa muove i sondaggi', chronicle(world, 6))}
     </div>
-    ${panel('PARTITI REALI · COMPORTAMENTI SIMULATI', 'Le forze in campo', forcesGrid(state, world, poll, index, logo, options.realLeader, options.secretary, { allianceOdds: options.allianceOdds, inviteOdds: options.inviteOdds, programAnalysis: options.programAnalysis, allianceTalkOptions: options.allianceTalkOptions, allianceRequests: options.allianceRequests, coalitionElections: options.coalitionElections, refusedUntil: options.refusedUntil, inviteBlock: options.inviteBlock, allianceBlock: options.allianceBlock }))}
+    ${panel('PARTITI REALI · COMPORTAMENTI SIMULATI', 'Le forze in campo', forcesGrid(state, world, poll, index, logo, options.realLeader, options.secretary, { allianceOdds: options.allianceOdds, inviteOdds: options.inviteOdds, programAnalysis: options.programAnalysis, allianceTalkOptions: options.allianceTalkOptions, allianceRequests: options.allianceRequests, coalitionElections: options.coalitionElections, refusedUntil: options.refusedUntil, inviteBlock: options.inviteBlock, allianceBlock: options.allianceBlock, allyKinds: options.allyKinds, allyActivities: options.allyActivities, allyOdds: options.allyOdds, funds: options.funds, capital: options.capital }))}
     ${panel('PRESENZA NEI SONDAGGI · SIMULAZIONE', 'Chi entra e chi esce', presencePanel(world))}
     <div class="poll-grid">
       ${panel('ALLEANZE · SIMULATE', 'Intese e rotture', alliances)}

@@ -1564,7 +1564,7 @@ button:not(:disabled):active, a.primary-button:active, a.secondary-button:active
 .tp-compare { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 10px; }
 .tp-compare label { display: grid; gap: 4px; }
 .tp-table td.num, .tp-table th.num { white-space: nowrap; }
-@media (max-width: 520px) { .tp-leads li { grid-template-columns: 1fr auto; } .tp-leads .tp-bar { grid-column: 1 / -1; } .tp-pager { justify-content: center; } }
+@media (max-width: 520px) { .tp-leads li { grid-template-columns: 1fr auto; } .tp-leads li > b { grid-column: 2; grid-row: 1; } .tp-leads .tp-bar { grid-column: 1 / -1; grid-row: 2; } .tp-pager { justify-content: center; } }
 .birth-field { border: 1px solid rgba(127, 140, 134, .35); border-radius: 12px; padding: 10px 12px; margin: 0; display: grid; gap: 8px; }
 .birth-field legend { padding: 0 6px; font-weight: 600; }
 .birth-row { display: grid; grid-template-columns: 1fr 2fr 1.4fr; gap: 10px; }
@@ -1594,3 +1594,5 @@ button:not(:disabled):active, a.primary-button:active, a.secondary-button:active
 .ini-ready { color: var(--sem-good); } .ini-warning { color: var(--sem-bad); }
 .statute-row { border-left-color: var(--sem-institution); }
 .ref-card .sx-card { border-left-width: 4px; }
+/* results by territory on a phone: the list names are long («Partito democratico»), so the label takes what it needs and the value stays on its right instead of running over it */
+@container (max-width: 520px) { .sx-table.tp-table td { grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; } .sx-table.tp-table td::before { overflow-wrap: anywhere; text-align: left; } .sx-table.tp-table td.num { text-align: right; } }

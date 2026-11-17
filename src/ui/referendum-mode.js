@@ -1,9 +1,9 @@
 // The page «Referendum»: the abrogative one (art. 75) and the constitutional confirmatory one (art. 138), kept apart in rules, phases, quorum and effects. Every button calls the store: nothing is decorative.
 // Figures of the votes are a simulation of the game (never a real result).
-import { ABROGATIVE, CONSTITUTIONAL, CAMPAIGN_ACTIONS, COUNCIL_ROUTE, EXCLUDED, PHASES, pathOf, isActive } from '../core/referendum-engine.js?v=20261117-4';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261117-4';
-import { badge, card, empty, esc, kpi } from './sections-kit.js?v=20261117-4';
-import { formatDate } from '../core/time.js?v=20261117-4';
+import { ABROGATIVE, CONSTITUTIONAL, CAMPAIGN_ACTIONS, COUNCIL_ROUTE, EXCLUDED, PHASES, pathOf, isActive } from '../core/referendum-engine.js?v=20261117-5';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261117-5';
+import { badge, card, empty, esc, kpi } from './sections-kit.js?v=20261117-5';
+import { formatDate } from '../core/time.js?v=20261117-5';
 
 const number = value => Math.round(Number(value) || 0).toLocaleString('it-IT');
 const pct = value => `${(Math.round(value * 10) / 10).toLocaleString('it-IT')}%`;
