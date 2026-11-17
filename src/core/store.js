@@ -68,6 +68,7 @@ import { TREASURY_OPERATIONS } from '../data/simulation/finance-rules.js?v=20261
 import { FINANCING as MINISTRY_FINANCING, MINISTRY_RULES, answerCrisis as answerMinistryCrisis, holdSession, lobbyColleague, newMinistry, openProposals, prepareProposal, respondAssignment, setPriority as setMinistryPriority, submitProposal, tickMinistry, withdrawProposal } from './ministry-engine.js?v=20261117-3';
 import { dueReminders, markReminded } from './promise-reminders.js?v=20261117-3';
 import { REQUEST_RULES, actionsFor as requestActionsFor, advanceRequest, generateRequest, linkOf as requestLinkOf, openRequests, takeAction as takeRequestAction } from './citizen-requests-engine.js?v=20261117-3';
+import { ABROGATIVE, CAMPAIGN_ACTIONS, CONSTITUTIONAL, COUNCIL_ROUTE, EXCLUDED as REFERENDUM_EXCLUDED, advanceReferendum, askCouncils, campaignAction as referendumCampaignAction, createAbrogative, eligibility as referendumEligibility, fileRequest as fileReferendumRequest, isActive as referendumActive, maybeRevision, requestConstitutional } from './referendum-engine.js?v=20261117-3';
 import { INITIATIVE_KINDS, advanceCollection, advanceParliamentPhase, createInitiative, depositInitiative as depositInitiativeRecord, endingEffects as initiativeEnding, isActive as initiativeActive, organize as organizeInitiativeRecord, overview as initiativeOverview, settleVerification, weeklyCost as initiativeWeeklyCost, withdraw as withdrawInitiativeRecord } from './initiative-engine.js?v=20261117-3';
 import { advanceSociety, applyBudgetPlan, applyLawToSociety, applySocialTable, applySpendingReview, calibrateWeights, createSociety, explainMood, measureDesign, mediaEvent, normalizeSociety, provisionalBudget, publicBudgetChoice, regionAttention, revokeMeasure, scheduleRegionalEffects, segmentAttention, societyMood, societyShock, observatorySociety } from './society-engine.js?v=20261117-3';
 import { ACTIVITY_MEDIA, INDICATORS, ISSUE_TOPICS, SEGMENTS } from '../data/simulation/society-rules.js?v=20261117-3';
@@ -3162,6 +3163,7 @@ function tickLegislature(input, date) {
     lines.push(result.line);
   }
   { const sync = syncInitiativeBills(next.game, next.parliament, date); if (sync.changed) { next = { ...next, game: sync.game }; lines.push(...sync.lines); if (sync.effects) next = applyStatDeltas(next, sync.effects); } }
+  { const week = referendumWeek(next, date); if (week.changed) { next = week.state; lines.push(...week.lines); } }
   let game = next.game;
   // A vote of the player's Chamber opens and waits for the player's own ballot (floor-votes.js): the week says which measure, and where. The requests of the old agenda (a default could answer them) are gone.
   for (const event of out.events.filter(item => item.type === 'votazione-aperta')) lines.unshift(`${event.chamber === 'camera' ? 'Camera dei deputati' : 'Senato della Repubblica'}: si apre la votazione su “${event.title}”. L’Aula attende il tuo voto.`);
@@ -3176,6 +3178,102 @@ function tickLegislature(input, date) {
   next = { ...next, parliament: outParliament };
   if (lines.length && game.lastReport) game = { ...game, lastReport: { ...game.lastReport, lines: [...game.lastReport.lines, ...lines.slice(0, 5)] } };
   return { ...next, game, parliament: withCapital(next.parliament, game) };
+}
+// ---------- referendums (referendum-engine.js) ----------
+// The two referendums of the Constitution live in game.referendums: the abrogative one (art. 75) starts from a law in force and, by the signatures route, from a collection of the initiatives page; the
+// confirmatory constitutional one (art. 138) is born from a revision approved by the Chambers. Each week this step moves the records, applies what a closed one leaves (the law repealed, the reform in force)
+// and tells it once in the diary.
+const referendumsOf = game => game?.referendums ?? [];
+const REFERENDUM_ELECTORATE = 51000000;
+// What every parliamentary group does in the campaign: the majority defends the law it passed (NO) and the opposition asks to repeal it (SÌ); for a constitutional reform, the other way round; some groups choose freely.
+function referendumStances(s, ref) {
+  const parliament = s.parliament;
+  const government = parliament?.government;
+  const governing = new Set(government && ['active', 'crisis'].includes(government.status) ? [...(government.coalitionGroupIds ?? []), ...(government.supportingGroupIds ?? [])] : []);
+  const groups = parliament?.chambers?.camera?.groups ?? [];
+  const total = groups.reduce((sum, group) => sum + (group.simulatedSeats ?? 0), 0) || 1;
+  const stances = { si: [], no: [], free: [] }, weights = { si: 0, no: 0 };
+  for (const group of groups) {
+    const rand = seededRandom(`${ref.id}|${group.groupId}|posizione`);
+    const share = (group.simulatedSeats ?? 0) / total;
+    if (rand() < 0.12) { stances.free.push(group.groupId); continue; }
+    const yes = ref.kind === 'abrogativo' ? !governing.has(group.groupId) : governing.has(group.groupId);
+    (yes ? stances.si : stances.no).push(group.groupId); weights[yes ? 'si' : 'no'] += share;
+  }
+  const own = parliament?.player?.groupId;
+  if (own && ref.side && !stances[ref.side].includes(own)) { stances.si = stances.si.filter(id => id !== own); stances.no = stances.no.filter(id => id !== own); stances.free = stances.free.filter(id => id !== own); stances[ref.side].push(own); }
+  return { stances, weights };
+}
+function referendumBacking(s) {
+  const parliament = s.parliament;
+  const government = parliament?.government;
+  const governing = new Set(government && ['active', 'crisis'].includes(government.status) ? [...(government.coalitionGroupIds ?? []), ...(government.supportingGroupIds ?? [])] : []);
+  const share = chamber => { const rows = parliament?.chambers?.[chamber]?.groups ?? []; const total = rows.reduce((sum, group) => sum + (group.simulatedSeats ?? 0), 0) || 1; return rows.filter(group => governing.has(group.groupId)).reduce((sum, group) => sum + (group.simulatedSeats ?? 0), 0) / total; };
+  return { camera: share('camera') || 0.52, senato: share('senato') || 0.52 };
+}
+function referendumWeek(s, date) {
+  const game0 = s.game;
+  if (!game0 || game0.status === 'ended') return { state: s, lines: [], changed: false };
+  let list = referendumsOf(game0);
+  const lines = []; let changed = false;
+  const week = game0.week.index;
+  // a new constitutional revision of the Chambers (rare, one at a time)
+  const born = maybeRevision({ ...game0, referendums: list }, { date, week, id: s.career.id ?? 'carriera', backing: referendumBacking(s) });
+  if (born) { list = [born, ...list]; changed = true; lines.push(`Il Parlamento avvia la revisione costituzionale «${born.title}» (art. 138 Cost.).`); }
+  if (!list.some(referendumActive)) return changed ? { state: { ...s, game: { ...game0, referendums: list } }, lines, changed } : { state: s, lines, changed };
+  let state = s;
+  const deltas = {}; const statuteChanges = []; const reforms = [];
+  list = list.map(original => {
+    let item = original;
+    if (!referendumActive(item)) return item;
+    // the signatures route of the abrogative request: the collection of the initiatives page closes with the deposit
+    if (item.kind === 'abrogativo' && item.phase === 'raccolta') {
+      const ini = (game0.initiatives ?? []).find(entry => entry.id === item.initiativeId);
+      if (ini?.status === 'depositata') { item = fileReferendumRequest(item, { date, valid: ini.verification?.valid ?? ini.signatures?.total ?? 0 }); changed = true; lines.push(`Referendum «${item.target.title}»: richiesta depositata, passa alla Cassazione.`); }
+      else if (ini && ['respinta', 'fallita', 'ritirata'].includes(ini.status)) { item = { ...item, status: 'fallito', phase: 'concluso', closedAt: date, outcome: ini.status === 'respinta' ? 'Le firme valide non bastano: il deposito è respinto e il referendum non si fa.' : ini.status === 'fallita' ? 'La raccolta delle 500.000 firme non è riuscita nei tempi.' : 'La raccolta è stata ritirata.', steps: [{ date, text: 'La raccolta si è chiusa senza il deposito.', phase: 'concluso' }, ...(item.steps ?? [])] }; changed = true; lines.push(`Referendum «${item.target.title}»: ${item.outcome}`); return item; }
+      else return item;
+    }
+    if (item.kind === 'costituzionale' && item.phase === 'richiesta' && !item.request) {
+      const ini = (game0.initiatives ?? []).find(entry => entry.constitutionalFor === item.id && entry.status === 'depositata');
+      if (ini) { try { item = requestConstitutional(item, { route: 'firme', date, week, valid: ini.verification?.valid ?? ini.signatures?.total ?? 0 }).referendum; changed = true; lines.push(`Referendum sulla riforma «${item.title}»: depositate le 500.000 firme.`); } catch { /* the term is over: the engine tells it */ }
+      }
+    }
+    const picked = item.phase === 'prima' || item.phase === 'pausa' || item.phase === 'richiesta' || item.phase === 'campagna' || item.phase === 'cassazione' || item.phase === 'corte';
+    if (!picked) return item;
+    const { stances, weights } = referendumStances(state, item);
+    const salience = Math.min(0.95, 0.3 + seededRandom(`${item.id}|salienza`)() * 0.4 + playerStat(state, 'notoriety', 20) / 400);
+    const out = advanceReferendum(item, { date, week, salience, stances, weights, electorate: REFERENDUM_ELECTORATE, backing: referendumBacking(state) });
+    if (out.changed || out.lines.length) changed = true;
+    lines.push(...out.lines);
+    item = out.referendum;
+    if (out.effects) {
+      for (const key of ['reputation', 'popularity', 'notoriety']) if (out.effects[key]) deltas[key] = (deltas[key] ?? 0) + out.effects[key];
+      if (out.effects.statute) statuteChanges.push({ ...out.effects.statute, date, title: item.target?.title });
+      if (out.effects.constitutional) reforms.push({ id: item.id, title: item.title, date, carried: out.effects.constitutional.carried, noReferendum: Boolean(out.effects.constitutional.noReferendum), result: item.result ?? null });
+    }
+    return item;
+  });
+  if (!changed) return { state: s, lines, changed: false };
+  let game = { ...game0, referendums: list };
+  game.log = [...list.filter(item => item.closedAt === date).map(item => ({ id: `diario-referendum-${item.id}-${date}`, week, date, kind: 'carriera', title: `Referendum${item.kind === 'costituzionale' ? ' costituzionale' : ' abrogativo'}: ${item.kind === 'abrogativo' ? item.target.title : item.title}`, lines: [item.outcome], tone: item.carried ? 'good' : 'neutral', source: DATA_SOURCES.SIMULATION })), ...(game.log ?? [])].slice(0, 400);
+  for (const item of list.filter(entry => entry.closedAt === date)) remember(game, { date, kind: `referendum-${item.status}`, text: item.outcome, weight: item.side ? 1 : 0.5 });
+  state = { ...s, game };
+  let parliament = state.parliament;
+  if (parliament && statuteChanges.length) {
+    let statutes = statutesOfParliament(parliament);
+    for (const change of statuteChanges) statutes = statutes.map(item => item.id === change.id ? (change.status === 'abrogata' ? { ...item, status: 'abrogata', repealedAt: date, repealedBy: 'referendum abrogativo' } : { ...item, amendedAt: date, amendments: [...(item.amendments ?? []), { date, title: 'Referendum abrogativo (parziale)', text: change.by }] }) : item);
+    parliament = { ...parliament, statutes };
+    for (const change of statuteChanges) parliament = recordParliament(parliament, date, 'legge-abrogata', `Referendum abrogativo: «${change.title}» è ${change.status === 'abrogata' ? 'abrogata' : 'abrogata in parte'}.`, { source: DATA_SOURCES.SIMULATION });
+  }
+  if (parliament && reforms.length) parliament = { ...parliament, constitutionalReforms: [...reforms.map(item => ({ ...item, source: DATA_SOURCES.SIMULATION })), ...(parliament.constitutionalReforms ?? [])].slice(0, 30) };
+  state = { ...state, parliament: parliament ?? state.parliament };
+  if (Object.keys(deltas).length) state = applyStatDeltas(state, deltas);
+  return { state, lines, changed: true };
+}
+// The laws a referendum could repeal (those in force) and what the Constitution excludes; the player-facing page asks the store for these.
+function referendumTargets(s) {
+  const taken = new Set(referendumsOf(s.game).filter(item => item.kind === 'abrogativo' && referendumActive(item)).map(item => item.target?.statuteId));
+  return statutesOfParliament(s.parliament).filter(item => item.status === 'vigente').map(item => ({ statuteId: item.id, title: item.title, area: item.area, instrument: item.instrument, kind: item.kind, approvedAt: item.approvedAt, taken: taken.has(item.id), excluded: REFERENDUM_EXCLUDED.filter(rule => rule.test({ title: item.title, area: item.area, kind: item.kind })).map(rule => rule.label) }));
 }
 // What happens to an initiative whose text is a bill of the Chambers: the stage of the bill is the stage of the initiative, and its end (approved, rejected, lapsed) is the end of the initiative, told once.
 const INITIATIVE_STAGE_OF_LAW = { proposal: 'assegnata', commission: 'commissione', amendments: 'commissione', 'other-chamber': 'aula', 'final-vote': 'aula' };
@@ -6167,6 +6265,108 @@ export const store = {
     const parliament = reference ? { ...result.parliament, laws: result.parliament.laws.map(law => law.id === result.law.id ? { ...law, realReference: reference } : law) } : result.parliament;
     applyParliamentUpdate(next, parliament, reference ? 'Proposta depositata: modifica simulata di un atto reale' : 'Proposta depositata', { experience: 0.5, influence: 0.5 });
     return parliament.laws.find(law => law.id === result.law.id);
+  },
+  // ---- referendums ----
+  referendums() { return referendumsOf(state.game); },
+  referendumTargets() { return referendumTargets(state); },
+  referendumCheck(draft) { const target = referendumTargets(state).find(item => item.statuteId === draft?.statuteId); return target ? referendumEligibility(target, draft) : { ok: false, excluded: [], problems: ['Scegli la legge da abrogare tra quelle in vigore.'], text: '', clarity: 0, homogeneity: 0, quality: 0 }; },
+  referendumRules() { return { ABROGATIVE, CONSTITUTIONAL, CAMPAIGN_ACTIONS, COUNCIL_ROUTE }; },
+  constitutionalReforms() { return state.parliament?.constitutionalReforms ?? []; },
+  startReferendum(draft) {
+    requireCareer();
+    const game = deepCopy(state.game);
+    const date = state.clock.currentDate;
+    const target = referendumTargets(state).find(item => item.statuteId === draft?.statuteId);
+    if (!target) throw new Error('Scegli la legge da abrogare tra quelle in vigore.');
+    if (target.taken) throw new Error('Per questa legge c’è già una richiesta di referendum in corso.');
+    if (referendumsOf(game).filter(item => item.kind === 'abrogativo' && referendumActive(item)).length >= 2) throw new Error('Hai già due richieste di referendum in corso: concludine una prima.');
+    const ref = createAbrogative(draft, { target, date, id: `referendum-${game.week.index}-${referendumsOf(game).length + 1}` });
+    if (draft.route === 'firme') {
+      if (initiativesOf(game).filter(item => initiativeActive(item) && item.kind === 'referendum').length >= 2) throw new Error('Hai già due raccolte di firme per referendum: concludine una prima.');
+      const ini = createInitiative({ title: ref.question.slice(0, 160), area: AREA_BY_ID[target.area]?.id ?? null, articles: [], kind: 'referendum' }, { date, funds: game.resources.funds, home: playerOf(state)?.region ?? null, id: `iniziativa-${game.week.index}-${initiativesOf(game).length + 1}` });
+      game.resources = { ...game.resources, funds: game.resources.funds - ini.spent };
+      game.initiatives = [ini, ...initiativesOf(game)];
+      ref.initiativeId = ini.id;
+    } else {
+      if (game.resources.funds < COUNCIL_ROUTE.cost.funds || game.resources.politicalCapital < COUNCIL_ROUTE.cost.capital) throw new Error(`Per chiedere il referendum ai Consigli regionali servono ${COUNCIL_ROUTE.cost.funds} € e ${COUNCIL_ROUTE.cost.capital} di capitale politico.`);
+      game.resources = { ...game.resources, funds: game.resources.funds - COUNCIL_ROUTE.cost.funds, politicalCapital: game.resources.politicalCapital - COUNCIL_ROUTE.cost.capital };
+    }
+    game.referendums = [ref, ...referendumsOf(game)];
+    remember(game, { date, kind: 'referendum-richiesta', text: `Richiesto il referendum abrogativo: ${ref.question}`, weight: 0.8 });
+    state = { ...state, game, ui: { ...state.ui, toast: draft.route === 'firme' ? 'Raccolta di 500.000 firme aperta' : 'Richiesta ai Consigli regionali aperta' } };
+    persist(); emit();
+    return ref;
+  },
+  askReferendumCouncils(id, regions) {
+    requireCareer();
+    const game = deepCopy(state.game);
+    const current = referendumsOf(game).find(item => item.id === id);
+    if (!current) throw new Error('Referendum non trovato.');
+    const weights = Object.fromEntries(Object.entries(state.society?.regions ?? {}).map(([name, region]) => [name, Math.max(0, Math.min(1, (state.game?.party?.support ?? 30) / 100 + (name === playerOf(state)?.region ? 0.15 : 0)))]));
+    const out = askCouncils(current, { regions, weights, date: state.clock.currentDate, week: game.week.index });
+    game.referendums = referendumsOf(game).map(item => item.id === id ? out.referendum : item);
+    state = { ...state, game, ui: { ...state.ui, toast: out.done ? 'Cinque Consigli regionali hanno approvato: richiesta in Cassazione' : `Consigli regionali: ${out.approved.length} su 5` } };
+    persist(); emit();
+    return out.referendum;
+  },
+  supportReferendum(id, side) {
+    requireCareer();
+    if (!['si', 'no'].includes(side)) throw new Error('Scegli se sostenere il SÌ o il NO.');
+    const game = deepCopy(state.game);
+    const current = referendumsOf(game).find(item => item.id === id);
+    if (!current || !referendumActive(current)) throw new Error('Referendum non in corso.');
+    if (current.side && current.side !== side && current.phase === 'campagna') throw new Error('Hai già scelto da che parte stare: cambiare a campagna in corso non è credibile.');
+    const next = { ...current, side, steps: [{ date: state.clock.currentDate, text: `Il giocatore si schiera per il ${side === 'si' ? 'SÌ' : 'NO'}.`, phase: current.phase }, ...(current.steps ?? [])] };
+    game.referendums = referendumsOf(game).map(item => item.id === id ? next : item);
+    state = { ...state, game, ui: { ...state.ui, toast: `Ti schieri per il ${side === 'si' ? 'SÌ' : 'NO'}` } };
+    persist(); emit();
+    return next;
+  },
+  referendumAction(id, actionId) {
+    requireCareer();
+    const game = deepCopy(state.game);
+    const current = referendumsOf(game).find(item => item.id === id);
+    if (!current) throw new Error('Referendum non trovato.');
+    const action = CAMPAIGN_ACTIONS[actionId];
+    if (!action) throw new Error('Azione non valida.');
+    if (game.resources.funds < action.cost.funds) throw new Error(`Servono ${action.cost.funds} € di fondi.`);
+    if (game.resources.politicalCapital < action.cost.capital) throw new Error('Capitale politico insufficiente.');
+    const out = referendumCampaignAction(current, actionId, { week: game.week.index, side: current.side });
+    game.resources = { ...game.resources, funds: game.resources.funds - action.cost.funds, politicalCapital: game.resources.politicalCapital - action.cost.capital };
+    game.referendums = referendumsOf(game).map(item => item.id === id ? out.referendum : item);
+    const spent = spendTime(game, action.cost.days);
+    state = { ...state, game: spent, parliament: withCapital(state.parliament, spent), ui: { ...state.ui, toast: out.text } };
+    persist(); emit();
+    return out;
+  },
+  startConstitutionalCollection(id) {
+    requireCareer();
+    const game = deepCopy(state.game);
+    const current = referendumsOf(game).find(item => item.id === id);
+    if (!current || current.kind !== 'costituzionale' || current.phase !== 'richiesta' || current.request) throw new Error('Non si può aprire ora una raccolta per questa riforma.');
+    if (initiativesOf(game).some(item => item.constitutionalFor === id && initiativeActive(item))) throw new Error('La raccolta è già aperta.');
+    if (initiativesOf(game).filter(item => initiativeActive(item) && item.kind === 'referendum').length >= 2) throw new Error('Hai già due raccolte di firme per referendum: concludine una prima.');
+    const ini = { ...createInitiative({ title: `Referendum sulla riforma costituzionale «${current.title}»`.slice(0, 160), area: null, articles: [], kind: 'referendum' }, { date: state.clock.currentDate, funds: game.resources.funds, home: playerOf(state)?.region ?? null, id: `iniziativa-${game.week.index}-${initiativesOf(game).length + 1}` }), constitutionalFor: id };
+    game.resources = { ...game.resources, funds: game.resources.funds - ini.spent };
+    game.initiatives = [ini, ...initiativesOf(game)];
+    state = { ...state, game, ui: { ...state.ui, toast: 'Raccolta di 500.000 firme aperta' } };
+    persist(); emit();
+    return ini;
+  },
+  requestConstitutionalReferendum(id, route, regions = []) {
+    requireCareer();
+    const game = deepCopy(state.game);
+    const current = referendumsOf(game).find(item => item.id === id);
+    if (!current || current.kind !== 'costituzionale') throw new Error('Riforma costituzionale non trovata.');
+    const backing = referendumBacking(state);
+    const weights = Object.fromEntries(Object.entries(state.society?.regions ?? {}).map(([name]) => [name, Math.max(0, Math.min(1, (state.game?.party?.support ?? 30) / 100))]));
+    if (route === 'quinto' && !state.parliament?.player?.groupId) throw new Error('La richiesta di un quinto dei membri di una Camera la presenta un parlamentare: non hai un seggio.');
+    if (route === 'firme') throw new Error('Per le firme apri la raccolta dalla pagina del referendum: la richiesta parte quando le 500.000 firme sono depositate.');
+    const out = requestConstitutional(current, { route, date: state.clock.currentDate, week: game.week.index, opposition: { camera: (1 - backing.camera) * 100, senato: (1 - backing.senato) * 100 }, weights, regions });
+    game.referendums = referendumsOf(game).map(item => item.id === id ? out.referendum : item);
+    state = { ...state, game, ui: { ...state.ui, toast: out.done ? 'Referendum chiesto' : 'Richiesta non sufficiente' } };
+    persist(); emit();
+    return out.referendum;
   },
   // The laws in force (the register of the simulated country) and the procedures to change them: a law already approved is never proposed again identical, it is amended or repealed with a bill of its own.
   statutes() { return statutesOfParliament(state.parliament); },

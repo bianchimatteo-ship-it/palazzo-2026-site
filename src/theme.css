@@ -1507,3 +1507,36 @@ button:not(:disabled):active, a.primary-button:active, a.secondary-button:active
 .req-path li.is-now { border-color: var(--accent); background: var(--accent-soft); color: var(--gold-light); }
 .req-path li.is-now.is-realizzata { border-color: rgba(95,181,138,.7); background: rgba(95,181,138,.16); color: #9fe0bd; }
 .req-path li.is-now.is-fallita, .req-path li.is-now.is-ignorata { border-color: rgba(214,106,94,.7); background: rgba(214,106,94,.14); color: #f0a79d; }
+
+/* Semantic colours of the institutional sections (alliances, coalitions, initiatives, signatures, referendums, statutes): green = success/agreements, red = conflicts/crises, blue = institutions, violet = diplomacy, orange = activities and campaigns, gold = the main action. Only the new sections use them. */
+:root { --sem-good: #4cae7a; --sem-bad: #d9625b; --sem-institution: #5a8fd8; --sem-diplomacy: #9a7ad6; --sem-campaign: #e0944a; --sem-main: #d9b24c; }
+.ref-page .ref-card { display: block; }
+.ref-tone-abrogativo { border-left: 4px solid var(--sem-campaign); }
+.ref-tone-costituzionale { border-left: 4px solid var(--sem-institution); }
+.ref-compare { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.ref-col { padding: 12px; border-radius: 12px; border: 1px solid rgba(127, 140, 134, .3); }
+.ref-col h4 { margin: 0 0 6px; }
+.ref-col ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.ref-question { font-weight: 700; margin: 8px 0; overflow-wrap: anywhere; }
+.ref-path { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; margin: 4px 0 10px; }
+.ref-path li { padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(127, 140, 134, .4); font-size: .85rem; opacity: .75; }
+.ref-path li.is-done { border-color: var(--sem-good); opacity: 1; }
+.ref-path li.is-now { border-color: var(--sem-main); background: rgba(217, 178, 76, .16); opacity: 1; font-weight: 700; }
+.ref-bars { display: grid; grid-template-columns: auto 1fr auto; gap: 6px 10px; align-items: center; margin: 8px 0; }
+.ref-bars .ini-bar { margin: 0; }
+.ref-bar.is-yes i { background: var(--sem-good); }
+.ref-bar.is-no i { background: var(--sem-bad); }
+.ref-sides, .ref-actions, .ref-routes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; }
+.ref-actions button small { display: block; opacity: .8; font-weight: 400; }
+.ref-events { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px; }
+.ref-events li.good { color: var(--sem-good); } .ref-events li.bad { color: var(--sem-bad); }
+.ref-figures { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px; }
+.ref-councils fieldset, .ref-scope { border: 1px solid rgba(127, 140, 134, .3); border-radius: 12px; padding: 10px; display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.ref-scope { grid-template-columns: 1fr; }
+.ref-region.is-used { opacity: .6; }
+.ref-outcome { font-weight: 600; margin: 8px 0; }
+.statute-board .statute-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 8px; }
+.statute-row { display: grid; gap: 6px; padding: 10px; border: 1px solid rgba(127, 140, 134, .3); border-left: 4px solid var(--sem-institution); border-radius: 12px; }
+.statute-row.is-abrogata { border-left-color: var(--sem-bad); opacity: .85; }
+.statute-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 520px) { .ref-bars { grid-template-columns: auto 1fr; } .ref-bars b { grid-column: 2; } .ref-actions button, .ref-routes button { width: 100%; } }

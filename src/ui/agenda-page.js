@@ -19,7 +19,7 @@ export const AGENDA_FILTERS = Object.freeze([
   ['risorse', 'Risorse', ['investimento']]
 ]);
 // The family of a dated commitment, for its colour and its icon (the label is always written): elections, candidacies, party, institutions, decisions, promises and deadlines, resources.
-const CATEGORY_OF = { elezione: 'elezioni', candidature: 'candidature', campagna: 'candidature', selezione: 'partito', congresso: 'partito', decreto: 'istituzioni', alleato: 'istituzioni', legislatura: 'istituzioni', quirinale: 'istituzioni', decisione: 'decisioni', promessa: 'impegni', conseguenza: 'impegni', investimento: 'risorse' };
+const CATEGORY_OF = { elezione: 'elezioni', candidature: 'candidature', campagna: 'candidature', selezione: 'partito', congresso: 'partito', decreto: 'istituzioni', alleato: 'istituzioni', legislatura: 'istituzioni', referendum: 'istituzioni', quirinale: 'istituzioni', decisione: 'decisioni', promessa: 'impegni', conseguenza: 'impegni', investimento: 'risorse' };
 export const agendaCategory = kind => CATEGORY_OF[kind] ?? 'impegni';
 const WEEKDAYS = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
 const toneBadge = tone => tone === 'bad' ? 'bad' : tone === 'warn' ? 'warn' : tone === 'good' ? 'good' : 'neutral';

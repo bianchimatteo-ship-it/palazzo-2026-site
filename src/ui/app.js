@@ -22,7 +22,7 @@ import { PARTY_LINK_COLLECTIONS, forceKind, isCoalitionList, politicalForces } f
 import { prefetchViews, renderScene, setLazyRender } from './lazy-views.js?v=20261117-3';
 import { playNightMotion } from './night-motion.js?v=20261117-3';
 import { playStage, stageIsPaused, stagePause, stageResume, stageSkip } from './stage-player.js?v=20261117-3';
-import { renderDiplomacy, renderInitiatives } from './lazy-views.js?v=20261117-3';
+import { renderDiplomacy, renderInitiatives, renderReferendums } from './lazy-views.js?v=20261117-3';
 import { renderElectionNight } from './lazy-views.js?v=20261117-3';
 import { PROFESSIONS, chosenPlace, makeCareerDraft, pollScenarioOf, removePartyCriterion, renderCareerWizard, togglePartyOrientation, wizardLogoPreview } from './career-wizard.js?v=20261117-3';
 import { userPartyLogo } from './party-logo.js?v=20261117-3';
@@ -86,7 +86,7 @@ const SECTIONS = Object.freeze([
   { id: 'partito', label: 'Partito', glyph: 'party', pages: [['partito', 'Il tuo partito'], ['finanze', 'Finanze'], ['partiti-lista', 'Tutti i partiti']] },
   { id: 'elezioni', label: 'Elezioni', glyph: 'ballot', pages: [['elezioni', 'Centrale elettorale']] },
   { id: 'sondaggi', label: 'Sondaggi', glyph: 'chart', pages: [['sondaggi', 'Osservatorio']] },
-  { id: 'istituzioni', label: 'Istituzioni', glyph: 'building', pages: [['parlamento', 'Camere'], ['governo', 'Governo'], ['diplomazia', 'Diplomazia'], ['quirinale', 'Quirinale'], ['leggi', 'Leggi'], ['iniziative', 'Iniziative']] },
+  { id: 'istituzioni', label: 'Istituzioni', glyph: 'building', pages: [['parlamento', 'Camere'], ['governo', 'Governo'], ['diplomazia', 'Diplomazia'], ['quirinale', 'Quirinale'], ['leggi', 'Leggi'], ['iniziative', 'Iniziative'], ['referendum', 'Referendum']] },
   { id: 'territori', label: 'Territori', glyph: 'map', pages: [['territori', 'Il Paese']], locals: true },
   { id: 'informazione', label: 'Informazione', glyph: 'news', pages: [['notizie', 'Notizie'], ['archivio', 'Archivio'], ['politici', 'Politici']] }
 ]);
@@ -146,6 +146,7 @@ const pages = {
   quirinale: { title: 'Quirinale', eyebrow: 'ISTITUZIONI · PRESIDENTE DELLA REPUBBLICA', intro: 'Il Colle: chi lo occupa, quanto credito ha, che cosa può fare e come si elegge il successore.' },
   leggi: { title: 'Leggi', eyebrow: 'ITER LEGISLATIVO', intro: 'Proposte, commissioni e provvedimenti.' },
   iniziative: { title: 'Iniziative', eyebrow: 'CITTADINI · FIRME', intro: 'Iniziative legislative popolari (50.000 firme) e raccolte firme referendarie: testo, organizzazione, deposito e fase parlamentare.' },
+  referendum: { title: 'Referendum', eyebrow: 'ISTITUZIONI · ART. 75 E 138', intro: 'Il referendum abrogativo e quello costituzionale: richiesta, controlli, campagna, quorum, voto e conseguenze.' },
   eventi: { title: 'Eventi', eyebrow: 'CRONACA POLITICA', intro: 'Gli eventi che scandiscono la vita pubblica.' },
   ricompense: { title: 'Ricompense', eyebrow: 'IL TUO TEMPO DI GIOCO', intro: 'La ricompensa giornaliera, il tempo di gioco e i video premiati.' },
   notizie: { title: 'Notizie', eyebrow: 'REDAZIONE · SIMULATA', intro: 'Cronaca politica, articoli, storie e testate, con il tuo diario.' },
@@ -778,7 +779,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
         ${store.hasCareer() && state.game && !wizard && !menu.open ? renderTutorialCard(state, state.ui.activePage, tutorialFacts(state)) : ''}
         <main class="main-area">
           <header class="topbar"><div class="topbar-title"><span class="topbar-brands"><img class="topbar-brand" src="icons/logo-politicando-240.webp" srcset="icons/logo-politicando-240.webp 240w, icons/logo-politicando-640.webp 640w" sizes="96px" width="96" height="96" alt="POLITICANDO 2026" decoding="async" />${store.hasCareer() && state.game ? topbarParty(identity) : ''}</span><strong>${current.title}</strong><span>${current.intro}</span></div><div class="top-actions"><div class="top-tools"><button class="icon-button menu-button" data-action="menu" aria-label="Torna alla schermata iniziale (menu principale)" title="Schermata iniziale: Nuova partita, Continua, Carica partita">${icon('home', 17)}</button><button class="icon-button" aria-label="Salva carriera" title="Salva carriera" data-action="save">${icon('save', 17)}</button></div><div class="top-time"><div class="date-chip">${icon('calendar', 16)}<span>${fullDate(state.clock.currentDate)}</span></div><span class="week-chip">Settimana ${state.game.week.index} · ${state.game.week.ap}/${state.game.week.maxAp} giorni</span><button class="advance-button" data-action="advance" ${state.game.status === 'ended' ? 'disabled' : ''}>${state.campaign?.status === 'active' ? 'Avanza campagna' : 'Chiudi settimana'} ${icon('arrow', 17)}</button></div></div></header>
-          ${wizard ? '' : saveAlert()}${wizard ? '' : dataNotice()}<div class="page-wrap">${wizard ? '' : (state.ui.activePage === 'panoramica' ? renderHeadquarters(state, { identity, partyName: identity.kind === 'partito' ? identity.name : null, partyLogo: identity.logo, newsFilter: views.newsFilter, newsCategory: views.newsCategory, newsOutlet: views.newsOutlet, expanded: views.homeExpand ?? {} }) : subpage(state, current, player, party, eventList, catalog, { logoFor, homePlace: () => store.homePlace(), nationalOverview: () => store.nationalOverview(), programView: () => store.programView(), challengeView: () => store.challengeView(), initiativeContext: area => store.initiativeContext(area), ministryView: () => { try { return store.ministryView(); } catch { return null; } }, requestActions: id => { try { return store.requestActions(id); } catch { return []; } }, presidencyView: () => store.presidencyView(), electoralGeography: () => store.electoralGeography?.() ?? null, campaignPicks: campaignChoices(state), parties:realParties(), selectable:selectableParties(), findParty, realLeader, admin, adminContext, territory, realLaws, archive, views, tabFor, settings, lastSaved, account, rewards: () => rewardsApi?.snapshot() ?? null, allianceOdds: id => { try { return store.allianceOdds(id); } catch { return null; } }, inviteOdds: id => { try { return store.inviteOdds(id); } catch { return null; } }, programAnalysis: (id, other) => { try { return store.programAnalysis(id, other); } catch { return null; } }, allianceTalkOptions: electionId => { try { return store.allianceTalkOptions(electionId); } catch { return null; } }, allianceRequests: () => { try { return store.allianceRequests(); } catch { return null; } }, coalitionElections: () => { try { return store.coalitionElections(); } catch { return []; } }, refusedUntil: id => { try { return store.refusedUntil(id); } catch { return null; } }, inviteBlock: id => { try { return store.inviteBlock(id); } catch { return null; } }, allianceBlock: id => { try { return store.allianceBlock(id); } catch { return null; } }, allianceWindow: () => store.allianceWindow(), raceOptions: id => { try { return store.raceCandidates(id, racePeople()); } catch { return null; } } }))}</div>${wizard ? '' : `<footer class="app-foot">${supportContact('app-support')}</footer>`}
+          ${wizard ? '' : saveAlert()}${wizard ? '' : dataNotice()}<div class="page-wrap">${wizard ? '' : (state.ui.activePage === 'panoramica' ? renderHeadquarters(state, { identity, partyName: identity.kind === 'partito' ? identity.name : null, partyLogo: identity.logo, newsFilter: views.newsFilter, newsCategory: views.newsCategory, newsOutlet: views.newsOutlet, expanded: views.homeExpand ?? {} }) : subpage(state, current, player, party, eventList, catalog, { logoFor, homePlace: () => store.homePlace(), nationalOverview: () => store.nationalOverview(), programView: () => store.programView(), challengeView: () => store.challengeView(), initiativeContext: area => store.initiativeContext(area), referendumTargets: () => store.referendumTargets(), constitutionalReforms: () => store.constitutionalReforms(), ministryView: () => { try { return store.ministryView(); } catch { return null; } }, requestActions: id => { try { return store.requestActions(id); } catch { return []; } }, presidencyView: () => store.presidencyView(), electoralGeography: () => store.electoralGeography?.() ?? null, campaignPicks: campaignChoices(state), parties:realParties(), selectable:selectableParties(), findParty, realLeader, admin, adminContext, territory, realLaws, archive, views, tabFor, settings, lastSaved, account, rewards: () => rewardsApi?.snapshot() ?? null, allianceOdds: id => { try { return store.allianceOdds(id); } catch { return null; } }, inviteOdds: id => { try { return store.inviteOdds(id); } catch { return null; } }, programAnalysis: (id, other) => { try { return store.programAnalysis(id, other); } catch { return null; } }, allianceTalkOptions: electionId => { try { return store.allianceTalkOptions(electionId); } catch { return null; } }, allianceRequests: () => { try { return store.allianceRequests(); } catch { return null; } }, coalitionElections: () => { try { return store.coalitionElections(); } catch { return []; } }, refusedUntil: id => { try { return store.refusedUntil(id); } catch { return null; } }, inviteBlock: id => { try { return store.inviteBlock(id); } catch { return null; } }, allianceBlock: id => { try { return store.allianceBlock(id); } catch { return null; } }, allianceWindow: () => store.allianceWindow(), raceOptions: id => { try { return store.raceCandidates(id, racePeople()); } catch { return null; } } }))}</div>${wizard ? '' : `<footer class="app-foot">${supportContact('app-support')}</footer>`}
         </main>
         ${wizard ? renderCareerWizard(state, wizard, realParties(), logoFor, realDatabase.parliamentaryGroups ?? [], realDatabase.partyLeaderships ?? [], realDatabase.politicalFigures ?? [], realDatabase.politicians ?? [], wizardTerritoryView(), wizardDataStatus(), store.pollScenarioView(pollScenarioOf(wizard))) : ''}
         ${catalog.selectedPoliticianId ? renderPoliticianProfile(catalog.selectedPoliticianId,{loading:catalog.profileLoading,logoFor}) : ''}
@@ -1745,6 +1746,16 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
       return;
     }
+    const referendumControl = event.target.closest('[data-ref-side],[data-ref-act],[data-ref-request],[data-ref-collect]');
+    if (referendumControl) {
+      try {
+        if (referendumControl.matches('[data-ref-side]')) confirmThen({ kicker: 'REFERENDUM', title: `Schierarti per il ${referendumControl.dataset.refChoice === 'si' ? 'SÌ' : 'NO'}?`, body: 'Dopo l’inizio della campagna non puoi cambiare parte: i cittadini e gli alleati se ne accorgerebbero. Se la tua parte vince guadagni reputazione, se perde la paghi.', confirmLabel: 'Mi schiero' }, () => { store.supportReferendum(referendumControl.dataset.refSide, referendumControl.dataset.refChoice); });
+        else if (referendumControl.matches('[data-ref-act]')) { store.referendumAction(referendumControl.dataset.refAct, referendumControl.dataset.refAction); playSound('confirm'); }
+        else if (referendumControl.matches('[data-ref-collect]')) { store.startConstitutionalCollection(referendumControl.dataset.refCollect); playSound('confirm'); }
+        else { store.requestConstitutionalReferendum(referendumControl.dataset.refRequest, referendumControl.dataset.refRoute); playSound('confirm'); }
+      } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
+      return;
+    }
     const challengeControl = event.target.closest('[data-challenge-start],[data-challenge-abandon]');
     if (challengeControl) {
       try {
@@ -1882,6 +1893,16 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
         else store.castLawVote(billControl.dataset.lawId, billControl.dataset.billVote);
         playSound('confirm');
       } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(),store.getLastSaved()); }
+      return;
+    }
+    const statuteChange = event.target.closest('[data-statute-change]');
+    if (statuteChange) {
+      const mode = statuteChange.dataset.statuteChange;
+      confirmThen({ kicker: 'ORDINAMENTO', title: mode === 'abrogazione' ? 'Proporre l’abrogazione?' : 'Proporre una modifica?', body: 'È una proposta di legge a sé: deve fare il suo iter in commissione e in Aula, e può essere respinta. La legge in vigore resta tale finché non è approvata.', confirmLabel: 'Presenta la proposta' }, () => {
+        try { store.proposeStatuteChange(statuteChange.dataset.statuteId, { mode }); store.getState().ui.toast = mode === 'abrogazione' ? 'Proposta di abrogazione depositata.' : 'Proposta di modifica depositata.'; }
+        catch (error) { store.getState().ui.toast = error.message; }
+        render(store.getState(), store.getLastSaved());
+      });
       return;
     }
     const lawAction = event.target.closest('[data-law-action]');
@@ -2594,6 +2615,19 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       const data = new FormData(form); const [area, instrument] = String(data.get('measure') ?? '').split('|');
       try { store.ministryAction('prepara', { area, instrument, financing: data.get('financing'), intensity: Number(data.get('intensity')) || 1 }); playSound('confirm'); }
       catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
+    } else if (form.matches('[data-ref-form]')) {
+      event.preventDefault();
+      const data = new FormData(form);
+      try { store.startReferendum({ statuteId: data.get('statuteId'), scope: data.get('scope'), partText: data.get('partText'), question: data.get('question'), route: data.get('route') }); playSound('confirm'); }
+      catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
+    } else if (form.matches('[data-ref-councils-form]')) {
+      event.preventDefault();
+      try { store.askReferendumCouncils(form.dataset.refCouncilsForm, [...form.querySelectorAll('input[name="region"]:checked')].map(item => item.value)); playSound('confirm'); }
+      catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
+    } else if (form.matches('[data-ref-request-form]')) {
+      event.preventDefault();
+      try { store.requestConstitutionalReferendum(form.dataset.refRequestForm, 'consigli', [...form.querySelectorAll('input[name="region"]:checked')].map(item => item.value)); playSound('confirm'); }
+      catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
     } else if (form.matches('[data-ini-form]')) {
       event.preventDefault();
       const data = new FormData(form);
@@ -3109,6 +3143,7 @@ function subpage(state, page, player, party, events, catalog, options = {}) {
     parlamento: renderParliamentPage('parlamento', state, { party, player, status: catalogStatus, politicians: realDatabase.politicians ?? [], hemicycle: state.parliament ? renderHemicycle(state, { politicians: realDatabase.politicians ?? [], db: realDatabase, view: options.views?.hemicycle, logoFor: options.logoFor }) : '', featured: state.parliament ? renderFeaturedMembers(state, realDatabase, options.views?.hemicycle) : '' }) + `<section class="hq-panel contacts-panel"><div class="home-section-heading"><div><span class="section-kicker">${state.parliament?.legislature?.reference === 'simulation' ? 'PARLAMENTARI DELLA XIX LEGISLATURA (REALE) · RAPPORTI SIMULATI' : 'PARLAMENTARI REALI · RAPPORTI SIMULATI'}</span><h2>${state.parliament?.legislature?.reference === 'simulation' ? 'I tuoi contatti della legislatura reale' : 'I tuoi interlocutori in Parlamento'}</h2></div></div>${state.parliament?.legislature?.reference === 'simulation' ? '<p class="sx-note">Dopo il voto della partita le Camere sono simulate: queste persone reali non vi siedono e non intervengono sulle tue proposte; restano contatti politici con i dati della XIX legislatura.</p>' : ''}${renderContactsPanel(state)}</section>`,
     quirinale: state.game ? renderQuirinale(state, options.presidencyView?.() ?? null) : '',
     diplomazia: renderDiplomacy(state),
+    referendum: renderReferendums(state, { targets: options.referendumTargets?.() ?? [], reforms: options.constitutionalReforms?.() ?? [] }),
     iniziative: renderInitiatives(state, item => options.initiativeContext?.(item?.area) ?? null, id => options.requestActions?.(id) ?? []),
     governo: renderParliamentPage('governo', state, { party, player, status: catalogStatus, politicians: realDatabase.politicians ?? [], secretary: playerRoles(state).secretary, ministryView: options.ministryView }) + realGovernmentCard(),
     archivio: renderArchiveHub(options.archive, { catalog, status: catalogStatus, logoFor: options.logoFor, realLaws: options.realLaws }),

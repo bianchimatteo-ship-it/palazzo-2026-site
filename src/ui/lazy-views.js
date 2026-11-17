@@ -13,6 +13,7 @@ const LOADERS = {
   'archive-hub': () => import('./archive-hub.js?v=20261117-3'),
   'diplomacy-view': () => import('./diplomacy-view.js?v=20261117-3'),
   'initiative-mode': () => import('./initiative-mode.js?v=20261117-3'),
+  'referendum-mode': () => import('./referendum-mode.js?v=20261117-3'),
   'election-night': () => import('./election-night.js?v=20261117-3'),
   'elections-hub': () => import('./elections-hub.js?v=20261117-3'),
   'hemicycle-view': () => import('./hemicycle-view.js?v=20261117-3'),
@@ -74,6 +75,7 @@ export const renderArchiveBody = html('archive-hub', 'renderArchiveBody');
 export const renderArchiveHub = html('archive-hub', 'renderArchiveHub');
 export const renderDiplomacy = html('diplomacy-view', 'renderDiplomacy');
 export const renderInitiatives = html('initiative-mode', 'renderInitiatives');
+export const renderReferendums = html('referendum-mode', 'renderReferendums');
 export const renderElectionNight = html('election-night', 'renderElectionNight');
 export const renderElectionsHub = html('elections-hub', 'renderElectionsHub');
 export const renderHemicycle = html('hemicycle-view', 'renderHemicycle');
@@ -103,7 +105,7 @@ export const resolveInstitution = sync('local-mode', 'resolveInstitution', null)
 
 // Fetches every page in the background (when a career is opened), all together, the pages most likely to be asked first leading: the first visit to a page is then almost always instant, and the
 // modules are in the cache of the browser and of the service worker for when the network is missing.
-const ORDER = ['game-mode', 'elections-hub', 'parliament-mode', 'party-page', 'career-page', 'agenda-page', 'observatory-view', 'hemicycle-view', 'scene-view', 'election-night', 'finance-mode', 'society-mode', 'organization-mode', 'local-mode', 'diplomacy-view', 'initiative-mode', 'presidency-view', 'archive-hub', 'members-view', 'real-laws', 'admin-panel'];
+const ORDER = ['game-mode', 'elections-hub', 'parliament-mode', 'party-page', 'career-page', 'agenda-page', 'observatory-view', 'hemicycle-view', 'scene-view', 'election-night', 'finance-mode', 'society-mode', 'organization-mode', 'local-mode', 'diplomacy-view', 'initiative-mode', 'referendum-mode', 'presidency-view', 'archive-hub', 'members-view', 'real-laws', 'admin-panel'];
 let prefetching = null;
 export function prefetchViews() {
   if (prefetching) return prefetching;

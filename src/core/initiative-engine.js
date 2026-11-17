@@ -199,7 +199,7 @@ export function settleVerification(input, { date }) {
   if (initiative.kind === 'referendum') {
     initiative.status = 'depositata';
     initiative.closedAt = date;
-    initiative.outcome = `Firme valide: ${valid.toLocaleString('it-IT')}. La richiesta di referendum è depositata; la fase successiva (Corte di cassazione, Corte costituzionale, voto) non è simulata in questa versione.`;
+    initiative.outcome = `Firme valide: ${valid.toLocaleString('it-IT')}. La richiesta di referendum è depositata: ora la verifica dell’Ufficio centrale presso la Cassazione, il giudizio della Corte costituzionale e il voto (pagina «Referendum»).`;
     events.push({ tone: 'good', text: `Referendum «${initiative.title}»: ${valid.toLocaleString('it-IT')} firme valide, richiesta depositata.`, ended: 'depositata' });
     return { initiative: record(initiative, date, initiative.outcome), events };
   }
