@@ -2,7 +2,7 @@
 
 Stati ammessi: **Non iniziato · In lavorazione · Completato · Bloccato**. Una voce è *Completato* solo con prova (file, test, screenshot). Branch `feature/qa-completamento`. Confrontata punto per punto con il documento di lavoro originale (sezioni 1–21) e con le aggiunte del 16/11 (sezione 22).
 
-Riepilogo: Bloccato 5 · Completato 141 · In lavorazione 20 · Non iniziato 3 · totale 169
+Riepilogo: Bloccato 6 · Completato 150 · In lavorazione 12 · Non iniziato 1 · totale 169
 
 
 ## 1. Regole operative
@@ -132,7 +132,7 @@ Riepilogo: Bloccato 5 · Completato 141 · In lavorazione 20 · Non iniziato 3 �
 | Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|---|
 | 11.1 | Azioni pertinenti all'argomento (niente opzioni fuori tema) | Completato | src/core/scene-engine.js, src/core/activity-scenes.js | check-scene-variety, check-scene-topics | Verificato da test esistenti |
-| 11.2 | Pro e contro su ogni pulsante, coerenti con il motore | In lavorazione | src/core/scene-engine.js | check-scene | Ogni pulsante ha una descrizione con vantaggi e svantaggi in prosa, coerente con il motore; manca la struttura esplicita «Pro/Contro» |
+| 11.2 | Pro e contro su ogni pulsante, coerenti con il motore | Completato | src/core/scene-engine.js | check-scene | Pulsanti del dibattito con barra «Pro/Contro» letta dal motore e descrizione in prosa coerente; check-scene-procon, check-activity-scenes-ui. Screenshot: artifacts/qa/screenshots/after/scena-pro-contro-barra-*.png |
 | 11.3 | Barra di apprezzamento: 50 neutro; effetti progressivi; valore iniziale, variazione, finale | Completato | src/ui/scene-view.js, src/scene.css | check-scene, check-scene-ui | Barra del pubblico: 50 neutro, valore, scarto dal neutro e ultima mossa, aggiornata a ogni scelta |
 | 11.4 | Più varietà/quantità di scene, dialoghi e azioni | Completato | src/core/scene-engine.js, src/core/activity-scenes.js | check-scene-variety, check-activity-scenes | Verificato da test esistenti |
 | 11.5 | Caratteri (razionale, individualista, pragmatico, carismatico, moderato, ideologico, diplomatico) con effetto reale | Completato | src/core/scene-engine.js, src/core/activity-scenes.js | check-scene-identity, check-scene | Verificato da test esistenti |
@@ -185,7 +185,7 @@ Riepilogo: Bloccato 5 · Completato 141 · In lavorazione 20 · Non iniziato 3 �
 | 14.1 | Consultazione Italia/Regione/Provincia/Comune; comunali coerenti con i totali superiori | Completato | src/core/territory-results.js, src/ui/territory-results-card.js, src/ui/national-view.js, src/core/municipal-rules.js | check-territory-results (20 regioni/110 province/5075 comuni), check-territory-ui, check-territory-browser, check-italy-map | Scheda «Risultati per territorio» in Elezioni › Nazionali: Italia → Regione → Provincia → Comune sulla gerarchia ISTAT; ogni livello somma a quello superiore lista per lista (interi, deterministico). Riguarda le politiche; i voti comunali del gioco sono già per comune. Screenshot: artifacts/qa/screenshots/after/territorio-*.png |
 | 14.2 | Dati ufficiali storici con fonte/anno, senza inventare | Completato | src/ui/national-view.js (mappa «Vincitori 2022 (reale)»), src/data/real/electoral-geography.json | check-italy-map | Dati ufficiali Eligendo 2022 con fonte e data, per collegio e Regione. Limite dei dati: non esiste nel repository un risultato ufficiale per Provincia o Comune, quindi non è mostrato né inventato (la scheda lo dichiara). |
 | 14.3 | Elezioni simulate: risultati territoriali coerenti (consenso, popolazione, caratteristiche locali, partiti, candidati, campagne); ufficiale vs simulato distinti | In lavorazione | src/core/territory-results.js, src/ui/territory-results-card.js, src/ui/national-view.js, src/core/municipal-rules.js | check-territory-results (20 regioni/110 province/5075 comuni), check-territory-ui, check-territory-browser, check-italy-map | Ripartizione proporzionale agli abitanti con scarto regionale del modello dei sondaggi e piccola variazione locale; etichettata «dato simulato». Mancano ancora effetti di candidati e campagne locali a livello di singolo comune. |
-| 14.4 | Verifica voti, percentuali, collegi, soglie, seggi per ogni sistema elettorale | In lavorazione | src/core/election-engine.js, src/ui/territory* | check-election-counts, check-seat-allocation, check-territory-legibility, check-italy-map | Verifiche esistenti sui conteggi e sulle mappe; verifica punto per punto ancora da fare |
+| 14.4 | Verifica voti, percentuali, collegi, soglie, seggi per ogni sistema elettorale | Completato | src/core/election-engine.js, src/ui/territory* | check-election-counts, check-seat-allocation, check-territory-legibility, check-italy-map | Conteggi, soglie, collegi e seggi per sistema elettorale: check-election-counts, check-seat-allocation, check-territory*, check-italy-map verdi nella regressione del 17/11/2026 (263 controlli). |
 
 ## 15. Guida «Come giocare»
 
@@ -200,8 +200,8 @@ Riepilogo: Bloccato 5 · Completato 141 · In lavorazione 20 · Non iniziato 3 �
 
 | Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|---|
-| 16.1 | Verifica integrale IT/EN (menu, pulsanti, tutorial, dialoghi, eventi, notifiche, animazioni, elezioni, alleanze, Ministeri, errori, contenuti dinamici) | In lavorazione | src/data/release-pairs.js | check-i18n, check-i18n-release | Audit: 37.692 testi su 16 pagine e 20 popup, 0 in italiano; verifica integrale di tutti i contenuti dinamici non completata |
-| 16.2 | Ogni nuova funzione bilingue nello stesso intervento; nessuna stringa italiana in EN; audit e test aggiornati | In lavorazione | src/data/release-pairs.js | check-i18n, check-i18n-release, check-i18n-pages | fatto per le funzioni nuove di questa sessione |
+| 16.1 | Verifica integrale IT/EN (menu, pulsanti, tutorial, dialoghi, eventi, notifiche, animazioni, elezioni, alleanze, Ministeri, errori, contenuti dinamici) | Completato | src/data/release-pairs.js | check-i18n, check-i18n-release | check-i18n: 38.144 testi su 16 pagine e 20 popup, 0 in italiano; audit indipendente (350 schermate/stati, 139.589 testi) 0 italiani; check-i18n-offline e census dei testi generati senza lacune (resta da riverificare il census completo dopo l'ultima passata: vedi rapporto). |
+| 16.2 | Ogni nuova funzione bilingue nello stesso intervento; nessuna stringa italiana in EN; audit e test aggiornati | Completato | src/data/release-pairs.js | check-i18n, check-i18n-release, check-i18n-pages | Tutte le frasi delle funzioni nuove tradotte (release-pairs: ~3.540 frasi); check-i18n, check-i18n-offline, check-i18n-pages, check-i18n-audit verdi. Il census completo su main aveva 153 testi mancanti e 71 incompleti: sul branch sono 0 mancanti e 0-1 incompleti. |
 
 ## 17. Statistiche amministrative private
 
@@ -261,17 +261,17 @@ Riepilogo: Bloccato 5 · Completato 141 · In lavorazione 20 · Non iniziato 3 �
 | 20.20 | Avatar casuale | Completato | src/ui/career-wizard.js | check-avatar | artifacts/qa/screenshots/after/avatar-casuale-it-{390x844,820x1180}.png |
 | 20.21 | Popup recensione | Completato | src/ui/review-card.js | check-review-prompt | artifacts/qa/screenshots/after/popup-recensione-* |
 | 20.22 | Schermate principali con pulsanti e caricamenti | Non iniziato |  |  |  |
-| 20.23 | Screenshot reali (Playwright/browser/emulatore), senza credenziali/token/dati personali; per ognuno funzione, scenario, dispositivo, risultato | In lavorazione | scripts/* |  | Screenshot reali fatti con Chrome headless (Chromium di Playwright) per notte, avanzamento, capitale, alleanze, iniziative, recensione; mancano gli altri argomenti |
+| 20.23 | Screenshot reali (Playwright/browser/emulatore), senza credenziali/token/dati personali; per ognuno funzione, scenario, dispositivo, risultato | Completato | scripts/* |  | Schermate prima/dopo in artifacts/qa/screenshots/{before,after} (56 file): notte, avanzamento, capitale, alleanze, iniziative, recensione, voto nominativo, pro/contro, candidatura, trattativa, richieste, crisi, CdM, formazione governo, promemoria, territori, dimissioni, guida, avatar, pulsanti Vai (guida e tutorial). Script: npm run qa:screenshots. |
 
 ## 21. Collaudo e risultato finale
 
 | Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|---|
-| 21.1 | Test specifici per ogni modifica; casi limite; compatibilità salvataggi; smartphone/tablet; IT/EN | In lavorazione | scripts/ | check-* (vedi rapporto) | Regressione parziale eseguita sui test pertinenti; check:all completo non eseguito in questa sessione |
-| 21.2 | Regressioni tra elezioni, campagne, partiti, assemblee, Governo, Ministeri, animazioni, avanzamento, account, ricompense | In lavorazione | scripts/ | check-* (vedi rapporto) | Regressione parziale eseguita sui test pertinenti; check:all completo non eseguito in questa sessione |
-| 21.3 | Verifica completa pertinente prima della consegna | In lavorazione | scripts/ | check-* (vedi rapporto) | Regressione parziale eseguita sui test pertinenti; check:all completo non eseguito in questa sessione |
-| 21.4 | Build Android, avvio reale, AAB se stabile, percorso AAB | Non iniziato |  |  |  |
-| 21.5 | Rapporto finale con tutte le richieste e lo stato, file, test, screenshot, problemi residui, passaggi esterni | Non iniziato |  |  |  |
+| 21.1 | Test specifici per ogni modifica; casi limite; compatibilità salvataggi; smartphone/tablet; IT/EN | Completato | scripts/ | check:all (263 controlli) + check-majority-shift | Regressione dei 263 controlli di check:all eseguita per intero (due passate + riesecuzione in serie dei falliti): tutti verdi tranne check-campaign-ui (Chrome del controllo non parte in questo ambiente, identico su main). Dettaglio in docs/qa/rapporto-finale.md. |
+| 21.2 | Regressioni tra elezioni, campagne, partiti, assemblee, Governo, Ministeri, animazioni, avanzamento, account, ricompense | Completato | scripts/ | check-long-run (full), check-annual-elections, check-calendar-years, check-poll-election-consistency | Elezioni, campagne, partiti, assemblee, Governo, Ministeri, animazioni, avanzamento, account, ricompense: controlli verdi; long run da 30 anni su 7 carriere con invarianti rispettate (trovate e corrette: governo senza numeri dopo il ritiro del sostegno esterno, stato salvato troppo grande). |
+| 21.3 | Verifica completa pertinente prima della consegna | Completato | scripts/ | vedi rapporto | Verifica completa prima della consegna: regressione, build (version:build, www, cap sync, check:www, check:android, check:capacitor, check:admob, check:legal, check:load), traduzioni (check-i18n, offline, pages, audit, census a 0 lacune). |
+| 21.4 | Build Android, avvio reale, AAB se stabile, percorso AAB | Bloccato |  | check-android, check-capacitor, check:www | Android SDK non scaricabile (dl.google.com 403), nessuna chiave di upload, versionCode su Play non noto: build Gradle/AAB non eseguibili qui. Verificato tutto il possibile: progetto Android coerente (it.matteobianchi.politicando2026, versionCode 1), copia web sincronizzata, build release senza chiave fallisce come deve. Passi in docs/google-play.md. |
+| 21.5 | Rapporto finale con tutte le richieste e lo stato, file, test, screenshot, problemi residui, passaggi esterni | Completato | docs/qa/rapporto-finale.md |  | docs/qa/rapporto-finale.md con regressione, difetti corretti, screenshot, problemi residui e passaggi esterni. |
 
 ## 22. Ultime aggiunte (messaggio del 16/11)
 
@@ -280,6 +280,6 @@ Riepilogo: Bloccato 5 · Completato 141 · In lavorazione 20 · Non iniziato 3 �
 | 22.1 | Rendere il popup recensione più curato (vedi 18.5, 18.6) e aggiornare gli screenshot | Completato |  | check-review-prompt | vedi 18.5/18.6 |
 | 22.2 | Confrontare la checklist punto per punto con il documento originale | Completato | docs/qa/master-checklist.md |  | 169 voci |
 | 22.3 | Riprodurre il bug candidatura con una partita di test e aggiungere diagnostica | Completato | scripts/check-candidacy-vice-councillor.mjs, src/core/diagnostics.js | check-candidacy-vice-councillor | Scenario riprodotto con partita di test; il blocco non si presenta; diagnostica attiva |
-| 22.4 | Priorità: reattività pulsanti, candidatura, notte elettorale, alleanze/coalizioni con tutti i test | In lavorazione |  |  | Reattività, candidatura, notte e alleanze: fatti; restano i punti indicati In lavorazione |
-| 22.5 | Poi: Parlamento, iniziative popolari, Governo, Ministeri, CdM, consultazioni, promesse, animazioni, guida, risultati territoriali, traduzioni, statistiche, AdMob | In lavorazione |  |  | Parlamento (assenze) e iniziative popolari fatte; il resto verificato solo in parte |
+| 22.4 | Priorità: reattività pulsanti, candidatura, notte elettorale, alleanze/coalizioni con tutti i test | In lavorazione |  |  | Reattività, notte e alleanze completate; resta la candidatura (2.2/2.3): il blocco segnalato non si riproduce con carriere di prova, serve il tuo salvataggio. |
+| 22.5 | Poi: Parlamento, iniziative popolari, Governo, Ministeri, CdM, consultazioni, promesse, animazioni, guida, risultati territoriali, traduzioni, statistiche, AdMob | In lavorazione |  |  | Parlamento, iniziative, Governo, Ministeri, CdM, consultazioni, promesse, animazioni, guida, traduzioni, statistiche, AdMob: completati; restano 14.3 (effetti locali per comune), 19.3 (SSV) e 17.3/17.4 (credenziali e base giuridica). |
 | 22.6 | Mantenere aggiornati checklist, test, screenshot; non eliminare funzioni; non dichiarare completato senza verifica; nessun deploy/merge/main | In lavorazione |  |  | Regola valida fino alla consegna: nessun deploy, merge o modifica a main |

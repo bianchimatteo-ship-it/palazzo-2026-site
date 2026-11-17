@@ -84,6 +84,13 @@ const TOPICS = {
     const expand = async () => { if (!await k.evaluate(`Boolean(document.querySelector('.tutorial-details') && document.querySelector('.tutorial-details').getBoundingClientRect().height > 0)`)) await k.click('[data-tutorial=toggle]'); await k.pause(500); };
     for (const [w, h, tag] of SIZES) await k.shot('tutorial-pulsante-vai', w, h, tag, expand);
   } },
+  // 20.22 the main pages of the game with their buttons and the state of loading (phone and tablet)
+  pagine: { level: 'deputato', async run(k) {
+    for (const [hash, name] of [['#panoramica', 'home'], ['#elezioni', 'elezioni'], ['#sondaggi', 'sondaggi'], ['#istituzioni', 'istituzioni'], ['#territori', 'territori'], ['#informazione', 'informazione'], ['#profilo', 'profilo'], ['#impostazioni', 'impostazioni']]) {
+      await k.hash(hash); await k.wait(() => k.evaluate(`!/^\\s*Carico la pagina/.test(document.querySelector('.page-wrap')?.innerText ?? 'Carico la pagina')`), 20000); await k.pause(500);
+      for (const [w, h, tag] of SIZES) await k.shot(`pagina-${name}`, w, h, tag);
+    }
+  } },
   // 20.15 the formation of the Government and the consultations at the Quirinale after a vote
   formazione: { level: 'deputato', async run(k, b) {
     await k.evaluate(`(async () => {
