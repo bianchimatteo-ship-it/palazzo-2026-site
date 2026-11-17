@@ -99,6 +99,14 @@ export function individualVotes(summary, roster, { playerBill = false } = {}) {
     // then the others from the most to the least loyal, with a share of chance.
     const order = seats.map(item => ({ ...item, key: random() * 0.55 + independenceOf(item.seat) * 0.45 })).sort((a, b) => Number(b.seat.player) - Number(a.seat.player) || Number(Boolean(b.seat.keepsLine)) - Number(Boolean(a.seat.keepsLine)) || a.key - b.key);
     const counts = { favorevole: group.yes, contrario: group.no, astenuto: group.abstain };
+    // Whoever is away is drawn by chance among the members (never the player, never who sets the line): the empty seats must not always be the least loyal ones.
+    const away = Math.min(group.absent ?? 0, Math.max(0, order.length - 1));
+    if (away > 0) {
+      const draw = seededRandom(`${summary.id ?? summary.chamber}|${group.groupId}|assenti-posti`);
+      const pool = order.map((item, position) => ({ position, key: draw(), fixed: item.seat.player || item.seat.keepsLine })).filter(item => !item.fixed).sort((a, b) => a.key - b.key).slice(0, away).map(item => item.position);
+      const gone = new Set(pool);
+      for (let position = order.length - 1; position >= 0; position--) if (gone.has(position)) order.splice(position, 1);
+    }
     const sequence = [group.line, ...['favorevole', 'contrario', 'astenuto'].filter(choice => choice !== group.line)];
     if (order[0]?.seat.player && decided && counts[decided] > 0) sequence.unshift(decided);
     else if (playerBill && order[0]?.seat.player && counts.favorevole > 0) sequence.unshift('favorevole');

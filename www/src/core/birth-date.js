@@ -25,3 +25,15 @@ export function parseBirth(parts, today) {
   if (age !== null && age > 110) return { iso: '', age, error: 'Controlla l’anno: l’età risulta oltre i 110 anni.' };
   return { iso, age, error: null };
 }
+
+// A whole date typed or pasted in one go («12/04/1985», «12-4-1985», «12.04.1985», «1985-04-12», «12 aprile 1985»): split into the three fields; null when it is not a whole date with a four-digit year.
+export function parseTyped(text) {
+  const t = String(text ?? '').trim().toLowerCase();
+  let m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(t);
+  if (m) return { day: String(Number(m[3])), month: String(Number(m[2])), year: m[1] };
+  m = /^(\d{1,2})\s*[\/.\-\s]\s*(\d{1,2})\s*[\/.\-\s]\s*(\d{4})$/.exec(t);
+  if (m) return { day: String(Number(m[1])), month: String(Number(m[2])), year: m[3] };
+  m = /^(\d{1,2})\s+([a-zà-ù]+)\s+(\d{4})$/.exec(t);
+  if (m) { const index = MONTHS.indexOf(m[2]); if (index >= 0) return { day: String(Number(m[1])), month: String(index + 1), year: m[3] }; }
+  return null;
+}

@@ -1,24 +1,25 @@
-import { activeMinisters, canManageParliament, CHAMBERS, CONTEST_COST, CONTEST_WINDOW_DAYS, GOVERNMENT_POST_REQUIREMENTS, governingGroupIds, governmentPostProblems, MINISTERIAL_PORTFOLIOS, nextParliamentaryRole, parliamentGroupFacts, playerInMajority } from '../core/parliament-engine.js?v=20261117-6';
-import { amendmentOdds, forecastVote, LAW_SPONSORS, openVotesOf, PLAYER_VOTE_CHOICES } from '../core/lawmaking-engine.js?v=20261117-6';
-import { formatDate } from '../core/time.js?v=20261117-6';
-import { floorOffer } from './floor-view.js?v=20261117-6';
-import { competenceIn } from '../core/standing-engine.js?v=20261117-6';
-import { heldOfficesOf } from '../core/roles.js?v=20261117-6';
-import { AREA_BY_ID, FINANCING, GOVERNMENT_LINES, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261117-6';
+import { activeMinisters, canManageParliament, CHAMBERS, CONTEST_COST, CONTEST_WINDOW_DAYS, GOVERNMENT_POST_REQUIREMENTS, governingGroupIds, governmentPostProblems, MINISTERIAL_PORTFOLIOS, nextParliamentaryRole, parliamentGroupFacts, playerInMajority } from '../core/parliament-engine.js?v=20261117-12';
+import { amendmentOdds, forecastVote, LAW_SPONSORS, openVotesOf, PLAYER_VOTE_CHOICES } from '../core/lawmaking-engine.js?v=20261117-12';
+import { formatDate } from '../core/time.js?v=20261117-12';
+import { isEnglish } from '../core/i18n.js?v=20261117-12';
+import { floorOffer } from './floor-view.js?v=20261117-12';
+import { competenceIn } from '../core/standing-engine.js?v=20261117-12';
+import { heldOfficesOf } from '../core/roles.js?v=20261117-12';
+import { AREA_BY_ID, FINANCING, GOVERNMENT_LINES, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261117-12';
 const GOVERNMENT_LINE_LABELS = Object.fromEntries(Object.entries(GOVERNMENT_LINES).map(([id, item]) => [id, item.label]));
-import { AMENDMENT_CAPITAL_COST, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20261117-6';
-import { DATA_SOURCES } from '../data/schema.js?v=20261117-6';
-import { careerOverview } from '../core/career-overview.js?v=20261117-6';
-import { voteSummary } from '../core/vote-engine.js?v=20261117-6';
-import { artTile, glyph, LAW_ICONS } from './visuals.js?v=20261117-6';
-import { measureDesign, projectLaw } from '../core/society-engine.js?v=20261117-6';
-import { dossierPanel } from './dossier-view.js?v=20261117-6';
-import { ministryPanel } from './ministry-view.js?v=20261117-6';
-import { accordPanel, govNav, govSectionClose, govSectionOpen, governmentDesk, governmentGlance, lawContent, policyFields, policyPreview } from './policy-mode.js?v=20261117-6';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261117-6';
-import { avatarOf } from '../core/avatar.js?v=20261117-6';
-import { avatarSvg } from './avatar-svg.js?v=20261117-6';
-import { legislatureLabel } from '../core/legislature-engine.js?v=20261117-6';
+import { AMENDMENT_CAPITAL_COST, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20261117-12';
+import { DATA_SOURCES } from '../data/schema.js?v=20261117-12';
+import { careerOverview } from '../core/career-overview.js?v=20261117-12';
+import { voteSummary } from '../core/vote-engine.js?v=20261117-12';
+import { artTile, glyph, LAW_ICONS } from './visuals.js?v=20261117-12';
+import { measureDesign, projectLaw } from '../core/society-engine.js?v=20261117-12';
+import { dossierPanel } from './dossier-view.js?v=20261117-12';
+import { ministryPanel } from './ministry-view.js?v=20261117-12';
+import { accordPanel, govNav, govSectionClose, govSectionOpen, governmentDesk, governmentGlance, lawContent, policyFields, policyPreview } from './policy-mode.js?v=20261117-12';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261117-12';
+import { avatarOf } from '../core/avatar.js?v=20261117-12';
+import { avatarSvg } from './avatar-svg.js?v=20261117-12';
+import { legislatureLabel } from '../core/legislature-engine.js?v=20261117-12';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const icon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
@@ -388,7 +389,7 @@ function statutesBoard(parliament, canAct) {
   const list = [...(parliament.statutes ?? [])].reverse();
   const head = '<div class="home-section-heading"><div><span class="section-kicker">ORDINAMENTO · SIMULAZIONE</span><h2>Leggi in vigore</h2></div><span>' + whole(list.filter(item => item.status === 'vigente').length) + ' in vigore · ' + whole(list.filter(item => item.status === 'abrogata').length) + ' abrogate</span></div>';
   if (!list.length) return '<section class="law-board statute-board">' + head + '<p class="quiet-copy">Le leggi approvate dal Parlamento entrano qui e producono i loro effetti. Una legge già in vigore non si approva di nuovo identica: si può modificare o abrogare con una nuova proposta.</p></section>';
-  const rows = list.slice(0, 30).map(item => '<li class="statute-row is-' + esc(item.status) + '" data-statute="' + esc(item.id) + '"><div><strong>' + esc(item.title) + '</strong> <span class="bill-flag ' + (item.status === 'vigente' ? 'good' : 'bad') + '">' + (item.status === 'vigente' ? 'In vigore' : 'Abrogata') + '</span><small>' + esc(item.origin) + ' · approvata il ' + esc(formatDate(item.approvedAt)) + (item.amendments?.length ? ' · ' + item.amendments.length + (item.amendments.length === 1 ? ' modifica' : ' modifiche') : '') + (item.repealedAt ? ' · abrogata il ' + esc(formatDate(item.repealedAt)) : '') + '</small><p>' + esc(item.summary ?? '') + '</p></div>' + (canAct && item.status === 'vigente' ? '<div class="statute-actions"><button type="button" class="secondary-button compact" data-statute-change="modifica" data-statute-id="' + esc(item.id) + '">Proponi una modifica</button><button type="button" class="ghost-button compact" data-statute-change="abrogazione" data-statute-id="' + esc(item.id) + '">Proponi l’abrogazione</button></div>' : '') + '</li>').join('');
+  const rows = list.slice(0, 30).map(item => '<li class="statute-row is-' + esc(item.status) + '" data-statute="' + esc(item.id) + '"><div><strong>' + esc(item.title) + '</strong> <span class="bill-flag ' + (item.status === 'vigente' ? 'good' : 'bad') + '">' + (item.status === 'vigente' ? 'In vigore' : 'Abrogata') + '</span><small>' + esc(item.origin) + ' · ' + (isEnglish() ? 'approved on ' : 'approvata il ') + esc(formatDate(item.approvedAt)) + (item.amendments?.length ? ' · ' + item.amendments.length + (isEnglish() ? (item.amendments.length === 1 ? ' amendment' : ' amendments') : (item.amendments.length === 1 ? ' modifica' : ' modifiche')) : '') + (item.repealedAt ? ' · ' + (isEnglish() ? 'repealed on ' : 'abrogata il ') + esc(formatDate(item.repealedAt)) : '') + '</small><p>' + esc(item.summary ?? '') + '</p></div>' + (canAct && item.status === 'vigente' ? '<div class="statute-actions"><button type="button" class="secondary-button compact" data-statute-change="modifica" data-statute-id="' + esc(item.id) + '">Proponi una modifica</button><button type="button" class="ghost-button compact" data-statute-change="abrogazione" data-statute-id="' + esc(item.id) + '">Proponi l’abrogazione</button></div>' : '') + '</li>').join('');
   return '<section class="law-board statute-board">' + head + '<ul class="statute-list">' + rows + '</ul>' + (list.length > 30 ? '<p class="quiet-copy">Le ' + (list.length - 30) + ' leggi più vecchie restano nell’archivio storico.</p>' : '') + '</section>';
 }
 function lawsView(parliament, extras = {}) {

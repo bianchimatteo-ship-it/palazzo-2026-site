@@ -1,6 +1,6 @@
 // English phrase book, part 8 of 8: the administrative area, the account and sign-out screens, the personal logo catalogue, the tutorial invitation and the engine's law-effect and government lines. Same format as part 6: [Italian as shown, English]; `#` stands for a number, `{}` for a free part; in the English a free part is named by its position (`{2}` for the second one).
-import { ALL_PAIRS } from '../studio-lines.js?v=20261117-6';
-import { ALL_PAIRS as ACTIVITY_SCENE_PAIRS } from '../activity-scene-lines.js?v=20261117-6';
+import { ALL_PAIRS } from '../studio-lines.js?v=20261117-12';
+import { ALL_PAIRS as ACTIVITY_SCENE_PAIRS } from '../activity-scene-lines.js?v=20261117-12';
 
 // The explanations of the opening of a general or European campaign (campaign-engine.js campaignOpeningNotes): signed numbers come in both signs.
 function campaignNotePairs() {
@@ -9535,6 +9535,33 @@ export const PHRASES = [
   ["Una revisione è già in corso.", "A revision is already in progress."],
   ["Titolo della revisione", "Title of the revision"],
   ["Revisione costituzionale presentata", "Constitutional revision submitted"],
+  ["Strappo: {} esce dalla maggioranza.", "Split: {1} leaves the majority."],
+  ["Trattativa fallita tra {} e la coalizione guidata da…", "Failed negotiation between {1} and the coalition led by…"],
+  ["{} lascia l’intesa {}", "{1} leaves the pact {2}"],
+  ["approvata il ", "approved on "],
+  ["abrogata il ", "repealed on "],
+  ["Fondi disponibili: # €.", "Funds available: €#."],
+  ["# firme di elettori (raccolta dalla pagina «Iniziative»; apertura # €)", "# voters’ signatures (collected on the “Initiatives” page; opening cost €#)"],
+  ["# firme di elettori (raccolta dalla pagina “Iniziative”; apertura # €)", "# voters’ signatures (collected on the “Initiatives” page; opening cost €#)"],
+  ["# Consigli regionali (# € e # di capitale politico)", "# Regional Councils (€# and # political capital)"],
+  ["# lista senza collocazione politica nei dati", "# list with no political placement in the data"],
+  ["# liste senza collocazione politica nei dati", "# lists with no political placement in the data"],
+  ["legge-in-vigore", "law-in-force"],
+  ["legge in vigore", "law in force"],
+  ["Consiglio comunale: la misura “{}” è in ritardo.", "City council: the measure “{1}” is behind schedule."],
+  ["Consiglio comunale: la misura “{}” non è stata attuata.", "City council: the measure “{1}” has not been implemented."],
+  ["Consiglio provinciale: la misura “{}” è in ritardo.", "Provincial council: the measure “{1}” is behind schedule."],
+  ["Consiglio provinciale: la misura “{}” non è stata attuata.", "Provincial council: the measure “{1}” has not been implemented."],
+  ["{} lascia l’intesa simulata {} – {}", "{1} leaves the simulated agreement {2} – {3}"],
+  ["l’intesa simulata {} – {}", "the simulated agreement {1} – {2}"],
+  ["{} ha la fiducia di # gruppi; la stabilità è a #/# e il margine nella Camera più stretta è di +# seggi.", "{1} has the confidence of {2} groups; stability is at {3}/{4} and the margin in the narrower Chamber is +{5} seats."],
+  ["{} ha la fiducia di # gruppi (di cui # dall’esterno); la stabilità è a #/# e il margine nella Camera più stretta è di +# seggi.", "{1} has the confidence of {2} groups ({3} from outside); stability is at {4}/{5} and the margin in the narrower Chamber is +{6} seats."],
+  ["{} ha la fiducia di # gruppi; la stabilità è a #/# e il margine nella Camera più stretta è di -# seggi.", "{1} has the confidence of {2} groups; stability is at {3}/{4} and the margin in the narrower Chamber is -{5} seats."],
+  ["{} ha la fiducia di # gruppi (di cui # dall’esterno); la stabilità è a #/# e il margine nella Camera più stretta è di -# seggi.", "{1} has the confidence of {2} groups ({3} from outside); stability is at {4}/{5} and the margin in the narrower Chamber is -{6} seats."],
+  ["{} ha la fiducia di # gruppi (di cui # dall’esterno); la stabilità è a #/#.", "{1} has the confidence of {2} groups ({3} from outside); stability is at {4}/{5}."],
+  ["{} ha la fiducia di # gruppi; la stabilità è a #/#.", "{1} has the confidence of {2} groups; stability is at {3}/{4}."],
+  ["Promesse verificate dai cittadini", "Promises checked by citizens"],
+  ["Regione {}: aperta l’opera {} di formazione professionale", "Region {1}: the project {2} of vocational training has opened"],
   ["{}: l’intervista su {}", "{1}: the interview on {2}"],
   ["{}: la conferenza stampa su {}", "{1}: the press conference on {2}"],
   ["{}: l’ospitata televisiva su {}", "{1}: the TV appearance on {2}"],

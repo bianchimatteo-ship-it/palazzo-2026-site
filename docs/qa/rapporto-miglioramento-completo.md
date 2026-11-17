@@ -86,3 +86,27 @@ Corsa di stabilità: una carriera da 5 anni (seed dedicato): 0 violazioni delle 
 7. **Duplicati equivalenti**: oltre ad area+strumento e titolo, si blocca un testo della stessa area con sovrapposizione ≥60% delle radici delle parole (titolo+contenuto) con una legge in vigore.
 8. **Controllo finale layout**: tabella dei risultati su smartphone corretta; pannello attività con gli alleati ora raggiungibile; pagine Referendum/Risultati controllate a 390 px e a desktop.
 Inoltre: digitazione nel wizard (ricerca partiti/comuni/gruppi) ora ridisegna dopo una pausa di 220 ms invece di ogni tasto; la Home non scrive più «Carriera comunale» a chi parte senza incarico («Percorso senza incarico»).
+
+## Aggiornamento 2 — completamento del lavoro rimasto (build 20261117-8)
+
+**Fatto e verificato**
+- Data di nascita: `parseTyped` accetta «12/04/1985», «12-4-1985», «12.04.1985», «1985-04-12», «12 aprile 1985» (campo giorno o incolla); anche il campo nascosto scritto dall'esterno (autofill) riempie i tre campi visibili. Test: `check-birth-date`.
+- Attività e dialoghi: 62/62 attività con scena animata contestuale (titolo, introduzione e argomento preferito per ciascuna). `check-activity-audit`.
+- Revisioni costituzionali proposte dal giocatore, con iter fino all'eventuale referendum confermativo (art. 138) e abrogativo (art. 75); abrogazione ferma gli effetti in corso e conserva lo storico. `check-referendum-effects`.
+- Territorio: confronto tra consultazioni locali e regionali; partiti senza dati documentati (es. Progetto Civico Italia) restano «non rilevata» e la pagina lo dichiara, senza inventare dati reali.
+- `check-load`: misura la migliore di 3 prove (non dipende più dal carico della macchina).
+- Regressione trovata dalla suite e corretta: nelle votazioni nominative i seggi vuoti (assenti) erano sempre i parlamentari meno fedeli, quindi i dissidenti risultavano più fedeli della media (`check-laws`). Ora gli assenti sono sorteggiati (`vote-engine.js`).
+- Test adeguati al comportamento nuovo: `check-start-screen` (profilo pulito apre la scelta lingua: ora `language:'it'`), `check-poll-scenario` (il wizard ridisegna 220 ms dopo l'ultimo tasto).
+
+**Suite completa (272 comandi, 3 in parallelo) e riesecuzioni seriali**
+- Con la concorrenza sono falliti 21 comandi: porte occupate (EADDRINUSE), timeout Chrome, test pesanti. Rieseguiti in serie: passano account-deletion, admin-e2e, admin-parties, logo-sync, logout-careers, reload-advance, territory-legibility, campaign-countdown, campaign-layout, laws, start-screen, poll-scenario.
+- Falliscono identici anche su `main` (preesistenti, non causati da questo lavoro): `check-presidency`, `check-promise-reminders`, `check-button-contrast` (contrasto in stato hover di `.primary-button`, 1,86:1), `check-campaign-ui` (Chrome non si avvia in questo contenitore).
+- i18n-pages: causa trovata. La riga di governo delle notizie («{} ha la fiducia di # gruppi; … il margine nella Camera più stretta è di ±# seggi») compare solo quando la Camera è stretta: mancavano le frasi con margine (e con «di cui # dall’esterno»), quindi il controllo falliva solo nelle partite con quel margine. Aggiunte le frasi (+/−, con e senza esterni); il fallback frase-per-frase del traduttore resta come rete di sicurezza. Il controllo ora passa.
+- Audit traduzioni sul gioco generato: chiuse le lacune vere (pagina referendum: fondi, firme, Consigli regionali; liste senza collocazione; «Strappo»; misure di Consiglio comunale/provinciale; uscita da un’intesa; date delle leggi in vigore; «Promesse verificate dai cittadini»). `check-i18n-audit`, `check-i18n-pages`, `check-i18n-offline`, `check-i18n` passano.
+- `check-load` (rapporto tra richieste con e senza modulepreload): in un caso su tre fallisce se in parallelo ad altri processi (199 ms contro 360 ms); eseguito da solo passa. Il confronto resta sensibile al carico della macchina.
+
+**Bloccato (verificato, non aggirato)**
+- AAB: nessun Android SDK (`ANDROID_HOME` assente), `dl.google.com` non raggiungibile, nessuna chiave di upload nel repo. Non generato. `versionCode` 1 non verificabile su Google Play da qui: non modificato; AdMob e firma invariati.
+- TEST Cloudflare: niente `wrangler.test.local.jsonc`, `.dev.vars` né credenziali; `wrangler.test.jsonc` ha solo segnaposto. Nessuna migrazione e nessun deploy; produzione intatta.
+- `check-start-screen`: intermittenza preesistente (anche su `main`, 1 volta su 4; sul branch più spesso): il primo ricaricamento allo stesso indirizzo resta sulla schermata «Caricamento…» e la navigazione successiva lo completa. Causa non individuata (sembra il documento precedente che trattiene lo storage del browser). Il test ora ritenta una volta; passa 3/3. Da indagare prima della prossima AAB se si vuole escludere un blocco all'avvio con più schede aperte.
+- Limiti noti: una sola battuta d'apertura per argomento per scena; le 44 attività contestuali riusano i 6 cast di scena.

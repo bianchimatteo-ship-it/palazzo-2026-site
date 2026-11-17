@@ -1,11 +1,11 @@
 // The page «Risultati per territorio»: the last simulated general election of the game read by Region, Province and Comune, with search, filters, pages and a comparison between consultations. It never loads
 // all the 7,894 comuni at once: the hierarchy holds only names and inhabitants, and the votes of the comuni are drawn for ONE province at a time (core/territory-results.js), always adding up to the level above.
 // What is shown is SIMULATED and says so; the only official data are the real 2022 results by Region (the map of the national page) and what the sources document.
-import { addsUp, territoryBreakdown } from '../core/territory-results.js?v=20261117-6';
-import { OTHERS, hierarchyFor, territoryInputs } from './territory-results-card.js?v=20261117-6';
-import { badge, card, empty, esc, num, pct } from './sections-kit.js?v=20261117-6';
-import { formatDate } from '../core/time.js?v=20261117-6';
-import { territoryPaint } from './national-view.js?v=20261117-6';
+import { addsUp, territoryBreakdown } from '../core/territory-results.js?v=20261117-12';
+import { OTHERS, hierarchyFor, territoryInputs } from './territory-results-card.js?v=20261117-12';
+import { badge, card, empty, esc, num, pct } from './sections-kit.js?v=20261117-12';
+import { formatDate } from '../core/time.js?v=20261117-12';
+import { territoryPaint } from './national-view.js?v=20261117-12';
 
 export const PAGE_SIZE = 25;
 const SORTS = [['popolazione', 'più abitanti'], ['nome', 'ordine alfabetico'], ['voti', 'più voti simulati']];
