@@ -1,11 +1,11 @@
 // English phrase-book pairs of the last release pass (data/i18n/en-ui-8.js reads `ALL_PAIRS`): the guided programme editor, the days of the Quirinale and the rule on the parties, the government room, the live
 // votes of the assemblies, the party headquarters, the TV name plates and the tutorial. Format as in the phrase-book: [Italian as shown, English]; `#` a number, `{}` a free part.
-import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261117-2';
-import { DEBATE_PAIRS } from './debate-choices.js?v=20261117-2';
-import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261117-2';
-import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261117-2';
-import { ALL_PAIRS as TOPIC_PAIRS } from './activity-scene-topics.js?v=20261117-2';
-import { LAW_TERM_PAIRS } from './law-terms.js?v=20261117-2';
+import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261117-3';
+import { DEBATE_PAIRS } from './debate-choices.js?v=20261117-3';
+import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261117-3';
+import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261117-3';
+import { ALL_PAIRS as TOPIC_PAIRS } from './activity-scene-topics.js?v=20261117-3';
+import { LAW_TERM_PAIRS } from './law-terms.js?v=20261117-3';
 export const ALL_PAIRS = [
   ...GUEST_PAIRS,
   ...DEBATE_PAIRS,
@@ -1556,4 +1556,5 @@ export const ALL_PAIRS = [
   ["Trattativa fallita tra {} e la coalizione guidata da Potere al…", "Failed negotiation between {1} and the coalition led by Potere al…"],
   ["Coordinamento provinciale (figura simulata) guida il comitato di {} (stato: perdita-controllo) e vuole essere candidato alle prossime elezioni. Il malcontento è a #/# e la fedeltà a #/#: se se ne va porta via iscritti e volontari.", "Provincial coordinator (simulated figure) leads the committee of {1} (status: loss of control) and wants to be a candidate in the next elections. Discontent is at {2}/{3} and loyalty at {4}/{5}: if they leave they take members and volunteers with them."],
   ["Regione {}: via libera all’opera Potenziamento di strutture sanitarie (case di…", "{1} Region: green light for the project Strengthening of health facilities (case di…"],
+  ["Senza il sostegno esterno","Without the external support"],
 ];
