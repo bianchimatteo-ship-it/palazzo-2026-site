@@ -107,4 +107,20 @@ html = page();
 assert.ok(/data-territory-compare="table"/.test(html) && (html.match(/data-territory-compare-row/g) ?? []).length >= 4 && /Differenza/.test(html) && /[+−]\d/.test(plain(html)), 'Il confronto mostra le differenze');
 assert.ok(/data-territory-compare="none"/.test(page({}, { national: { lastPolitiche: last, votes: [] } })), 'Con un solo voto il confronto dice perché non c’è');
 assert.ok(!/NaN|undefined|\[object/.test(html), 'Nessun valore rotto');
+// regional and local votes: two votes in the same place, compared list by list, shares coherent (never above 100)
+{
+  const { compareRaces, finishedRaces } = await import(`../src/ui/territory-page.js${v}`);
+  const race = (id, date, groups, level = 'comunale') => ({ id, level, territory: { name: 'Siena' }, electionDate: date, result: { share: 12, winner: { label: groups[0][0], percent: groups[0][1] }, groups: groups.map(([label, percent]) => ({ label, percent })) } });
+  const a = race('r1', '2021-10-03', [['Lista A', 48], ['Lista B', 40], ['Lista C', 8]]), b = race('r2', '2026-10-04', [['Lista B', 51], ['Lista A', 39.5], ['Lista D', 9]]);
+  const out = compareRaces(b, a);
+  assert.equal(out.first.id, 'r1', 'Il confronto va dal voto più vecchio al più recente.'); assert.ok(out.consistent);
+  assert.deepEqual(out.rows.map(r => r.label).sort(), ['Lista A', 'Lista B', 'Lista C', 'Lista D'], 'Tutte le liste di entrambi i voti.');
+  assert.equal(out.rows.find(r => r.label === 'Lista C').b, undefined, 'Chi non c’era ha un trattino, non uno zero inventato.');
+  assert.equal(compareRaces(a, race('r3', '2026-10-04', [['X', 70], ['Y', 50]])).consistent, false, 'Quote oltre il 100% sono segnalate.');
+  const st = { game: { week: { index: 1 } }, races: { items: [a, b, { id: 'x', level: 'regionale', territory: { name: 'Toscana' } }] } };
+  assert.equal(finishedRaces(st).length, 2, 'Solo i voti con un risultato.');
+  const html = renderTerritoryPage(st, overview, { geography, municipalities: db().municipalities, filters: {}, swatch, colorOf: () => '#456', labelOf: id => String(id).slice(0, 18) });
+  assert.ok(/data-territory-races="table"/.test(html) && /data-territory-race-row/.test(html) && /Comunali · Siena/.test(html.replace(/<[^>]+>/g, '')), 'La pagina mostra il confronto locale.');
+  assert.ok(/data-territory-races="none"/.test(renderTerritoryPage({ game: { week: { index: 1 } } }, overview, { geography, municipalities: db().municipalities, filters: {}, swatch, colorOf: () => '#456', labelOf: id => id })), 'Senza voti locali lo dice.');
+}
 console.log('check-territory-page: ok');
