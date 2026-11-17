@@ -9,8 +9,8 @@ import { startCareer, playWeek } from './lib/long-run.mjs';
 {
   const ordinary = Array.from({ length: 400 }, (_, n) => absentOf({ members: 100, seed: `v${n}` }));
   const mean = ordinary.reduce((a, b) => a + b, 0) / ordinary.length;
-  assert.ok(mean >= 6 && mean <= 13, `Un voto ordinario ha in media tra il 6% e il 13% di assenti (${mean.toFixed(1)}%).`);
-  assert.ok(Math.max(...ordinary) <= 14 && Math.min(...ordinary) >= 4, 'Le assenze restano in una forbice credibile (4-14%).');
+  assert.ok(mean >= 5.5 && mean <= 9.5, `Un voto ordinario ha in media tra il 5,5% e il 9,5% di assenti (${mean.toFixed(1)}%): meno di prima, ma mai un’Aula piena.`);
+  assert.ok(Math.max(...ordinary) <= 11 && Math.min(...ordinary) >= 4, 'Le assenze restano in una forbice credibile (4-11%).');
   const confidence = Array.from({ length: 400 }, (_, n) => absentOf({ members: 100, confidence: true, seed: `f${n}` }));
   assert.ok(Math.max(...confidence) <= 3, 'La fiducia chiama quasi tutti: al massimo il 3% di assenti.');
   assert.equal(absentOf({ members: 100, seed: 'x' }), absentOf({ members: 100, seed: 'x' }), 'Lo stesso voto ha le stesse assenze.');
@@ -19,6 +19,15 @@ import { startCareer, playWeek } from './lib/long-run.mjs';
     assert.equal(out.yes + out.no + out.abstain, Math.max(0, yes + no + abstain - Math.min(gone, yes + no + abstain)), `spreadAbsent(${yes},${no},${abstain},${gone}) conserva i conti.`);
     assert.ok(out.yes >= 0 && out.no >= 0 && out.abstain >= 0, 'Mai negativi.');
   }
+}
+
+// the abstentions: fewer than before, more when the vote is close, and still fewer on a question of confidence
+{
+  const { splitGroupVote } = await import('../src/core/vote-engine.js');
+  const mean = (seats, yes, confidence) => { let abstain = 0; for (let n = 0; n < 400; n++) abstain += splitGroupVote({ seats, yes, confidence, seed: `a${n}|${seats}|${yes}` }).abstain; return abstain / 400 / (seats - yes); };
+  const close = mean(100, 50, false), clear = mean(100, 90, false), conf = mean(100, 50, true);
+  assert.ok(close < 0.26 && close > 0.12, `Voto in bilico: la quota di astenuti tra chi non vota sì è ${(close * 100).toFixed(0)}% (prima oltre il 30%).`);
+  assert.ok(clear < close && conf < clear, 'Voto netto: meno astenuti che in bilico; fiducia: ancora meno.');
 }
 
 // ---------- a career in the real Chambers ----------
@@ -43,7 +52,7 @@ for (const vote of ordinary) {
   for (const group of summary.groups.filter(item => item.governing && item.seats >= 20)) { governing++; dissentShare += group.dissent / Math.max(1, group.seats - group.absent); }
 }
 const meanAbsent = absentShare / ordinary.length;
-assert.ok(meanAbsent >= 0.03 && meanAbsent <= 0.15, `Assenze medie dei voti ordinari: ${(meanAbsent * 100).toFixed(1)}% (tra il 3% e il 15%).`);
+assert.ok(meanAbsent >= 0.03 && meanAbsent <= 0.12, `Assenze medie dei voti ordinari: ${(meanAbsent * 100).toFixed(1)}% (tra il 3% e il 15%).`);
 if (governing) { const dissent = dissentShare / governing; assert.ok(dissent < 0.3, `Le forze di maggioranza seguono in gran parte la linea (dissenso medio ${(dissent * 100).toFixed(1)}%).`); }
 for (const vote of confidence) { const summary = voteSummary(vote); assert.equal(summary.yes + summary.against + summary.abstain + summary.absent, summary.total, `${vote.id}: la fiducia somma ai seggi.`); assert.ok(summary.absent / summary.total <= 0.04, `${vote.id}: la fiducia ha pochissimi assenti.`); }
 // secret ballot: no individual votes
