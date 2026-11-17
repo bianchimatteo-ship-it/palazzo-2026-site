@@ -1605,4 +1605,5 @@ export const ALL_PAIRS = [
   ["(simulazione).", "(simulation)."],
   ["Stabilmente sopra l’#% da un mese: da questa settimana gli istituti rilevano {} con una propria voce.", "Steadily above {1}% for a month: from this week the polling institutes measure {2} as a separate entry."],
   ["Colore, serie e storico da qui in avanti sono simulati.", "Colour, series and history from here on are simulated."],
+  ["Stabilmente sopra l’#% da un mese: da questa settimana gli istituti rilevano {}", "Steadily above {1}% for a month: from this week the polling institutes measure {2}"],
 ];

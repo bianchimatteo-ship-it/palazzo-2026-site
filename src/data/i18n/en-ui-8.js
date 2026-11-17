@@ -8951,6 +8951,7 @@ export const PHRASES = [
   ["la promessa è stata mantenuta", "the promise was kept"],
   ["l’iniziativa è arrivata in fondo", "the initiative went all the way"],
   ["(simulazione).", "(simulation)."],
+  ["Stabilmente sopra l’#% da un mese: da questa settimana gli istituti rilevano {}", "Steadily above {1}% for a month: from this week the polling institutes measure {2}"],
   ["{}: l’intervista su {}", "{1}: the interview on {2}"],
   ["{}: la conferenza stampa su {}", "{1}: the press conference on {2}"],
   ["{}: l’ospitata televisiva su {}", "{1}: the TV appearance on {2}"],
