@@ -34,7 +34,7 @@ import { changePartner } from './parliament-engine.js?v=20261117-3';
 import { governmentSpendingReview, playerSeatedOn, accordApplies, accordConflicts, parliamentInternals, premierGroupOf, answerCommitment, ensureAccord, offerConcession, tickAccord, changeSeats, checkMajority, record as recordParliament, setConfidenceVote, setGroupDirective, createReferenceGovernment, neverHadGovernment, offerGroupSupport, requestGovernmentPost, withdrawGroupSupport, partnerSatisfaction, acceptLawDemand, activeMinisters, amendLawPolicy, askConfidenceOnLaw, groupProfile, issueDecree, majoritySummit, reshuffleMinister, setGovernmentProgram, settlePartnerDemand, withdrawLaw, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20261117-3';
 import { activityProblem, dissolutionWait, situation, addProvincialCalendar, declareAmbition, scheduleEarlyLocalElection, alignLocalCalendar, localCalendarOf, committeeAction, startTreasuryOperation, requestFundsFromParty, payIntoParty, staffChange, staffGive, staffSetStatus, setCommunication, setPartyProgram, addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, assignOrgans, callEarlyCongress, contestPartyRank, createGameState, disciplineGroup, expelDissidents, isSecretary, joinParty, makeInvestment, nextPartyRank, partyInvestment, lifeBreakPact, lifeCadre, lifeCongress, lifeFound, lifeMerge, lifeOverview, lifeRebuild, lifeRename, lifeRespond, partyOpsAvailability, saveForElection, saveReserve, takeReserve, scheduleEarlyElection, setCandidacyRule, setPartyLine, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, recordResignation, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20261117-3';
 import { ADVANCE_RULES, AMENDMENT_CAPITAL_COST, COMMUNICATION_STYLES, GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS, PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261117-3';
-import { syncAgendas, advanceLegislativeWeek, amendOthersLaw, amendmentOdds, castFloorVote, floorKeyOf, linkGroupsToParties, setPlayerVote, speakOnLaw, BALLOTS, openVotesNotice, openVotesOf } from './lawmaking-engine.js?v=20261117-3';
+import { introduceInitiativeBill, lawState, statutesOf as statutesOfParliament, syncAgendas, advanceLegislativeWeek, amendOthersLaw, amendmentOdds, castFloorVote, floorKeyOf, linkGroupsToParties, setPlayerVote, speakOnLaw, BALLOTS, openVotesNotice, openVotesOf } from './lawmaking-engine.js?v=20261117-3';
 import { seededRandom } from './vote-engine.js?v=20261117-3';
 import { advanceCabinetWeek, joinAsSupport, majorityMargin } from './cabinet-engine.js?v=20261117-3';
 import { CRISIS_ANSWERS, advanceDiplomacy, answerCrisis, createDiplomacy, decideSummit, diplomacyView, negotiate, openNegotiation, presidentTreaty } from './diplomacy-engine.js?v=20261117-3';
@@ -1847,7 +1847,7 @@ function tickSociety(s, date, report) {
       }
       if (item.status === 'raccolta') { const out = advanceCollection(item, ctx); item = out.initiative; events.push(...out.events); }
       if (item.status === 'verifica') { const out = settleVerification(item, { date }); item = out.initiative; events.push(...out.events); }
-      if (item.status === 'in-parlamento') { const out = advanceParliamentPhase(item, { date, support: ctx.parliamentSupport }); item = out.initiative; events.push(...out.events); }
+      if (item.status === 'in-parlamento' && !item.lawId && !chambersAtWork(s.parliament)) { const out = advanceParliamentPhase(item, { date, support: ctx.parliamentSupport }); item = out.initiative; events.push(...out.events); }
       next.push(item);
       for (const event of events) {
         lines.push(event.text); promiseNotes.push({ kind: 'iniziativa', title: event.text, tone: event.tone === 'bad' ? 'bad' : 'good' });
@@ -3144,6 +3144,14 @@ function tickLegislature(input, date) {
   // The life of the cabinet (cabinet-life-engine.js): evaluations, requests, conflicts, the meeting, the minister who walks out; the Prime Minister decides when it is the player.
   const life = advanceCabinetLife(cabinet.parliament, { date, week: s.game?.week?.index ?? 0, rand: seededRandom(`${s.career.id ?? 'carriera'}|${date}|squadra`), society: s.society, playerPremier: isPrimeMinister(cabinet.parliament) });
   cabinet.parliament = life.parliament; cabinet.lines = [...cabinet.lines, ...life.lines];
+  // The popular initiatives that passed the check of the signatures become real bills (art. 71 Cost.): they follow the iter of every bill (assignment, committee, floor, amendments, votes) and end as the Chambers decide.
+  let iniList = s.game?.initiatives ?? [], iniMoved = false;
+  for (const item of iniList.filter(entry => entry.status === 'in-parlamento' && !entry.lawId)) {
+    const text = (item.articles ?? []).map(entry => `Art. ${entry.n} — ${entry.text}`).join(' ').slice(0, 600);
+    const made = introduceInitiativeBill(cabinet.parliament, { id: item.id, title: item.title, summary: text.length >= 12 ? text : `Testo dell’iniziativa popolare «${item.title}».`, area: item.area, date, chamber: item.parliament?.chamber ?? 'camera' });
+    cabinet.parliament = made.parliament; iniList = iniList.map(entry => entry.id === item.id ? { ...entry, lawId: made.law.id, iter: 'reale' } : entry); iniMoved = true;
+  }
+  if (iniMoved) s = { ...s, game: { ...s.game, initiatives: iniList } };
   const out = advanceLegislativeWeek(cabinet.parliament, { date, rand: seededRandom(`${s.career.id ?? 'carriera'}|${date}|camere`), world: s.world, society: s.society });
   let next = out.parliament === before ? s : computeParliamentUpdate(s, withCapital(out.parliament, s.game), s.ui.toast);
   if (next !== s) next = { ...next, world: legislativeEffects(next.world, before, next.parliament, date) };
@@ -3153,6 +3161,7 @@ function tickLegislature(input, date) {
     next = result.state;
     lines.push(result.line);
   }
+  { const sync = syncInitiativeBills(next.game, next.parliament, date); if (sync.changed) { next = { ...next, game: sync.game }; lines.push(...sync.lines); if (sync.effects) next = applyStatDeltas(next, sync.effects); } }
   let game = next.game;
   // A vote of the player's Chamber opens and waits for the player's own ballot (floor-votes.js): the week says which measure, and where. The requests of the old agenda (a default could answer them) are gone.
   for (const event of out.events.filter(item => item.type === 'votazione-aperta')) lines.unshift(`${event.chamber === 'camera' ? 'Camera dei deputati' : 'Senato della Repubblica'}: si apre la votazione su “${event.title}”. L’Aula attende il tuo voto.`);
@@ -3167,6 +3176,36 @@ function tickLegislature(input, date) {
   next = { ...next, parliament: outParliament };
   if (lines.length && game.lastReport) game = { ...game, lastReport: { ...game.lastReport, lines: [...game.lastReport.lines, ...lines.slice(0, 5)] } };
   return { ...next, game, parliament: withCapital(next.parliament, game) };
+}
+// What happens to an initiative whose text is a bill of the Chambers: the stage of the bill is the stage of the initiative, and its end (approved, rejected, lapsed) is the end of the initiative, told once.
+const INITIATIVE_STAGE_OF_LAW = { proposal: 'assegnata', commission: 'commissione', amendments: 'commissione', 'other-chamber': 'aula', 'final-vote': 'aula' };
+function syncInitiativeBills(game, parliament, date) {
+  const list = game?.initiatives ?? [];
+  if (!list.some(item => item.status === 'in-parlamento' && item.lawId)) return { game, changed: false, lines: [], effects: null };
+  const lines = []; let effects = null; let changed = false;
+  const initiatives = list.map(item => {
+    if (item.status !== 'in-parlamento' || !item.lawId) return item;
+    const st = lawState(parliament, item.lawId);
+    if (!st) return item;
+    if (st.open) {
+      const stage = INITIATIVE_STAGE_OF_LAW[st.stage] ?? item.parliament?.stage;
+      if (stage === item.parliament?.stage) return item;
+      changed = true; lines.push(`«${item.title}»: ${st.stage === 'proposal' ? 'assegnata alla commissione' : stage === 'aula' ? 'in Aula' : 'esame in commissione'}.`);
+      return { ...item, parliament: { ...item.parliament, stage, chamber: st.chamber ?? item.parliament?.chamber }, history: [{ date, text: `Il disegno di legge è ${stage === 'aula' ? 'in Aula' : 'in esame in commissione'}.` }, ...(item.history ?? [])].slice(0, 40) };
+    }
+    changed = true;
+    const approved = st.stage === 'approved';
+    const done = { ...item, status: approved ? 'approvata' : 'archiviata', closedAt: date, outcome: approved ? 'Il Parlamento ha approvato il testo (anche con modifiche): è una vittoria della raccolta, e la legge entra nell’ordinamento.' : st.stage === 'rejected' ? 'Il Parlamento ha respinto il testo in votazione: l’iniziativa è archiviata. Si può ripresentare.' : 'Il testo è decaduto in commissione senza arrivare al voto: l’iniziativa è archiviata. Si può ripresentare.' };
+    done.history = [{ date, text: done.outcome }, ...(done.history ?? [])].slice(0, 40);
+    const ending = initiativeEnding(done);
+    if (ending) effects = { reputation: (effects?.reputation ?? 0) + ending.reputation, popularity: (effects?.popularity ?? 0) + ending.popularity, notoriety: (effects?.notoriety ?? 0) + ending.notoriety };
+    lines.push(approved ? `Il Parlamento ha approvato il testo di «${item.title}»: è una vittoria della raccolta.` : `«${item.title}»: ${done.outcome}`);
+    return done;
+  });
+  if (!changed) return { game, changed: false, lines: [], effects: null };
+  const next = { ...game, initiatives };
+  for (const item of initiatives) if (item.closedAt === date && item.lawId) { remember(next, { date, kind: `iniziativa-${item.status}`, text: item.outcome, weight: item.status === 'approvata' ? 0.9 : 0.6 }); next.log = [{ id: `diario-iniziativa-${item.id}-${date}`, week: next.week.index, date, kind: 'carriera', title: `Iniziativa «${item.title}»: ${item.status === 'approvata' ? 'approvata dal Parlamento' : 'archiviata'}`, lines: [item.outcome], tone: item.status === 'approvata' ? 'good' : 'bad', source: DATA_SOURCES.SIMULATION }, ...(next.log ?? [])].slice(0, 400); }
+  return { game: next, changed: true, lines, effects };
 }
 function nationalFormationOpen(s) {
   const formation = s.national?.formation;
@@ -6128,6 +6167,23 @@ export const store = {
     const parliament = reference ? { ...result.parliament, laws: result.parliament.laws.map(law => law.id === result.law.id ? { ...law, realReference: reference } : law) } : result.parliament;
     applyParliamentUpdate(next, parliament, reference ? 'Proposta depositata: modifica simulata di un atto reale' : 'Proposta depositata', { experience: 0.5, influence: 0.5 });
     return parliament.laws.find(law => law.id === result.law.id);
+  },
+  // The laws in force (the register of the simulated country) and the procedures to change them: a law already approved is never proposed again identical, it is amended or repealed with a bill of its own.
+  statutes() { return statutesOfParliament(state.parliament); },
+  proposeStatuteChange(statuteId, { mode = 'abrogazione', text = '' } = {}) {
+    requireCareer();
+    if (!canManageParliament(state.parliament)) throw new Error('Per presentare una legge devi avere un percorso parlamentare e un gruppo di riferimento.');
+    const statute = statutesOfParliament(state.parliament).find(item => item.id === statuteId && item.status === 'vigente');
+    if (!statute) throw new Error('Questa legge non è in vigore.');
+    if (!['abrogazione', 'modifica'].includes(mode)) throw new Error('Scegli se abrogare o modificare.');
+    const field = mode === 'abrogazione' ? 'repeals' : 'amends';
+    if ((state.parliament.laws ?? []).some(law => law.policy?.[field] === statute.id && !['approved', 'rejected', 'lapsed'].includes(law.stage))) throw new Error('Per questa legge c’è già un procedimento aperto.');
+    const next = withTime(PARLIAMENT_TIME_COSTS.proposeLaw);
+    const title = mode === 'abrogazione' ? `Abrogazione di «${statute.title}»` : `Modifica di «${statute.title}»`;
+    const summary = String(text ?? '').trim().length >= 12 ? String(text).trim() : (mode === 'abrogazione' ? `Si abroga la legge «${statute.title}» approvata il ${statute.approvedAt}.` : `Si modifica la legge «${statute.title}» approvata il ${statute.approvedAt}.`);
+    const result = proposeLaw(next.parliament, { title, category: AREA_BY_ID[statute.area]?.label ?? statute.area, summary, currentDate: next.clock.currentDate, policy: { ...(statute.policy ?? {}), area: statute.area, [field]: statute.id } });
+    applyParliamentUpdate(next, result.parliament, mode === 'abrogazione' ? 'Proposta di abrogazione depositata' : 'Proposta di modifica depositata', { experience: 0.5, influence: 0.5 });
+    return result.parliament.laws.find(law => law.id === result.law.id);
   },
   amendLaw(lawId, text) {
     requireOwnLaw(state, lawId);

@@ -218,6 +218,17 @@ export function createParliamentState({ career, player, groups = [], currentDate
 export const isReferenceGovernment = government => Boolean(government) && government.formedBy === 'reference';
 // A Government that has ended goes to the record of the career with its offices and the outcome of its confidence
 // votes (not the seat-by-seat detail): saves stay light, the last twelve are kept.
+export const STATUTE_BLOCK_WEEKS = 104;
+const titleKey = title => String(title ?? '').toLowerCase().replace(/[^a-zà-ù0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+export const statutesOf = parliament => parliament?.statutes ?? [];
+export function statuteBlock(parliament, { area = null, instrument = null, title = null, amends = null, repeals = null } = {}, date) {
+  if (amends || repeals) return null;
+  const legislature = parliament?.legislature?.number ?? null;
+  return statutesOf(parliament).find(item => item.status === 'vigente' && item.blockable !== false
+    && ((area && instrument && item.area === area && item.instrument === instrument) || (title && titleKey(item.title) === titleKey(title)))
+    && ((legislature !== null && item.legislature === legislature) || weeksBetweenDates(item.approvedAt, date) < STATUTE_BLOCK_WEEKS)) ?? null;
+}
+const weeksBetweenDates = (from, to) => Math.floor((Date.parse(`${to}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) / 604800000);
 export const PAST_GOVERNMENTS_LIMIT = 12;
 const HISTORY_LIMIT = 700;
 // A Government that has ended is kept small: the evaluations of the ministers shrink to the last one, the dossiers to what they came to, the life of the cabinet (requests, clashes, Councils) to the last few: they are told by the history, and the state of a career of thirty years must stay within what the browser can store.
@@ -364,6 +375,9 @@ export function proposeLaw(parliament, { title, category, summary, currentDate, 
   if (cleanTitle.length < 5) throw new Error('Il titolo deve contenere almeno 5 caratteri.');
   if (kind !== 'manovra' && !area) throw new Error('Scegli un tema valido.');
   if (cleanSummary.length < 12) throw new Error('Descrivi la proposta con almeno 12 caratteri.');
+  // a law already in force with the same effects cannot be proposed again: it can be amended or repealed with a procedure of its own
+  const inForce = kind === 'ddl' ? statuteBlock(parliament, { area: area?.id, instrument: policy?.instrument ?? null, title: cleanTitle, amends: policy?.amends ?? null, repeals: policy?.repeals ?? null }, currentDate) : null;
+  if (inForce) throw new Error(`Esiste già una legge in vigore con questi effetti: «${inForce.title}» (approvata il ${inForce.approvedAt}). Non può essere ripresentata: proponi di modificarla o di abrogarla.`);
   const law = {
     id: newId(kind === 'decreto' ? 'decreto' : kind === 'manovra' ? 'manovra' : 'legge'), title: cleanTitle, category: kind === 'manovra' ? 'Finanze pubbliche' : area.label, summary: cleanSummary,
     status: 'proposal', stage: 'proposal', introducedAt: currentDate, updatedAt: currentDate, stageSince: currentDate,
