@@ -18,7 +18,7 @@ export const COLLECT = `(() => {
   return out;
 })()`;
 
-export const PAGES = ['panoramica', 'profilo', 'carriera', 'partito', 'calendario', 'elezioni', 'sondaggi', 'territori', 'finanze', 'parlamento', 'governo', 'quirinale', 'leggi', 'referendum', 'eventi', 'notizie', 'politici', 'partiti-lista', 'archivio', 'impostazioni'];
+export const PAGES = ['panoramica', 'profilo', 'carriera', 'partito', 'calendario', 'elezioni', 'sondaggi', 'territori', 'finanze', 'parlamento', 'governo', 'quirinale', 'leggi', 'referendum', 'risultati', 'eventi', 'notizie', 'politici', 'partiti-lista', 'archivio', 'impostazioni'];
 
 // Visits every page and its internal tabs (two levels), opens every folded block and returns the screens { name, texts[] }.
 export async function tourCareer({ evaluate, pause }, { pages = PAGES, onScreen }) {

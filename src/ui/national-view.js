@@ -303,6 +303,8 @@ function sourcesCard(overview) {
   return card({ fold: { id: 'nv-fonti', icon: 'shield', start: 'closed' }, kicker: 'FONTI E REGOLE', title: 'Cosa è reale e cosa è simulato', body: `${real}<ul class="nv-notes">${notes}</ul>` });
 }
 
+// What the territory page needs to paint the lists of the last simulated vote: swatch, colour and label of every list.
+export const territoryPaint = overview => ({ swatch, colorOf: id => palette(overview, overview.national.lastPolitiche).of(id), labelOf: labelOf(overview, overview.national.lastPolitiche) });
 export function renderNationalView(state, overview, { geography = null, view = null, map = null } = {}) {
   if (!overview) return '<p class="sx-empty">Ciclo nazionale non disponibile.</p>';
   const formationActive = overview.national.formation && !['completata'].includes(overview.national.formation.phase);

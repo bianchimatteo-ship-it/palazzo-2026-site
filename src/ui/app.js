@@ -22,7 +22,7 @@ import { PARTY_LINK_COLLECTIONS, forceKind, isCoalitionList, politicalForces } f
 import { prefetchViews, renderScene, setLazyRender } from './lazy-views.js?v=20261117-3';
 import { playNightMotion } from './night-motion.js?v=20261117-3';
 import { playStage, stageIsPaused, stagePause, stageResume, stageSkip } from './stage-player.js?v=20261117-3';
-import { renderDiplomacy, renderInitiatives, renderReferendums } from './lazy-views.js?v=20261117-3';
+import { renderDiplomacy, renderInitiatives, renderReferendums, renderTerritoryPage } from './lazy-views.js?v=20261117-3';
 import { renderElectionNight } from './lazy-views.js?v=20261117-3';
 import { PROFESSIONS, chosenPlace, makeCareerDraft, pollScenarioOf, removePartyCriterion, renderCareerWizard, togglePartyOrientation, wizardLogoPreview } from './career-wizard.js?v=20261117-3';
 import { userPartyLogo } from './party-logo.js?v=20261117-3';
@@ -84,7 +84,7 @@ const SECTIONS = Object.freeze([
   { id: 'panoramica', label: 'Panoramica', short: 'Home', glyph: 'home', pages: [['panoramica', 'Panoramica']] },
   { id: 'carriera', label: 'Carriera', glyph: 'route', pages: [['carriera', 'Percorso'], ['calendario', 'Agenda'], ['eventi', 'Eventi'], ['ricompense', 'Ricompense']] },
   { id: 'partito', label: 'Partito', glyph: 'party', pages: [['partito', 'Il tuo partito'], ['finanze', 'Finanze'], ['partiti-lista', 'Tutti i partiti']] },
-  { id: 'elezioni', label: 'Elezioni', glyph: 'ballot', pages: [['elezioni', 'Centrale elettorale']] },
+  { id: 'elezioni', label: 'Elezioni', glyph: 'ballot', pages: [['elezioni', 'Centrale elettorale'], ['risultati', 'Risultati per territorio']] },
   { id: 'sondaggi', label: 'Sondaggi', glyph: 'chart', pages: [['sondaggi', 'Osservatorio']] },
   { id: 'istituzioni', label: 'Istituzioni', glyph: 'building', pages: [['parlamento', 'Camere'], ['governo', 'Governo'], ['diplomazia', 'Diplomazia'], ['quirinale', 'Quirinale'], ['leggi', 'Leggi'], ['iniziative', 'Iniziative'], ['referendum', 'Referendum']] },
   { id: 'territori', label: 'Territori', glyph: 'map', pages: [['territori', 'Il Paese']], locals: true },
@@ -146,6 +146,7 @@ const pages = {
   quirinale: { title: 'Quirinale', eyebrow: 'ISTITUZIONI · PRESIDENTE DELLA REPUBBLICA', intro: 'Il Colle: chi lo occupa, quanto credito ha, che cosa può fare e come si elegge il successore.' },
   leggi: { title: 'Leggi', eyebrow: 'ITER LEGISLATIVO', intro: 'Proposte, commissioni e provvedimenti.' },
   iniziative: { title: 'Iniziative', eyebrow: 'CITTADINI · FIRME', intro: 'Iniziative legislative popolari (50.000 firme) e raccolte firme referendarie: testo, organizzazione, deposito e fase parlamentare.' },
+  risultati: { title: 'Risultati per territorio', eyebrow: 'ELEZIONI · REGIONI, PROVINCE, COMUNI', intro: 'Il voto simulato della partita letto per regione, provincia e comune: ricerca, filtri, confronto tra consultazioni.' },
   referendum: { title: 'Referendum', eyebrow: 'ISTITUZIONI · ART. 75 E 138', intro: 'Il referendum abrogativo e quello costituzionale: richiesta, controlli, campagna, quorum, voto e conseguenze.' },
   eventi: { title: 'Eventi', eyebrow: 'CRONACA POLITICA', intro: 'Gli eventi che scandiscono la vita pubblica.' },
   ricompense: { title: 'Ricompense', eyebrow: 'IL TUO TEMPO DI GIOCO', intro: 'La ricompensa giornaliera, il tempo di gioco e i video premiati.' },
@@ -863,6 +864,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     : page === 'governo' ? ['parliamentaryGroups','groupMemberships','chambers','politicians','government']
     : page === 'quirinale' ? ['politicians','parliamentaryGroups']
     : page === 'archivio' ? ARCHIVE_COLLECTIONS[archive.tab] ?? ARCHIVE_COLLECTIONS.partiti
+    : page === 'risultati' ? ['municipalities','territorialUnits']
     : page === 'elezioni' ? ['politicians','parliamentaryGroups','territorialUnits','municipalities',...PARTY_LINK_COLLECTIONS]
     : page === 'sondaggi' ? ['partyLeaderships','politicalFigures',...PARTY_LINK_COLLECTIONS]
     : page === 'partito' ? ['territorialUnits']
@@ -1509,6 +1511,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       if (!account.user && account.status !== 'none' && !onboarding().account && !menu.localStart) { menu.view = 'benvenuto'; menu.reveal = true; }
       render(store.getState(), store.getLastSaved()); return;
     }
+    if (event.target.closest('[data-territory-reset]')) { Object.assign(views.filters, { terr: '', terrQ: '', terrSort: 'popolazione', terrPage: 1 }); render(store.getState(), store.getLastSaved()); return; }
     const viewFilterChoice = event.target.closest('[data-view-filter]');
     if (viewFilterChoice) {
       // regions and provinces are two readings of the map: a pick of one is not carried over to the other
@@ -2635,6 +2638,20 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       event.preventDefault();
       try { store.requestConstitutionalReferendum(form.dataset.refRequestForm, 'consigli', [...form.querySelectorAll('input[name="region"]:checked')].map(item => item.value)); playSound('confirm'); }
       catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
+    } else if (form.matches('[data-territory-form]')) {
+      event.preventDefault();
+      const data = new FormData(form);
+      const region = String(data.get('region') ?? ''), province = String(data.get('province') ?? '');
+      views.filters.terr = region ? (province ? `${region}|${province}` : region) : '';
+      views.filters.terrQ = String(data.get('q') ?? '').trim();
+      views.filters.terrSort = String(data.get('sort') ?? 'popolazione');
+      views.filters.terrPage = 1;
+      render(store.getState(), store.getLastSaved());
+    } else if (form.matches('[data-territory-compare-form]')) {
+      event.preventDefault();
+      const data = new FormData(form);
+      views.filters.terrCompare = `${data.get('a')}|${data.get('b')}`;
+      render(store.getState(), store.getLastSaved());
     } else if (form.matches('[data-ini-form]')) {
       event.preventDefault();
       const data = new FormData(form);
@@ -2842,6 +2859,8 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   root.addEventListener('focusin', event => guided(event, 'onGuideFocus'));
   root.addEventListener('change', async event => {
     guided(event, 'onGuideEvent');
+    // Risultati per territorio: choosing a Region, a Province or the order redraws the page at once (a new Region clears the Province).
+    if (event.target.matches?.('[data-territory-region],[data-territory-province],[data-territory-sort]')) { const form = event.target.closest('form'); if (event.target.matches('[data-territory-region]') && form?.province) form.province.value = ''; form?.requestSubmit(); return; }
     // Vita interna: the description of the chosen way of changing the name sits apart from the menu (which shows only the short names)
     if (event.target.matches?.('[data-rename-style]')) { for (const item of root.querySelectorAll('[data-rename-detail]')) item.hidden = item.dataset.renameDetail !== event.target.value; return; }
     // The priority of a promise: recorded at once (at most two at the top).
@@ -3150,6 +3169,7 @@ function subpage(state, page, player, party, events, catalog, options = {}) {
     parlamento: renderParliamentPage('parlamento', state, { party, player, status: catalogStatus, politicians: realDatabase.politicians ?? [], hemicycle: state.parliament ? renderHemicycle(state, { politicians: realDatabase.politicians ?? [], db: realDatabase, view: options.views?.hemicycle, logoFor: options.logoFor }) : '', featured: state.parliament ? renderFeaturedMembers(state, realDatabase, options.views?.hemicycle) : '' }) + `<section class="hq-panel contacts-panel"><div class="home-section-heading"><div><span class="section-kicker">${state.parliament?.legislature?.reference === 'simulation' ? 'PARLAMENTARI DELLA XIX LEGISLATURA (REALE) · RAPPORTI SIMULATI' : 'PARLAMENTARI REALI · RAPPORTI SIMULATI'}</span><h2>${state.parliament?.legislature?.reference === 'simulation' ? 'I tuoi contatti della legislatura reale' : 'I tuoi interlocutori in Parlamento'}</h2></div></div>${state.parliament?.legislature?.reference === 'simulation' ? '<p class="sx-note">Dopo il voto della partita le Camere sono simulate: queste persone reali non vi siedono e non intervengono sulle tue proposte; restano contatti politici con i dati della XIX legislatura.</p>' : ''}${renderContactsPanel(state)}</section>`,
     quirinale: state.game ? renderQuirinale(state, options.presidencyView?.() ?? null) : '',
     diplomazia: renderDiplomacy(state),
+    risultati: (() => { const overview = options.nationalOverview?.() ?? null; return renderTerritoryPage(state, overview, { geography: options.electoralGeography?.() ?? null, municipalities: realDatabase.municipalities ?? [], filters: options.views?.filters ?? {}, ...(overview?.national?.lastPolitiche ? territoryPaint(overview) : { swatch: () => '', colorOf: () => '#999', labelOf: id => id }) }); })(),
     referendum: renderReferendums(state, { targets: options.referendumTargets?.() ?? [], reforms: options.constitutionalReforms?.() ?? [] }),
     iniziative: renderInitiatives(state, item => options.initiativeContext?.(item?.area) ?? null, id => options.requestActions?.(id) ?? []),
     governo: renderParliamentPage('governo', state, { party, player, status: catalogStatus, politicians: realDatabase.politicians ?? [], secretary: playerRoles(state).secretary, ministryView: options.ministryView }) + realGovernmentCard(),

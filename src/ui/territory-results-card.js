@@ -42,18 +42,25 @@ export function regionalLean(rows, districts) {
   return lean;
 }
 
-export function territoryResultsCard({ overview, last, geography, terr = '', municipalities = [], swatch, colorOf, labelOf }) {
-  const head = { fold: { id: 'nv-territorio', icon: 'map', start: 'closed' }, kicker: 'RISULTATI PER TERRITORIO · SIMULATO' };
-  const hierarchy = hierarchyOf(municipalities);
-  if (!last || !hierarchy) return card({ ...head, title: 'Regioni, province e comuni', body: `<p class="sx-empty" role="status" data-territory-state="missing">${last ? 'I dati ISTAT dei comuni non sono ancora caricati: riapri la pagina tra un momento.' : 'Il risultato per territorio compare dopo il primo voto politico della partita.'}</p>` });
+// The inputs of the breakdown from a simulated vote: the votes of every list in the country (the valid ballots of the electorate of the map shared by the shares of the vote, «Altri» for what the result does not name)
+// and the regional lean from the districts of the vote.
+export function territoryInputs(last, geography) {
   const electorate = nationalElectorate(geography, last.turnout);
   const valid = electorate.valid ?? 0;
   const rows = (last.national ?? []).filter(row => row.share > 0);
-  // the lists the result does not name (the small ones) are «Altri»: what is left of the valid ballots
   const rest = Math.max(0, 100 - rows.reduce((sum, row) => sum + row.share, 0));
   const totals = Object.fromEntries([...rows.map(row => [row.id, Math.round(row.share * valid / 100)]), ...(rest >= 0.05 ? [[OTHERS, Math.round(rest * valid / 100)]] : [])]);
   const districts = geography?.camera?.collegi ?? [];
   const lean = regionalLean(districtRows(last, 'camera', geography), Array.isArray(districts) ? districts : []);
+  return { totals, lean, valid };
+}
+export const hierarchyFor = hierarchyOf;
+
+export function territoryResultsCard({ overview, last, geography, terr = '', municipalities = [], swatch, colorOf, labelOf }) {
+  const head = { fold: { id: 'nv-territorio', icon: 'map', start: 'closed' }, kicker: 'RISULTATI PER TERRITORIO · SIMULATO' };
+  const hierarchy = hierarchyOf(municipalities);
+  if (!last || !hierarchy) return card({ ...head, title: 'Regioni, province e comuni', body: `<p class="sx-empty" role="status" data-territory-state="missing">${last ? 'I dati ISTAT dei comuni non sono ancora caricati: riapri la pagina tra un momento.' : 'Il risultato per territorio compare dopo il primo voto politico della partita.'}</p>` });
+  const { totals, lean } = territoryInputs(last, geography);
   const [regionCode = '', provinceCode = ''] = String(terr ?? '').split('|');
   const breakdown = territoryBreakdown({ totals, hierarchy, seed: `${last.id ?? last.date}|territorio`, regionLean: lean, regionCode: regionCode || null, provinceCode: provinceCode || null });
   const level = breakdown.level;
@@ -78,5 +85,5 @@ export function territoryResultsCard({ overview, last, geography, terr = '', mun
   const sum = `<p class="sx-note" data-territory-sum>${checks ? 'Somma controllata' : 'Somma da verificare'}: ${what}, lista per lista (${num(parent.valid, 0)} voti validi simulati).${part}</p>`;
   const source = `<p class="sx-note" data-territory-source>Dato simulato: i voti di lista del voto nazionale della partita, ripartiti per abitanti (ISTAT, 1 gennaio 2026) con lo scarto regionale del modello e una piccola variazione locale. Non è un dato ufficiale. I dati reali delle politiche 2022 esistono per collegio: sono nella mappa qui sopra («Vincitori 2022»), non per provincia né per comune.</p>`;
   const title = level === 'italia' ? 'Come è andato il voto nelle regioni' : level === 'regione' ? `Le province: ${breakdown.region.name}` : `I comuni: ${breakdown.province.name}`;
-  return card({ ...head, title, body: `${nav}${table}${sum}${source}` });
+  return card({ ...head, title, body: `${nav}${table}${sum}${source}<p><button type="button" class="secondary-button" data-nav="risultati" data-territory-fullpage>Apri la pagina completa: ricerca dei comuni, filtri e confronto</button></p>` });
 }

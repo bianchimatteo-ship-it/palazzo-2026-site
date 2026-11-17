@@ -8,6 +8,7 @@
 //     voters or five Regional Councils can ask for it. NO quorum: YES wins if it has the majority of the valid votes; if the reform is rejected it does not come into force.
 // Every figure is a simulation of the game (the electorate, the polls, the votes): nothing here is a real result.
 import { seededRandom } from './vote-engine.js?v=20261117-3';
+import { formatDate } from './time.js?v=20261117-3';
 
 export const ABROGATIVE = Object.freeze({
   id: 'abrogativo', label: 'Referendum abrogativo', basis: 'art. 75 Cost.', signatures: 500000, councils: 5, quorum: 0.5, cassationWeeks: 5, courtWeeks: 8, campaignWeeks: 9,
@@ -126,7 +127,7 @@ export function advanceReferendum(input, ctx) {
         return { referendum: ref, lines, effects: { reputation: -0.8, popularity: -0.3 }, changed };
       }
       ref = startCampaign(ref, ctx, rand);
-      lines.push(`La Corte costituzionale ammette il referendum su «${ref.target.title}»: si vota il ${ref.voteDate}.`);
+      lines.push(`La Corte costituzionale ammette il referendum su «${ref.target.title}»: si vota il ${formatDate(ref.voteDate)}.`);
     }
   }
   if (ref.kind === 'costituzionale') {
@@ -164,7 +165,7 @@ function startCampaign(input, ctx, rand) {
     turnout: clamp((ref.kind === 'costituzionale' ? 44 : 33) + salience * 16 + (rand() - 0.5) * 6, 18, 70),   // % of those entitled who vote
     stances, actions: {}, events: [], polls: [], effortWeek: -1, used: 0
   };
-  return record(ref, ctx.date, `Si vota il ${ref.voteDate}: parte la campagna per il SÌ e per il NO.`, 'campagna');
+  return record(ref, ctx.date, `Si vota il ${formatDate(ref.voteDate)}: parte la campagna per il SÌ e per il NO.`, 'campagna');
 }
 export const CAMPAIGN_ACTIONS = Object.freeze({
   comizio: { id: 'comizio', label: 'Comizio in piazza', cost: { days: 1, capital: 0, funds: 300 }, support: 0.7, turnout: 0.4, hint: 'Porta la tua posizione davanti ai cittadini: sposta un po’ i voti e un po’ l’affluenza.' },
@@ -287,16 +288,16 @@ function advanceRevision(input, ctx, rand) {
     if (!(r.camera.absolute && r.senato.absolute)) { ref = close(ref, ctx.date, 'respinta', 'La riforma non ottiene la maggioranza assoluta alla seconda deliberazione: non è approvata.'); lines.push(`Revisione costituzionale «${ref.title}»: respinta alla seconda deliberazione.`); return { referendum: ref, lines, effects, changed }; }
     if (r.camera.twoThirds && r.senato.twoThirds) { ref = close(ref, ctx.date, 'in-vigore', 'La riforma è approvata dai due terzi dei membri di entrambe le Camere alla seconda deliberazione: il referendum non è possibile e la riforma entra in vigore.'); lines.push(`La riforma costituzionale «${ref.title}» è approvata con i due terzi: nessun referendum, entra in vigore.`); effects = { reputation: 0, popularity: 0, constitutional: { carried: true, noReferendum: true } }; return { referendum: ref, lines, effects, changed }; }
     ref.phase = 'richiesta'; ref.requestUntil = addDays(ctx.date, CONSTITUTIONAL.requestWeeks * 7); ref.opposition = { camera: Math.round((1 - ctx.backing.camera) * 1000) / 10, senato: Math.round((1 - ctx.backing.senato) * 1000) / 10 };
-    ref = record(ref, ctx.date, `Riforma approvata a maggioranza assoluta (senza i due terzi): entro il ${ref.requestUntil} un quinto dei membri di una Camera, 500.000 elettori o cinque Consigli regionali possono chiedere il referendum.`);
+    ref = record(ref, ctx.date, `Riforma approvata a maggioranza assoluta (senza i due terzi): entro il ${formatDate(ref.requestUntil)} un quinto dei membri di una Camera, 500.000 elettori o cinque Consigli regionali possono chiedere il referendum.`);
     lines.push(`La riforma costituzionale «${ref.title}» è approvata senza i due terzi: si può chiedere il referendum entro tre mesi.`);
   } else if (ref.phase === 'richiesta') {
-    if (ref.request) { changed = true; ref.phase = 'campagna'; ref.side = ref.side ?? null; ref = startCampaign(ref, ctx, rand); lines.push(`Referendum sulla riforma costituzionale «${ref.title}»: si vota il ${ref.voteDate}.`); }
+    if (ref.request) { changed = true; ref.phase = 'campagna'; ref.side = ref.side ?? null; ref = startCampaign(ref, ctx, rand); lines.push(`Referendum sulla riforma costituzionale «${ref.title}»: si vota il ${formatDate(ref.voteDate)}.`); }
     else if (ctx.date > ref.requestUntil) {
       // nobody of the player asked: the opposition may still do it by itself (a fifth of the members of a Chamber), by the weight it has
       changed = true;
       const op = Math.max(ref.opposition?.camera ?? 0, ref.opposition?.senato ?? 0) / 100;
       const byOpposition = op >= CONSTITUTIONAL.fifth && rand() < 0.55;
-      if (byOpposition) { ref.request = { by: 'quinto', date: ctx.date, who: 'le opposizioni' }; ref = record(ref, ctx.date, 'Le opposizioni chiedono il referendum con la firma di un quinto dei membri di una Camera.'); ref = startCampaign(ref, ctx, rand); lines.push(`Le opposizioni chiedono il referendum sulla riforma «${ref.title}»: si vota il ${ref.voteDate}.`); }
+      if (byOpposition) { ref.request = { by: 'quinto', date: ctx.date, who: 'le opposizioni' }; ref = record(ref, ctx.date, 'Le opposizioni chiedono il referendum con la firma di un quinto dei membri di una Camera.'); ref = startCampaign(ref, ctx, rand); lines.push(`Le opposizioni chiedono il referendum sulla riforma «${ref.title}»: si vota il ${formatDate(ref.voteDate)}.`); }
       else { ref = close(ref, ctx.date, 'in-vigore', 'Scaduti i tre mesi senza una richiesta di referendum: la riforma costituzionale è promulgata ed entra in vigore.'); lines.push(`Nessuno chiede il referendum: la riforma costituzionale «${ref.title}» entra in vigore.`); effects = { reputation: 0, popularity: 0, constitutional: { carried: true, noReferendum: true } }; }
     }
   }
