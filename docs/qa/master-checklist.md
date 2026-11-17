@@ -2,7 +2,7 @@
 
 Stati ammessi: **Non iniziato · In lavorazione · Completato · Bloccato**. Una voce è *Completato* solo con prova (file, test, screenshot). Branch `feature/qa-completamento`. Confrontata punto per punto con il documento di lavoro originale (sezioni 1–21) e con le aggiunte del 16/11 (sezione 22).
 
-Riepilogo: Bloccato 6 · Completato 150 · In lavorazione 12 · Non iniziato 1 · totale 169
+Riepilogo: Bloccato 6 · Completato 152 · In lavorazione 11 · totale 169
 
 
 ## 1. Regole operative
@@ -228,7 +228,7 @@ Riepilogo: Bloccato 6 · Completato 150 · In lavorazione 12 · Non iniziato 1 �
 | Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
 |---|---|---|---|---|---|
 | 19.1 | Verificare l'integrazione nel branch (plugin, ID, banner, interstitial, rewarded, UMP) | Completato | docs/admob.md | check-admob | plugin 8.3.0, ID, banner/interstitial/rewarded, UMP presenti, spenti |
-| 19.2 | ID di test ufficiali durante i test; limiti, duplicazioni, offline, attribuzione ricompense | In lavorazione |  | check-admob, check-rewards-sync | limiti/duplicati/offline/accredito Worker verificati con ID di prova |
+| 19.2 | ID di test ufficiali durante i test; limiti, duplicazioni, offline, attribuzione ricompense | Completato |  | check-admob, check-rewards-sync | ID di prova di Google in prova e quelli del titolare solo dal vivo; limiti, duplicati, offline e accredito Worker verificati (check-admob, check-rewards, check-rewards-sync verdi nella regressione). |
 | 19.3 | Valutare SSV lato server | In lavorazione | docs/admob.md |  | SSV valutata, non implementata (serve configurazione AdMob) |
 | 19.4 | Non attivare annunci reali/live; se AdMob non pronto, aggiornamento senza pubblicità | Completato |  | check-admob | ADS_MODE off: nessun annuncio reale |
 | 19.5 | Incrementare versione e versionCode prima dell'AAB | Bloccato |  |  | versionCode attuale su Play sconosciuto (repo: 1): non lo invento |
@@ -260,7 +260,7 @@ Riepilogo: Bloccato 6 · Completato 150 · In lavorazione 12 · Non iniziato 1 �
 | 20.19 | Dimissioni e carriera senza incarichi | Completato | src/ui/hall-view.js | check-resignations-ui | artifacts/qa/screenshots/after/dimissioni-{elenco,conferma,dopo}-desktop.png, dimissioni-elenco-smartphone.png |
 | 20.20 | Avatar casuale | Completato | src/ui/career-wizard.js | check-avatar | artifacts/qa/screenshots/after/avatar-casuale-it-{390x844,820x1180}.png |
 | 20.21 | Popup recensione | Completato | src/ui/review-card.js | check-review-prompt | artifacts/qa/screenshots/after/popup-recensione-* |
-| 20.22 | Schermate principali con pulsanti e caricamenti | Non iniziato |  |  |  |
+| 20.22 | Schermate principali con pulsanti e caricamenti | Completato | scripts/qa-screenshots.mjs | npm run qa:screenshots pagine | 16 schermate delle pagine principali (Home, Elezioni, Sondaggi, Istituzioni, Territori, Informazione, Profilo, Impostazioni) a 390×844 e 820×1180, dopo il caricamento: artifacts/qa/screenshots/after/pagina-*.png |
 | 20.23 | Screenshot reali (Playwright/browser/emulatore), senza credenziali/token/dati personali; per ognuno funzione, scenario, dispositivo, risultato | Completato | scripts/* |  | Schermate prima/dopo in artifacts/qa/screenshots/{before,after} (56 file): notte, avanzamento, capitale, alleanze, iniziative, recensione, voto nominativo, pro/contro, candidatura, trattativa, richieste, crisi, CdM, formazione governo, promemoria, territori, dimissioni, guida, avatar, pulsanti Vai (guida e tutorial). Script: npm run qa:screenshots. |
 
 ## 21. Collaudo e risultato finale
