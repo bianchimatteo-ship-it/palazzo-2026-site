@@ -270,6 +270,15 @@ lines.push('genere: solo uomo e donna, vecchi valori normalizzati senza perdita'
   for (const field of A.AVATAR_FIELDS) if (field !== 'beard' && field !== 'moustache') assert.equal(seen[field].size, A.AVATAR_OPTIONS[field].length, `Con molte estrazioni compaiono tutte le opzioni di ${field}.`);
   assert.deepEqual(A.randomAvatar(seeded(3)), A.randomAvatar(seeded(3)), 'Stesso generatore, stesso avatar.');
   assert.notDeepEqual(A.randomAvatar(seeded(3)), A.randomAvatar(seeded(4)), 'Generatori diversi, avatar diversi.');
+  // the random look respects the chosen sex: Uomo → masculine face, Donna → feminine face, always, and the other traits keep their variety
+  for (const [gender, face] of [['uomo', 'maschile'], ['donna', 'femminile'], ['maschile', 'maschile'], ['femminile', 'femminile']]) {
+    const sample = Array.from({ length: 600 }, () => A.randomAvatar(rand, { gender }));
+    assert.ok(sample.every(look => look.face === face && A.isValidAvatar(look)), `Genere «${gender}»: il volto è sempre ${face}.`);
+    for (const field of ['skin', 'hair', 'hairstyle', 'jacket', 'eyes', 'expression']) assert.ok(new Set(sample.map(look => look[field])).size >= Math.min(5, A.AVATAR_OPTIONS[field].length - 1), `Genere «${gender}»: ${field} resta vario.`);
+    if (face === 'femminile') assert.ok(sample.every(look => look.beard === 'nessuna' && look.moustache === 'nessuno' && look.hairstyle !== 'stempiato'), 'Volto femminile: niente barba, baffi o stempiatura.');
+    else assert.ok(sample.some(look => look.beard !== 'nessuna') && sample.some(look => look.glasses !== 'nessuno'), 'Volto maschile: barba e occhiali compaiono con la loro frequenza.');
+  }
+  assert.ok(new Set(Array.from({ length: 300 }, () => A.randomAvatar(rand, { gender: 'altro' }).face)).size === 2, 'Senza un genere noto il volto è ancora estratto.');
   const shaped = A.randomAvatar(seeded(5), { keepShape: { w: 2, j: -1, d: 0, s: 1, b: 0, m: 0 } });
   assert.equal(shaped.shape?.w, 2, 'Le proporzioni scelte dal giocatore restano.');
   lines.push('avatar casuale: sempre valido e disegnabile, tutte le opzioni raggiungibili, deterministico col generatore, proporzioni conservate');

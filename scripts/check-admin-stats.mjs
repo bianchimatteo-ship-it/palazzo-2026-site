@@ -146,4 +146,25 @@ assert.ok(!/amministrazione|admin\/stats/i.test(menu.replace(/Amministrazione de
   assert.ok(/role="alert"/.test(withStats({ stats: { status: 'error', error: 'Sessione scaduta' } })) && /Carico le statistiche/.test(withStats({ stats: { status: 'loading' } })) && /Premi «Aggiorna»/.test(withStats({})), 'Stati: errore, caricamento e vuoto.');
   assert.ok(!/data-admin-tab="statistiche"/.test(renderAdminPanel({ tab: 'partiti' }, { ...context, unlocked: false })), 'Senza sessione del proprietario non compare nemmeno la scheda.');
 }
+
+// ---------- extended figures: careers online, game modes, what is and is not known ----------
+{
+  const now = Date.now();
+  const save = (slot, meta, ageDays = 1) => sqlite.prepare("INSERT INTO saves (user_id, slot, name, meta, data, encoding, revision, size, updated_at) VALUES (?, ?, ?, ?, '{}', 'json', 1, 2, ?)").run(`utente-${slot}`, slot, 'Nome Segreto Giocatore', JSON.stringify(meta), new Date(now - ageDays * 86400000).toISOString());
+  save('c-uno', { player: 'Mario Rossi', party: 'Partito Segreto', status: 'active', difficulty: 'normale', gameMode: 'realistica' }, 1);
+  save('c-due', { player: 'Anna Bianchi', status: 'ended', difficulty: 'difficile', gameMode: 'sandbox' }, 10);
+  save('c-tre', { player: 'Luca Verdi', status: 'active', difficulty: 'normale' }, 40);
+  const stats = (await call(on, '/api/admin/stats?days=90', { token: owner })).body;
+  assert.ok(stats.careers && stats.careers.online >= 3, 'Le carriere online sono contate.');
+  assert.equal(stats.careers.ended, 1, 'Concluse = stato «ended».');
+  assert.equal(stats.careers.byGameMode.sandbox, 1); assert.equal(stats.careers.byGameMode.realistica, 1); assert.ok(stats.careers.byGameMode['non indicato'] >= 1, 'Un salvataggio senza modalità resta «non indicato»: non si inventa.');
+  assert.ok(stats.careers.savedLast7Days >= 1 && stats.careers.savedLast30Days >= 2 && stats.careers.savedLast30Days < stats.careers.online + 1, 'Salvataggi recenti per finestra.');
+  const text = JSON.stringify(stats);
+  for (const secret of ['Mario Rossi', 'Anna Bianchi', 'Luca Verdi', 'Partito Segreto', 'Nome Segreto Giocatore', 'utente-c-uno', 'giocatrice']) assert.ok(!text.includes(secret), `Nessun dato personale nelle statistiche: «${secret}».`);
+  const byId = Object.fromEntries(stats.coverage.map(item => [item.id, item]));
+  for (const missing of ['sessioni', 'carriere-create', 'elezioni', 'funzioni']) assert.equal(byId[missing].available, false, `${missing}: dichiarato non disponibile, non inventato.`);
+  assert.ok(byId.modalita.available && byId['carriere-online'].available, 'Quello che si sa è dichiarato disponibile.');
+  assert.equal((await call(off, '/api/admin/stats?days=90', { token: owner })).body.coverage.find(item => item.id === 'dau-wau-mau').available, false, 'Con ADMIN_STATS spento DAU/WAU/MAU sono dichiarati non disponibili.');
+  assert.equal((await call(on, '/api/admin/stats?days=90')).status, 401, 'Le statistiche estese sono solo del proprietario.');
+}
 console.log('Statistiche amministrative verificate: solo con la sessione del proprietario; attività spenta di default e, accesa, solo account e giorno; DAU/WAU/MAU esatti; conservazione 400 giorni e cancellazione con l’account; installazioni inserite con fonte; nessun collegamento pubblico, credenziale o analitica esterna.');

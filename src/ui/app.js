@@ -27,6 +27,7 @@ import { renderElectionNight } from './lazy-views.js?v=20261117-3';
 import { PROFESSIONS, chosenPlace, makeCareerDraft, pollScenarioOf, removePartyCriterion, renderCareerWizard, togglePartyOrientation, wizardLogoPreview } from './career-wizard.js?v=20261117-3';
 import { userPartyLogo } from './party-logo.js?v=20261117-3';
 import { WIZARD_VIEWS, validateWizardStep } from '../core/career-rules.js?v=20261117-3';
+import { parseBirth } from '../core/birth-date.js?v=20261117-3';
 import { avatarOf, normalizeAvatar, randomAvatar } from '../core/avatar.js?v=20261117-3';
 import { avatarSvg } from './avatar-svg.js?v=20261117-3';
 import { renderElectionsHub } from './lazy-views.js?v=20261117-3';
@@ -243,12 +244,12 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     // Unreachable at the first opening: the player is not kept on the account screen, the local start is offered.
     render(store.getState(), store.getLastSaved());
   };
-  const careerMeta = () => { const meta = store.currentMeta(); return { player: meta.player, role: meta.role, party: meta.party, week: meta.week, gameDate: meta.gameDate, status: meta.status, difficulty: store.getState().career?.difficulty ?? 'normale' }; };
+  const careerMeta = () => { const meta = store.currentMeta(); return { player: meta.player, role: meta.role, party: meta.party, week: meta.week, gameDate: meta.gameDate, status: meta.status, difficulty: store.getState().career?.difficulty ?? 'normale', gameMode: store.getState().career?.gameMode ?? 'realistica' }; };
   // The meta of a saved copy that is not the one being played (the queue works on what is saved in this browser, whichever career it is).
   const metaOfSnapshot = snapshot => {
     if (snapshot?.career?.id && snapshot.career.id === store.getState().career?.id) return careerMeta();
     const player = snapshot?.dataset?.politicians?.find?.(item => item.id === snapshot?.career?.playerId);
-    return { player: player?.displayName ?? 'Carriera', role: null, party: snapshot?.game?.party?.label ?? null, week: snapshot?.game?.week?.index ?? null, gameDate: snapshot?.clock?.currentDate ?? null, status: snapshot?.game?.status ?? null, difficulty: snapshot?.career?.difficulty ?? 'normale' };
+    return { player: player?.displayName ?? 'Carriera', role: null, party: snapshot?.game?.party?.label ?? null, week: snapshot?.game?.week?.index ?? null, gameDate: snapshot?.clock?.currentDate ?? null, status: snapshot?.game?.status ?? null, difficulty: snapshot?.career?.difficulty ?? 'normale', gameMode: snapshot?.career?.gameMode ?? 'realistica' };
   };
   // The sync of the online saves: a queue written down in the browser (see sync-queue.js), not a timer. A change of its state redraws the account screen.
   const syncEngine = createSyncEngine({
@@ -1232,7 +1233,9 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     if (guideJump) {
       event.preventDefault();
       const smooth = settings.interfaceMotion === 'full' && !globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-      root.querySelector?.(`#${guideJump}`)?.scrollIntoView?.({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
+      const target = root.querySelector?.(`#${guideJump}`);
+      const fold = target?.querySelector?.('[data-guide-fold]'); if (fold) fold.open = true;
+      target?.scrollIntoView?.({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
       return;
     }
     let menuTarget =event.target.closest('[data-menu],[data-menu-close],[data-menu-action],[data-slot-load],[data-slot-delete],[data-slot-export],[data-version-restore],[data-version-export],[data-setting-key],[data-report-close],[data-account-action],[data-cloud-load],[data-cloud-delete],[data-conflict],[data-history-open],[data-history-restore]');
@@ -2274,7 +2277,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       if (logoSwatch) { syncWizardDraft(); wizard.partyLogoSecondaryColor = logoSwatch.dataset.logoSecondary; const top = root.querySelector?.('.wizard-body')?.scrollTop ?? 0; render(store.getState(), store.getLastSaved()); const body = root.querySelector?.('.wizard-body'); if (body) body.scrollTop = top; return; }
       if (event.target.closest('[data-avatar-random]')) {
         syncWizardDraft();
-        wizard.avatar = randomAvatar(Math.random, { keepShape: wizard.avatar?.shape ?? null }); wizard.errors = [];
+        wizard.avatar = randomAvatar(Math.random, { keepShape: wizard.avatar?.shape ?? null, gender: wizard.gender }); wizard.errors = [];
         const top = root.querySelector?.('.wizard-body')?.scrollTop ?? 0;
         render(store.getState(), store.getLastSaved());
         const body = root.querySelector?.('.wizard-body'); if (body) body.scrollTop = top;
@@ -2770,6 +2773,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       for (const card of root.querySelectorAll('[data-guide-card]')) {
         const match = !query || fold(`${card.textContent} ${card.dataset.guideKeywords ?? ''}`).includes(query);
         card.hidden = !match; shown += match ? 1 : 0;
+        const details = card.querySelector('[data-guide-fold]'); if (details) details.open = Boolean(query) && match; // a search opens what it found; an empty box closes them again
         const link = root.querySelector(`[data-guide-index="${card.dataset.guideCard}"]`);
         if (link) link.hidden = !match;
       }
@@ -2857,6 +2861,22 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   const guided = (event, handler) => { if (event.target.closest?.('[data-proposal-form],[data-proposal-edit-form]')) import('./program-guide.js?v=20261117-3').then(guide => guide[handler](event, store)).catch(() => {}); };
   root.addEventListener('input', event => guided(event, 'onGuideEvent'));
   root.addEventListener('focusin', event => guided(event, 'onGuideFocus'));
+  // The date of birth in three fields: every keystroke checks the calendar and writes the «YYYY-MM-DD» into the hidden field the game reads (nothing is redrawn, so the keyboard stays open).
+  root.addEventListener('input', event => {
+    const group = event.target.closest?.('[data-birth]');
+    if (!group) return;
+    if (event.target.matches('input[name=birthDay],input[name=birthYear]')) event.target.value = event.target.value.replace(/\D+/g, '');
+    const value = name => group.querySelector(`[name=${name}]`)?.value ?? '';
+    const parsed = parseBirth({ day: value('birthDay'), month: value('birthMonth'), year: value('birthYear') }, group.dataset.birthToday);
+    const hidden = group.querySelector('input[name=birthDate]'); if (hidden) hidden.value = parsed.iso;
+    const hint = group.querySelector('[data-birth-hint]');
+    if (hint) { hint.textContent = parsed.error ?? (parsed.iso ? `Hai ${parsed.age} anni.` : 'Scrivi il giorno, scegli il mese e scrivi l’anno di quattro cifre.'); hint.classList.toggle('is-error', Boolean(parsed.error)); }
+    if (event.target.matches('input[name=birthDay]') && event.target.value.length === 2 && !parsed.error) group.querySelector('select[name=birthMonth]')?.focus();
+  });
+  root.addEventListener('change', event => {
+    const group = event.target.closest?.('[data-birth]');
+    if (group && event.target.matches('select[name=birthMonth]')) { group.querySelector('input[name=birthYear]')?.focus(); group.dispatchEvent(new Event('input', { bubbles: true })); }
+  });
   root.addEventListener('change', async event => {
     guided(event, 'onGuideEvent');
     // Risultati per territorio: choosing a Region, a Province or the order redraws the page at once (a new Region clears the Province).
@@ -3007,7 +3027,10 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   const reviewPrompt = createReviewPrompt({ isPlayStoreApp: () => /Android/i.test(globalThis.navigator?.userAgent ?? '') && isNativeApp() });
   reviewPrompt.noteLaunch();
   let reviewCard = null;
-  const quietNow = () => { const state = store.getState(); return Boolean(state.game && !state.scene && !state.night && !state.campaign && !wizard && !menu.open && !pendingConfirm && !reportOpen && !newsPopup && !pendingCelebration(state.game) && onboarding().tour === 'done'); };
+  // A quiet moment: a career in the open and nothing else asking for attention (a scene, the night, a campaign running, the wizard, a menu or dialog, the weekly report, a news popup, a celebration, the guided tutorial on screen).
+  // Before: the first-run tour had to be marked «done» and any campaign object (also a finished one) counted as busy: a player who never saw the tour (login on a new device, «Inizia senza account», an old save) or who had
+  // played a campaign never had a quiet moment, so the invitation never came.
+  const quietNow = () => { const state = store.getState(); return Boolean(state.game && !state.scene && !state.night && state.campaign?.status !== 'active' && !wizard && !menu.open && !pendingConfirm && !reportOpen && !newsPopup && !pendingCelebration(state.game) && !root.querySelector?.('[data-tutorial-card]')); };
   const offerReview = () => {
     if (reviewCard || !reviewPrompt.due({ quiet: quietNow(), weeks: store.getState().game?.week?.index ?? 0 }) || !reviewPrompt.markShown()) return;   // recorded as shown BEFORE the card appears
     let watch = null;
@@ -3015,6 +3038,10 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     // the card is only there in a quiet moment: it hides while a scene, a vote, the night, a dialog or a menu is on and comes back after (it never blocks the game)
     watch = setInterval(() => reviewCard?.setQuiet(quietNow()), 800);
   };
+  // The invitation is also looked for when the game changes (the week goes by without the weekly report, a career is opened that already has enough weeks), not only when the report is closed: at most once every few seconds.
+  { let last = 0; store.subscribe(() => { const now = Date.now(); if (reviewCard || now - last < 4000) return; last = now; setTimeout(() => offerReview(), 1200); }); }
+  // for the checks: why the invitation is or is not due right now
+  globalThis.__reviewStatus = () => ({ quiet: quietNow(), weeks: store.getState().game?.week?.index ?? 0, store: reviewPrompt.state(), due: reviewPrompt.due({ quiet: quietNow(), weeks: store.getState().game?.week?.index ?? 0 }), shown: Boolean(reviewCard), parts: { game: Boolean(store.getState().game), scene: Boolean(store.getState().scene), night: Boolean(store.getState().night), campaign: store.getState().campaign?.status ?? null, wizard: Boolean(wizard), menu: Boolean(menu.open), confirm: Boolean(pendingConfirm), report: Boolean(reportOpen), news: Boolean(newsPopup), celebration: Boolean(pendingCelebration(store.getState().game)), tutorial: Boolean(root.querySelector?.('[data-tutorial-card]')) } });
   // The reminder of the promises: after a week is closed, in a quiet moment, with no other card on screen; each reminder is written in the log first (never repeated).
   let reminderCard = null;
   const offerReminder = () => {

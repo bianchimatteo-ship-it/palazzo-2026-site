@@ -305,7 +305,7 @@
     "check:party-founding-ui": "node scripts/check-party-founding-ui.mjs",
     "build:portal": "node scripts/build-portal.mjs",
     "check:advance-turn": "node scripts/check-advance-turn.mjs",
-    "check:review-prompt": "node scripts/check-review-prompt.mjs",
+    "check:review-prompt": "node scripts/check-review-prompt.mjs && node scripts/check-review-prompt-flow.mjs",
     "check:button-response": "node scripts/check-button-response.mjs",
     "check:admob": "node scripts/check-admob.mjs",
     "check:publication": "node scripts/check-publication.mjs",

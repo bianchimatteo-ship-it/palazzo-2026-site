@@ -1565,3 +1565,23 @@ button:not(:disabled):active, a.primary-button:active, a.secondary-button:active
 .tp-compare label { display: grid; gap: 4px; }
 .tp-table td.num, .tp-table th.num { white-space: nowrap; }
 @media (max-width: 520px) { .tp-leads li { grid-template-columns: 1fr auto; } .tp-leads .tp-bar { grid-column: 1 / -1; } .tp-pager { justify-content: center; } }
+.birth-field { border: 1px solid rgba(127, 140, 134, .35); border-radius: 12px; padding: 10px 12px; margin: 0; display: grid; gap: 8px; }
+.birth-field legend { padding: 0 6px; font-weight: 600; }
+.birth-row { display: grid; grid-template-columns: 1fr 2fr 1.4fr; gap: 10px; }
+.birth-row label { display: grid; gap: 4px; }
+.birth-row input, .birth-row select { width: 100%; box-sizing: border-box; min-height: 48px; font-size: 1.05rem; }
+.birth-hint { opacity: .9; } .birth-hint.is-error { color: var(--sem-bad, #d9625b); font-weight: 600; opacity: 1; }
+@media (max-width: 360px) { .birth-row { grid-template-columns: 1fr 1.6fr 1.2fr; gap: 6px; } }
+.guide-card:has(.guide-fold):not([hidden]) { display: block; padding: 0; }
+.guide-fold { display: block; }
+.guide-fold > summary { list-style: none; display: flex; gap: 12px; align-items: flex-start; padding: 14px; cursor: pointer; min-height: 44px; }
+.guide-fold > summary::-webkit-details-marker { display: none; }
+.guide-fold > summary::after { content: ''; margin-left: auto; align-self: center; width: 8px; height: 8px; border-right: 2px solid var(--accent); border-bottom: 2px solid var(--accent); transform: rotate(45deg); transition: transform .15s; flex: none; }
+.guide-fold[open] > summary::after { transform: rotate(-135deg); }
+.guide-sum { display: grid; gap: 2px; min-width: 0; }
+.guide-sum small { color: var(--ink-2); font-size: 12.5px; line-height: 1.4; }
+.guide-body { padding: 0 14px 14px 46px; }
+@media (max-width: 520px) { .guide-body { padding-left: 14px; } }
+
+.guide-sum small { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.guide-fold[open] > summary .guide-sum small { display: none; }

@@ -7,6 +7,11 @@ Stato: **realizzate e spente di default**. La raccolta dell'attività si attiva 
 - `GET /api/admin/stats?days=90` e `PUT /api/admin/stats` rispondono **solo** con una sessione del proprietario valida (altrimenti 401). Restituiscono soltanto numeri aggregati.
 - Mostrano: account registrati (totale e nuovi al giorno), account attivi al giorno (DAU), nella settimana mobile di 7 giorni (WAU) e nel mese mobile di 30 giorni (MAU), con andamento e tabella; installazioni degli store inserite a mano con la loro fonte.
 
+## Carriere, modalità e cosa non si sa (aggiunto)
+- «Carriere salvate online»: quante, in corso e concluse (stato `ended` nei metadati del salvataggio), per difficoltà e per modalità di gioco (`gameMode`, scritta nei salvataggi nuovi: i vecchi risultano «non indicato»), salvate negli ultimi 7 e 30 giorni. Si leggono solo i metadati (nessun nome, partito o luogo esce dal server).
+- La tabella «Cosa si sa e cosa no» elenca ogni dato richiesto con la fonte o il motivo per cui manca: **sessioni** (il server conosce solo i giorni di attività), **carriere create** anche senza account, **elezioni simulate** e **uso delle funzioni** non sono raccolti e non si inventano; le installazioni restano a inserimento manuale.
+- Resta tutto dietro la sessione del proprietario; `ADMIN_STATS` resta spenta finché non sono definiti base giuridica e informativa.
+
 ## Cosa non fanno (minimizzazione)
 - Non contano i giocatori **senza account** (non c'è nulla che li identifichi e non si aggiunge nulla per identificarli).
 - Non salvano indirizzo IP, dispositivo, user agent, posizione, contenuto delle partite o clic. Nessun fingerprinting, nessuna analitica di terzi, nessun cookie aggiunto, nessuna chiamata a servizi esterni.

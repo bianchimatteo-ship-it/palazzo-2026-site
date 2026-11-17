@@ -418,7 +418,25 @@ export async function adminStats(env, db, { now = Date.now(), days = 90 } = {}) 
   while (day <= today) { series.push({ day, newAccounts: joined.get(day) ?? 0 }); day = addDaysIso(day, 1); }
   const installs = ((await db.prepare('SELECT day, store, installs, source, recorded_at AS recordedAt FROM store_installs WHERE day >= ? ORDER BY day DESC, store').bind(from).all()).results ?? []);
   const installTotals = Object.fromEntries(STORES.map(store => [store, installs.filter(row => row.store === store).reduce((sum, row) => sum + row.installs, 0)]));
-  return { generatedAt: new Date(now).toISOString(), days: span, accounts: { total: accounts, newInPeriod: [...joined.values()].reduce((a, b) => a + b, 0), series }, activity, installs: { rows: installs, totals: installTotals, note: 'Le installazioni non si possono dedurre dal gioco: sono le cifre di Google Play Console e App Store Connect, inserite a mano dal titolare con la fonte.' } };
+  // The careers saved online (only those: a career kept in the browser without an account is not known to the server): how many, how they stand, the difficulty and the game mode written in the meta of the save. Nothing that names a person, a party or a place.
+  const metas = ((await db.prepare('SELECT meta, updated_at AS at FROM saves').all()).results ?? []).map(row => { let meta = {}; try { meta = JSON.parse(row.meta ?? '{}') ?? {}; } catch { /* a save without readable meta counts as «unknown» */ } return { status: typeof meta.status === 'string' ? meta.status : null, difficulty: typeof meta.difficulty === 'string' ? meta.difficulty : null, gameMode: typeof meta.gameMode === 'string' ? meta.gameMode : null, at: row.at }; });
+  const tally = key => { const out = {}; for (const meta of metas) { const value = meta[key] ?? 'non indicato'; out[value] = (out[value] ?? 0) + 1; } return out; };
+  const since = n => metas.filter(meta => meta.at && Date.parse(meta.at) >= now - n * 86400000).length;
+  const careers = { online: metas.length, ended: metas.filter(meta => meta.status === 'ended').length, active: metas.filter(meta => meta.status && meta.status !== 'ended').length, byDifficulty: tally('difficulty'), byGameMode: tally('gameMode'), savedLast7Days: since(7), savedLast30Days: since(30),
+    note: 'Sono le carriere salvate online con un account (una per salvataggio). Le carriere create e giocate solo nel browser, senza account, non arrivano al server e non sono contate; non c’è un contatore delle carriere create: «completate» sono quelle online con stato «ended».' };
+  // What the figures can and cannot tell: every metric asked for is listed with its source, or with the reason it is not there (nothing is made up).
+  const coverage = [
+    { id: 'account', label: 'Account registrati e nuovi', available: true, source: 'tabella degli account (data di creazione)' },
+    { id: 'dau-wau-mau', label: 'Utenti attivi giornalieri, settimanali, mensili (DAU/WAU/MAU)', available: statsOn(env), source: 'giorni di attività degli account', note: statsOn(env) ? null : 'La raccolta è spenta (ADMIN_STATS non è «on»): serve prima la base giuridica e l’informativa.' },
+    { id: 'sessioni', label: 'Sessioni', available: false, note: 'Il server conta i giorni in cui un account è attivo, non le singole sessioni: non si conta altro per minimizzare i dati.' },
+    { id: 'installazioni', label: 'Installazioni', available: true, source: 'cifre inserite a mano dal titolare con la fonte', note: 'Nessun conteggio automatico: servono le credenziali dei report degli store.' },
+    { id: 'carriere-online', label: 'Carriere salvate online e completate', available: true, source: 'metadati dei salvataggi online' },
+    { id: 'carriere-create', label: 'Carriere create (anche senza account)', available: false, note: 'Non c’è un contatore: chi gioca senza account non invia nulla al server.' },
+    { id: 'modalita', label: 'Modalità di gioco', available: metas.some(meta => meta.gameMode), source: 'metadati dei salvataggi online', note: metas.some(meta => meta.gameMode) ? 'Solo per i salvataggi scritti dopo l’introduzione del dato.' : 'I salvataggi online esistenti non indicano ancora la modalità.' },
+    { id: 'elezioni', label: 'Elezioni simulate', available: false, note: 'Non sono raccolte: occorrerebbe un evento di gioco inviato al server, che richiede una decisione sull’informativa.' },
+    { id: 'funzioni', label: 'Uso delle funzioni', available: false, note: 'Non è raccolto: nessuna analitica di prodotto è attiva.' }
+  ];
+  return { generatedAt: new Date(now).toISOString(), days: span, accounts: { total: accounts, newInPeriod: [...joined.values()].reduce((a, b) => a + b, 0), series }, activity, careers, coverage, installs: { rows: installs, totals: installTotals, note: 'Le installazioni non si possono dedurre dal gioco: sono le cifre di Google Play Console e App Store Connect, inserite a mano dal titolare con la fonte.' } };
 }
 export async function recordInstalls(db, { day, store, installs, source }, now = Date.now()) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(day)) || day > romeDay(now)) throw Object.assign(new Error('Giorno non valido.'), { status: 400 });
@@ -438,7 +456,7 @@ async function accountOf(db, request) {
 const cleanMeta = meta => {
   const value = meta && typeof meta === 'object' ? meta : {};
   const text = key => typeof value[key] === 'string' ? value[key].slice(0, 120) : null;
-  return { player: text('player'), role: text('role'), party: text('party'), partyId: text('partyId'), gameDate: text('gameDate'), status: text('status'), difficulty: text('difficulty'), week: Number.isFinite(value.week) ? value.week : null };
+  return { player: text('player'), role: text('role'), party: text('party'), partyId: text('partyId'), gameDate: text('gameDate'), status: text('status'), difficulty: text('difficulty'), gameMode: text('gameMode'), week: Number.isFinite(value.week) ? value.week : null };
 };
 
 // ---------- the content of a save ----------
