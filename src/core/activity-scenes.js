@@ -14,7 +14,7 @@ import { STAKES } from '../data/activity-scene-stakes.js?v=20261117-3';
 import { BODIES, CITIZEN_GUESTS, CITIZENS, GUESTS, HEADINGS, REFS } from '../data/activity-scene-guests.js?v=20261117-3';
 import { APPROACH_LABELS } from '../data/activity-scene-approaches.js?v=20261117-3';
 import { ONLY, TOPIC_KIND, TOPIC_MOVES, areasOf, newsFits } from '../data/activity-scene-topics.js?v=20261117-3';
-import { APPROACH_FUNCTIONS, COMMITMENTS, COMMITMENT_TEXT, CONSEQUENCE_LINES, EXTRA_Q1, FUNCTIONS, FUND_COST, GUARANTEE_MOVES, MOVES, OUTCOME_KINDS, REACTION_LINES, REACTION_TYPES, STAGE_TEXT, WHY_LINES } from '../data/activity-scene-moves.js?v=20261117-3';
+import { APPROACH_FUNCTIONS, COMMITMENTS, COMMITMENT_TEXT, CONSEQUENCE_LINES, EXTRA_Q1, FUNCTIONS, FUND_COST, GUARANTEE_MOVES, MOVES, OUTCOME_KINDS, REACTION_ALT, REACTION_LINES, REACTION_TYPES, STAGE_TEXT, WHY_LINES } from '../data/activity-scene-moves.js?v=20261117-3';
 
 export { ACTIVITY_SCENES, ACTIVITY_SCENE_UI };
 export const SCENE_KIND = 'attivita';
@@ -23,6 +23,8 @@ const round1 = value => Math.round(value * 10) / 10;
 const hashOf = text => { let h = 2166136261 >>> 0; for (let i = 0; i < String(text).length; i++) { h ^= String(text).charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h; };
 const unit = text => hashOf(text) / 4294967296;
 const pickBy = (list, text) => list[hashOf(text) % list.length];
+// how the move was received: one of the lines of the function and the quality (the primary one and the alternatives), drawn by the seed of the scene and the moment, so that the same move does not always sound the same
+const reactionLine = (scene, last) => { const lines = [REACTION_LINES[last.fn][last.band], ...(REACTION_ALT[last.fn]?.[last.band] ?? [])]; return lines[hashOf(`${scene.seed}|${scene.nodeId}|${last.fn}|reazione`) % lines.length][0]; };
 // The beats: the opening, three moments of decision with the reaction after each (a fourth one when somebody asks for guarantees or the tone has risen), the outcome.
 const BEATS = Object.freeze(['apertura', 'q1', 'r1', 'q2', 'r2', 'q3', 'r3', 'q4', 'r4', 'esito']);
 const NEXT = Object.freeze({ apertura: 'q1', q1: 'r1', r1: 'q2', q2: 'r2', r2: 'q3', q3: 'r3', q4: 'r4', r4: 'esito' });
@@ -232,7 +234,7 @@ export function activityNode(scene) {
       const reaction = REACTION_TYPES[last?.type ?? 'perplessita'];
       const who = guest(scene, index % 2 ? 1 : 2), other = guest(scene, index % 2 ? 2 : 1);
       const joined = reaction.joins[hashOf(`${scene.seed}|${scene.nodeId}|intervento`) % reaction.joins.length];
-      return { ...base, speaker: who.id, expression: reaction.expression, gesture: reaction.gesture, camera: reaction.camera, reaction: last?.type ?? null, move: last ? { fn: last.fn, by: me(scene).id, gesture: FUNCTIONS[last.fn]?.gesture ?? 'apre' } : null, title: STAGE_TEXT.titles[scene.nodeId][0], kind: reaction.label[0], said: last?.said ?? null, preface: last?.reaction ? [last.reaction] : [], text: last ? REACTION_LINES[last.fn][last.band][0] : '', exchange: [{ who: other.name, text: joined[0] }], ...(last?.stake ? { lines: [last.stake] } : {}), why: last?.why ?? [], score: last?.score, audience: null, choices: [['continua', 'Continua']] };
+      return { ...base, speaker: who.id, expression: reaction.expression, gesture: reaction.gesture, camera: reaction.camera, reaction: last?.type ?? null, move: last ? { fn: last.fn, by: me(scene).id, gesture: FUNCTIONS[last.fn]?.gesture ?? 'apre' } : null, title: STAGE_TEXT.titles[scene.nodeId][0], kind: reaction.label[0], said: last?.said ?? null, preface: last?.reaction ? [last.reaction] : [], text: last ? reactionLine(scene, last) : '', exchange: [{ who: other.name, text: joined[0] }], ...(last?.stake ? { lines: [last.stake] } : {}), why: last?.why ?? [], score: last?.score, audience: null, choices: [['continua', 'Continua']] };
     }
     default: {
       const kind = OUTCOME_KINDS[scene.outcome?.kind ?? 'parziale'];
