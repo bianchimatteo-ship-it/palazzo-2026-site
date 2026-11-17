@@ -125,6 +125,14 @@ function racesCard(state, selected) {
   }
   return card({ kicker: 'CONSULTAZIONI REGIONALI E LOCALI · SIMULATE', title: `${races.length} ${races.length === 1 ? 'voto concluso' : 'voti conclusi'}`, body: `<ul class="tp-races" data-territory-races-list>${list}</ul>${compare}` });
 }
+// The lists of the game whose party has NO documented collocazione or programme in the data (the verified catalogue does not have them): they are shown with their share like any other, but nothing about their
+// positions is made up — the page says so and the alliance pages show «posizione non rilevata».
+export const undocumentedParties = state => (state?.world?.parties ?? []).filter(party => party.active !== false && !party.isPlayer && !Number.isFinite(party.axis));
+function undocumentedCard(state) {
+  const list = undocumentedParties(state);
+  if (!list.length) return '';
+  return card({ kicker: 'DATI NON DOCUMENTATI', title: `${list.length} ${list.length === 1 ? 'lista senza' : 'liste senza'} collocazione politica nei dati`, body: `<p class="sx-note" data-territory-undocumented>${esc(list.map(party => party.label).join(', '))}: compaiono con la loro quota nei sondaggi e nei voti simulati, ma il programma e la posizione politica non sono documentati e restano «non rilevati»: il gioco non li inventa.</p>` });
+}
 export function renderTerritoryPage(state, overview, { geography = null, municipalities = [], filters = {}, swatch = null, colorOf = null, labelOf = null } = {}) {
   if (!state.game) return empty('Crea prima un politico per vedere i risultati per territorio.', '<button class="primary-button" data-action="new-career">Crea il politico</button>');
   const last = overview?.national?.lastPolitiche ?? null;
@@ -145,6 +153,6 @@ export function renderTerritoryPage(state, overview, { geography = null, municip
   const comuni = hierarchy.reduce((sum, region) => sum + region.provinces.reduce((acc, province) => acc + province.comuni.length, 0), 0);
   return `<div class="territory-page" data-territory-page-root>${status}
     ${card({ kicker: 'CERCA E FILTRA', title: `${num(comuni, 0)} comuni consultabili`, body: `${controls({ hierarchy, regionCode, provinceCode, q, sort })}${searchResults(found, q)}` })}
-    ${crumbs(breakdown)}${summaryCard(breakdown, ctx)}${tableCard(breakdown, ctx, { page: Math.max(1, Number(filters.terrPage) || 1), sort })}${compare}
+    ${crumbs(breakdown)}${summaryCard(breakdown, ctx)}${tableCard(breakdown, ctx, { page: Math.max(1, Number(filters.terrPage) || 1), sort })}${compare}${undocumentedCard(state)}
     <p class="sx-note" data-territory-source>Dato simulato: i voti di lista del voto nazionale del ${esc(formatDate(last.date))} della partita, ripartiti per abitanti (ISTAT) con lo scarto regionale del modello e una piccola variazione locale, sempre la stessa per lo stesso voto. Non è un dato ufficiale: i risultati reali del 2022 sono solo per collegio e Regione.</p></div>`;
 }

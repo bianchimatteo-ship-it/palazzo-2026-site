@@ -1,7 +1,7 @@
 // The date of birth in three simple fields: the calendar (30 and 31 days, leap years), the future, a plausible age, the same «YYYY-MM-DD» for the game and the old saves, and in Chrome on a phone: numeric keyboards,
 // the hidden field follows what is typed, mistakes are told in words.
 import assert from 'node:assert/strict';
-import { daysInMonth, isLeapYear, parseBirth, splitBirth } from '../src/core/birth-date.js';
+import { daysInMonth, isLeapYear, parseBirth, parseTyped, splitBirth } from '../src/core/birth-date.js';
 import { chromeAvailable, createCareerInPage, withBrowser } from './lib/browser.mjs';
 
 assert.ok(isLeapYear(2000) && isLeapYear(2024) && !isLeapYear(1900) && !isLeapYear(2023), 'anni bisestili: secolari solo se divisibili per 400');
@@ -24,6 +24,10 @@ assert.equal(parseBirth({ day: '25', month: '9', year: '1985' }, today).age, 40,
 assert.deepEqual(splitBirth('1985-04-02'), { day: '2', month: '4', year: '1985' }, 'una vecchia data si divide nei tre campi');
 assert.deepEqual(splitBirth(''), { day: '', month: '', year: '' });
 
+// formats typed or pasted in one go
+for (const [text, want] of [['12/04/1985', '1985-04-12'], ['12-4-1985', '1985-04-12'], ['12.04.1985', '1985-04-12'], ['1985-04-12', '1985-04-12'], ['12 aprile 1985', '1985-04-12'], ['29/02/2000', '2000-02-29']]) { const t = parseTyped(text); assert.equal(parseBirth(t, today).iso, want, `«${text}» → ${want}`); }
+assert.equal(parseTyped('12/04/85'), null, 'Anno a due cifre: non si indovina.'); assert.equal(parseTyped('ciao'), null);
+assert.equal(parseBirth(parseTyped('31/04/1985'), today).iso, '', 'Il 31 aprile incollato è rifiutato.');
 if (!chromeAvailable) { console.log('Data di nascita: parte nel browser saltata (Chrome non trovato).'); } else {
   await withBrowser(async browser => {
     const { evaluate, goto, waitFor: wait, pause, send, errors } = browser;
@@ -43,6 +47,7 @@ if (!chromeAvailable) { console.log('Data di nascita: parte nel browser saltata 
     assert.equal(out.hidden, '', 'Una data che non esiste non arriva al gioco'); assert.ok(out.error && /bisestile/.test(out.hint), out.hint);
     await type('birthYear', '2000'); out = await read();
     assert.equal(out.hidden, '2000-02-29'); assert.ok(!out.error && /Hai \d+ anni/.test(out.hint), out.hint);
+    await type('birthDay', '12/04/1985'); out = await read(); assert.equal(out.hidden, '1985-04-12', 'Una data incollata intera riempie i tre campi.'); assert.equal(await evaluate(`document.querySelector('[data-birth] [name=birthYear]').value`), '1985'); assert.equal(await evaluate(`document.querySelector('[data-birth] [name=birthMonth]').value`), '4');
     await type('birthDay', '1x2'); assert.equal(await evaluate(`document.querySelector('[data-birth] [name=birthDay]').value`), '12', 'Solo cifre nel giorno');
     assert.deepEqual(errors.filter(item => !/favicon/.test(String(item))), [], 'Nessun errore JavaScript.');
   });

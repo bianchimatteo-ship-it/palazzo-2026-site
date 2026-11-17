@@ -1,6 +1,6 @@
 // The page «Referendum»: the abrogative one (art. 75) and the constitutional confirmatory one (art. 138), kept apart in rules, phases, quorum and effects. Every button calls the store: nothing is decorative.
 // Figures of the votes are a simulation of the game (never a real result).
-import { ABROGATIVE, CONSTITUTIONAL, CAMPAIGN_ACTIONS, COUNCIL_ROUTE, EXCLUDED, PHASES, pathOf, isActive } from '../core/referendum-engine.js?v=20261117-6';
+import { REVISION_TOPICS, ABROGATIVE, CONSTITUTIONAL, CAMPAIGN_ACTIONS, COUNCIL_ROUTE, EXCLUDED, PHASES, pathOf, isActive } from '../core/referendum-engine.js?v=20261117-6';
 import { ITALIAN_REGIONS } from '../data/regions.js?v=20261117-6';
 import { badge, card, empty, esc, kpi } from './sections-kit.js?v=20261117-6';
 import { formatDate } from '../core/time.js?v=20261117-6';
@@ -89,6 +89,11 @@ function formOf(state, targets) {
     <fieldset class="ref-scope"><legend>Come si chiede</legend><label><input type="radio" name="route" value="firme" checked> ${number(ABROGATIVE.signatures)} firme di elettori (raccolta dalla pagina «Iniziative»; apertura ${number(4000)} €)</label> <label><input type="radio" name="route" value="consigli"> ${ABROGATIVE.councils} Consigli regionali (${number(COUNCIL_ROUTE.cost.funds)} € e ${COUNCIL_ROUTE.cost.capital} di capitale politico)</label></fieldset>
     <button type="submit" class="primary-button">Presenta la richiesta</button><small>Fondi disponibili: ${number(state.game.resources?.funds ?? 0)} €.</small></form>` });
 }
+function revisionForm(state) {
+  if (!state.parliament?.player?.groupId) return card({ kicker: 'REVISIONE COSTITUZIONALE', title: 'Proponi una revisione della Costituzione', body: '<p class="quiet-copy" data-revision-noseat>La proposta di revisione costituzionale (art. 138) la presenta un parlamentare: serve un seggio alla Camera o al Senato.</p>' });
+  const busy = (state.game.referendums ?? []).some(item => item.kind === 'costituzionale' && isActive(item));
+  return card({ kicker: 'REVISIONE COSTITUZIONALE', title: 'Proponi una revisione della Costituzione', body: `<form class="ini-form ref-form" data-revision-form><p class="quiet-copy">Servono due deliberazioni di ciascuna Camera a distanza di almeno tre mesi (maggioranza assoluta alla seconda). Con i due terzi non c’è referendum; altrimenti si può chiedere entro tre mesi. Costa 5 di capitale politico; il tuo gruppo porta i suoi seggi.</p><label>Tema<select name="topic">${REVISION_TOPICS.map(item => `<option value="${esc(item)}">${esc(item)}</option>`).join('')}</select></label><label>Oppure scrivi un titolo (facoltativo)<input name="custom" maxlength="140" placeholder="Titolo della revisione"></label><button type="submit" class="primary-button"${busy ? ' disabled' : ''}>Presenta la revisione</button>${busy ? '<small>Una revisione è già in corso.</small>' : ''}</form>` });
+}
 function rulesCard() {
   return card({ kicker: 'DUE STRADE DA NON CONFONDERE', title: 'Referendum abrogativo e referendum costituzionale', body: `<div class="ref-compare" data-ref-compare>
     <div class="ref-col ref-tone-abrogativo"><h4>Abrogativo · art. 75</h4><ul><li>Abroga una legge, in tutto o in parte.</li><li>Lo chiedono ${number(ABROGATIVE.signatures)} elettori o cinque Consigli regionali.</li><li>Controllano l’Ufficio centrale (Cassazione) e la Corte costituzionale.</li><li><b>Quorum:</b> deve votare la maggioranza degli aventi diritto, e vincere i SÌ.</li><li>Escluse: leggi tributarie e di bilancio, amnistia e indulto, ratifica dei trattati.</li></ul></div>
@@ -101,5 +106,5 @@ export function renderReferendums(state, data = {}) {
   const kpis = `<div class="sx-kpis">${kpi({ label: 'In corso', value: String(active.length) })}${kpi({ label: 'Conclusi', value: String(list.length - active.length) })}${kpi({ label: 'Leggi in vigore', value: String((data.targets ?? []).length) })}${kpi({ label: 'Fondi', value: `${number(state.game.resources?.funds ?? 0)} €` })}</div>`;
   const cards = list.length ? list.map(item => cardOf(item, state)).join('') : card({ kicker: 'REFERENDUM', title: 'Nessun referendum', body: '<p class="sx-empty">Nessun referendum in corso. Puoi chiederne uno abrogativo qui sotto; le riforme costituzionali nascono dal lavoro delle Camere.</p>' });
   const reforms = data.reforms?.length ? card({ kicker: 'COSTITUZIONE', title: 'Riforme costituzionali concluse', body: `<ul class="ref-figures" data-ref-reforms>${data.reforms.map(item => `<li><b>${esc(item.title)}</b> · ${esc(formatDate(item.date))} · ${item.carried ? 'in vigore' : 'respinta'}${item.noReferendum ? ' (senza referendum)' : ''}</li>`).join('')}</ul>` }) : '';
-  return `<div class="ini-page ref-page" data-referendum-page>${rulesCard()}${kpis}${cards}${formOf(state, data.targets ?? [])}${reforms}</div>`;
+  return `<div class="ini-page ref-page" data-referendum-page>${rulesCard()}${kpis}${cards}${formOf(state, data.targets ?? [])}${revisionForm(state)}${reforms}</div>`;
 }

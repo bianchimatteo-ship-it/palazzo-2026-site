@@ -74,7 +74,7 @@ export function birthField(d, today) {
   const hint = parsed.error ?? (parsed.iso ? `Hai ${parsed.age} anni.` : 'Scrivi il giorno, scegli il mese e scrivi l’anno di quattro cifre.');
   return `<fieldset class="birth-field" data-birth data-birth-today="${esc(today)}"><legend>Data di nascita</legend>
     <div class="birth-row">
-      <label>Giorno<input name="birthDay" value="${esc(split.day)}" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="GG" autocomplete="bday-day" enterkeyhint="next" aria-describedby="birth-hint" /></label>
+      <label>Giorno<input name="birthDay" value="${esc(split.day)}" inputmode="numeric" pattern="[0-9]*" maxlength="12" placeholder="GG" autocomplete="bday-day" enterkeyhint="next" aria-describedby="birth-hint" /></label>
       <label>Mese<select name="birthMonth" autocomplete="bday-month" aria-describedby="birth-hint"><option value="">Mese</option>${MONTHS.map((month, index) => `<option value="${index + 1}"${String(index + 1) === String(split.month) ? ' selected' : ''}>${month[0].toUpperCase()}${month.slice(1)}</option>`).join('')}</select></label>
       <label>Anno<input name="birthYear" value="${esc(split.year)}" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="AAAA" autocomplete="bday-year" aria-describedby="birth-hint" /></label>
     </div>

@@ -83,8 +83,10 @@ else {
       assert.deepEqual(stats.failed, [], 'Nessuna richiesta fallita.');
       return { page, menuMs, ...stats, spread: stats.lastStart - stats.firstStart };
     }, { serverPort: 8796, language: 'it' });
-    const withPreload = await measure('index.html');
-    const without = await measure('nopreload.html');
+    // The timings depend on how busy the machine is (other processes, a test suite running beside): every page is measured three times and the best run of each is compared, so that a busy moment of the CPU does not decide the result.
+    const best = async page => { let top = null; for (let run = 0; run < 3; run++) { const r = await measure(page); if (!top || r.spread < top.spread) top = r; } return top; };
+    const withPreload = await best('index.html');
+    const without = await best('nopreload.html');
     for (const result of [withPreload, without]) assert.ok(result.modules >= graph.list.length - 2 && result.modules <= graph.list.length + 2, `Moduli caricati da ${result.page}: ${result.modules} (grafo ${graph.list.length}): niente scaricato in più.`);
     assert.ok(withPreload.menuMs < 30000, `Il menu compare in ${withPreload.menuMs} ms (limite 30 s con la CPU 4 volte più lenta).`);
     // the point of the announcements: the requests of all the modules leave together instead of one import level after the other (the gap is what a network round trip multiplies by the levels)

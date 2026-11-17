@@ -10,6 +10,7 @@ import { AVATAR_OPTIONS, EXTRA_NAMES, F, M, defaultAvatarFor, genderOf, normaliz
 import { personName, registerSceneKind } from './scene-engine.js?v=20261117-6';
 import { SPEAK_GESTURES, LISTEN_GESTURES, pickGesture, registerStageScript, stagePose } from './stage-script.js?v=20261117-6';
 import { ACTIVITY_SCENES, ACTIVITY_SCENE_UI } from '../data/activity-scene-lines.js?v=20261117-6';
+import { ACTIVITY_CONTEXT } from '../data/activity-scene-context.js?v=20261117-6';
 import { STAKES } from '../data/activity-scene-stakes.js?v=20261117-6';
 import { BODIES, CITIZEN_GUESTS, CITIZENS, GUESTS, HEADINGS, REFS } from '../data/activity-scene-guests.js?v=20261117-6';
 import { APPROACH_LABELS } from '../data/activity-scene-approaches.js?v=20261117-6';
@@ -30,7 +31,7 @@ const BEATS = Object.freeze(['apertura', 'q1', 'r1', 'q2', 'r2', 'q3', 'r3', 'q4
 const NEXT = Object.freeze({ apertura: 'q1', q1: 'r1', r1: 'q2', q2: 'r2', r2: 'q3', q3: 'r3', q4: 'r4', r4: 'esito' });
 export const SCENE_KEYS = Object.freeze(Object.keys(ACTIVITY_SCENES));
 // The scene an activity plays as, or null: the activities of the game that have a scene.
-export const sceneKeyOf = activityId => SCENE_KEYS.find(key => ACTIVITY_SCENES[key].activityIds.includes(activityId)) ?? null;
+export const sceneKeyOf = activityId => SCENE_KEYS.find(key => ACTIVITY_SCENES[key].activityIds.includes(activityId)) ?? ACTIVITY_CONTEXT[activityId]?.scene ?? null;
 export const activityHasScene = activityId => Boolean(sceneKeyOf(activityId));
 // «Incontra i cittadini» is a scene of its own: the market square with passers-by and a daily problem each, not the civic hall with delegates (data/activity-scene-guests.js CITIZENS). The rest of the engine is the same.
 const isCitizens = scene => scene.sceneKey === 'associazioni' && scene.activityId === 'cittadini';
@@ -89,7 +90,8 @@ export function pickRef(sceneKey, seed, refs = {}) {
 export function createActivityScene({ id, seed, sceneKey, activityId, target = null, variant = 'default', player, playerAvatar, stats = {}, recent = [], prefer = null, date = null, party = null, refs = {}, pool = [], situation = {}, promises = null, news = null, priorFamilies = null }) {
   const spec = ACTIVITY_SCENES[sceneKey];
   if (!spec) throw new Error('Scena non riconosciuta.');
-  const family = pickFamily(spec, seed, recent, prefer);
+  const context = ACTIVITY_CONTEXT[activityId] ?? null;
+  const family = pickFamily(spec, seed, recent, prefer ?? context?.prefer ?? null);
   const used = new Set();
   const roles = (activityId === 'cittadini' ? CITIZEN_GUESTS[family.id] : null) ?? GUESTS[sceneKey]?.[family.id] ?? [spec.cast[0].tag, spec.cast[1].tag];
   const heading = sceneKey === 'associazioni' ? HEADINGS[activityId === 'cittadini' ? 'cittadini' : 'associazioni'] : null;
@@ -221,7 +223,7 @@ export function activityNode(scene) {
   const base = { id: scene.nodeId, setting: scene.setting };
   const citizens = isCitizens(scene);
   switch (scene.nodeId) {
-    case 'apertura': return { ...base, speaker: me(scene).id, expression: 'serena', gesture: 'saluta', camera: 'wide', title: scene.heading?.title ?? spec.title[0], text: (citizens ? CITIZENS.intro : (spec.intro[scene.variant] ?? spec.intro.default))[0], ...(scene.ref?.text ? { lines: [scene.ref.text] } : {}), choices: [['continua', 'Continua']] };
+    case 'apertura': return { ...base, speaker: me(scene).id, expression: 'serena', gesture: 'saluta', camera: 'wide', title: ACTIVITY_CONTEXT[scene.activityId]?.title[0] ?? scene.heading?.title ?? spec.title[0], text: (ACTIVITY_CONTEXT[scene.activityId]?.intro ?? (citizens ? CITIZENS.intro : (spec.intro[scene.variant] ?? spec.intro.default)))[0], ...(scene.ref?.text ? { lines: [scene.ref.text] } : {}), choices: [['continua', 'Continua']] };
     case 'q1': return { ...base, speaker: guest(scene, 1).id, expression: 'determinata', gesture: 'sottolinea', camera: 'wide', title: family.label[0], text: (citizens ? CITIZENS.families[family.id]?.open ?? family.open : family.open)[0], choices: choicesOf(scene, 'q1') };
     case 'q2': return { ...base, speaker: guest(scene, 2).id, expression: 'determinata', gesture: 'indica', camera: 'wide', title: family.label[0], text: (citizens ? CITIZENS.families[family.id]?.follow ?? family.follow : family.follow)[0], choices: choicesOf(scene, 'q2') };
     case 'q3': {

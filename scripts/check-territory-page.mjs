@@ -123,4 +123,13 @@ assert.ok(!/NaN|undefined|\[object/.test(html), 'Nessun valore rotto');
   assert.ok(/data-territory-races="table"/.test(html) && /data-territory-race-row/.test(html) && /Comunali · Siena/.test(html.replace(/<[^>]+>/g, '')), 'La pagina mostra il confronto locale.');
   assert.ok(/data-territory-races="none"/.test(renderTerritoryPage({ game: { week: { index: 1 } } }, overview, { geography, municipalities: db().municipalities, filters: {}, swatch, colorOf: () => '#456', labelOf: id => id })), 'Senza voti locali lo dice.');
 }
+// parties without documented data: declared, never invented
+{
+  const { undocumentedParties } = await import(`../src/ui/territory-page.js${v}`);
+  const st = { game: { week: { index: 1 } }, world: { parties: [{ id: 'a', label: 'Lista Documentata', axis: 1, active: true }, { id: 'b', label: 'Lista Senza Dati', axis: null, active: true }, { id: 'p', label: 'Io', isPlayer: true, axis: null }] } };
+  assert.deepEqual(undocumentedParties(st).map(p => p.label), ['Lista Senza Dati'], 'Solo le liste senza collocazione (non il giocatore).');
+  const html = renderTerritoryPage(st, overview, { geography, municipalities: db().municipalities, filters: {}, swatch, colorOf: () => '#456', labelOf: id => String(id).slice(0, 18) });
+  assert.ok(/data-territory-undocumented/.test(html) && /Lista Senza Dati/.test(html) && /non li inventa/.test(html), 'La pagina lo dichiara.');
+  assert.ok(!/data-territory-undocumented/.test(renderTerritoryPage({ game: { week: { index: 1 } }, world: { parties: [] } }, overview, { geography, municipalities: db().municipalities, filters: {}, swatch, colorOf: () => '#456', labelOf: id => id })), 'Nessun avviso se i dati ci sono.');
+}
 console.log('check-territory-page: ok');

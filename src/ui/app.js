@@ -27,7 +27,7 @@ import { renderElectionNight } from './lazy-views.js?v=20261117-6';
 import { PROFESSIONS, chosenPlace, makeCareerDraft, pollScenarioOf, removePartyCriterion, renderCareerWizard, togglePartyOrientation, wizardLogoPreview } from './career-wizard.js?v=20261117-6';
 import { userPartyLogo } from './party-logo.js?v=20261117-6';
 import { WIZARD_VIEWS, validateWizardStep } from '../core/career-rules.js?v=20261117-6';
-import { parseBirth } from '../core/birth-date.js?v=20261117-6';
+import { parseBirth, parseTyped } from '../core/birth-date.js?v=20261117-6';
 import { avatarOf, normalizeAvatar, randomAvatar } from '../core/avatar.js?v=20261117-6';
 import { avatarSvg } from './avatar-svg.js?v=20261117-6';
 import { renderElectionsHub } from './lazy-views.js?v=20261117-6';
@@ -2633,6 +2633,11 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       const data = new FormData(form);
       try { store.startReferendum({ statuteId: data.get('statuteId'), scope: data.get('scope'), partText: data.get('partText'), question: data.get('question'), route: data.get('route') }); playSound('confirm'); }
       catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
+    } else if (form.matches('[data-revision-form]')) {
+      event.preventDefault();
+      const data = new FormData(form);
+      try { store.proposeRevision({ topic: data.get('topic'), custom: data.get('custom') }); playSound('confirm'); }
+      catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
     } else if (form.matches('[data-ref-councils-form]')) {
       event.preventDefault();
       try { store.askReferendumCouncils(form.dataset.refCouncilsForm, [...form.querySelectorAll('input[name="region"]:checked')].map(item => item.value)); playSound('confirm'); }
@@ -2872,7 +2877,9 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   root.addEventListener('input', event => {
     const group = event.target.closest?.('[data-birth]');
     if (!group) return;
-    if (event.target.matches('input[name=birthDay],input[name=birthYear]')) event.target.value = event.target.value.replace(/\D+/g, '');
+    // a whole date pasted or typed in the day field («12/04/1985») fills the three fields; otherwise only digits are kept
+    if (event.target.matches('input[name=birthDay]')) { const whole = parseTyped(event.target.value); if (whole) { event.target.value = whole.day; group.querySelector('select[name=birthMonth]').value = whole.month; group.querySelector('input[name=birthYear]').value = whole.year; } else event.target.value = event.target.value.replace(/\D+/g, '').slice(0, 2); }
+    if (event.target.matches('input[name=birthYear]')) event.target.value = event.target.value.replace(/\D+/g, '').slice(0, 4);
     const value = name => group.querySelector(`[name=${name}]`)?.value ?? '';
     const parsed = parseBirth({ day: value('birthDay'), month: value('birthMonth'), year: value('birthYear') }, group.dataset.birthToday);
     const hidden = group.querySelector('input[name=birthDate]'); if (hidden) hidden.value = parsed.iso;

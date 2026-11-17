@@ -69,7 +69,7 @@ import { FINANCING as MINISTRY_FINANCING, MINISTRY_RULES, answerCrisis as answer
 import { dueReminders, markReminded } from './promise-reminders.js?v=20261117-6';
 import { REQUEST_RULES, actionsFor as requestActionsFor, advanceRequest, generateRequest, linkOf as requestLinkOf, openRequests, takeAction as takeRequestAction } from './citizen-requests-engine.js?v=20261117-6';
 import { ALLY_ACTIVITIES, isOpenActivity as allyActivityOpen, oddsOf as allyActivityOdds, resolveActivity as resolveAllyActivity, startActivity as startAllyActivity } from './alliance-activities.js?v=20261117-6';
-import { ABROGATIVE, CAMPAIGN_ACTIONS, CONSTITUTIONAL, COUNCIL_ROUTE, EXCLUDED as REFERENDUM_EXCLUDED, advanceReferendum, askCouncils, campaignAction as referendumCampaignAction, createAbrogative, eligibility as referendumEligibility, fileRequest as fileReferendumRequest, isActive as referendumActive, maybeRevision, requestConstitutional } from './referendum-engine.js?v=20261117-6';
+import { REVISION_TOPICS, ABROGATIVE, CAMPAIGN_ACTIONS, CONSTITUTIONAL, COUNCIL_ROUTE, EXCLUDED as REFERENDUM_EXCLUDED, advanceReferendum, askCouncils, campaignAction as referendumCampaignAction, createAbrogative, eligibility as referendumEligibility, fileRequest as fileReferendumRequest, isActive as referendumActive, maybeRevision, requestConstitutional } from './referendum-engine.js?v=20261117-6';
 import { INITIATIVE_KINDS, advanceCollection, advanceParliamentPhase, createInitiative, depositInitiative as depositInitiativeRecord, endingEffects as initiativeEnding, isActive as initiativeActive, organize as organizeInitiativeRecord, overview as initiativeOverview, settleVerification, weeklyCost as initiativeWeeklyCost, withdraw as withdrawInitiativeRecord } from './initiative-engine.js?v=20261117-6';
 import { repealMeasure, advanceSociety, applyBudgetPlan, applyLawToSociety, applySocialTable, applySpendingReview, calibrateWeights, createSociety, explainMood, measureDesign, mediaEvent, normalizeSociety, provisionalBudget, publicBudgetChoice, regionAttention, revokeMeasure, scheduleRegionalEffects, segmentAttention, societyMood, societyShock, observatorySociety } from './society-engine.js?v=20261117-6';
 import { ACTIVITY_MEDIA, INDICATORS, ISSUE_TOPICS, SEGMENTS } from '../data/simulation/society-rules.js?v=20261117-6';
@@ -3278,6 +3278,14 @@ function referendumStances(s, ref) {
   return { stances, weights };
 }
 export const referendumStancesOf = referendumStances;
+// A revision proposed by the player: the group of the proposer brings its seats (when it is not already in the majority) and the player's influence adds a little.
+function referendumBackingFor(s, item) {
+  const base = referendumBacking(s);
+  if (item?.proposedBy !== 'giocatore') return base;
+  const seat = s.parliament?.player;
+  const bonus = chamber => { const rows = s.parliament?.chambers?.[chamber]?.groups ?? []; const total = rows.reduce((sum, group) => sum + (group.simulatedSeats ?? 0), 0) || 1; const own = rows.find(group => group.groupId === seat?.groupId); const governing = s.parliament?.government ? [...(s.parliament.government.coalitionGroupIds ?? []), ...(s.parliament.government.supportingGroupIds ?? [])].includes(seat?.groupId) : false; return (own && !governing ? (own.simulatedSeats ?? 0) / total : 0) + playerStat(s, 'influence', 50) / 1000; };
+  return { camera: Math.min(0.95, base.camera + bonus('camera')), senato: Math.min(0.95, base.senato + bonus('senato')) };
+}
 function referendumBacking(s) {
   const parliament = s.parliament;
   const government = parliament?.government;
@@ -3316,7 +3324,7 @@ function referendumWeek(s, date) {
     if (!picked) return item;
     const { stances, weights } = referendumStances(state, item);
     const salience = Math.min(0.95, 0.3 + seededRandom(`${item.id}|salienza`)() * 0.4 + playerStat(state, 'notoriety', 20) / 400);
-    const out = advanceReferendum(item, { date, week, salience, stances, weights, electorate: REFERENDUM_ELECTORATE, backing: referendumBacking(state) });
+    const out = advanceReferendum(item, { date, week, salience, stances, weights, electorate: REFERENDUM_ELECTORATE, backing: referendumBackingFor(state, item) });
     if (out.changed || out.lines.length) changed = true;
     lines.push(...out.lines);
     item = out.referendum;
@@ -6443,6 +6451,25 @@ export const store = {
     state = { ...state, game: spent, parliament: withCapital(state.parliament, spent), ui: { ...state.ui, toast: out.text } };
     persist(); emit();
     return out;
+  },
+  revisionTopics() { return REVISION_TOPICS; },
+  // The player proposes a revision of the Constitution (art. 138): only a member of Parliament, one at a time, with political capital; the iter is the one of every revision (two deliberations three months apart, the request of the referendum, the campaign, the vote).
+  proposeRevision(draft = {}) {
+    requireCareer();
+    if (!state.parliament?.player?.groupId) throw new Error('Una revisione costituzionale la propone un parlamentare: serve un seggio alla Camera o al Senato.');
+    const game = deepCopy(state.game);
+    if (referendumsOf(game).some(item => item.kind === 'costituzionale' && referendumActive(item))) throw new Error('C’è già una revisione costituzionale in corso: concludila prima.');
+    const title = String(draft.custom ?? '').trim() || String(draft.topic ?? '').trim();
+    if (title.length < 10 || title.length > 140) throw new Error('Scegli un tema o scrivi un titolo di almeno 10 caratteri.');
+    if (game.resources.politicalCapital < 5) throw new Error('Servono 5 punti di capitale politico per proporre una revisione costituzionale.');
+    const date = state.clock.currentDate;
+    const record = { id: `revisione-giocatore-${game.week.index}`, kind: 'costituzionale', title, status: 'in-corso', phase: 'prima', createdAt: date, createdWeek: game.week.index, side: 'si', proposedBy: 'giocatore', deliberations: [], councils: { required: 5, approved: [], refused: [] }, request: null, firstAt: new Date(Date.parse(`${date}T12:00:00Z`) + 21 * 86400000).toISOString().slice(0, 10), source: 'simulazione', steps: [{ date, text: `Presenti la revisione costituzionale «${title}» (art. 138 Cost.): servono due deliberazioni per Camera a distanza di tre mesi.`, phase: 'prima' }] };
+    game.resources = { ...game.resources, politicalCapital: game.resources.politicalCapital - 5 };
+    game.referendums = [record, ...referendumsOf(game)];
+    remember(game, { date, kind: 'revisione-proposta', text: `Proposta la revisione costituzionale «${title}».`, weight: 1 });
+    state = { ...state, game, ui: { ...state.ui, toast: 'Revisione costituzionale presentata' } };
+    persist(); emit();
+    return record;
   },
   startConstitutionalCollection(id) {
     requireCareer();

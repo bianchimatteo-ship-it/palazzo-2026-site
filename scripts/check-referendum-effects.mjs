@@ -85,4 +85,34 @@ for (let i = 0; i < 3; i++) playWeek({ store, db, decide });
   if (reached.status === 'concluso') { assert.ok(reached.result && reached.result.quorumReached, 'Votata a referendum: nessun quorum richiesto.'); assert.ok(store.constitutionalReforms().some(item => item.id === 'riforma-cat'), 'Registrata tra le riforme costituzionali.'); }
   else assert.ok(['in-vigore', 'respinta'].includes(reached.status), `Esito senza referendum: ${reached.status}`);
 }
+// ---------- (5) the player proposes a revision and follows it ----------
+{
+  const own = await startCareer({ seed: 'revisione-giocatore', level: 'deputato', fast: true });
+  const st = own.store;
+  const state = () => st.getState();
+  assert.ok(st.revisionTopics().length >= 5, 'I temi di revisione sono elencati.');
+  state().game.resources = { ...state().game.resources, politicalCapital: 2 };
+  assert.throws(() => st.proposeRevision({ topic: 'Riforma del bicameralismo' }), /5 punti/, 'Serve capitale politico.');
+  state().game.resources = { ...state().game.resources, politicalCapital: 20 };
+  assert.throws(() => st.proposeRevision({ topic: '' }), /almeno 10/, 'Serve un titolo.');
+  const rev = st.proposeRevision({ topic: 'Riforma del bicameralismo' });
+  assert.equal(rev.proposedBy, 'giocatore'); assert.equal(rev.phase, 'prima');
+  assert.equal(state().game.resources.politicalCapital, 15, 'Costa 5 di capitale.');
+  assert.throws(() => st.proposeRevision({ topic: 'Riduzione del numero dei parlamentari' }), /già una revisione/, 'Una alla volta.');
+  let last = null;
+  for (let i = 0; i < 100; i++) {
+    st.advance(7);
+    const r = state().game.referendums.find(item => item.id === rev.id);
+    if (r.phase === 'richiesta' && !r.request) { try { st.requestConstitutionalReferendum(rev.id, 'quinto'); } catch { /* the opposition is too small */ } }
+    if (r.status !== 'in-corso') { last = r; break; }
+  }
+  assert.ok(last, 'L’iter arriva a una conclusione.');
+  assert.ok(last.deliberations.length >= 1, 'Almeno la prima deliberazione è registrata.');
+  assert.ok(['concluso', 'respinta', 'in-vigore'].includes(last.status), `Esito: ${last.status}`);
+  if (last.status === 'concluso') assert.ok(last.result && last.result.quorumReached, 'Se arriva al referendum, nessun quorum.');
+  assert.ok(state().game.log.some(entry => /riforma|revisione|Referendum/i.test(entry.title ?? '')), 'Il diario racconta l’esito.');
+  // not a member of Parliament: refused
+  const none = await startCareer({ seed: 'senza-seggio', level: 'comunale', fast: true });
+  assert.throws(() => none.store.proposeRevision({ topic: 'Riforma del bicameralismo' }), /parlamentare/);
+}
 console.log('check-referendum-effects: ok');

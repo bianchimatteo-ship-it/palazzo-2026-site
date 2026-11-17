@@ -15,8 +15,29 @@ const byCategory = {}; for (const a of activities) { (byCategory[a.category] ??=
 for (const a of activities) assert.ok(a.label && a.detail && a.effects && a.cost !== undefined, `${a.id}: scheda completa (nome, descrizione, costo, effetti, rischio).`);
 assert.equal(new Set(activities.map(a => a.id)).size, activities.length, 'Identificativi delle attività unici.');
 for (const key of SCENE_KEYS) for (const id of ACTIVITY_SCENES[key].activityIds) assert.ok(activities.some(a => a.id === id), `${key}: l’attività ${id} esiste.`);
-assert.ok(withScene.length >= 18, `Attività con scena animata: ${withScene.length} su ${activities.length}.`);
-for (const category of ['territorio', 'media', 'partito', 'parlamento', 'relazioni']) assert.ok(byCategory[category]?.scene >= 1, `Ogni famiglia di attività ha almeno una scena (${category}).`);
+assert.equal(withScene.length, activities.length, `Tutte le attività hanno una scena animata (${withScene.length}/${activities.length}).`);
+const { ACTIVITY_CONTEXT } = await load('src/data/activity-scene-context.js');
+const intros = [];
+for (const [id, c] of Object.entries(ACTIVITY_CONTEXT)) {
+  assert.ok(ACTIVITY_SCENES[c.scene], `${id}: scena ${c.scene} esistente.`);
+  assert.ok(ACTIVITY_SCENES[c.scene].families.some(f => f.id === c.prefer), `${id}: argomento preferito ${c.prefer} esistente nella scena.`);
+  for (const pair of [c.title, c.intro]) assert.ok(Array.isArray(pair) && pair.length === 2 && pair.every(t => t.length >= 8), `${id}: testo italiano e inglese.`);
+  assert.ok(c.intro[0].length >= 60, `${id}: l’apertura è specifica (non una frase generica).`);
+  intros.push(c.intro[0]);
+}
+assert.equal(new Set(intros).size, intros.length, 'Nessuna apertura ripetuta tra le attività.');
+// a scene built for a contextual activity opens with its own title and line, and leans to its topic
+{
+  const { activityChoose: choose } = await load('src/core/activity-scenes.js');
+  for (const [id, c] of Object.entries(ACTIVITY_CONTEXT)) {
+    const scene = createActivityScene({ id: `ctx-${id}`, seed: `ctx|${id}`, sceneKey: c.scene, activityId: id, player: { name: 'Anna Verdi', tag: 'Deputata' }, playerAvatar: null, stats: {} });
+    const node = activityNode(scene);
+    assert.equal(node.text, c.intro[0], `${id}: apre con la sua frase.`); assert.equal(node.title, c.title[0]);
+    assert.equal(scene.familyId, c.prefer, `${id}: parte dal suo argomento.`);
+    assert.ok(activityNode(choose(scene, 'continua')).choices.length >= 3, `${id}: le scelte ci sono.`);
+  }
+}
+for (const category of Object.keys(byCategory)) assert.equal(byCategory[category].scene, byCategory[category].all, `Ogni attività di «${category}» ha una scena.`);
 // the activities with NO scene are resolved by the plain model, which the verdict engine covers: they all carry a text for each tone
 // ---------- data integrity ----------
 const seenIds = new Set();

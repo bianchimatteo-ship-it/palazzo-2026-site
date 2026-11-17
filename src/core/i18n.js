@@ -347,6 +347,11 @@ export function translateText(text) {
   let out = cache.get(core);
   if (out === undefined) {
     let translated = written.get(core) ?? translatePiece(core);
+    // A paragraph made of several sentences, some in the phrase book and one with an unusual combination of numbers: the sentences are translated one by one (each one is a phrase of the book), then joined again.
+    if (translated !== undefined && residualItalian(englishDates(englishNumbers(translated))) !== null && /[.!?]\s+[A-ZÀ-Ù“«]/.test(core)) {
+      const parts = core.split(/(?<=[.!?])\s+(?=[A-ZÀ-Ù“«])/);
+      if (parts.length > 1) { const each = parts.map(part => written.get(part) ?? translatePiece(part)); if (residualItalian(englishDates(englishNumbers(each.join(' ')))) === null) translated = each.join(' '); }
+    }
     // Not in the phrase book, or only in part («Programma: fino a quattro priorità» → «PROGRAMME: fino a quattro priorità»): the automatic translator (server provider, persistent cache) is asked for the
     // WHOLE text as an anonymous template; until it answers the text stays as it is (retranslate() clears this memory when answers arrive).
     if (auto && (translated === core || residualItalian(englishDates(englishNumbers(translated))) !== null)) {
