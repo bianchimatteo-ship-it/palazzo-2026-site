@@ -73,6 +73,7 @@ await withBrowser(async browser => {
   assert.ok(await evaluate(`location.hash === '#iniziative' || /Iniziative/.test(document.querySelector('h1, .page-title, .page-head')?.textContent ?? '')`), 'Il collegamento apre la pagina delle iniziative.');
   // every «Vai» of every scenario and every «Apri la pagina» of every function really goes to its page and leaves the guide
   {
+    if (!(await has('[data-guide-search]'))) { await click('[data-action=menu]'); await click('[data-menu=guida]'); await wait(() => has('[data-guide-search]'), 8000); }
     const links = await evaluate(`[...document.querySelectorAll('.guide-card [data-nav]')].map(el => el.dataset.nav)`);
     assert.equal(links.length, GUIDE_SCENARIOS.reduce((n, item) => n + item.steps.length, 0) + GUIDE_FUNCTIONS.length, 'Un collegamento per ogni passo e per ogni funzione.');
     // the guide is open again after each jump
@@ -90,7 +91,7 @@ await withBrowser(async browser => {
   // phone and tablet
   for (const [name, w, h, mobile] of [['smartphone', 390, 800, true], ['tablet', 820, 1100, true]]) {
     await viewport(w, h, mobile); await pause(300);
-    await click('[data-action=menu]'); await click('[data-menu=guida]');
+    if (!(await has('[data-guide-search]'))) { await click('[data-action=menu]'); await click('[data-menu=guida]'); }
     await wait(() => has('[data-guide-search]'), 8000);
     const over = await evaluate(`Math.max(document.documentElement.scrollWidth - document.documentElement.clientWidth, document.querySelector('[data-guide-search]').closest('.menu-popup, .menu-side, body').scrollWidth - document.querySelector('[data-guide-search]').closest('.menu-popup, .menu-side, body').clientWidth)`);
     assert.ok(over <= 1, `${name}: nessuno scroll orizzontale (${over}).`);

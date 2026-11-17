@@ -1537,4 +1537,5 @@ export const ALL_PAIRS = [
   ["Valutazione dei ministri: Economia e finanze: ottimo, Interno: buono, Esteri: buono, {}: ottimo….", "Evaluation of the ministers: Economy and finance: excellent, Interior: good, Foreign affairs: good, {1}: excellent…."],
   ["Pressione migratoria: Sbarchi in aumento e tensione nei territori.", "Migration pressure: Landings increasing and tension in the territories."],
   ["Pressione migratoria: attendere, la crisi resta aperta.", "Migration pressure: wait, the crisis remains open."],
+  ['Altri ministri valutati: #.', 'Other ministers assessed: #.'],
 ];

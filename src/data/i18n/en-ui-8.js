@@ -8776,6 +8776,7 @@ export const PHRASES = [
   ["Valutazione dei ministri: Economia e finanze: ottimo, Interno: buono, Esteri: buono, {}: ottimo….", "Evaluation of the ministers: Economy and finance: excellent, Interior: good, Foreign affairs: good, {1}: excellent…."],
   ["Pressione migratoria: Sbarchi in aumento e tensione nei territori.", "Migration pressure: Landings increasing and tension in the territories."],
   ["Pressione migratoria: attendere, la crisi resta aperta.", "Migration pressure: wait, the crisis remains open."],
+  ["Altri ministri valutati: #.", "Other ministers assessed: #."],
   ["{}: l’intervista su {}", "{1}: the interview on {2}"],
   ["{}: la conferenza stampa su {}", "{1}: the press conference on {2}"],
   ["{}: l’ospitata televisiva su {}", "{1}: the TV appearance on {2}"],

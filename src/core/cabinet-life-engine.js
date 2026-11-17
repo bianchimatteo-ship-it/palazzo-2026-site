@@ -94,7 +94,7 @@ export function advanceCabinetLife(input, { date, week = 0, rand = Math.random, 
     }
     life = { ...life, lastEval: date };
     next = log(setLife(next, life), date, 'valutazione-ministri', `Valutazione periodica dei ministri: ${verdicts.join(', ')}.`, { auto: !playerPremier });
-    lines.push(`Valutazione dei ministri: ${verdicts.slice(0, 4).join(', ')}${verdicts.length > 4 ? '…' : ''}.`);
+    lines.push(`Valutazione dei ministri: ${verdicts.slice(0, 4).join(', ')}.${verdicts.length > 4 ? ` Altri ministri valutati: ${verdicts.length - 4}.` : ''}`);
   }
 
   // 2. Ambition: a minister doing well asks for more; ignored too long, he loses loyalty.
