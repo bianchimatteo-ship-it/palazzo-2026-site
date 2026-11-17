@@ -141,7 +141,9 @@ function totalSeats(parliament, chamber) {
 function majority(parliament, chamber) { return Math.floor(totalSeats(parliament, chamber) / 2) + 1; }
 export function record(parliament, date, type, text, details = {}) {
   const entry = { id: newId('attivita-parlamentare'), date, type, text, details, source: DATA_SOURCES.SIMULATION };
-  return { ...parliament, history: [...(parliament.history ?? []), entry] };
+  // the chronicle keeps the last HISTORY_LIMIT entries (a career of thirty years would otherwise carry thousands: the archives of laws, governments and votes keep what matters)
+  const history = [...(parliament.history ?? []), entry];
+  return { ...parliament, history: history.length > HISTORY_LIMIT ? history.slice(-HISTORY_LIMIT) : history };
 }
 function setRelation(parliament, groupId, delta) {
   const current = parliament.relations?.[groupId] ?? { value: 50, source: DATA_SOURCES.SIMULATION };
@@ -217,7 +219,11 @@ export const isReferenceGovernment = government => Boolean(government) && govern
 // A Government that has ended goes to the record of the career with its offices and the outcome of its confidence
 // votes (not the seat-by-seat detail): saves stay light, the last twelve are kept.
 export const PAST_GOVERNMENTS_LIMIT = 12;
-const pastGovernment = government => ({ ...government, ...(government.accord ? { accord: compactAccord(government.accord) } : {}), confidenceVotes: (government.confidenceVotes ?? []).map(entry => ({ date: entry.date, result: entry.result, votes: (entry.votes ?? []).map(vote => ({ chamber: vote.chamber, yes: vote.yes, needed: vote.needed, total: vote.total, passed: vote.passed })), source: DATA_SOURCES.SIMULATION })) });
+const HISTORY_LIMIT = 700;
+// A Government that has ended is kept small: the evaluations of the ministers shrink to the last one, the dossiers to what they came to, the life of the cabinet (requests, clashes, Councils) to the last few: they are told by the history, and the state of a career of thirty years must stay within what the browser can store.
+const compactMinister = minister => ({ ...minister, ...(minister.traits ? { traits: { ...minister.traits, evaluations: (minister.traits.evaluations ?? []).slice(-1) } } : {}) });
+const compactDossiers = list => (list ?? []).slice(-8).map(item => ({ id: item.id, kind: item.kind, area: item.area, title: item.title, portfolio: item.portfolio, openedDate: item.openedDate, due: item.due, status: item.status === 'aperto' ? 'decaduto' : item.status, progress: item.progress, source: item.source }));
+const pastGovernment = government => ({ ...government, ...(government.accord ? { accord: compactAccord(government.accord) } : {}), ...(Array.isArray(government.ministers) ? { ministers: government.ministers.map(compactMinister) } : {}), ...(Array.isArray(government.dossiers) ? { dossiers: compactDossiers(government.dossiers) } : {}), ...(government.life ? { life: { ...government.life, requests: [], conflicts: (government.life.conflicts ?? []).slice(-3), meetings: (government.life.meetings ?? []).slice(-3) } } : {}), confidenceVotes: (government.confidenceVotes ?? []).map(entry => ({ date: entry.date, result: entry.result, votes: (entry.votes ?? []).map(vote => ({ chamber: vote.chamber, yes: vote.yes, needed: vote.needed, total: vote.total, passed: vote.passed })), source: DATA_SOURCES.SIMULATION })) });
 export function archiveGovernment(parliament, patch = {}) {
   const past = (parliament?.pastGovernments ?? []).map(pastGovernment);
   return (parliament?.government ? [...past, { ...pastGovernment(parliament.government), ...patch }] : past).slice(-PAST_GOVERNMENTS_LIMIT);

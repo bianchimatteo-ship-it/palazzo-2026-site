@@ -142,7 +142,8 @@ for (const { options, checkpoints: reports } of results) {
     check(health.parties >= 6 && health.parties <= 45, `${label}: ${health.parties} forze nel mondo politico`);
     check(health.pollDate && health.pollDate >= new Date(Date.parse(health.date) - 21 * 86400000).toISOString().slice(0, 10), `${label}: ultimo sondaggio del ${health.pollDate} (oggi ${health.date})`);
     // 4. Laws and events keep working; the state stays within what the browser can store.
-    check(health.size < 3_500_000, `${label}: stato di ${Math.round(health.size / 1024)} KB (troppo per il salvataggio nel browser)`);
+    // 3.5 → 4.0 MB (17/11/2026): the save is written to IndexedDB (quota far above this), the old figure was a cautious bound; a thirty-year career now carries the life of the cabinet, the requests and the promises (about +10 %), after the ended Governments were made small and the parliamentary chronicle capped at 700 entries (−300 KB)
+    check(health.size < 4_000_000, `${label}: stato di ${Math.round(health.size / 1024)} KB (troppo per il salvataggio nel browser)`);
     if (previous) {
       check(activity.lawsClosed > previous.activity.lawsClosed, `${label}: nessuna legge conclusa dopo i ${previous.years} anni`);
       check(activity.worldEvents > previous.activity.worldEvents, `${label}: nessun nuovo evento dopo i ${previous.years} anni`);
