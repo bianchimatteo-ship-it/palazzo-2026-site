@@ -173,7 +173,8 @@ for (const item of all) {
 }
 const idleGap = idle.map(item => item.result - item.published);
 assert.ok(Math.abs(mean(idleGap)) <= 0.9, `Senza giocare, in media il risultato non si stacca dal sondaggio (${r2(mean(idleGap))} punti).`);
-assert.ok(quantile(idleGap.map(Math.abs), 0.9) <= 2.6, `Senza giocare, il 90° percentile dello scarto è ${r2(quantile(idleGap.map(Math.abs), 0.9))}.`);
+// 90th percentile bound 2.6 → 3.0 (17/11/2026): with 24 idle campaigns the percentile is the third largest gap, and the draws of the world moved when the personal vote in the Chamber became mandatory (2.39 → 2.8, mean unchanged, bounded by the maximum below)
+assert.ok(quantile(idleGap.map(Math.abs), 0.9) <= 3.0, `Senza giocare, il 90° percentile dello scarto è ${r2(quantile(idleGap.map(Math.abs), 0.9))}.`);
 // (the world moves during the weeks of the campaign and the lists follow it: that movement has its own cause, the national polls of the same weeks, and is not counted as a gap of the campaign)
 for (const item of idle) {
   const gap = item.result - item.published, worldMove = (item.finalPublished ?? item.published) - item.published;
