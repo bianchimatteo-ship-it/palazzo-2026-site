@@ -8,7 +8,7 @@ const P = (it, en) => [it, en];
 
 export const ACTIVITY_SCENES = Object.freeze({
   associazioni: {
-    activityIds: ['associazioni', 'cittadini'], setting: 'sala', place: P('Sala civica', 'Civic hall'),
+    activityIds: ['associazioni', 'cittadini', 'ascolto', 'associazioni-imprese'], setting: 'sala', place: P('Sala civica', 'Civic hall'),
     kicker: P('INCONTRO CON CITTADINI E ASSOCIAZIONI', 'MEETING WITH CITIZENS AND ASSOCIATIONS'), title: P('Incontro in sala civica', 'Meeting in the civic hall'),
     intro: { default: P('Una sala piena a metà, sedie di plastica e un tavolo con le tazzine: chi è venuto ha qualcosa da chiederti e vuole sentirsi rispondere.', 'A half-full hall, plastic chairs and a table with coffee cups: the people who came have something to ask you and want an answer.') },
     cast: [{ names: ['Marta Rinaldi', 'Lucia Ferraris', 'Giulia Santoro', 'Anna Pellizzari'], tag: P('Presidente del comitato di quartiere', 'Chair of the neighbourhood committee') }, { names: ['Paolo Cattaneo', 'Franco Bellini', 'Luca Marchesi', 'Enzo Dalla Valle'], tag: P('Associazione dei genitori', 'Parents’ association') }],
@@ -35,7 +35,7 @@ export const ACTIVITY_SCENES = Object.freeze({
   },
 
   cantiere: {
-    activityIds: ['sopralluogo', 'ispezione-cantiere'], setting: 'cantiere', place: P('Cantiere dell’opera', 'The building site'),
+    activityIds: ['sopralluogo', 'ispezione-cantiere', 'verifica-strade-scuole'], setting: 'cantiere', place: P('Cantiere dell’opera', 'The building site'),
     kicker: P('SOPRALLUOGO AL CANTIERE', 'SITE INSPECTION'), title: P('Sopralluogo al cantiere', 'Site inspection'),
     intro: { head: P('Casco in testa e scarpe antinfortunistica: i tecnici ti accompagnano lungo l’opera che guidi e i cittadini guardano dalla rete.', 'Hard hat on and safety boots: the technicians walk you along the work you are responsible for while citizens watch from the fence.'), opposition: P('Hai chiesto di entrare: da consigliere di opposizione verifichi se i lavori vanno come dice la giunta. Il direttore dei lavori ti aspetta al cancello.', 'You asked to enter: as an opposition councillor you check whether the works are going as the administration says. The site manager waits for you at the gate.'), default: P('Casco in testa e scarpe antinfortunistica: i tecnici ti accompagnano lungo l’opera.', 'Hard hat on and safety boots: the technicians walk you along the work.') },
     cast: [{ names: ['Giorgio Montanari', 'Sergio Ferrante', 'Riccardo Vitale', 'Daniele Orlandi'], tag: P('Direttore dei lavori', 'Site manager') }, { names: ['Salvatore Greco', 'Ivan Bertolini', 'Mario Cavalli', 'Antonio Rizzo'], tag: P('Capocantiere', 'Site foreman') }],
@@ -62,7 +62,7 @@ export const ACTIVITY_SCENES = Object.freeze({
   },
 
   sede: {
-    activityIds: ['riunione'], setting: 'sede', place: P('Sede del partito', 'Party headquarters'),
+    activityIds: ['riunione', 'mediazione-correnti', 'dissenso', 'sezione', 'formazione'], setting: 'sede', place: P('Sede del partito', 'Party headquarters'),
     kicker: P('RIUNIONE DI PARTITO', 'PARTY MEETING'), title: P('Riunione nella sede del partito', 'Meeting at the party headquarters'),
     intro: { default: P('La sala è piena: vecchi iscritti, giovani volenterosi e due correnti che non si parlano. Tocca a te dire la tua.', 'The room is full: old members, willing young people and two currents that do not speak to each other. It is your turn to have your say.') },
     cast: [{ names: ['Renato Colombo', 'Elio Barbieri', 'Piero Gentile', 'Vittorio Sanna'], tag: P('Segretario di sezione', 'Section secretary') }, { names: ['Chiara Lombardi', 'Elisa Moretti', 'Sara Fabbri', 'Noemi Caruso'], tag: P('Delegata dei giovani', 'Youth delegate') }],
@@ -89,7 +89,7 @@ export const ACTIVITY_SCENES = Object.freeze({
   },
 
   commissione: {
-    activityIds: ['audizione-commissione'], setting: 'commissione', place: P('Sala della commissione', 'Committee room'),
+    activityIds: ['audizione-commissione', 'interrogazione'], setting: 'commissione', place: P('Sala della commissione', 'Committee room'),
     kicker: P('AUDIZIONE IN COMMISSIONE', 'HEARING IN COMMITTEE'), title: P('Audizione in commissione', 'Committee hearing'),
     intro: { default: P('Banchi a semicerchio, targhette con i nomi e un microfono acceso: gli esperti che hai chiamato stanno per parlare davanti alla commissione.', 'Semicircular desks, name plates and a live microphone: the experts you called are about to speak before the committee.') },
     cast: [{ names: ['Alberto Zanetti', 'Federica Conti', 'Massimo De Luca', 'Rossella Amato'], tag: P('Presidente della commissione', 'Committee chair') }, { names: ['Prof. Elena Caputo', 'Dott. Stefano Riva', 'Prof. Andrea Serra', 'Dott.ssa Irene Bassi'], tag: P('Esperto invitato in audizione', 'Expert invited to the hearing') }],
@@ -116,7 +116,7 @@ export const ACTIVITY_SCENES = Object.freeze({
   },
 
   redazione: {
-    activityIds: ['intervista'], setting: 'redazione', place: P('Redazione del quotidiano', 'Newspaper newsroom'),
+    activityIds: ['intervista', 'conferenza', 'talk'], setting: 'redazione', place: P('Redazione del quotidiano', 'Newspaper newsroom'),
     kicker: P('INTERVISTA A UN QUOTIDIANO', 'NEWSPAPER INTERVIEW'), title: P('Intervista in redazione', 'Interview in the newsroom'),
     intro: { default: P('Scrivanie, monitor accesi e pile di giornali: la direttrice e un cronista ti aspettano per un’intervista che domani sarà in edicola.', 'Desks, lit monitors and piles of newspapers: the editor and a reporter wait for you for an interview that will be on the stands tomorrow.') },
     cast: [{ names: ['Ilaria Fontana', 'Cristina Mancini', 'Valeria Piras', 'Daniela Longo'], tag: P('Direttrice del quotidiano', 'Newspaper editor') }, { names: ['Matteo Brambilla', 'Simone Ricci', 'Fabio Testa', 'Andrea Neri'], tag: P('Cronista politico', 'Political reporter') }],

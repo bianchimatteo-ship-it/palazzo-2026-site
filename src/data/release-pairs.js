@@ -1,11 +1,11 @@
 // English phrase-book pairs of the last release pass (data/i18n/en-ui-8.js reads `ALL_PAIRS`): the guided programme editor, the days of the Quirinale and the rule on the parties, the government room, the live
 // votes of the assemblies, the party headquarters, the TV name plates and the tutorial. Format as in the phrase-book: [Italian as shown, English]; `#` a number, `{}` a free part.
-import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261117-5';
-import { DEBATE_PAIRS } from './debate-choices.js?v=20261117-5';
-import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261117-5';
-import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261117-5';
-import { ALL_PAIRS as TOPIC_PAIRS } from './activity-scene-topics.js?v=20261117-5';
-import { LAW_TERM_PAIRS } from './law-terms.js?v=20261117-5';
+import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261117-6';
+import { DEBATE_PAIRS } from './debate-choices.js?v=20261117-6';
+import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261117-6';
+import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261117-6';
+import { ALL_PAIRS as TOPIC_PAIRS } from './activity-scene-topics.js?v=20261117-6';
+import { LAW_TERM_PAIRS } from './law-terms.js?v=20261117-6';
 export const ALL_PAIRS = [
   ...GUEST_PAIRS,
   ...DEBATE_PAIRS,
@@ -2149,4 +2149,19 @@ export const ALL_PAIRS = [
   ["Governo in carica all’avvio ha la fiducia di # gruppi; la stabilità è a #/# e il margine nella Camera più stretta è di -# seggi.", "The government in office at the start has the confidence of # groups; stability is at #/# and the margin in the narrowest Chamber is -# seats."],
   ["Governo in carica all’avvio ha la fiducia di # gruppi; la stabilità è a #/#.", "The government in office at the start has the confidence of # groups; stability is at #/#."],
   ["Governo in carica all’avvio ha la fiducia di # gruppi (di cui # dall’esterno); la stabilità è a #/#.", "The government in office at the start has the confidence of # groups (# from outside); stability is at #/#."],
+  ["Percorso senza incarico", "Path without office"],
+  ["Consultazioni regionali e locali · simulate", "Regional and local votes · simulated"],
+  ["Nessun voto locale concluso", "No local vote concluded"],
+  ["Quando una elezione comunale, provinciale o regionale della partita si conclude, il risultato compare qui; con due voti nello stesso luogo si confrontano.", "When a municipal, provincial or regional election of the game ends, the result appears here; with two votes in the same place they are compared."],
+  ["Il confronto compare quando in uno stesso luogo, allo stesso livello, ci sono almeno due voti.", "The comparison appears when in the same place, at the same level, there are at least two votes."],
+  ["Attenzione: le quote di un voto superano il #%.", "Warning: the shares of one vote exceed #%."],
+  ["Attenzione: le quote di un voto superano il 100%.", "Warning: the shares of one vote exceed 100%."],
+  ["Compaiono le liste principali di ciascun voto (dato simulato); i comuni di una regione o di una provincia non sono ricostruiti uno a uno.", "The main lists of each vote are shown (simulated data); the municipalities of a region or province are not rebuilt one by one."],
+  ["Luogo", "Place"],
+  ["Mostra", "Show"],
+  ["Comunali", "Municipal"],
+  ["Provinciali", "Provincial"],
+  ["Regionali", "Regional"],
+  ["Il confronto compare quando in uno stesso luogo, allo stesso livello, ci sono almeno due voti.", "The comparison appears when in the same place, at the same level, there are at least two votes."],
+  ["Alleanze in movimento: iDEA - Identità e {} - popolo e libertà entra nella coalizione di {}", "Alliances on the move: iDEA - Identity and {1} - people and freedom joins the coalition of {2}"],
 ];

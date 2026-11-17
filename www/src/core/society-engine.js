@@ -1,10 +1,10 @@
-import { uniqueId } from './ids.js?v=20261117-5';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261117-5';
-import { INDICATORS, ISSUE_THRESHOLD, ISSUE_TOPICS, MEDIA_OUTLETS, REAL_TOPIC_AREAS, SCENARIO_EXECUTIVE, SEGMENTS } from '../data/simulation/society-rules.js?v=20261117-5';
-import { SOCIAL_TABLE, SPENDING_REVIEW } from '../data/simulation/policy-rules.js?v=20261117-5';
-import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, EU_PROCEDURE_WEEKS, FINANCING, INSTRUMENT_KINDS, INTENSITY, MACRO_AREAS, POLICY_AREAS, SPREAD_BASE, TERRITORIAL_TARGETS, areaOf, macroAreaOf } from '../data/simulation/policy-rules.js?v=20261117-5';
-import { BUDGET_SECTORS, FISCAL_LEVERS } from '../data/simulation/project-rules.js?v=20261117-5';
-import { euWeek, openCallWeek, projectsOf, projectsWeek } from './project-engine.js?v=20261117-5';
+import { uniqueId } from './ids.js?v=20261117-6';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261117-6';
+import { INDICATORS, ISSUE_THRESHOLD, ISSUE_TOPICS, MEDIA_OUTLETS, REAL_TOPIC_AREAS, SCENARIO_EXECUTIVE, SEGMENTS } from '../data/simulation/society-rules.js?v=20261117-6';
+import { SOCIAL_TABLE, SPENDING_REVIEW } from '../data/simulation/policy-rules.js?v=20261117-6';
+import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, EU_PROCEDURE_WEEKS, FINANCING, INSTRUMENT_KINDS, INTENSITY, MACRO_AREAS, POLICY_AREAS, SPREAD_BASE, TERRITORIAL_TARGETS, areaOf, macroAreaOf } from '../data/simulation/policy-rules.js?v=20261117-6';
+import { BUDGET_SECTORS, FISCAL_LEVERS } from '../data/simulation/project-rules.js?v=20261117-6';
+import { euWeek, openCallWeek, projectsOf, projectsWeek } from './project-engine.js?v=20261117-6';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -381,6 +381,18 @@ export function applyLawToSociety(input, { category, compromiseLevel = 0, title,
   if (!design) return { society: copy(input), summary: null };
   if (!policy) design.financing = 'deficit';
   return applyMeasure(input, design, { title, origin, date, week, lawId, factor });
+}
+// A law repealed (by a bill or by referendum): its ongoing effects stop — what was still to happen is cancelled — but what already happened stays (no undoing, no mood penalty): the history is kept.
+// `share` = the part of the ongoing effects that stops (1 for a total repeal, a part for a partial one). Returns the society, with the count of the effects stopped in `society.lastRepeal`.
+export function repealMeasure(input, title, share = 1) {
+  const society = copy(input);
+  const summary = society.lawsApplied.find(item => item.title === title);
+  const own = society.effects.filter(effect => effect.cause === title || effect.cause === `${title} (fine del sostegno)`);
+  const stopped = own.slice(0, Math.ceil(own.length * clamp(share, 0, 1)));
+  society.effects = society.effects.filter(effect => !stopped.includes(effect));
+  if (summary) { summary.repealed = true; summary.repealShare = share; }
+  society.lastRepeal = { title, stopped: stopped.length, kept: own.length - stopped.length };
+  return society;
 }
 // A decree not converted in time: what has not happened yet is cancelled and part of the rest is undone.
 export function revokeMeasure(input, title, share = 0.6) {

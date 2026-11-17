@@ -1,6 +1,6 @@
 // The reminder of the promises, as a card of the game's own style (the same quiet sheet as the invitation to review): the open promises that need attention with why (a deadline coming, late, not
 // started), «Apri il programma» and «Più tardi». It never blocks the game and hides in a moment that is not quiet (a scene, a vote, the night, a dialog).
-import { translateTree } from '../core/i18n.js?v=20261117-5';
+import { translateTree } from '../core/i18n.js?v=20261117-6';
 
 const esc = text => String(text ?? '').replace(/[&<>"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[char]);
 const KIND = { scadenza: 'Scadenza vicina', ritardo: 'In ritardo', avvio: 'Non ancora avviata' };

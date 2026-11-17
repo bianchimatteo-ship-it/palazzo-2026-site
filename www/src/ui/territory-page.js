@@ -1,11 +1,11 @@
 // The page «Risultati per territorio»: the last simulated general election of the game read by Region, Province and Comune, with search, filters, pages and a comparison between consultations. It never loads
 // all the 7,894 comuni at once: the hierarchy holds only names and inhabitants, and the votes of the comuni are drawn for ONE province at a time (core/territory-results.js), always adding up to the level above.
 // What is shown is SIMULATED and says so; the only official data are the real 2022 results by Region (the map of the national page) and what the sources document.
-import { addsUp, territoryBreakdown } from '../core/territory-results.js?v=20261117-5';
-import { OTHERS, hierarchyFor, territoryInputs } from './territory-results-card.js?v=20261117-5';
-import { badge, card, empty, esc, num, pct } from './sections-kit.js?v=20261117-5';
-import { formatDate } from '../core/time.js?v=20261117-5';
-import { territoryPaint } from './national-view.js?v=20261117-5';
+import { addsUp, territoryBreakdown } from '../core/territory-results.js?v=20261117-6';
+import { OTHERS, hierarchyFor, territoryInputs } from './territory-results-card.js?v=20261117-6';
+import { badge, card, empty, esc, num, pct } from './sections-kit.js?v=20261117-6';
+import { formatDate } from '../core/time.js?v=20261117-6';
+import { territoryPaint } from './national-view.js?v=20261117-6';
 
 export const PAGE_SIZE = 25;
 const SORTS = [['popolazione', 'più abitanti'], ['nome', 'ordine alfabetico'], ['voti', 'più voti simulati']];
@@ -95,12 +95,42 @@ function comparisonCard(votes, selected) {
   return card({ kicker: 'CONFRONTO TRA CONSULTAZIONI · SIMULATO', title: `${name(first)} e ${name(second)}`, body: `<form class="tp-compare" data-territory-compare-form><label>Primo voto<select name="a">${options.replace(`value="${list.indexOf(first)}"`, `value="${list.indexOf(first)}" selected`)}</select></label><label>Secondo voto<select name="b">${options.replace(`value="${list.indexOf(second)}"`, `value="${list.indexOf(second)}" selected`)}</select></label><button type="submit" class="secondary-button">Confronta</button></form><div class="sx-table-wrap"><table class="sx-table" data-territory-compare="table"><thead><tr><th scope="col">Lista</th><th scope="col" class="num">${esc(formatDate(first.date))}</th><th scope="col" class="num">${esc(formatDate(second.date))}</th><th scope="col" class="num">Differenza</th></tr></thead><tbody>${body}</tbody></table></div><p class="sx-note">Le liste sono confrontate per nome; chi non c’era in uno dei due voti ha un trattino. Dato simulato dalla partita.</p>` });
 }
 
+// Regional, provincial and municipal votes of the game (state.races): the game keeps for each one the lists with their shares (top six + winner), not every comune, so the comparison is by consultation and place — never a made-up
+// breakdown below it. Two votes of the same place and level are put side by side list by list; the shares of one vote never add up to more than 100.
+const LEVEL = { comunale: 'Comunali', provinciale: 'Provinciali', regionale: 'Regionali' };
+export const finishedRaces = state => (state?.races?.items ?? []).filter(item => item?.result?.groups?.length && item.electionDate);
+export function compareRaces(a, b) {
+  const first = a.electionDate <= b.electionDate ? a : b, second = first === a ? b : a;
+  const names = [...new Set([...first.result.groups, ...second.result.groups].map(row => row.label))];
+  const share = (race, label) => race.result.groups.find(row => row.label === label)?.percent;
+  const rows = names.map(label => ({ label, a: share(first, label), b: share(second, label) })).sort((x, y) => (y.b ?? y.a ?? 0) - (x.b ?? x.a ?? 0));
+  const sum = race => race.result.groups.reduce((total, row) => total + (row.percent ?? 0), 0);
+  return { first, second, rows, consistent: sum(first) <= 100.5 && sum(second) <= 100.5 };
+}
+function racesCard(state, selected) {
+  const races = finishedRaces(state);
+  if (!races.length) return card({ kicker: 'CONSULTAZIONI REGIONALI E LOCALI · SIMULATE', title: 'Nessun voto locale concluso', body: '<p class="sx-empty" data-territory-races="none">Quando una elezione comunale, provinciale o regionale della partita si conclude, il risultato compare qui; con due voti nello stesso luogo si confrontano.</p>' });
+  const groups = new Map();
+  for (const race of races) { const key = `${race.level}|${race.territory?.name}`; groups.set(key, [...(groups.get(key) ?? []), race].sort((x, y) => x.electionDate.localeCompare(y.electionDate))); }
+  const pairs = [...groups.entries()].filter(([, list]) => list.length >= 2);
+  const list = races.slice().sort((x, y) => y.electionDate.localeCompare(x.electionDate)).slice(0, 12).map(race => `<li data-territory-race="${esc(race.id ?? '')}"><b>${esc(LEVEL[race.level] ?? race.level)} · ${esc(race.territory?.name ?? '')}</b> <small>${esc(formatDate(race.electionDate))}</small> — vince ${esc(race.result.winner?.label ?? '—')}${race.result.winner ? ` (${pct(race.result.winner.percent)})` : ''}${race.result.share !== undefined ? ` · il tuo partito ${pct(race.result.share)}` : ''}</li>`).join('');
+  const chosen = pairs.find(([key]) => key === selected) ?? pairs[0] ?? null;
+  let compare = '<p class="sx-note" data-territory-races="single">Il confronto compare quando in uno stesso luogo, allo stesso livello, ci sono almeno due voti.</p>';
+  if (chosen) {
+    const [key, listRaces] = chosen;
+    const out = compareRaces(listRaces.at(-2), listRaces.at(-1));
+    const options = pairs.map(([k, l]) => `<option value="${esc(k)}"${k === key ? ' selected' : ''}>${esc(LEVEL[l[0].level] ?? l[0].level)} · ${esc(l[0].territory?.name ?? '')}</option>`).join('');
+    const body = out.rows.map(row => `<tr data-territory-race-row><th scope="row">${esc(row.label)}</th><td class="num">${Number.isFinite(row.a) ? pct(row.a) : '—'}</td><td class="num">${Number.isFinite(row.b) ? pct(row.b) : '—'}</td><td class="num ${Number.isFinite(row.a) && Number.isFinite(row.b) ? (row.b - row.a >= 0 ? 'tone-good' : 'tone-bad') : ''}">${Number.isFinite(row.a) && Number.isFinite(row.b) ? `${row.b - row.a >= 0 ? '+' : '−'}${pct(Math.abs(row.b - row.a)).replace('%', '')} pt` : '—'}</td></tr>`).join('');
+    compare = `<form class="tp-compare" data-territory-race-form><label>Luogo<select name="race">${options}</select></label><button type="submit" class="secondary-button">Mostra</button></form><div class="sx-table-wrap"><table class="sx-table" data-territory-races="table"><thead><tr><th scope="col">Lista</th><th scope="col" class="num">${esc(formatDate(out.first.electionDate))}</th><th scope="col" class="num">${esc(formatDate(out.second.electionDate))}</th><th scope="col" class="num">Differenza</th></tr></thead><tbody>${body}</tbody></table></div><p class="sx-note">Compaiono le liste principali di ciascun voto (dato simulato); i comuni di una regione o di una provincia non sono ricostruiti uno a uno. ${out.consistent ? '' : 'Attenzione: le quote di un voto superano il 100%.'}</p>`;
+  }
+  return card({ kicker: 'CONSULTAZIONI REGIONALI E LOCALI · SIMULATE', title: `${races.length} ${races.length === 1 ? 'voto concluso' : 'voti conclusi'}`, body: `<ul class="tp-races" data-territory-races-list>${list}</ul>${compare}` });
+}
 export function renderTerritoryPage(state, overview, { geography = null, municipalities = [], filters = {}, swatch = null, colorOf = null, labelOf = null } = {}) {
   if (!state.game) return empty('Crea prima un politico per vedere i risultati per territorio.', '<button class="primary-button" data-action="new-career">Crea il politico</button>');
   const last = overview?.national?.lastPolitiche ?? null;
   const hierarchy = hierarchyFor(municipalities);
   const status = statusCard(last, geography);
-  const compare = comparisonCard(overview?.national?.votes ?? [], filters.terrCompare);
+  const compare = comparisonCard(overview?.national?.votes ?? [], filters.terrCompare) + racesCard(state, filters.terrRace);
   if (!last) return `<div class="territory-page" data-territory-page-root>${status}${card({ kicker: 'RISULTATI PER TERRITORIO', title: 'Ancora nessun voto politico', body: '<p class="sx-empty" role="status" data-territory-state="missing">Dopo le prossime elezioni politiche simulate qui trovi i risultati per regione, provincia e comune. Nel frattempo la mappa della centrale elettorale mostra la proiezione di oggi, che non è un risultato.</p><button type="button" class="secondary-button" data-nav="elezioni">Vai alla centrale elettorale</button>' })}${compare}</div>`;
   if (!hierarchy) return `<div class="territory-page" data-territory-page-root>${status}${card({ kicker: 'RISULTATI PER TERRITORIO', title: 'Dati ISTAT in caricamento', body: '<p class="sx-empty" role="status" data-territory-state="missing">I dati ISTAT dei comuni non sono ancora caricati: riapri la pagina tra un momento.</p>' })}${compare}</div>`;
   if (!swatch || !colorOf || !labelOf) ({ swatch, colorOf, labelOf } = territoryPaint(overview));   // the colours and names of the lists come from the national page (a lazy chunk of its own)

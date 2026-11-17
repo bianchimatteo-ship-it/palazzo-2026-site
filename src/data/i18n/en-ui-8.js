@@ -1,6 +1,6 @@
 // English phrase book, part 8 of 8: the administrative area, the account and sign-out screens, the personal logo catalogue, the tutorial invitation and the engine's law-effect and government lines. Same format as part 6: [Italian as shown, English]; `#` stands for a number, `{}` for a free part; in the English a free part is named by its position (`{2}` for the second one).
-import { ALL_PAIRS } from '../studio-lines.js?v=20261117-5';
-import { ALL_PAIRS as ACTIVITY_SCENE_PAIRS } from '../activity-scene-lines.js?v=20261117-5';
+import { ALL_PAIRS } from '../studio-lines.js?v=20261117-6';
+import { ALL_PAIRS as ACTIVITY_SCENE_PAIRS } from '../activity-scene-lines.js?v=20261117-6';
 
 // The explanations of the opening of a general or European campaign (campaign-engine.js campaignOpeningNotes): signed numbers come in both signs.
 function campaignNotePairs() {
@@ -9465,6 +9465,16 @@ export const PHRASES = [
   ["si può chiedere il referendum (un quinto dei membri di una Camera, 500.000 elettori o cinque Consigli regionali). Se nessuno lo chiede, la riforma entra in vigore. Non c’è quorum.", "the referendum can be requested (a fifth of the members of a Chamber, 500,000 voters or five Regional Councils). If nobody requests it, the reform enters into force. There is no quorum."],
   ["Governo in carica all’avvio ha la fiducia di # gruppi; la stabilità è a #/#.", "The government in office at the start has the confidence of # groups; stability is at #/#."],
   ["Governo in carica all’avvio ha la fiducia di # gruppi (di cui # dall’esterno); la stabilità è a #/#.", "The government in office at the start has the confidence of # groups (# from outside); stability is at #/#."],
+  ["Percorso senza incarico", "Path without office"],
+  ["Consultazioni regionali e locali · simulate", "Regional and local votes · simulated"],
+  ["Nessun voto locale concluso", "No local vote concluded"],
+  ["Quando una elezione comunale, provinciale o regionale della partita si conclude, il risultato compare qui; con due voti nello stesso luogo si confrontano.", "When a municipal, provincial or regional election of the game ends, the result appears here; with two votes in the same place they are compared."],
+  ["Il confronto compare quando in uno stesso luogo, allo stesso livello, ci sono almeno due voti.", "The comparison appears when in the same place, at the same level, there are at least two votes."],
+  ["Attenzione: le quote di un voto superano il #%.", "Warning: the shares of one vote exceed #%."],
+  ["Attenzione: le quote di un voto superano il 100%.", "Warning: the shares of one vote exceed 100%."],
+  ["Compaiono le liste principali di ciascun voto (dato simulato); i comuni di una regione o di una provincia non sono ricostruiti uno a uno.", "The main lists of each vote are shown (simulated data); the municipalities of a region or province are not rebuilt one by one."],
+  ["Luogo", "Place"],
+  ["Alleanze in movimento: iDEA - Identità e {} - popolo e libertà entra nella coalizione di {}", "Alliances on the move: iDEA - Identity and {1} - people and freedom joins the coalition of {2}"],
   ["{}: l’intervista su {}", "{1}: the interview on {2}"],
   ["{}: la conferenza stampa su {}", "{1}: the press conference on {2}"],
   ["{}: l’ospitata televisiva su {}", "{1}: the TV appearance on {2}"],
