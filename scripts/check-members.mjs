@@ -265,7 +265,7 @@ sound('gruppo sotto il minimo');
 assert.equal(state().parliament.government.status, 'active');
 let guardMoves = 0;
 const heavy = () => chamber('camera').groups.filter(group => majorityIds().has(group.groupId)).sort((a, b) => b.simulatedSeats - a.simulatedSeats)[0];
-while (state().parliament.government.status === 'active' && guardMoves++ < 120) {
+while (state().parliament.government.status === 'active' && guardMoves++ < 420) {
   const margin = backing('camera') - (Math.floor(total('camera') / 2) + 1);
   const seat = members('camera').find(item => item.groupId === heavy().groupId);
   store.changeMember('camera', { type: 'defezione', kind: 'misto', personId: seat.personId, to: { groupId: chamber('camera').groups.find(group => group.independent).groupId, partyId: person(seat.personId).partyId } });

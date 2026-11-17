@@ -66,6 +66,8 @@ const shortLabels = new Map();
 const literals = new Map(); // key (numbers as #, {…} as {}) → { text, files }
 for (const file of files) {
   if (file === 'src/core/invariants.js' || file === 'src/core/i18n-auto.js' || file === 'src/core/i18n.js') continue; // developer diagnostics (never rendered) and the status text of the translator (not shown in any screen)
+  if (file === 'src/data/release-pairs.js') continue; // the phrase book itself: its Italian side is the key of an entry, not a text of a screen
+  if (file === 'src/core/avatar.js') continue; // the role/first-name tables are lookup keys for the gender of a character, never shown (the labels themselves are shown, and translated, by the scene data that owns them)
   for (const whole of literalsOf(readFileSync(join(root, file), 'utf8'))) {
     // a template with markup is several texts (one for each element): they are read one by one, as the page shows them
     // the texts a reader (or a screen reader) gets from the ATTRIBUTES of the markup (tooltip, accessible name, placeholder, alternative text) are texts too: they are read before the tags are cut away
@@ -77,7 +79,7 @@ for (const file of files) {
       if (text.length < 8 || CODE.test(text) || (text.match(/[\p{L}]+/gu) ?? []).length < 2 || !ITALIAN.test(text)) continue;   // (Italian by a function word, or by the independent detector: «Candidature chiuse» has no function word)
       if (!/\p{L}{3}/u.test(text.replace(/\{\}/g, ''))) continue;   // (the kickers in capitals are texts too)
       if (/="|^[">]|["<]$|\bclass=|\bdata-[a-z-]+=/.test(text)) continue;
-      if (/\.json$|throw new|\) \{|\bconst \w+ =/.test(text)) continue; // a file name or a stretch of code
+      if (/\.json$|throw new|\) \{|\bconst \w+ =|\bgovernmentId: /.test(text)) continue; // a file name or a stretch of code
       const key = text.replace(/\{\w+\}/g, '{}').replace(/\d+(?:[.,]\d+)*/g, '#');
       if (!literals.has(key)) literals.set(key, { text: key, files: new Set() });
       literals.get(key).files.add(file);
@@ -255,7 +257,7 @@ console.log(`Censimento (${files.length} file)`);
 for (const text of [line('codice', 'Letterali del codice'), line('generati', 'Testi generati giocando')]) if (text) console.log(`  ${text}`);
 console.log(`  Dizionario: ${report.book.entries} voci (${report.book.distinct} distinte), ${report.book.duplicates.length} duplicate identiche, ${report.book.conflicts.length} in conflitto, ${report.book.unused.length} non raggiunte da nessun testo del codice o dei dati (candidate inutilizzate, non eliminate)`);
 const bad = [...report.literals.map(item => ({ ...item, from: 'codice' })), ...report.runtime.map(item => ({ ...item, from: 'generato', files: [item.path] }))].filter(item => item.cls === 'incompleta' || item.cls === 'mancante');
-for (const item of bad.slice(0, Number(process.env.CENSUS_SHOW ?? 25))) console.log(`  [${item.cls}] ${item.files[0]}: ${item.text.slice(0, 120)} — ${item.reason}${item.example ? ` → ${item.example.slice(0, 80)}` : ''}`);
+for (const item of bad.slice(0, Number(process.env.CENSUS_SHOW ?? 25))) console.log(`  [${item.cls}] ${item.files[0]}: ${item.text.slice(0, Number(process.env.CENSUS_WIDTH ?? 120))} — ${item.reason}${item.example ? ` → ${item.example.slice(0, Number(process.env.CENSUS_WIDTH ? 0 : 80))}` : ''}`);
 if (process.env.CENSUS_REPORT) writeFileSync(process.env.CENSUS_REPORT, JSON.stringify(report, null, 1));
 // The gate is ZERO: nothing of the code and nothing of the texts generated while playing may be incomplete or missing in English (there is no baseline to lower and no recorded debt: a gap fails the check).
 const now = { incompleta: count.generati?.incompleta ?? 0, mancante: count.generati?.mancante ?? 0, total: report.runtime.length };

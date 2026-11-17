@@ -16,7 +16,9 @@ import { moduleGraph } from './lib/module-graph.mjs';
 // and are announced by modulepreload with the rest. Bytes, compressed bytes compressed bytes 1.20 → 1.25 MB (the same additions, +~15 KB); raw bytes and depth keep their limits.
 // raw bytes 4.90 → 5.00 MB (16/11/2026): the alliance rules module (ten-theme programme, compromises, registrations: ~15 KB), the vote absences and the new texts of the page of the alliances (+~30 KB in all); the budget was
 // reached, not designed away: the page loads the same graph, compressed size and depth are unchanged in their limits.
-const BUDGET = { modules: 160, raw: 5_000_000, compressed: 1_250_000, depth: 18 };
+// modules 160 → 170, raw 5.00 → 5.15 MB, compressed 1.25 → 1.30 MB (17/11/2026): the QA completion work added the resignations module, the guide manual (functions and scenarios), the alliance/territory
+// helpers and their texts (+4 modules, +~100 KB raw, +~13 KB compressed); announced by modulepreload with the rest, depth (14) and the 4x-CPU timings are unchanged.
+const BUDGET = { modules: 170, raw: 5_150_000, compressed: 1_300_000, depth: 18 };
 const graph = await moduleGraph();
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const stamp = html.match(/main\.js\?v=([^"']+)/)?.[1];
