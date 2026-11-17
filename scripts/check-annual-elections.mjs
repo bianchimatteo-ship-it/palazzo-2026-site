@@ -30,15 +30,17 @@ if (process.argv[2] === 'worker') {
     // The player always takes the vote that is in front of him (what is checked is that there is one he can play, not how often a player decides to): the open election of
     // his calendar, else the race of the round of the amministrative, which any career can stand in (Elezioni → Candidatura).
     if (now.campaign?.status !== 'active') {
+    // The rule of the game: whoever holds an office of government leaves it before standing for a territorial body or the European Parliament («prima lascia l’incarico»). The player of the check does what the message says: resigns from the offices of government, then stands.
+    const leaveGovernment = () => { let left = false; for (const post of store.resignationPosts?.() ?? []) if (/^(ministro|premier|sottosegretario|governo)/.test(post.kind ?? post.id ?? '')) { try { store.resign(post.id); left = true; } catch { /* not possible now */ } } return left; };
+    const attempt = fn => { try { fn(); } catch (error) { if (/incarico di governo/.test(error.message) && leaveGovernment()) fn(); else throw error; } };
       const open = (now.game.elections ?? []).find(item => item.status === 'open');
       const race = store.races().find(item => item.round && ['planned', 'confirmed'].includes(item.status) && now.clock.currentDate >= item.windowOpensAt && now.clock.currentDate <= item.windowClosesAt);
       if (open) {
-        try { store.startCampaign({ electionType: open.type, ...(open.type === 'politiche' ? { role: 'deputato' } : {}), objective: 'seat' }, db.parties, people); } catch (error) { blocked.push({ date: now.clock.currentDate, election: open.id, reason: error.message }); }
+        try { attempt(() => store.startCampaign({ electionType: open.type, ...(open.type === 'politiche' ? { role: 'deputato' } : {}), objective: 'seat' }, db.parties, people)); } catch (error) { blocked.push({ date: now.clock.currentDate, election: open.id, reason: error.message }); }
       }
       if (store.getState().campaign?.status !== 'active' && race) {
         try {
-          if (race.status === 'planned') store.chooseRaceCandidate(race.id, { kind: 'player' }, people);
-          store.startCampaign({ electionType: race.level, raceId: race.id }, db.parties, people);
+          attempt(() => { if (race.status === 'planned') store.chooseRaceCandidate(race.id, { kind: 'player' }, people); store.startCampaign({ electionType: race.level, raceId: race.id }, db.parties, people); });
         } catch (error) { blocked.push({ date: now.clock.currentDate, race: race.id, reason: error.message }); }
       }
     }
