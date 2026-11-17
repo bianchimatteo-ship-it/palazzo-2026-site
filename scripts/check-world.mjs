@@ -47,6 +47,7 @@ assert.ok(scarred.chance < close.chance - 0.15, 'Le rotture passate con quella f
 assert.ok(scarred.reasons.some(item => /Memoria/.test(item.label) && item.delta < 0));
 const hard = allianceOdds(world, 'pd', { difficulty: DIFFICULTIES.difficile.allianceChance });
 assert.ok(hard.chance < close.chance, 'In Difficile gli alleati sono più esigenti.');
+assert.ok(!hard.reasons.some(item => /Difficolt/i.test(item.label)), 'La difficoltà della carriera non è mai la motivazione di un’accettazione o di un rifiuto.');
 // Across the whole spectrum only as a motivated exception.
 const extreme = createWorld({ seedText: 'estremi', date: '2026-09-24', playerParty: { id: 'io', label: 'Il mio partito', position: 'estrema sinistra', founder: true }, forces: [...forces, { id: 'far', label: 'Estrema destra A', share: 1, position: 'estrema destra' }], realPoll });
 { const odds = allianceOdds(extreme, 'fdi', {}); assert.ok(odds.chance <= 0.03, 'Accordi incoerenti praticamente impossibili senza un motivo eccezionale.'); assert.ok(odds.blocked && /incompatibili/.test(odds.blocked), 'Estrema sinistra ed estrema destra hanno programmi incompatibili: serve un compromesso, non basta il punteggio.'); }

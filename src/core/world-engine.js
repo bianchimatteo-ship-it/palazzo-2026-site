@@ -1877,8 +1877,9 @@ export function allianceOdds(world, forceId, { partySupport = 50, influence = 50
   add('La tua influenza', (influence - 50) / 250);
   if (allianceOf(world, force.id)) add(`${force.label} è già in un’altra intesa`, -0.25);
   if (force.crisis) add(`${force.label} è in crisi e cerca sponde`, 0.1);
-  if (difficulty) add('Difficoltà della partita', difficulty);
-  const chance = clamp(0.22 + reasons.reduce((sum, item) => sum + item.delta, 0), 0.03, 0.9);
+  // The difficulty of the career is not a reason a party gives for accepting or refusing: the decision rests on the programmes, the relations, the consensus, the interests, the strategy, the precedents and the convenience above (the `difficulty` option only shifts the odds below, silently).
+  // the level of the career still sets how exacting the allies are, as a plain shift of the odds: it is never given as the reason of an acceptance or of a refusal
+  const chance = clamp(0.22 + reasons.reduce((sum, item) => sum + item.delta, 0) + (difficulty || 0), 0.03, 0.9);
   // Very distant forces only agree as a motivated exception: two small forces, or a force in crisis.
   const exception = gap >= 4 && !(own < 3 && theirs < 3) && !force.crisis;
   const blocked = program.hard.length ? `Programmi incompatibili su ${program.hard.map(row => row.label.toLowerCase()).join(', ')}: senza un compromesso negoziato sul tema l’alleanza non è possibile.` : null;
