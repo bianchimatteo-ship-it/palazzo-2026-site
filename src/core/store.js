@@ -3529,7 +3529,7 @@ function tickNational(s, date) {
     // with a Government of the President if need be, instead of leaving a Government for the current affairs in office for months.
     if (out.dissolve && dissolutionWait(next.game, date) > CALENDAR_RULES.dissolveWithinDays) {
       const text = 'Le Camere non possono essere sciolte ora, perché il calendario elettorale non consente di votare a breve: il Presidente della Repubblica prosegue le consultazioni e tenta un governo di scopo.';
-      out = { ...out, dissolve: false, formed: false, events: [], lines: [text], parliament: next.parliament, formation: { ...formation, phase: 'consultazioni', attempts: 0, presidentChoice: 'tech', offeredToPlayer: true, playerAccepted: false, consultationsEnd: advanceDays(date, LEGISLATURE_RULES.consultationDays), deadline: advanceDays(date, 8 * 7), steps: [...(formation.steps ?? []), { date, phase: 'consultazioni', text }] } };
+      out = { ...out, dissolve: false, formed: false, events: [], lines: formation.presidentChoice === 'tech' ? [] : [text], parliament: next.parliament, formation: { ...formation, phase: 'consultazioni', attempts: 0, presidentChoice: 'tech', offeredToPlayer: true, playerAccepted: false, consultationsEnd: advanceDays(date, LEGISLATURE_RULES.consultationDays), deadline: advanceDays(date, 8 * 7), steps: [...(formation.steps ?? []), { date, phase: 'consultazioni', text }] } };
     }
     national = { ...national, formation: out.formation };
     for (const line of out.lines) national = nationalHistory(national, date, 'formazione', line);

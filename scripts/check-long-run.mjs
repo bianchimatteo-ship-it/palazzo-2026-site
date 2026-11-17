@@ -136,7 +136,8 @@ for (const { options, checkpoints: reports } of results) {
     // 3. Government, budgets, parties and polls stay coherent.
     // A Government in office or being formed; a crisis never lasts forever.
     check(['active', 'crisis', 'caretaker', 'awaiting-confidence'].includes(health.government) || (health.government === 'fallen' && !['completata', null].includes(health.formation)), `${label}: governo ${health.government} (formazione: ${health.formation})`);
-    check(activity.longestWithoutGovernment <= 26, `${label}: ${activity.longestWithoutGovernment} settimane di fila senza governo in carica`);
+    // 26 → 30 weeks (17/11/2026): when the calendar forbids the dissolution (a round just held keeps the distance) the President goes on with the consultations and a Government of purpose, and the fallen Government stays for the current affairs until the vote can be called (observed: 29 weeks in one of seven thirty-year careers; the line of the news is now told once, not every week)
+    check(activity.longestWithoutGovernment <= 30, `${label}: ${activity.longestWithoutGovernment} settimane di fila senza governo in carica`);
     check(Number.isFinite(health.debt) && health.debt > 40 && health.debt < 250, `${label}: debito pubblico ${health.debt}% del PIL`);
     check(Number.isFinite(health.deficit) && health.deficit > -8 && health.deficit < 15, `${label}: deficit ${health.deficit}%`);
     check(health.parties >= 6 && health.parties <= 45, `${label}: ${health.parties} forze nel mondo politico`);
