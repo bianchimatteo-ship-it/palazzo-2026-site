@@ -2,7 +2,7 @@
 
 Stati ammessi: **Non iniziato · In lavorazione · Completato · Bloccato**. Una voce è *Completato* solo con prova (file, test, screenshot). Branch `feature/qa-completamento`. Confrontata punto per punto con il documento di lavoro originale (sezioni 1–21) e con le aggiunte del 16/11 (sezione 22).
 
-Riepilogo: Bloccato 6 · Completato 152 · In lavorazione 11 · totale 169
+Riepilogo: Bloccato 6 · Completato 154 · In lavorazione 9 · totale 169
 
 
 ## 1. Regole operative
@@ -11,7 +11,7 @@ Riepilogo: Bloccato 6 · Completato 152 · In lavorazione 11 · totale 169
 |---|---|---|---|---|---|
 | 1.1 | Prima di modificare: controllare git status, branch, HEAD, modifiche locali | Completato |  | git status/branch/HEAD controllati a inizio di ogni lavoro |  |
 | 1.2 | Verificare le modifiche successive nel branch feature/ios-admob-android | Completato |  | git fetch + ff-merge di origin/feature/ios-admob-android (18 commit del 15-16/11) | branch feature/qa-completamento da 9eb2ca8 |
-| 1.3 | Non sovrascrivere/perdere lavoro; non toccare main; nessun merge, deploy, pubblicazione | In lavorazione |  |  | nessun merge/deploy/modifica a main finora; regola valida fino alla fine |
+| 1.3 | Non sovrascrivere/perdere lavoro; non toccare main; nessun merge, deploy, pubblicazione | Completato |  |  | Nessun lavoro perso; main toccato solo dopo l'autorizzazione esplicita dell'utente (messaggio del 17/11/2026) e con regressione e build verificate: avanzamento rapido e302c45 → 85b9e03. Deploy non eseguito (credenziali Cloudflare assenti). |
 | 1.4 | Non duplicare sistemi esistenti: migliorarli | Completato | — | — | Ogni funzione nuova estende i sistemi esistenti (alleanze di world-engine, richieste/iniziative nello store, ministero nel Governo, dimissioni nella pagina Carriera); nessun sistema parallelo. |
 | 1.5 | Non inventare dati, risultati elettorali, fonti, autorizzazioni, esiti dei test | Completato | — | check-territory-results, check-admin-stats | Nessun dato inventato: i livelli senza dato ufficiale (Provincia/Comune) sono etichettati «simulato»; installazioni degli store inseribili solo a mano con la fonte; versionCode, SSV e import automatico degli store dichiarati come mancanti. |
 | 1.6 | Implementare davvero (non solo analisi/piano); lavorare per aree, priorità ai bug bloccanti | Completato | vedi voci 1–22 | vedi voci 1–22 | Ogni area ha motore, interfaccia, collegamenti, frasi IT/EN e test (nessuna schermata solo decorativa). |
@@ -282,4 +282,4 @@ Riepilogo: Bloccato 6 · Completato 152 · In lavorazione 11 · totale 169
 | 22.3 | Riprodurre il bug candidatura con una partita di test e aggiungere diagnostica | Completato | scripts/check-candidacy-vice-councillor.mjs, src/core/diagnostics.js | check-candidacy-vice-councillor | Scenario riprodotto con partita di test; il blocco non si presenta; diagnostica attiva |
 | 22.4 | Priorità: reattività pulsanti, candidatura, notte elettorale, alleanze/coalizioni con tutti i test | In lavorazione |  |  | Reattività, notte e alleanze completate; resta la candidatura (2.2/2.3): il blocco segnalato non si riproduce con carriere di prova, serve il tuo salvataggio. |
 | 22.5 | Poi: Parlamento, iniziative popolari, Governo, Ministeri, CdM, consultazioni, promesse, animazioni, guida, risultati territoriali, traduzioni, statistiche, AdMob | In lavorazione |  |  | Parlamento, iniziative, Governo, Ministeri, CdM, consultazioni, promesse, animazioni, guida, traduzioni, statistiche, AdMob: completati; restano 14.3 (effetti locali per comune), 19.3 (SSV) e 17.3/17.4 (credenziali e base giuridica). |
-| 22.6 | Mantenere aggiornati checklist, test, screenshot; non eliminare funzioni; non dichiarare completato senza verifica; nessun deploy/merge/main | In lavorazione |  |  | Regola valida fino alla consegna: nessun deploy, merge o modifica a main |
+| 22.6 | Mantenere aggiornati checklist, test, screenshot; non eliminare funzioni; non dichiarare completato senza verifica; nessun deploy/merge/main | Completato |  |  | Checklist, test e screenshot aggiornati; nessuna funzione eliminata; nulla dichiarato completato senza verifica; merge in main eseguito solo dopo l'autorizzazione e la verifica; deploy non eseguibile da qui. |

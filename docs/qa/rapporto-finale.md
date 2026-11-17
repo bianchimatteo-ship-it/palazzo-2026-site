@@ -62,3 +62,12 @@ Prima passata (concorrenza 3): 229/263 verdi, 34 falliti. Molti fallimenti erano
 | 19.7 / 21.4 build Gradle e AAB | Bloccato | Nessun Android SDK scaricabile (dl.google.com 403), nessuna chiave di upload: la build non può partire qui. Passi in `docs/google-play.md` |
 | Deploy su Cloudflare | Bloccato | Nessuna credenziale Cloudflare né `wrangler.test.local.jsonc` in questo ambiente. Comando previsto: `npm run cf:deploy` (produzione) / `npm run cf:deploy:test` |
 | 13.5 «gioco meno monotono» | In lavorazione | Giudizio da giocatore, non misurabile da un test |
+
+## 6. Pubblicazione (autorizzata dopo regressione e build verificate)
+
+| Passo | Esito |
+|---|---|
+| Push del branch `feature/qa-completamento` | **Fatto** |
+| Merge in `main` | **Fatto** (avanzamento rapido da e302c45 a 85b9e03: `main` era antenato del branch, nessun conflitto) |
+| Deploy (Cloudflare Worker, `npm run cf:deploy`) | **Non eseguito: bloccato.** In questo ambiente non ci sono credenziali Cloudflare (nessuna variabile `CLOUDFLARE_*`) né `wrangler.test.local.jsonc`. Lo esegui tu da una macchina con `wrangler` autenticato: `npm run cf:deploy:test` per l'ambiente di prova, poi `npm run cf:deploy` per la produzione. La migrazione D1 `0009_activity_stats.sql` va applicata prima (statistiche, spente finché non imposti `ADMIN_STATS=on`) |
+| AAB per Google Play | **Non prodotto** (SDK Android e chiave di upload assenti; versionCode da portare oltre l'ultimo caricato) |
