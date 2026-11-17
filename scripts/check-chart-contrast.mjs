@@ -31,7 +31,7 @@ const AUDIT = `(() => {
       if (kind === 'fill' && el.tagName === 'rect' && box.width > 200 && box.height > 40) continue;
       if (kind === 'fill' && c.a < 0.2) continue;
       // icons and tile art sit on their own tinted tiles (audited with the tiles); logos, maps and illustrations are artwork
-      if (el.closest('.hemi-seats, .eh-map, .territory-map, .map-tiles, .party-logo, .logo-art, .illustration, .art-tile, .art-rings, .glyph, .emblem, .person-mark, .mark, .brand, [data-no-contrast]') || el.closest('svg')?.classList.contains('glyph')) continue;
+      if (el.closest('.hemi-seats, .eh-map, .territory-map, .map-tiles, .party-logo, .logo-art, .illustration, .art-tile, .art-rings, .glyph, .emblem, .person-mark, .avatar-svg, .mark, .brand, [data-no-contrast]') || el.closest('svg')?.classList.contains('glyph')) continue;
       const mark = over({ ...c, a: Math.min(1, c.a * opacity) }, bg);
       const r = ratio(mark, bg);
       checked++;

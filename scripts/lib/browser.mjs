@@ -84,4 +84,12 @@ export async function openCareer({ evaluate, goto, waitFor }) {
   await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu=continua]"))'));
   await evaluate('document.querySelector("[data-menu=continua]").click(), true');
   await waitFor(() => evaluate('Boolean(document.querySelector(".page-wrap"))'));
+  // the page is drawn in two steps (the frame, then the lazy view): wait until its content stops changing, so a check never reads the frame alone
+  let last = -1;
+  for (let i = 0; i < 80; i++) {
+    const size = await evaluate('(() => { const wrap = document.querySelector(".page-wrap"); return wrap && !/^\\s*Carico la pagina/.test(wrap.innerText) ? wrap.innerHTML.length : 0; })()');
+    if (size === last && size > 0) break;
+    last = size;
+    await new Promise(resolve => setTimeout(resolve, 150));
+  }
 }

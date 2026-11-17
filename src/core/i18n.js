@@ -235,6 +235,19 @@ function translateClipped(text, depth) {
   const whole = translatePiece(core, depth + 1);
   if (whole !== core && residualItalian(whole) === null) return `${whole}…`;
   const cuts = [...core.matchAll(/(?:[,;:–—]|\s·)\s|\s(?=\()/g)].map(match => match.index).reverse();
+  // the game cut the text in the middle of a word («…requisiti delle prestazion…»): the last clause is the beginning of a phrase of the book, which is read whole (the English ends with the same dots)
+  for (const at of cuts) {
+    const sep = core.slice(at).match(/^(?:[,;:–—]|\s·)\s*/)?.[0] ?? '';
+    const tail = core.slice(at + sep.length).trim().toLowerCase();
+    if (tail.length < 14 || !book) continue;
+    let found = null;
+    for (const [key, en] of book.lower) { if (key.length > tail.length && key.startsWith(tail)) { found = en; break; } }
+    if (found === null) continue;
+    const head = core.slice(0, at).trim();
+    const done = head ? translatePiece(head, depth + 1) : '';
+    if (head && (done === head || residualItalian(done) !== null)) continue;
+    return `${done ? `${done}${sep.trim() === '·' ? ' ·' : sep.trim()} ` : ''}${found}…`;
+  }
   for (const at of cuts) {
     const head = core.slice(0, at).trim();
     if (head.length < 12) continue;
