@@ -1841,7 +1841,7 @@ function tickSociety(s, date, report) {
         if (game.resources.funds >= cost) game.resources = { ...game.resources, funds: game.resources.funds - cost };
         else {
           // without money the tables are closed: the levers that cost something stop (the volunteers stay)
-          item = { ...item, organization: { ...item.organization, banchetti: 0, online: 0, comuni: 0 }, history: [{ date, text: 'Fondi esauriti: banchetti, piattaforma e comuni amici sospesi.' }, ...(item.history ?? [])].slice(0, 40) };
+          item = { ...item, organization: { ...item.organization, banchetti: 0, online: 0, comuni: 0, volontari: 0 }, history: [{ date, text: 'Fondi esauriti: banchetti, piattaforma, comuni amici e volontari rimborsati sospesi: senza fondi non si raccolgono firme a pagamento.' }, ...(item.history ?? [])].slice(0, 40) };
           events.push({ tone: 'bad', text: `Raccolta «${item.title}»: fondi esauriti, banchetti e piattaforma sospesi.` });
         }
       }
