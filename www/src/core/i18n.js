@@ -5,7 +5,7 @@
 //     the phrase book (src/data/i18n/en-*.js): exact phrases, phrases with numbers (`#`) or free parts (`{}`), and the numbers, currency and dates in English form.
 //     Proper names (people, parties, places, official denominations) are never in the phrase book: they stay as they are. A phrase that is not in the book stays Italian, never wrong.
 // Nothing here touches a career: the language is a view of the same data.
-import { saveSetting } from './settings.js?v=20261116-20';
+import { saveSetting } from './settings.js?v=20261117-1';
 
 export const LANGUAGES = Object.freeze([['it', 'Italiano', 'it-IT'], ['en', 'English', 'en-GB']]);
 const SETTINGS_KEY = 'politicando.settings.v1';
@@ -235,6 +235,19 @@ function translateClipped(text, depth) {
   const whole = translatePiece(core, depth + 1);
   if (whole !== core && residualItalian(whole) === null) return `${whole}…`;
   const cuts = [...core.matchAll(/(?:[,;:–—]|\s·)\s|\s(?=\()/g)].map(match => match.index).reverse();
+  // the game cut the text in the middle of a word («…requisiti delle prestazion…»): the last clause is the beginning of a phrase of the book, which is read whole (the English ends with the same dots)
+  for (const at of cuts) {
+    const sep = core.slice(at).match(/^(?:[,;:–—]|\s·)\s*/)?.[0] ?? '';
+    const tail = core.slice(at + sep.length).trim().toLowerCase();
+    if (tail.length < 14 || !book) continue;
+    let found = null;
+    for (const [key, en] of book.lower) { if (key.length > tail.length && key.startsWith(tail)) { found = en; break; } }
+    if (found === null) continue;
+    const head = core.slice(0, at).trim();
+    const done = head ? translatePiece(head, depth + 1) : '';
+    if (head && (done === head || residualItalian(done) !== null)) continue;
+    return `${done ? `${done}${sep.trim() === '·' ? ' ·' : sep.trim()} ` : ''}${found}…`;
+  }
   for (const at of cuts) {
     const head = core.slice(0, at).trim();
     if (head.length < 12) continue;
@@ -465,7 +478,7 @@ export function watchTree(root) {
 let loading = null;
 export function loadBook() {
   if (book?.loaded) return Promise.resolve(book);
-  loading ??= import('../data/i18n/index.js?v=20261116-20').then(module => { module.install(installBook); book.loaded = true; return book; });
+  loading ??= import('../data/i18n/index.js?v=20261117-1').then(module => { module.install(installBook); book.loaded = true; return book; });
   return loading;
 }
 // The title of the page (the tab) is read by people and by assistive technology: it follows the language like the rest (the Italian one is kept to go back to).

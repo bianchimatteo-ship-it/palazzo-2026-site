@@ -1,17 +1,17 @@
 // Main menu, how-to-play, settings, save slots and the end-of-week report.
-import { renderTutorialInvite } from './tutorial.js?v=20261116-20';
-import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261116-20';
-import { GUIDE_FUNCTIONS, GUIDE_SCENARIOS } from '../data/guide-manual.js?v=20261116-20';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261116-20';
-import { formatDate } from '../core/time.js?v=20261116-20';
-import { illustration } from './illustrations.js?v=20261116-20';
-import { glyph } from './visuals.js?v=20261116-20';
-import { identityMark, identityVars } from './party-identity.js?v=20261116-20';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261116-20';
-import { hallView } from './hall-view.js?v=20261116-20';
-import { renderLogoCatalog } from './logo-catalog.js?v=20261116-20';
-import { esc, signed } from './charts.js?v=20261116-20';
-import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261116-20';
+import { renderTutorialInvite } from './tutorial.js?v=20261117-1';
+import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261117-1';
+import { GUIDE_FUNCTIONS, GUIDE_SCENARIOS } from '../data/guide-manual.js?v=20261117-1';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261117-1';
+import { formatDate } from '../core/time.js?v=20261117-1';
+import { illustration } from './illustrations.js?v=20261117-1';
+import { glyph } from './visuals.js?v=20261117-1';
+import { identityMark, identityVars } from './party-identity.js?v=20261117-1';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261117-1';
+import { hallView } from './hall-view.js?v=20261117-1';
+import { renderLogoCatalog } from './logo-catalog.js?v=20261117-1';
+import { esc, signed } from './charts.js?v=20261117-1';
+import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261117-1';
 
 const when = iso => { try { return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); } catch { return ''; } };
 // The actions of the opening screen, in order of importance: starting a career and resuming one are the two main ones (drawn apart, below); then what concerns the
@@ -217,11 +217,11 @@ const guideTarget = page => `data-nav="${esc(page)}" data-guide-close`;
 function manualCards(offset) {
   const functions = GUIDE_FUNCTIONS.map((item, i) => {
     const index = offset + i;
-    return `<article class="guide-card guide-manual" id="guida-${index}" data-guide-card="${index}" data-guide-kind="funzione" data-guide-topic="${esc(item.id)}" data-guide-keywords="${esc(item.keywords ?? '')}">${glyph(item.icon, 20)}<div><strong>${esc(item.title)}</strong><dl class="guide-parts">${GUIDE_PARTS.map(([key, label]) => `<div><dt>${esc(label)}</dt><dd>${esc(item[key])}</dd></div>`).join('')}</dl><p><button type="button" class="secondary-button" ${guideTarget(item.page)}>Apri la pagina</button></p></div></article>`;
+    return `<article class="guide-card guide-manual" id="guida-${index}" data-guide-card="${index}" data-guide-kind="funzione" data-guide-topic="${esc(item.id)}" data-guide-keywords="${esc(item.keywords ?? '')}">${glyph(item.icon, 20)}<div><strong>${esc(item.title)}</strong><dl class="guide-parts">${GUIDE_PARTS.map(([key, label]) => `<div><dt>${esc(label)}</dt><dd>${esc(item[key])}</dd></div>`).join('')}</dl><p><button type="button" class="go-button" ${guideTarget(item.page)}><span>Apri la pagina</span><i class="go-arrow" aria-hidden="true"></i></button></p></div></article>`;
   });
   const scenarios = GUIDE_SCENARIOS.map((item, i) => {
     const index = offset + GUIDE_FUNCTIONS.length + i;
-    return `<article class="guide-card guide-scenario" id="guida-${index}" data-guide-card="${index}" data-guide-kind="scenario" data-guide-topic="${esc(item.id)}">${glyph(item.icon, 20)}<div><strong>${esc(item.title)}</strong><p>${esc(item.goal)}</p><ol class="guide-steps">${item.steps.map(([text, page]) => `<li><span>${esc(text)}</span> <button type="button" class="ghost-button" ${guideTarget(page)}>Vai</button></li>`).join('')}</ol></div></article>`;
+    return `<article class="guide-card guide-scenario" id="guida-${index}" data-guide-card="${index}" data-guide-kind="scenario" data-guide-topic="${esc(item.id)}">${glyph(item.icon, 20)}<div><strong>${esc(item.title)}</strong><p>${esc(item.goal)}</p><ol class="guide-steps">${item.steps.map(([text, page]) => `<li><span>${esc(text)}</span> <button type="button" class="go-button" ${guideTarget(page)} aria-label="Vai: ${esc(text)}"><span>Vai</span><i class="go-arrow" aria-hidden="true"></i></button></li>`).join('')}</ol></div></article>`;
   });
   return { functions, scenarios };
 }

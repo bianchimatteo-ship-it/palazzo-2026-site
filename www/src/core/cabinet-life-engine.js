@@ -8,9 +8,9 @@
 //   - the minister who contests the line in public and, if nobody listens, resigns with a quarrel.
 // The Prime Minister decides: when it is the player, requests, conflicts and meetings wait for him (and turn into their default if he lets them pass); when it is a simulated one, the same
 // rules are answered by chance seeded on the date. Everything is pure: the store passes the parliament and gets it back with the lines to tell.
-import { DATA_SOURCES } from '../data/schema.js?v=20261116-20';
-import { AREA_BY_ID, areasOfPortfolio } from '../data/simulation/policy-rules.js?v=20261116-20';
-import { activeMinisters, assignMinister, changePartner, groupProfile, parliamentInternals } from './parliament-engine.js?v=20261116-20';
+import { DATA_SOURCES } from '../data/schema.js?v=20261117-1';
+import { AREA_BY_ID, areasOfPortfolio } from '../data/simulation/policy-rules.js?v=20261117-1';
+import { activeMinisters, assignMinister, changePartner, groupProfile, parliamentInternals } from './parliament-engine.js?v=20261117-1';
 
 const { getGroup, record } = parliamentInternals;
 const SIM = DATA_SOURCES.SIMULATION;
@@ -94,7 +94,7 @@ export function advanceCabinetLife(input, { date, week = 0, rand = Math.random, 
     }
     life = { ...life, lastEval: date };
     next = log(setLife(next, life), date, 'valutazione-ministri', `Valutazione periodica dei ministri: ${verdicts.join(', ')}.`, { auto: !playerPremier });
-    lines.push(`Valutazione dei ministri: ${verdicts.slice(0, 4).join(', ')}${verdicts.length > 4 ? '…' : ''}.`);
+    lines.push(`Valutazione dei ministri: ${verdicts.slice(0, 4).join(', ')}.${verdicts.length > 4 ? ` Altri ministri valutati: ${verdicts.length - 4}.` : ''}`);
   }
 
   // 2. Ambition: a minister doing well asks for more; ignored too long, he loses loyalty.

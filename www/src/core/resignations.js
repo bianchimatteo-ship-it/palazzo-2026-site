@@ -1,9 +1,9 @@
 // Resignations: the player can leave any single office he holds, one at a time, and sees what it costs BEFORE confirming. This module is pure: it lists the posts the player holds (party, councils,
 // executive of a body, Parliament, groups, committees, Government, Quirinale), the consequences each one has (the lines of the confirmation and the effects the store applies) and why a post cannot be
 // left right now. The store does the leaving (it knows the state); this module is the single place where the consequences are written, so the confirmation and the effect never disagree.
-import { isSecretary } from './career-engine.js?v=20261116-20';
-import { activeMinisters } from './parliament-engine.js?v=20261116-20';
-import { institutionOffice, officeLabel } from './office-engine.js?v=20261116-20';
+import { isSecretary } from './career-engine.js?v=20261117-1';
+import { activeMinisters } from './parliament-engine.js?v=20261117-1';
+import { institutionOffice, officeLabel } from './office-engine.js?v=20261117-1';
 
 const governing = parliament => ['active', 'crisis'].includes(parliament?.government?.status);
 const KIND_LABEL = { comune: 'Comune', provincia: 'Provincia', regione: 'Regione', europa: 'Parlamento europeo' };
