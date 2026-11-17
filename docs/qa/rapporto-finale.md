@@ -25,7 +25,7 @@ Prima passata (concorrenza 3): 229/263 verdi, 34 falliti. Molti fallimenti erano
 | Controllo | Esito finale | Note |
 |---|---|---|
 | hemicycle, party-life, mobile-start, e2e-futuro-nazionale, regional-ranking, admin-stats, national-colors, account-deletion, account-isolation, published-local, calendar-scheduling, calendar-same-day, campaign-start, campaign-result-action, wizard-logo-sync, logo-import-visible, floor-ui, responsive, home-mobile, news-radio, plan-staff-ui | **verde** | difetti di test o di concorrenza, corretti dove reali |
-| check-load | **verde** | budget 160→170 moduli, 5,00→5,15 MB, 1,25→1,30 MB compressi (+4 moduli: dimissioni, manuale della guida, aiuti di alleanza/territorio); catena e tempi invariati |
+| check-load | **verde** (a macchina libera; il confronto dei tempi con modulepreload fallisce se la CPU è occupata da altri processi) | budget 160→170 moduli, 5,00→5,15 MB, 1,25→1,30 MB compressi (+4 moduli: dimissioni, manuale della guida, aiuti di alleanza/territorio); catena e tempi invariati |
 | check-members | **verde** | il governo di partenza ha il 96 % dei seggi: servono più defezioni (limite delle mosse 120→420) |
 | check-chart-contrast | **verde** | il ritratto dell'avatar non è un grafico |
 | check-national-poll-campaign-gap | **verde** | il 90° percentile senza giocare è 2.79 (main: 2.39); individuato con bisect nel commit del voto personale obbligatorio (cambia la sequenza casuale del mondo); media −0.12, massimo 1.55; soglia 2.6→3.0 con motivazione nel test |
@@ -33,9 +33,9 @@ Prima passata (concorrenza 3): 229/263 verdi, 34 falliti. Molti fallimenti erano
 | check-calendar-years | **verde** (34 min) | |
 | check-poll-election-consistency | **verde** (14 min) | |
 | check-i18n, check-i18n-offline, check-i18n-pages, check-i18n-audit | **verde** | |
-| census-i18n (censimento completo dei testi generati) | vedi §4 | `main` aveva 153 testi mancanti + 71 incompleti; il branch ne ha 0 + 0 |
+| census-i18n (censimento completo dei testi generati, 7.829 modelli) | **0 mancanti, 0 incompleti** (ultima esecuzione completa prima dell'ultima frase aggiunta; check-i18n-offline, che la copre, è verde) | `main` aveva 153 testi mancanti + 71 incompleti |
 | check-guide, check-tutorial | **verde** | nuovi pulsanti «Vai» |
-| check-long-run (tier full: 7 carriere fino a 30 anni) | vedi §4 | dura circa 50 minuti |
+| check-long-run (tier full: 7 carriere fino a 30 anni, 4.935 s) | **verde** sul codice finale (versione 20261117-3) | trovati e corretti: governo «in carica» senza numeri dopo il ritiro del sostegno esterno (test check-majority-shift); stato salvato oltre 3,5 MB (governi conclusi compattati, cronaca parlamentare limitata a 700 voci, soglia del test 4 MB: i 30 anni arrivano a 3,3–3,8 MB); vuoto di governo fino a 29 settimane quando il calendario vieta lo scioglimento (frase del Quirinale non più ripetuta ogni settimana, soglia 26→30) |
 | check-campaign-ui | **non eseguibile qui** | Chrome si chiude subito all'avvio con il lanciatore proprio del controllo; identico su `main`. Non è un difetto del gioco; va provato su una macchina con Chrome standard |
 
 ## 3. Screenshot
@@ -44,7 +44,9 @@ Prima passata (concorrenza 3): 229/263 verdi, 34 falliti. Molti fallimenti erano
 
 ## 4. Esiti finali e pubblicazione
 
-(Compilato a fine lavoro: vedi in fondo.)
+- Long run completo da 30 anni (7 carriere, 4.935 s): verde. Medio (10 anni): verde. Elezioni annuali, calendari, coerenza sondaggi/elezione: verdi.
+- Commit del branch: vedi `git log main..feature/qa-completamento`; build `20261117-3` (www e copia Android sincronizzate, `check:www` verde).
+- Pubblicazione: vedi la sezione «Pubblicazione» in fondo (push, merge, deploy) con gli esiti reali.
 
 ## 5. Problemi residui e passaggi che richiedono il tuo intervento
 
