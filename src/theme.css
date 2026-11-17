@@ -1540,3 +1540,11 @@ button:not(:disabled):active, a.primary-button:active, a.secondary-button:active
 .statute-row.is-abrogata { border-left-color: var(--sem-bad); opacity: .85; }
 .statute-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 @media (max-width: 520px) { .ref-bars { grid-template-columns: auto 1fr; } .ref-bars b { grid-column: 2; } .ref-actions button, .ref-routes button { width: 100%; } }
+.ally-activities { margin: 10px 0; border: 1px solid rgba(127, 140, 134, .3); border-left: 4px solid var(--sem-campaign); border-radius: 12px; padding: 8px 12px; }
+.ally-activities > summary { cursor: pointer; font-weight: 700; }
+.ally-activity-list, .ally-run-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 8px; }
+.ally-activity { display: flex; flex-wrap: wrap; gap: 8px 12px; justify-content: space-between; align-items: center; padding: 10px; border: 1px solid rgba(127, 140, 134, .25); border-radius: 10px; }
+.ally-activity small { display: block; opacity: .85; }
+.ally-activity-do { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ally-run.tone-good { border-left: 3px solid var(--sem-good); padding-left: 8px; } .ally-run.tone-bad { border-left: 3px solid var(--sem-bad); padding-left: 8px; }
+@media (max-width: 520px) { .ally-activity { flex-direction: column; align-items: stretch; } .ally-activity-do select, .ally-activity-do button { width: 100%; } }

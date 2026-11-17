@@ -2147,8 +2147,9 @@ export function termOptions(input, allianceId, election = null) {
 export function commonProgramOf(world, alliance) {
   const members = talkMembers(world, alliance);
   return THEMES.map(theme => {
-    const values = members.map(member => ({ id: member.id, label: member.label, value: round1(programPositionOf(world, member, theme.id)) }));
-    const gap = values.length ? Math.max(...values.map(item => item.value)) - Math.min(...values.map(item => item.value)) : 0;
+    const values = members.map(member => { const at = programPositionOf(world, member, theme.id); return { id: member.id, label: member.label, value: Number.isFinite(at) ? round1(at) : null }; });
+    const known = values.filter(item => item.value !== null);
+    const gap = known.length ? Math.max(...known.map(item => item.value)) - Math.min(...known.map(item => item.value)) : 0;
     const agreed = Boolean(world.compromises?.[`${[...alliance.partyIds].sort().join('+')}|${theme.id}`]) || (alliance.terms ?? []).some(item => item.kind === 'punto-comune' && item.theme === theme.id && item.status === 'aperto');
     const state = agreed ? 'concordato' : gap >= HARD_GAP && theme.veto ? 'in conflitto' : gap >= 2 ? 'da negoziare' : 'condiviso';
     return { id: theme.id, label: theme.label, gap: round1(gap), state, values };
@@ -2214,7 +2215,7 @@ export function proposeTerm(input, allianceId, proposal, date, { election = null
     alliance.terms.push({ ...term, id: `${alliance.id}|${kind}|${alliance.terms.length + 1}|${date}`, date, status: 'aperto', evidence: null, due: election?.electionDate ?? null });
     if (kind === 'guida') { alliance.leaderId = beneficiary.id; if (alliance.partyIds.length >= 3) alliance.label = ledName(alliance, beneficiary.label); }
     if (kind === 'punto-comune') {
-      for (const a of members) for (const b of members) if (a.id < b.id) { const gap = Math.abs(programPositionOf(world, a, term.theme) - programPositionOf(world, b, term.theme)); if (gap >= 2) world.compromises = { ...(world.compromises ?? {}), [`${programPairKey(a.id, b.id)}|${term.theme}`]: { date, theme: term.theme } }; }
+      for (const a of members) for (const b of members) if (a.id < b.id) { const gap = Math.abs((programPositionOf(world, a, term.theme) ?? NaN) - (programPositionOf(world, b, term.theme) ?? NaN)); if (gap >= 2) world.compromises = { ...(world.compromises ?? {}), [`${programPairKey(a.id, b.id)}|${term.theme}`]: { date, theme: term.theme } }; }
       world.compromises = { ...(world.compromises ?? {}), [`${[...alliance.partyIds].sort().join('+')}|${term.theme}`]: { date, theme: term.theme } };
     }
     cohesionGain = kind === 'punto-comune' ? 3 : -1;

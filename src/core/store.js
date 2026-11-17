@@ -68,6 +68,7 @@ import { TREASURY_OPERATIONS } from '../data/simulation/finance-rules.js?v=20261
 import { FINANCING as MINISTRY_FINANCING, MINISTRY_RULES, answerCrisis as answerMinistryCrisis, holdSession, lobbyColleague, newMinistry, openProposals, prepareProposal, respondAssignment, setPriority as setMinistryPriority, submitProposal, tickMinistry, withdrawProposal } from './ministry-engine.js?v=20261117-3';
 import { dueReminders, markReminded } from './promise-reminders.js?v=20261117-3';
 import { REQUEST_RULES, actionsFor as requestActionsFor, advanceRequest, generateRequest, linkOf as requestLinkOf, openRequests, takeAction as takeRequestAction } from './citizen-requests-engine.js?v=20261117-3';
+import { ALLY_ACTIVITIES, isOpenActivity as allyActivityOpen, oddsOf as allyActivityOdds, resolveActivity as resolveAllyActivity, startActivity as startAllyActivity } from './alliance-activities.js?v=20261117-3';
 import { ABROGATIVE, CAMPAIGN_ACTIONS, CONSTITUTIONAL, COUNCIL_ROUTE, EXCLUDED as REFERENDUM_EXCLUDED, advanceReferendum, askCouncils, campaignAction as referendumCampaignAction, createAbrogative, eligibility as referendumEligibility, fileRequest as fileReferendumRequest, isActive as referendumActive, maybeRevision, requestConstitutional } from './referendum-engine.js?v=20261117-3';
 import { INITIATIVE_KINDS, advanceCollection, advanceParliamentPhase, createInitiative, depositInitiative as depositInitiativeRecord, endingEffects as initiativeEnding, isActive as initiativeActive, organize as organizeInitiativeRecord, overview as initiativeOverview, settleVerification, weeklyCost as initiativeWeeklyCost, withdraw as withdrawInitiativeRecord } from './initiative-engine.js?v=20261117-3';
 import { advanceSociety, applyBudgetPlan, applyLawToSociety, applySocialTable, applySpendingReview, calibrateWeights, createSociety, explainMood, measureDesign, mediaEvent, normalizeSociety, provisionalBudget, publicBudgetChoice, regionAttention, revokeMeasure, scheduleRegionalEffects, segmentAttention, societyMood, societyShock, observatorySociety } from './society-engine.js?v=20261117-3';
@@ -3164,6 +3165,7 @@ function tickLegislature(input, date) {
   }
   { const sync = syncInitiativeBills(next.game, next.parliament, date); if (sync.changed) { next = { ...next, game: sync.game }; lines.push(...sync.lines); if (sync.effects) next = applyStatDeltas(next, sync.effects); } }
   { const week = referendumWeek(next, date); if (week.changed) { next = week.state; lines.push(...week.lines); } }
+  { const week = allyActivitiesWeek(next, date); if (week.changed) { next = week.state; lines.push(...week.lines); } }
   let game = next.game;
   // A vote of the player's Chamber opens and waits for the player's own ballot (floor-votes.js): the week says which measure, and where. The requests of the old agenda (a default could answer them) are gone.
   for (const event of out.events.filter(item => item.type === 'votazione-aperta')) lines.unshift(`${event.chamber === 'camera' ? 'Camera dei deputati' : 'Senato della Repubblica'}: si apre la votazione su “${event.title}”. L’Aula attende il tuo voto.`);
@@ -3178,6 +3180,50 @@ function tickLegislature(input, date) {
   next = { ...next, parliament: outParliament };
   if (lines.length && game.lastReport) game = { ...game, lastReport: { ...game.lastReport, lines: [...game.lastReport.lines, ...lines.slice(0, 5)] } };
   return { ...next, game, parliament: withCapital(next.parliament, game) };
+}
+// ---------- activities with the allies (alliance-activities.js) ----------
+const allyActivitiesOf = game => game?.allyActivities ?? [];
+function allyContext(s, activity) {
+  const world = s.world;
+  const alliance = world?.alliances?.find(item => item.id === activity.allianceId);
+  const partner = activity.partnerId ? world?.parties?.find(item => item.id === activity.partnerId) : null;
+  const player = world?.parties?.find(item => item.isPlayer);
+  const members = (alliance?.partyIds ?? []).map(id => world.parties.find(item => item.id === id)).filter(item => item && !item.isPlayer);
+  const targets = partner ? [partner] : members;
+  const relation = targets.length ? targets.reduce((sum, item) => sum + (item.playerRelation ?? 0), 0) / targets.length : 0;
+  const compat = player && targets.length ? targets.reduce((sum, item) => sum + (programAnalysisOf(world, player.id, item.id)?.score ?? 0.5), 0) / targets.length : 0.5;
+  return { alliance, partner, targets, cohesion: alliance?.cohesion ?? 60, relation, compatibility: compat, partnerLabel: partner?.label ?? null };
+}
+function allyActivitiesWeek(s, date) {
+  const game0 = s.game;
+  const open = allyActivitiesOf(game0).filter(allyActivityOpen);
+  if (!game0 || !open.length || !s.world) return { state: s, lines: [], changed: false };
+  const week = game0.week.index;
+  const world = deepCopy(s.world);
+  const game = { ...game0 };
+  const lines = []; const deltas = {}; let changed = false;
+  const list = allyActivitiesOf(game0).map(item => {
+    if (!allyActivityOpen(item)) return item;
+    const ctx = allyContext({ ...s, world }, item);
+    if (!ctx.alliance || ctx.alliance.status !== 'active') { changed = true; const lost = { ...item, status: 'annullata', closedAt: date, text: 'L’alleanza non c’è più: l’attività è annullata.', effects: {} }; lines.push(`${item.label}: l’alleanza non c’è più, l’attività è annullata.`); return lost; }
+    const out = resolveAllyActivity(item, { week, date, cohesion: ctx.cohesion, relation: ctx.relation, compatibility: ctx.compatibility, partnerLabel: ctx.partnerLabel });
+    if (!out) return item;
+    changed = true;
+    const e = out.effects;
+    if (e.cohesion) ctx.alliance.cohesion = Math.max(0, Math.min(100, Math.round(ctx.alliance.cohesion + e.cohesion)));
+    if (e.relation) for (const partner of ctx.targets) { const live = world.parties.find(entry => entry.id === partner.id); if (live) live.playerRelation = Math.max(-100, Math.min(100, Math.round((live.playerRelation ?? 0) + e.relation))); }
+    ctx.alliance.history = [...(ctx.alliance.history ?? []), { date, text: out.text }].slice(-12);
+    for (const key of ['popularity', 'notoriety', 'reputation']) if (e[key]) deltas[key] = (deltas[key] ?? 0) + e[key];
+    lines.push(out.text);
+    remember(game, { date, kind: `alleati-${out.activity.status}`, text: out.text, weight: out.tone === 'bad' ? 0.8 : 0.5 });
+    game.log = [{ id: `diario-alleati-${item.id}`, week, date, kind: 'carriera', title: out.text, lines: [Object.entries(e).filter(([, value]) => value).map(([key, value]) => `${{ cohesion: 'Coesione', relation: 'Rapporti', popularity: 'Consenso', notoriety: 'Notorietà', reputation: 'Reputazione' }[key]} ${value > 0 ? '+' : ''}${value}`).join(' · ')].filter(Boolean), tone: out.tone, source: DATA_SOURCES.SIMULATION }, ...(game.log ?? [])].slice(0, 400);
+    return out.activity;
+  });
+  if (!changed) return { state: s, lines, changed: false };
+  game.allyActivities = list.slice(0, 40);
+  let state = { ...s, world, game };
+  if (Object.keys(deltas).length) state = applyStatDeltas(state, deltas);
+  return { state, lines, changed: true };
 }
 // ---------- referendums (referendum-engine.js) ----------
 // The two referendums of the Constitution live in game.referendums: the abrogative one (art. 75) starts from a law in force and, by the signatures route, from a collection of the initiatives page; the
@@ -6265,6 +6311,35 @@ export const store = {
     const parliament = reference ? { ...result.parliament, laws: result.parliament.laws.map(law => law.id === result.law.id ? { ...law, realReference: reference } : law) } : result.parliament;
     applyParliamentUpdate(next, parliament, reference ? 'Proposta depositata: modifica simulata di un atto reale' : 'Proposta depositata', { experience: 0.5, influence: 0.5 });
     return parliament.laws.find(law => law.id === result.law.id);
+  },
+  // ---- activities with the allies ----
+  allyActivityKinds() { return ALLY_ACTIVITIES; },
+  allyActivities() { return allyActivitiesOf(state.game); },
+  allyActivityOdds(kindId, partnerId = null) {
+    const alliance = playerAlliance(state.world);
+    if (!alliance) return null;
+    const ctx = allyContext(state, { allianceId: alliance.id, partnerId });
+    return { ...allyActivityOdds(kindId, ctx), cohesion: ctx.cohesion, relation: Math.round(ctx.relation), compatibility: Math.round(ctx.compatibility * 100) / 100 };
+  },
+  startAllyActivity(kindId, partnerId = null) {
+    requireCareer();
+    if (!state.game?.party) throw new Error('Serve un partito per fare attività con gli alleati.');
+    requireSecretary();
+    const alliance = playerAlliance(state.world);
+    if (!alliance) throw new Error('Non hai un’alleanza o una coalizione: nessun alleato con cui fare qualcosa.');
+    const kind = ALLY_ACTIVITIES[kindId];
+    if (!kind) throw new Error('Attività non valida.');
+    if (partnerId && !alliance.partyIds.includes(partnerId)) throw new Error('Questo partito non è nel tuo accordo.');
+    const game = deepCopy(state.game);
+    if (game.resources.funds < kind.cost.funds) throw new Error(`Servono ${kind.cost.funds} € di fondi.`);
+    if (game.resources.politicalCapital < kind.cost.capital) throw new Error(`Servono ${kind.cost.capital} punti di capitale politico.`);
+    const item = startAllyActivity(allyActivitiesOf(game), { kindId, allianceId: alliance.id, partnerId, date: state.clock.currentDate, week: game.week.index });
+    game.resources = { ...game.resources, funds: game.resources.funds - kind.cost.funds, politicalCapital: game.resources.politicalCapital - kind.cost.capital };
+    game.allyActivities = [item, ...allyActivitiesOf(game)];
+    const spent = spendTime(game, kind.cost.days);
+    state = { ...state, game: spent, parliament: withCapital(state.parliament, spent), ui: { ...state.ui, toast: `${kind.label}: avviata (${kind.weeks} ${kind.weeks === 1 ? 'settimana' : 'settimane'})` } };
+    persist(); emit();
+    return item;
   },
   // ---- referendums ----
   referendums() { return referendumsOf(state.game); },
