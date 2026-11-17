@@ -1,8 +1,8 @@
-import { DATA_SOURCES } from '../data/schema.js?v=20261117-5';
-import { AREA_BY_ID, CAMP_PRIORITIES, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, SPENDING_REVIEW, STAGE_WEEKS, areaOf, governmentKindOf } from '../data/simulation/policy-rules.js?v=20261117-5';
-import { BUDGET_SECTORS } from '../data/simulation/project-rules.js?v=20261117-5';
-import { evaluateAdvancement } from './progression-engine.js?v=20261117-5';
-import { absentOf, groupLine, spreadAbsent, splitGroupVote } from './vote-engine.js?v=20261117-5';
+import { DATA_SOURCES } from '../data/schema.js?v=20261117-6';
+import { AREA_BY_ID, CAMP_PRIORITIES, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, SPENDING_REVIEW, STAGE_WEEKS, areaOf, governmentKindOf } from '../data/simulation/policy-rules.js?v=20261117-6';
+import { BUDGET_SECTORS } from '../data/simulation/project-rules.js?v=20261117-6';
+import { evaluateAdvancement } from './progression-engine.js?v=20261117-6';
+import { absentOf, groupLine, spreadAbsent, splitGroupVote } from './vote-engine.js?v=20261117-6';
 
 export const CHAMBERS = Object.freeze({
   camera: { label: 'Camera dei deputati', shortLabel: 'Camera', source: DATA_SOURCES.REAL },
@@ -221,11 +221,16 @@ export const isReferenceGovernment = government => Boolean(government) && govern
 export const STATUTE_BLOCK_WEEKS = 104;
 const titleKey = title => String(title ?? '').toLowerCase().replace(/[^a-zà-ù0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
 export const statutesOf = parliament => parliament?.statutes ?? [];
-export function statuteBlock(parliament, { area = null, instrument = null, title = null, amends = null, repeals = null } = {}, date) {
+// The content of a text as a set of word stems (short words and the usual connectives left out): two texts with different titles but the same substance share most of them.
+const STOP = new Set(['della', 'delle', 'degli', 'dello', 'dell', 'alla', 'alle', 'agli', 'allo', 'nell', 'nella', 'nelle', 'negli', 'per', 'con', 'tra', 'fra', 'che', 'non', 'una', 'uno', 'sul', 'sulla', 'sulle', 'sugli', 'del', 'dei', 'dal', 'dal', 'dalle', 'dalla', 'legge', 'misure', 'norme', 'nuove', 'nuovo', 'disposizioni', 'materia']);
+export const contentStems = text => new Set(titleKey(text).split(' ').filter(word => word.length > 3 && !STOP.has(word)).map(word => word.slice(0, 5)));
+export const contentOverlap = (a, b) => { const x = contentStems(a), y = contentStems(b); if (x.size < 3 || y.size < 3) return 0; let common = 0; for (const word of x) if (y.has(word)) common++; return common / Math.min(x.size, y.size); };
+export const EQUIVALENT_OVERLAP = 0.6;
+export function statuteBlock(parliament, { area = null, instrument = null, title = null, summary = null, amends = null, repeals = null } = {}, date) {
   if (amends || repeals) return null;
   const legislature = parliament?.legislature?.number ?? null;
   return statutesOf(parliament).find(item => item.status === 'vigente' && item.blockable !== false
-    && ((area && instrument && item.area === area && item.instrument === instrument) || (title && titleKey(item.title) === titleKey(title)))
+    && ((area && instrument && item.area === area && item.instrument === instrument) || (title && titleKey(item.title) === titleKey(title)) || (area && item.area === area && (title || summary) && contentOverlap(`${item.title} ${item.summary ?? ''}`, `${title ?? ''} ${summary ?? ''}`) >= EQUIVALENT_OVERLAP))
     && ((legislature !== null && item.legislature === legislature) || weeksBetweenDates(item.approvedAt, date) < STATUTE_BLOCK_WEEKS)) ?? null;
 }
 const weeksBetweenDates = (from, to) => Math.floor((Date.parse(`${to}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) / 604800000);
@@ -376,7 +381,7 @@ export function proposeLaw(parliament, { title, category, summary, currentDate, 
   if (kind !== 'manovra' && !area) throw new Error('Scegli un tema valido.');
   if (cleanSummary.length < 12) throw new Error('Descrivi la proposta con almeno 12 caratteri.');
   // a law already in force with the same effects cannot be proposed again: it can be amended or repealed with a procedure of its own
-  const inForce = kind === 'ddl' ? statuteBlock(parliament, { area: area?.id, instrument: policy?.instrument ?? null, title: cleanTitle, amends: policy?.amends ?? null, repeals: policy?.repeals ?? null }, currentDate) : null;
+  const inForce = kind === 'ddl' ? statuteBlock(parliament, { area: area?.id, instrument: policy?.instrument ?? null, title: cleanTitle, summary: cleanSummary, amends: policy?.amends ?? null, repeals: policy?.repeals ?? null }, currentDate) : null;
   if (inForce) throw new Error(`Esiste già una legge in vigore con questi effetti: «${inForce.title}» (approvata il ${inForce.approvedAt}). Non può essere ripresentata: proponi di modificarla o di abrogarla.`);
   const law = {
     id: newId(kind === 'decreto' ? 'decreto' : kind === 'manovra' ? 'manovra' : 'legge'), title: cleanTitle, category: kind === 'manovra' ? 'Finanze pubbliche' : area.label, summary: cleanSummary,
