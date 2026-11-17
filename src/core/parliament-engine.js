@@ -1,8 +1,8 @@
-import { DATA_SOURCES } from '../data/schema.js?v=20261117-1';
-import { AREA_BY_ID, CAMP_PRIORITIES, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, SPENDING_REVIEW, STAGE_WEEKS, areaOf, governmentKindOf } from '../data/simulation/policy-rules.js?v=20261117-1';
-import { BUDGET_SECTORS } from '../data/simulation/project-rules.js?v=20261117-1';
-import { evaluateAdvancement } from './progression-engine.js?v=20261117-1';
-import { absentOf, groupLine, spreadAbsent, splitGroupVote } from './vote-engine.js?v=20261117-1';
+import { DATA_SOURCES } from '../data/schema.js?v=20261117-2';
+import { AREA_BY_ID, CAMP_PRIORITIES, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, SPENDING_REVIEW, STAGE_WEEKS, areaOf, governmentKindOf } from '../data/simulation/policy-rules.js?v=20261117-2';
+import { BUDGET_SECTORS } from '../data/simulation/project-rules.js?v=20261117-2';
+import { evaluateAdvancement } from './progression-engine.js?v=20261117-2';
+import { absentOf, groupLine, spreadAbsent, splitGroupVote } from './vote-engine.js?v=20261117-2';
 
 export const CHAMBERS = Object.freeze({
   camera: { label: 'Camera dei deputati', shortLabel: 'Camera', source: DATA_SOURCES.REAL },
@@ -1343,7 +1343,8 @@ export function majorityShift(parliament, currentDate) {
   const supporter = government.supportingGroupIds.at(-1);
   if (supporter) {
     const next = { ...parliament, government: { ...government, supportingGroupIds: government.supportingGroupIds.slice(0, -1), leftGroupIds: [...new Set([...(government.leftGroupIds ?? []), supporter])], stability: Math.max(0, (government.stability ?? 50) - 6) } };
-    return record(next, currentDate, 'cambio-maggioranza', `${getGroup(parliament, supporter)?.officialName ?? 'Un gruppo'} ritira il sostegno esterno al governo.`, { governmentId: government.id, groupId: supporter, source: DATA_SOURCES.SIMULATION });
+    // the external support was part of the numbers: if without it a Chamber has no majority, the Government goes to the verifica at once (an active Government always has the numbers)
+    return checkMajority(record(next, currentDate, 'cambio-maggioranza', `${getGroup(parliament, supporter)?.officialName ?? 'Un gruppo'} ritira il sostegno esterno al governo.`, { governmentId: government.id, groupId: supporter, source: DATA_SOURCES.SIMULATION }), currentDate, 'Senza il sostegno esterno');
   }
   const partners = government.coalitionGroupIds.filter(id => id !== parliament.player?.groupId);
   if (government.coalitionGroupIds.length < 2 || !partners.length) return parliament;
