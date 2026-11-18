@@ -774,7 +774,8 @@ const adsPublic = env => Object.fromEntries(PLATFORMS.map(platform => { const r 
 async function bookAdReward(request, env, db, userId, body) {
   const id = body?.id;
   if (typeof id !== 'string' || !AD_COMPLETION_ID.test(id)) return json(request, { error: 'Completamento non valido.' }, 400);
-  const platform = typeof body?.platform === 'string' && PLATFORMS.includes(body.platform) ? body.platform : null;
+  if (body?.platform !== undefined && !PLATFORMS.includes(body.platform)) return json(request, { error: 'Piattaforma non valida.' }, 400);
+  const platform = PLATFORMS.includes(body?.platform) ? body.platform : null;
   const live = platform ? [adsFor(env, platform)] : PLATFORMS.map(item => adsFor(env, item));
   const config = live.find(item => item.rewarded.enabled);
   if (!config) return json(request, { error: 'I video con premio non sono al momento attivi.', code: 'disabled' }, 403);

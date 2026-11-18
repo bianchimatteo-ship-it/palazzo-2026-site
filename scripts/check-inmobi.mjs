@@ -178,6 +178,7 @@ try {
   const burst = await Promise.all(Array.from({ length: 5 }, () => post('/api/account/ads/reward', { id: 'imb-raffica-000001', device: 'dev-2', platform: 'android' })));
   assert.equal(burst.filter(item => item.body.credited === true).length, 1, 'Richieste in parallelo: un solo credito.');
   assert.equal((await post('/api/account/ads/reward', { id: 'imb-ios-0000001', device: 'dev-1', platform: 'ios' })).status, 403, 'iOS ha il formato spento: rifiutato.');
+  assert.equal((await post('/api/account/ads/reward', { id: 'imb-piattaforma-1', device: 'dev-1', platform: 'windows' })).status, 400, 'Piattaforma sconosciuta: rifiutata.');
   for (const bad of [{ id: 'x', device: 'dev-1' }, { id: 'con spazi non validi', device: 'dev-1' }, { id: 'imb-senza-device-1' }, { id: 'imb-dispositivo-1', device: 'sp azi' }]) assert.equal((await post('/api/account/ads/reward', bad)).status, 400, `Richiesta non valida rifiutata (${JSON.stringify(bad)}).`);
   let credited = 0, limited = 0; for (let n = 0; n < 33; n++) { const out = await post('/api/account/ads/reward', { id: `imb-limite-${String(n).padStart(6, '0')}`, device: 'dev-3', platform: 'android' }); if (out.body.credited) credited += 1; else if (out.status === 429) limited += 1; }
   assert.equal(credited, 30, 'Limite giornaliero: 30 video.'); assert.equal(limited, 3);
