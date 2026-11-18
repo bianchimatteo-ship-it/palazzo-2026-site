@@ -9,3 +9,12 @@ node_modules/
 *.jks
 *.keystore
 android/keystore.properties
+
+# Local, private configuration of the TEST site and of the local Worker: real ids, secrets and tokens never go into the repository
+.dev.vars
+.dev.vars.*
+wrangler.test.local.jsonc
+wrangler.test.local.json
+wrangler.local.jsonc
+.env
+.env.*
