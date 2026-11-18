@@ -192,7 +192,8 @@ export function staffWeek(game, stats, { week, date, rand }) {
   const total = { stats: {} };
   if (!staff?.mandates?.some(item => item.status === 'attivo')) return { lines, effects: null };
   for (const mandate of staff.mandates) {
-    if (mandate.status !== 'attivo' || (mandate.createdWeek ?? 0) > week) continue;
+    // a week already worked is never worked (and paid) again: the close of the same week run twice leaves the mandate as it was
+    if (mandate.status !== 'attivo' || (mandate.createdWeek ?? 0) > week || mandate.lastRunWeek === week) continue;
     const task = STAFF_TASK_BY_ID[mandate.task];
     const report = (text, tone = 'neutral', spent = 0) => { const entry = { week, mandateId: mandate.id, task: task.id, text, tone, spent, source: SIM }; mandate.lastReport = entry; staff.reports = [entry, ...staff.reports].slice(0, STAFF_REPORTS_KEPT); lines.push(`Staff · ${task.label}: ${text}`); };
     const problem = taskProblem(game, stats, mandate.task, mandate.target) ?? (mandate.spent + mandate.weeklyBudget > mandate.budgetMax ? 'budget' : null);
@@ -201,6 +202,7 @@ export function staffWeek(game, stats, { week, date, rand }) {
     if (game.resources.funds < mandate.weeklyBudget) { report(`in attesa: in cassa mancano i ${mandate.weeklyBudget} € di questa settimana.`, 'warn'); continue; }
     book(game, -mandate.weeklyBudget, 'personale', `Staff: ${task.label}`, date);
     mandate.spent += mandate.weeklyBudget;
+    mandate.lastRunWeek = week;
     const result = runTask(game, stats, mandate, task, mandateQuality(game, stats, mandate), rand, week, date);
     mandate.weeksDone += 1; mandate.weeksLeft -= 1; mandate.points = round2(mandate.points + result.points);
     mandate.results = [{ week, ok: result.ok, points: result.points, text: result.text }, ...mandate.results].slice(0, 12);
