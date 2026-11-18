@@ -2048,3 +2048,39 @@ details[open].program-proposal > .program-proposal-head::after { transform: rota
 .admin-spark { width: 100%; max-width: 560px; height: 90px; color: var(--accent, #c9a45c); }
 .admin-installs-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; align-items: end; }
 .admin-installs-form label { display: grid; gap: 4px; font-size: 13px; }
+
+/* Referendum page: summary, the two paths, the guided forms (only this page) */
+.ref-todo-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 10px; }
+.ref-todo { border: 1px solid var(--line, rgba(127,140,134,.35)); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.ref-todo h4 { margin: 0 0 6px; display: flex; align-items: center; gap: 6px; font-size: .95rem; }
+.ref-todo.is-mine { border-color: color-mix(in srgb, var(--gold, #d9b45a) 60%, transparent); } .ref-todo.is-mine h4 { color: var(--gold-soft, #e8c875); }
+.ref-todo.is-auto h4 { color: var(--ink-2, #aab); }
+.ref-todo ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ref-todo li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.ref-todo li b, .ref-todo li small { display: block; } .ref-todo li small { opacity: .85; }
+.ref-todo-icon { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: rgba(127,140,134,.18); }
+@media (max-width: 640px) { .ref-todo-grid { grid-template-columns: minmax(0, 1fr); } }
+.ref-path-section { display: grid; gap: 12px; margin-top: 14px; padding-top: 4px; border-top: 3px solid var(--ref-accent, var(--gold, #d9b45a)); }
+.ref-path-section.ref-tone-abrogativo { --ref-accent: #6fa8dc; } .ref-path-section.ref-tone-costituzionale { --ref-accent: #c58fd9; }
+.ref-path-head { display: flex; gap: 12px; align-items: center; } .ref-path-head h3 { margin: 0; } .ref-path-head p { margin: 2px 0 0; }
+.ref-path-icon { display: inline-grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; color: var(--ref-accent); background: color-mix(in srgb, var(--ref-accent) 16%, transparent); flex: none; }
+.ref-subhead { margin: 6px 0 0; font-size: .95rem; letter-spacing: .04em; text-transform: uppercase; opacity: .85; }
+.ref-new { border-left: 4px solid var(--ref-accent, var(--gold)); }
+.ref-steps { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 14px; } .ref-steps > li { display: grid; gap: 8px; }
+.ref-steps textarea, .ref-steps select, .ref-steps input[name=custom] { width: 100%; box-sizing: border-box; }
+.ref-suggest { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; } .ref-suggest-title { display: inline-flex; gap: 6px; align-items: center; font-size: .86rem; opacity: .9; width: 100%; }
+.ref-check { border: 1px solid var(--line, rgba(127,140,134,.35)); border-radius: 10px; padding: 8px 10px; display: grid; gap: 4px; }
+.ref-check strong { display: flex; gap: 6px; align-items: center; } .ref-check ul { margin: 0; padding-left: 18px; } .ref-check p { margin: 0; }
+.ref-check.is-ok { border-color: rgba(76,174,122,.6); background: rgba(76,174,122,.08); } .ref-check.is-ok strong { color: #6fd4a0; }
+.ref-check.is-bad { border-color: rgba(217,98,91,.65); background: rgba(217,98,91,.09); } .ref-check.is-bad strong { color: #f0908a; }
+.ref-who { display: flex; gap: 6px; align-items: flex-start; margin: 6px 0; padding: 6px 10px; border-radius: 10px; font-size: .92rem; }
+.ref-who.is-mine { background: rgba(217,180,90,.14); } .ref-who.is-auto { background: rgba(127,140,134,.14); }
+.ref-proc-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ref-proc { display: grid; grid-template-columns: 86px minmax(0, 1fr); gap: 10px; align-items: start; } .ref-proc small { display: block; opacity: .85; }
+.ref-proc-who { font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 3px 6px; border-radius: 6px; text-align: center; }
+.ref-proc.is-mine .ref-proc-who { background: rgba(217,180,90,.2); color: #f0cf7c; } .ref-proc.is-auto .ref-proc-who { background: rgba(127,140,134,.22); }
+.ref-note { font-size: .88rem; opacity: .9; margin: 0; }
+.ref-form .ref-scope { display: grid; gap: 8px; border: 1px solid var(--line, rgba(127,140,134,.35)); border-radius: 10px; padding: 8px 10px; margin: 0; min-width: 0; }
+.ref-form .ref-scope label { display: flex; align-items: center; gap: 10px; min-height: 40px; }
+.ref-form .ref-scope input[type=radio], .ref-form .ref-region input { flex: none; width: 20px; height: 20px; margin: 0; }
+.ref-form .ref-region { display: flex; align-items: center; gap: 8px; }
