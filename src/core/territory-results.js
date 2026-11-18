@@ -3,7 +3,7 @@
 // the country, from the model of the polls) and a small local deviation that is drawn from the keys (the same vote gives the same figures). The shares are exact (largest remainder): the comuni of a
 // Province add up to the Province, the Provinces of a Region to the Region, the Regions to the country, list by list. Nothing here is an official figure and the page says so; the official data of the
 // real 2022 vote exist only by Region (the uninominal colleges do not coincide with Provinces and comuni): the page does not invent a lower level for it.
-import { seededRandom } from './vote-engine.js?v=20261118-4';
+import { seededRandom } from './vote-engine.js?v=20261118-10';
 
 // Share an integer total among the children by weights, exactly (largest remainder), never below zero.
 export function shareExactly(total, weights) {

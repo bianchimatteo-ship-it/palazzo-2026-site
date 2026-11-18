@@ -2084,3 +2084,21 @@ details[open].program-proposal > .program-proposal-head::after { transform: rota
 .ref-form .ref-scope label { display: flex; align-items: center; gap: 10px; min-height: 40px; }
 .ref-form .ref-scope input[type=radio], .ref-form .ref-region input { flex: none; width: 20px; height: 20px; margin: 0; }
 .ref-form .ref-region { display: flex; align-items: center; gap: 8px; }
+
+/* Initiatives page: the guided opening of a collection (only this page) */
+.ini-new > summary { list-style: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; box-sizing: border-box; min-height: 52px; cursor: pointer; font-weight: 700; }
+.ini-new > summary::-webkit-details-marker { display: none; }
+.ini-new[open] > summary { margin-bottom: 12px; }
+.ini-kind-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.ini-kind-card { display: block; cursor: pointer; position: relative; }
+.ini-kind-card input { position: absolute; top: 0; left: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.ini-kind-body { display: grid; gap: 4px; align-content: start; height: 100%; box-sizing: border-box; padding: 12px; border: 1px solid var(--line, rgba(127,140,134,.45)); border-radius: 12px; }
+.ini-kind-body small { opacity: .88; }
+.ini-kind-card input:checked + .ini-kind-body { border-color: var(--gold, #d9b45a); background: rgba(217,180,90,.12); box-shadow: inset 0 0 0 1px var(--gold, #d9b45a); }
+.ini-kind-card input:focus-visible + .ini-kind-body { outline: 2px solid var(--gold, #d9b45a); outline-offset: 2px; }
+@media (max-width: 560px) { .ini-kind-grid { grid-template-columns: minmax(0, 1fr); } }
+.ini-kinds-pick { border: 0; padding: 0; margin: 0; min-width: 0; } .ini-kinds-pick legend { padding: 0; margin-bottom: 6px; }
+.ini-draft { border: 1px dashed var(--line, rgba(127,140,134,.5)); border-radius: 10px; padding: 10px 12px; display: grid; gap: 8px; }
+.ini-draft dl { margin: 0; display: grid; gap: 6px; } .ini-draft dt { font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; opacity: .8; } .ini-draft dd { margin: 0; }
+.ini-costs { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: .92rem; }
+.ini-form input[type=text], .ini-form select, .ini-form textarea { width: 100%; box-sizing: border-box; }

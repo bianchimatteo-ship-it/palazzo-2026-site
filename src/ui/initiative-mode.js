@@ -1,10 +1,12 @@
 // The page «Iniziative»: popular initiatives (50,000 signatures, art. 71) and signatures for a referendum (500,000, art. 75), kept apart from the bills of the members of Parliament («Leggi»).
 // Every button calls the store (startInitiative, organizeInitiative, depositInitiative, withdrawInitiative): nothing is decorative.
-import { INITIATIVE_KINDS, CHANNELS, PARLIAMENTARY_NOTE, SETUP_COST, ESTIMATED_VALID_SHARE, PARLIAMENT_STAGES, overview } from '../core/initiative-engine.js?v=20261118-4';
-import { phaseOf } from '../core/citizen-requests-engine.js?v=20261118-4';
-import { POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261118-4';
-import { badge, card, empty, esc, kpi } from './sections-kit.js?v=20261118-4';
-import { formatDate } from '../core/time.js?v=20261118-4';
+import { INITIATIVE_KINDS, CHANNELS, PARLIAMENTARY_NOTE, SETUP_COST, ESTIMATED_VALID_SHARE, PARLIAMENT_STAGES, overview } from '../core/initiative-engine.js?v=20261118-10';
+import { phaseOf } from '../core/citizen-requests-engine.js?v=20261118-10';
+import { POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261118-10';
+import { badge, card, empty, esc, foldPanel, kpi } from './sections-kit.js?v=20261118-10';
+import { glyph } from './visuals.js?v=20261118-10';
+import { topicsFor, topicById, draftOf } from '../data/initiative-drafts.js?v=20261118-10';
+import { formatDate } from '../core/time.js?v=20261118-10';
 
 const number = value => Math.round(Number(value) || 0).toLocaleString('it-IT');
 const STATUS = {
@@ -51,17 +53,34 @@ function cardOf(initiative, state, view) {
   if (initiative.history?.length) body += `<details class="ini-history"><summary>Storia della raccolta</summary><ul>${initiative.history.slice(0, 8).map(item => `<li><small>${esc(formatDate(item.date))}</small> ${esc(item.text)}</li>`).join('')}</ul></details>`;
   return card({ kicker: initiative.kind === 'referendum' ? 'REFERENDUM · FIRME' : 'INIZIATIVA POPOLARE', title: initiative.title, tone, body: `<div class="ini-body" data-initiative="${esc(initiative.id)}" data-initiative-status="${esc(initiative.status)}">${body}</div>` });
 }
-function formOf(state) {
+// ---------- the guided opening of a new collection ----------
+export const topicOptions = (kind, area = null) => `<option value="">Argomento libero (scrivo io tutto)</option>${topicsFor(kind, area).map(item => `<option value="${esc(item.id)}">${esc(item.title)}</option>`).join('')}`;
+// What the chosen subject says: the problem, the objective, the wording and the costs. Always a draft, never presented as approved.
+export function draftBox(topicId, kind, funds = 0) {
+  const topic = topicById(topicId);
+  const cost = SETUP_COST[kind], rules = INITIATIVE_KINDS[kind];
+  const costs = `<ul class="ini-costs" data-ini-costs><li><b>Costo di apertura</b> ${number(cost)} € (moduli, autentica, materiali)${funds < cost ? ` — <span class="bad-ink">ti mancano ${number(cost - funds)} €</span>` : ''}</li><li><b>Firme da raccogliere</b> ${number(rules.required)} in ${rules.weeks} settimane</li><li><b>Deposito</b> consigliato con un margine di ${Math.round((rules.depositMargin - 1) * 100)}% per le firme non valide</li></ul>`;
+  if (!topic) return `<div class="ini-draft" data-ini-draft><p class="quiet-copy">Scrivi tu titolo${kind === 'popolare' ? ' e articoli' : ''}: nessuna bozza è proposta.</p>${costs}</div>`;
+  return `<div class="ini-draft" data-ini-draft="${esc(topic.id)}"><dl><div><dt>Problema affrontato</dt><dd>${esc(topic.problem)}</dd></div><div><dt>Obiettivo</dt><dd>${esc(topic.objective)}</dd></div><div><dt>${kind === 'referendum' ? 'Quesito proposto' : 'Formulazione'}</dt><dd>${esc(draftOf(topic).wording)}</dd></div></dl>
+    <p class="quiet-copy">È una bozza: puoi cambiare titolo e articoli. ${kind === 'referendum' ? 'Il quesito vero lo scrivi nella pagina Referendum, quando le firme sono depositate; l’ammissibilità la decidono l’Ufficio centrale e la Corte.' : 'Il testo non è approvato da nessuno: se raccogli le firme e lo depositi, in Parlamento seguirà l’iter della simulazione.'}</p>${costs}</div>`;
+}
+function formOf(state, hasAny) {
   const funds = state.game?.resources?.funds ?? 0;
   const areas = POLICY_AREAS.map(item => `<option value="${esc(item.id)}">${esc(item.label)}</option>`).join('');
-  return card({ kicker: 'NUOVA RACCOLTA', title: 'Apri una raccolta firme', body: `<form class="ini-form" data-ini-form>
-    <label>Che cosa vuoi fare<select name="kind"><option value="popolare">Iniziativa legislativa popolare — 50.000 firme (${number(SETUP_COST.popolare)} €)</option><option value="referendum">Raccolta firme referendaria — 500.000 firme (${number(SETUP_COST.referendum)} €)</option></select></label>
-    <label>Titolo<input name="title" type="text" maxlength="90" placeholder="Es. Salario minimo legale" required></label>
-    <label>Tema<select name="area">${areas}</select></label>
-    <label data-ini-articles>Articoli del testo (uno per riga, al massimo 8; per il referendum lascia vuoto)<textarea name="articles" rows="5" placeholder="Art. 1 — …"></textarea></label>
-    <button type="submit" class="primary-button">Apri la raccolta</button>
-    <small>Fondi disponibili: ${number(funds)} €. L’apertura copre moduli, autentica e materiali.</small>
-  </form>` });
+  const kindCard = (kind, icon, title, text) => `<label class="ini-kind-card"><input type="radio" name="kind" value="${kind}"${kind === 'popolare' ? ' checked' : ''}><span class="ini-kind-body">${glyph(icon, 22)}<b>${esc(title)}</b><small>${esc(text)}</small><small>${number(INITIATIVE_KINDS[kind].required)} firme · ${number(SETUP_COST[kind])} € di apertura</small></span></label>`;
+  return `<section class="sx-card ini-new-card" data-ini-new-card><header class="sx-card-head"><div><span class="section-kicker">NUOVA RACCOLTA</span><h3>Apri una raccolta firme</h3></div></header>
+    <p class="quiet-copy">Scegli la strada, parti da un argomento (o scrivi tu tutto), modifica la bozza e conferma. Nulla parte finché non confermi.</p>
+    <details class="ini-new" data-ini-new${hasAny ? '' : ' open'}><summary class="primary-button">${glyph('flag', 18)} Apri una nuova raccolta</summary>
+    <form class="ini-form" data-ini-form>
+      <ol class="ref-steps">
+      <li><fieldset class="ini-kinds-pick"><legend><b>1 · Che cosa vuoi fare</b></legend><div class="ini-kind-grid">${kindCard('popolare', 'law', 'Iniziativa legislativa popolare', 'Un testo di legge scritto dai cittadini (art. 71).')}${kindCard('referendum', 'ballot', 'Raccolta firme per referendum abrogativo', 'Firme per chiedere di abrogare una legge (art. 75).')}</div></fieldset></li>
+      <li><label><b>2 · Argomento</b><select name="topic" data-ini-topic>${topicOptions('popolare')}</select></label><div data-ini-draft-holder>${draftBox('', 'popolare', funds)}</div></li>
+      <li><b>3 · Il tuo testo</b><label>Titolo<input name="title" type="text" maxlength="90" placeholder="Es. Salario minimo legale" required></label>
+        <label>Tema<select name="area">${areas}</select></label>
+        <label data-ini-articles>Articoli del testo (uno per riga, al massimo 8; per il referendum lascia vuoto)<textarea name="articles" rows="6" placeholder="Art. 1 — …"></textarea></label></li></ol>
+      <button type="submit" class="primary-button">Rivedi e conferma</button>
+      <small>Fondi disponibili: ${number(funds)} €. L’apertura copre moduli, autentica e materiali. Prima di partire ti chiediamo conferma.</small>
+    </form></details></section>`;
 }
 // the cycle of a request, shown as a path: received → taken in charge → started → carried out (satisfied) / failed / ignored / rejected
 const REQ_STATUS = { aperta: ['Ricevuta: attende una tua risposta', 'warning'], 'in-corso': ['In corso', 'warning'], risolta: ['Soddisfatta', 'good'], fallita: ['Intervento fallito', 'bad'], scaduta: ['Ignorata', 'bad'], respinta: ['Respinta', 'neutral'] };
@@ -82,12 +101,24 @@ function requestsOf(state, actionsFor) {
 export function renderInitiatives(state, ctxFor = null, requestActions = null) {
   if (!state.game) return empty('Crea prima un politico per promuovere un’iniziativa.', '<button class="primary-button" data-action="new-career">Crea il politico</button>');
   const initiatives = state.game.initiatives ?? [];
-  const active = initiatives.filter(item => ['raccolta', 'verifica', 'in-parlamento'].includes(item.status));
-  const intro = card({ kicker: 'COSA PUOI FARE', title: 'Tre strade diverse, da non confondere', body: `<ul class="ini-kinds">
+  const views = new Map(initiatives.map(item => [item.id, overview(item, ctxFor ? ctxFor(item) : null)]));
+  const group = {
+    attive: initiatives.filter(item => item.status === 'raccolta' && !views.get(item.id).ready),
+    completare: initiatives.filter(item => item.status === 'raccolta' && views.get(item.id).ready),
+    verifica: initiatives.filter(item => item.status === 'verifica'),
+    concluse: initiatives.filter(item => !['raccolta', 'verifica'].includes(item.status))
+  };
+  const running = [...group.attive, ...group.completare];
+  const totalSignatures = running.reduce((sum, item) => sum + (views.get(item.id).total ?? 0), 0);
+  const weekly = running.reduce((sum, item) => sum + (views.get(item.id).weeklyCost ?? 0), 0);
+  const funds = state.game.resources?.funds ?? 0;
+  const kpis = `<div class="sx-kpis">${kpi({ label: 'Raccolte attive', value: String(group.attive.length) })}${kpi({ label: 'Da completare', value: String(group.completare.length), note: 'soglia raggiunta, da depositare' })}${kpi({ label: 'In verifica', value: String(group.verifica.length) })}${kpi({ label: 'Concluse', value: String(group.concluse.length) })}${kpi({ label: 'Firme raccolte', value: number(totalSignatures), note: 'nelle raccolte aperte' })}${kpi({ label: 'Fondi', value: `${number(funds)} €`, note: weekly ? `${number(weekly)} € a settimana in spesa` : '' })}</div>`;
+  const section = (id, title, icon, list, emptyText) => list.length ? foldPanel({ id: `ini-${id}`, title: `${title} (${list.length})`, icon, open: 'always', body: list.map(item => cardOf(item, state, views.get(item.id))).join('') }) : '';
+  const lists = `${section('attive', 'Raccolte attive', 'flag', group.attive)}${section('completare', 'Da completare: pronte al deposito', 'target', group.completare)}${section('verifica', 'In verifica', 'clock', group.verifica)}${section('concluse', 'Concluse', 'book', group.concluse)}`;
+  const empty_ = initiatives.length ? '' : card({ kicker: 'RACCOLTE', title: 'Nessuna raccolta firme', body: '<p class="sx-empty">Non hai ancora aperto una raccolta. Parti dal pulsante qui sopra: scegli un argomento, modifica la bozza e conferma.</p>' });
+  const intro = foldPanel({ id: 'ini-strade', title: 'Tre strade diverse, da non confondere', icon: 'book', open: 'always', body: `<ul class="ini-kinds">
     <li><b>Iniziativa legislativa popolare</b><span>${esc(INITIATIVE_KINDS.popolare.short)} Possono promuoverla anche partiti senza parlamentari.</span></li>
     <li><b>Raccolta firme referendaria</b><span>${esc(INITIATIVE_KINDS.referendum.short)}</span></li>
     <li><b>Proposta parlamentare</b><span>${esc(PARLIAMENTARY_NOTE)}</span></li></ul>` });
-  const kpis = `<div class="sx-kpis">${kpi({ label: 'Raccolte attive', value: String(active.length) })}${kpi({ label: 'Concluse', value: String(initiatives.length - active.length) })}${kpi({ label: 'Fondi', value: `${number(state.game.resources?.funds ?? 0)} €` })}</div>`;
-  const list = initiatives.length ? initiatives.map(item => cardOf(item, state, overview(item, ctxFor ? ctxFor(item) : null))).join('') : card({ kicker: 'RACCOLTE', title: 'Nessuna raccolta firme', body: '<p class="sx-empty">Non hai ancora aperto una raccolta. Compila il modulo qui sotto: serve un titolo, un tema e un testo in articoli.</p>' });
-  return `<div class="ini-page" data-ini-page>${intro}${requestsOf(state, requestActions)}${kpis}${list}${formOf(state)}</div>`;
+  return `<div class="ini-page" data-ini-page>${formOf(state, initiatives.length > 0)}${kpis}${empty_}${lists}${requestsOf(state, requestActions)}${intro}</div>`;
 }
