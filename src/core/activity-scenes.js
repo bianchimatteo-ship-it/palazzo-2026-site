@@ -6,16 +6,16 @@
 // activity is applied ONCE, by the store, when the scene ends.
 // Deterministic: the family of topics, the names and the small variations come from the seed of the scene (and from what the player met lately: the same family is not drawn again in a row).
 // Loaded on demand (it is not in the first screen): it registers itself in scene-engine.js and stage-script.js when imported.
-import { AVATAR_OPTIONS, EXTRA_NAMES, F, M, defaultAvatarFor, genderOf, normalizeAvatar, roleGender } from './avatar.js?v=20261118-32';
-import { personName, registerSceneKind } from './scene-engine.js?v=20261118-32';
-import { SPEAK_GESTURES, LISTEN_GESTURES, pickGesture, registerStageScript, stagePose } from './stage-script.js?v=20261118-32';
-import { ACTIVITY_SCENES, ACTIVITY_SCENE_UI } from '../data/activity-scene-lines.js?v=20261118-32';
-import { ACTIVITY_CONTEXT } from '../data/activity-scene-context.js?v=20261118-32';
-import { STAKES } from '../data/activity-scene-stakes.js?v=20261118-32';
-import { BODIES, CITIZEN_GUESTS, CITIZENS, GUESTS, HEADINGS, REFS } from '../data/activity-scene-guests.js?v=20261118-32';
-import { APPROACH_LABELS } from '../data/activity-scene-approaches.js?v=20261118-32';
-import { ONLY, TOPIC_KIND, TOPIC_MOVES, areasOf, newsFits } from '../data/activity-scene-topics.js?v=20261118-32';
-import { APPROACH_FUNCTIONS, COMMITMENTS, COMMITMENT_TEXT, CONSEQUENCE_LINES, EXTRA_Q1, FUNCTIONS, FUND_COST, GUARANTEE_MOVES, MOVES, OUTCOME_KINDS, REACTION_ALT, REACTION_LINES, REACTION_TYPES, STAGE_TEXT, WHY_LINES } from '../data/activity-scene-moves.js?v=20261118-32';
+import { AVATAR_OPTIONS, EXTRA_NAMES, F, M, defaultAvatarFor, genderOf, normalizeAvatar, roleGender } from './avatar.js?v=20261118-33';
+import { personName, registerSceneKind } from './scene-engine.js?v=20261118-33';
+import { SPEAK_GESTURES, LISTEN_GESTURES, pickGesture, registerStageScript, stagePose } from './stage-script.js?v=20261118-33';
+import { ACTIVITY_SCENES, ACTIVITY_SCENE_UI } from '../data/activity-scene-lines.js?v=20261118-33';
+import { ACTIVITY_CONTEXT } from '../data/activity-scene-context.js?v=20261118-33';
+import { STAKES } from '../data/activity-scene-stakes.js?v=20261118-33';
+import { BODIES, CITIZEN_GUESTS, CITIZENS, GUESTS, HEADINGS, REFS } from '../data/activity-scene-guests.js?v=20261118-33';
+import { APPROACH_LABELS } from '../data/activity-scene-approaches.js?v=20261118-33';
+import { ONLY, TOPIC_KIND, TOPIC_MOVES, areasOf, newsFits } from '../data/activity-scene-topics.js?v=20261118-33';
+import { APPROACH_FUNCTIONS, COMMITMENTS, COMMITMENT_TEXT, CONSEQUENCE_LINES, EXTRA_Q1, FUNCTIONS, FUND_COST, GUARANTEE_MOVES, MOVES, OUTCOME_KINDS, REACTION_ALT, REACTION_LINES, REACTION_TYPES, STAGE_TEXT, WHY_LINES } from '../data/activity-scene-moves.js?v=20261118-33';
 
 export { ACTIVITY_SCENES, ACTIVITY_SCENE_UI };
 export const SCENE_KIND = 'attivita';
@@ -232,14 +232,14 @@ export function activityNode(scene) {
   const base = { id: scene.nodeId, setting: scene.setting };
   const citizens = isCitizens(scene);
   switch (scene.nodeId) {
-    case 'apertura': return { ...base, speaker: me(scene).id, expression: 'serena', gesture: 'saluta', camera: 'wide', title: ACTIVITY_CONTEXT[scene.activityId]?.title[0] ?? scene.heading?.title ?? spec.title[0], text: (ACTIVITY_CONTEXT[scene.activityId]?.intro ?? (citizens ? CITIZENS.intro : (spec.intro[scene.variant] ?? spec.intro.default)))[0], ...(scene.ref?.text ? { lines: [scene.ref.text] } : {}), choices: [['continua', 'Continua']] };
-    case 'q1': return { ...base, speaker: guest(scene, 1).id, expression: 'determinata', gesture: 'sottolinea', camera: 'wide', title: family.label[0], text: (citizens ? CITIZENS.families[family.id]?.open ?? family.open : family.open)[0], choices: choicesOf(scene, 'q1') };
-    case 'q2': return { ...base, speaker: guest(scene, 2).id, expression: 'determinata', gesture: 'indica', camera: 'wide', title: family.label[0], text: (citizens ? CITIZENS.families[family.id]?.follow ?? family.follow : family.follow)[0], choices: choicesOf(scene, 'q2') };
+    case 'apertura': return { ...base, speaker: me(scene).id, expression: pickGesture(scene, 'apertura', 'espressione', ['serena', 'sorridente', 'serena']), gesture: pickGesture(scene, 'apertura', 'giocatore', ['saluta', 'apre', 'saluta', 'palmi']), camera: 'wide', title: ACTIVITY_CONTEXT[scene.activityId]?.title[0] ?? scene.heading?.title ?? spec.title[0], text: (ACTIVITY_CONTEXT[scene.activityId]?.intro ?? (citizens ? CITIZENS.intro : (spec.intro[scene.variant] ?? spec.intro.default)))[0], ...(scene.ref?.text ? { lines: [scene.ref.text] } : {}), choices: [['continua', 'Continua']] };
+    case 'q1': return { ...base, speaker: guest(scene, 1).id, expression: 'determinata', gesture: pickGesture(scene, 'q1', 'ospite1', SPEAK_GESTURES), camera: 'wide', title: family.label[0], text: (citizens ? CITIZENS.families[family.id]?.open ?? family.open : family.open)[0], choices: choicesOf(scene, 'q1') };
+    case 'q2': return { ...base, speaker: guest(scene, 2).id, expression: 'determinata', gesture: pickGesture(scene, 'q2', 'ospite2', SPEAK_GESTURES), camera: 'wide', title: family.label[0], text: (citizens ? CITIZENS.families[family.id]?.follow ?? family.follow : family.follow)[0], choices: choicesOf(scene, 'q2') };
     case 'q3': {
       const text = scene.tally.tension >= 2 ? STAGE_TEXT.q3.tense : STAGE_TEXT.q3[last?.band ?? 'mid'];
       return { ...base, speaker: guest(scene, 1).id, expression: last?.band === 'bad' || scene.tally.tension >= 2 ? 'determinata' : 'serena', gesture: 'sottolinea', camera: 'wide', title: STAGE_TEXT.titles.q3[0], text: text[0], choices: choicesOf(scene, 'q3') };
     }
-    case 'q4': return { ...base, speaker: guest(scene, 2).id, expression: 'determinata', gesture: 'indica', camera: 'wide', title: STAGE_TEXT.titles.q4[0], text: (scene.tally.guarantee ? STAGE_TEXT.q4.guarantee : STAGE_TEXT.q4.tense)[0], choices: choicesOf(scene, 'q4') };
+    case 'q4': return { ...base, speaker: guest(scene, 2).id, expression: 'determinata', gesture: pickGesture(scene, 'q4', 'ospite2', SPEAK_GESTURES), camera: 'wide', title: STAGE_TEXT.titles.q4[0], text: (scene.tally.guarantee ? STAGE_TEXT.q4.guarantee : STAGE_TEXT.q4.tense)[0], choices: choicesOf(scene, 'q4') };
     case 'r1': case 'r2': case 'r3': case 'r4': {
       const index = Number(scene.nodeId[1]);
       const reaction = REACTION_TYPES[last?.type ?? 'perplessita'];

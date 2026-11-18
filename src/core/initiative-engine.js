@@ -5,7 +5,7 @@
 //                      the vote with its quorum) is NOT simulated by this module and the page says so;
 //   · parlamentare   — a bill of a member of Parliament: that is the page «Leggi» (parliament-engine.js), never this module.
 // Everything is pure and deterministic: the same initiative, the same week and the same context give the same signatures. The state lives in game.initiatives (a plain array of records).
-import { seededRandom } from './vote-engine.js?v=20261118-32';
+import { seededRandom } from './vote-engine.js?v=20261118-33';
 
 export const INITIATIVE_KINDS = Object.freeze({
   popolare: { id: 'popolare', label: 'Iniziativa legislativa popolare', basis: 'art. 71 Cost.', required: 50000, weeks: 26, depositMargin: 1.15, articles: { min: 1, max: 8 }, short: 'Un testo scritto dai cittadini, firmato da almeno 50.000 elettori e depositato in una Camera.' },

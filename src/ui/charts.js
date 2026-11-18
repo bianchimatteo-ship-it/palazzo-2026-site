@@ -1,8 +1,8 @@
 // Shared building blocks for the simulation screens: numbers, state badges, meters and charts.
 // Charts follow the same rules as the polls page: thin marks, one axis, legend + direct labels,
 // hover tooltips through data-trend / data-tip, text in ink rather than in the series colour.
-import { glyph } from './visuals.js?v=20261118-32';
-import { accentAsGraphic } from './party-identity.js?v=20261118-32';
+import { glyph } from './visuals.js?v=20261118-33';
+import { accentAsGraphic } from './party-identity.js?v=20261118-33';
 
 export const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 // number formats built once (a new one for each call made a redraw of the polls page slow)

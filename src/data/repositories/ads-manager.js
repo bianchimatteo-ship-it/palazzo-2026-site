@@ -3,7 +3,7 @@
 //   · Interstitial: only when the player closes a week (a natural pause), at most one every INTERSTITIAL.everyWeeks closed weeks, never within minGapMs of another interstitial or of a rewarded video, at most perDay a day,
 //     and never while an election, a campaign, the night, a scene or a vote is going on.
 //   · Rewarded video: always the player's choice (the button of the rewards page); this module only records the time it ended, to keep the interstitials away from it.
-import { BANNER_PAGES, INTERSTITIAL } from '../ads-config.js?v=20261118-32';
+import { BANNER_PAGES, INTERSTITIAL } from '../ads-config.js?v=20261118-33';
 
 const KEY = 'politicando.ads.v1';
 const dayOf = ms => new Date(ms).toISOString().slice(0, 10);

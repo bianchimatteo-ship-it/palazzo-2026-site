@@ -1,11 +1,11 @@
 // In-game archive of the real data: every tab reads the verified snapshot and never the simulation.
-import { realDatabase } from '../data/repositories/real-data.js?v=20261118-32';
-import { renderPartyArchive } from './party-archive.js?v=20261118-32';
-import { renderPoliticianArchive } from './politician-archive.js?v=20261118-32';
-import { renderRealLaws } from './real-laws.js?v=20261118-32';
-import { glyph, personMark } from './visuals.js?v=20261118-32';
-import { PARTY_LINK_COLLECTIONS, politicianAffiliation } from '../data/repositories/party-links.js?v=20261118-32';
-import { esc } from './charts.js?v=20261118-32';
+import { realDatabase } from '../data/repositories/real-data.js?v=20261118-33';
+import { renderPartyArchive } from './party-archive.js?v=20261118-33';
+import { renderPoliticianArchive } from './politician-archive.js?v=20261118-33';
+import { renderRealLaws } from './real-laws.js?v=20261118-33';
+import { glyph, personMark } from './visuals.js?v=20261118-33';
+import { PARTY_LINK_COLLECTIONS, politicianAffiliation } from '../data/repositories/party-links.js?v=20261118-33';
+import { esc } from './charts.js?v=20261118-33';
 
 export const ARCHIVE_TABS = Object.freeze([
   ['partiti', 'flag', 'Partiti e movimenti'],
@@ -16,7 +16,7 @@ export const ARCHIVE_TABS = Object.freeze([
   ['leggi', 'law', 'Leggi e atti'],
   ['territori', 'map', 'Territori']
 ]);
-import { ARCHIVE_COLLECTIONS } from './archive-collections.js?v=20261118-32';
+import { ARCHIVE_COLLECTIONS } from './archive-collections.js?v=20261118-33';
 export { ARCHIVE_COLLECTIONS };
 
 const number = value => Number(value).toLocaleString('it-IT');

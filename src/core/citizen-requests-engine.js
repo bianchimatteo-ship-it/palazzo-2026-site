@@ -2,7 +2,7 @@
 // indicator of that area in that region). What the player can do depends on the offices he holds (a member without office can only report it and promise; a councillor or a parliamentarian can ask a
 // question or file a motion; whoever leads an executive can act directly; anybody can start a signature drive), each action has a cost, a time and a chance, and the answer arrives later with its
 // consequences on reputation, popularity and the attention of the region. Pure and deterministic: the same request, week and context give the same answer.
-import { seededRandom } from './vote-engine.js?v=20261118-32';
+import { seededRandom } from './vote-engine.js?v=20261118-33';
 
 export const REQUESTERS = Object.freeze([
   { id: 'cittadini', label: 'Un gruppo di cittadini', tone: 'preoccupato' },

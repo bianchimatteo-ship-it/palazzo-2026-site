@@ -223,3 +223,10 @@ html[data-scene-motion="full"] .cm-protest .cm-arm { animation: st-arms .45s eas
 .scene-facts { display: grid; gap: 4px; margin: 6px 0 2px; padding: 8px 10px; border-left: 3px solid #d9825b; background: rgba(217,130,91,.1); border-radius: 6px; font-size: .86rem; }
 .scene-facts div { display: grid; grid-template-columns: minmax(96px, 30%) minmax(0, 1fr); gap: 8px; } .scene-facts dt { opacity: .8; } .scene-facts dd { margin: 0; overflow-wrap: anywhere; }
 @media (max-width: 480px) { .scene-facts div { grid-template-columns: minmax(0, 1fr); gap: 0; } }
+/* Presentation of the beats and of the choices: a soft entrance of the line and a press feedback on the choices (never when the player asks for reduced motion; no layout change, transform and opacity only) */
+@media (prefers-reduced-motion: no-preference) {
+  .scene .scene-line, .scene .scene-text, .scene [data-scene-text] { animation: scene-line-in .38s ease-out both; }
+  .scene .choice-button, .scene [data-scene-choice] { transition: transform .12s ease, box-shadow .18s ease; }
+  .scene .choice-button:active:not(:disabled), .scene [data-scene-choice]:active:not(:disabled) { transform: scale(.985); }
+  @keyframes scene-line-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+}
