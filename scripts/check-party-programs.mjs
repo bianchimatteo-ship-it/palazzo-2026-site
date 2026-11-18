@@ -38,17 +38,20 @@ for (const party of missing) {
   assert.equal(R.positionOf(fixed, party, 'economia'), 1);
 }
 // Progetto Civico Italia: no collocazione, but a programme documented from its official sources (data/party-programs.js): all ten themes covered and documented, nothing invented
+const sourcesDoc = JSON.parse(await readFile(new URL('../src/data/real/party-program-sources.json', import.meta.url), 'utf8'))['party-progetto-civico-italia'];
 const pci = D.DOCUMENTED_PROGRAMS['party-progetto-civico-italia'];
 assert.ok(pci, 'programma documentato di Progetto Civico Italia');
 assert.deepEqual(Object.keys(pci.themes).sort(), R.THEMES.map(theme => theme.id).sort(), 'tutti e dieci i temi sono trattati (valore o motivo dell’assenza)');
 assert.ok(pci.sources.length >= 3 && pci.sources.every(url => url.startsWith('https://progettocivicoitalia.it/')), 'fonti ufficiali del partito');
+assert.ok(sourcesDoc.note && sourcesDoc.retrievedAt && sourcesDoc.sources.length >= 3, 'documento delle fonti: nota, data di lettura, fonti');
 for (const [id, theme] of Object.entries(pci.themes)) {
-  assert.ok(theme.evidence && theme.evidence.length > 40, `${id}: motivazione dalla fonte`);
-  assert.ok(Array.isArray(theme.labs) && theme.labs.length, `${id}: Laboratorio di riferimento`);
+  const why = sourcesDoc.themes[id];
+  assert.ok(why?.evidence && why.evidence.length > 40, `${id}: motivazione dalla fonte`);
+  assert.ok(Array.isArray(why.labs) && why.labs.length, `${id}: Laboratorio di riferimento`);
   if (theme.value === null) assert.equal(theme.confidence, 'nessuna', `${id}: dato mancante dichiarato`);
   else { assert.ok(Number.isFinite(theme.value) && theme.value >= -3 && theme.value <= 3, `${id}: valore sulla scala`); assert.ok(['alta', 'media', 'bassa'].includes(theme.confidence), `${id}: confidenza`); assert.ok(theme.value !== 0 || theme.confidence !== 'alta', `${id}: nessun valore medio automatico con confidenza alta`); }
 }
-assert.ok(pci.areas.length >= 10 && pci.areas.every(area => area.it && area.en && area.lab), 'temi trasversali con testo italiano e inglese');
+assert.ok(pci.areas.length >= 10 && pci.areas.every(area => area.text[0] && area.text[1] && sourcesDoc.areaLabs[area.id]), 'temi trasversali con testo italiano e inglese e Laboratorio di origine');
 assert.deepEqual(pci.areas.map(area => area.id).filter(id => ['scuola', 'giovani', 'welfare', 'agricoltura', 'turismo', 'trasporti', 'innovazione'].includes(id)).length, 7, 'i temi trasversali richiesti ci sono');
 {
   const pciParty = world.parties.find(party => party.id === 'party-progetto-civico-italia') ?? { id: 'party-progetto-civico-italia', label: 'Progetto Civico Italia' };
