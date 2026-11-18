@@ -74,40 +74,48 @@ public class InMobiAdsPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     // MARK: consent
+    // Google User Messaging Platform 3.1.0 (module `UserMessagingPlatform`): the 3.x Swift API drops the `UMP` prefix (RequestParameters, ConsentInformation, ConsentForm, FormStatus, ConsentStatus,
+    // PrivacyOptionsRequirementStatus), `sharedInstance` is `shared` and `tagForUnderAgeOfConsent` is `isTaggedForUnderAgeOfConsent`. The forms are `async throws` and main-actor. The calls below follow the usage of the
+    // Capacitor AdMob plugin 8.3.0, which is built against this same package (swift-package-manager-google-user-messaging-platform, from 3.1.0).
+    // Ads stay blocked until `ConsentInformation.shared.canRequestAds` is true: `initialize` and every ad call check it.
     @objc func requestConsent(_ call: CAPPluginCall) {
-        DispatchQueue.main.async {
-            let parameters = UMPRequestParameters()
-            parameters.tagForUnderAgeOfConsent = false   // the audience is 14+
-            UMPConsentInformation.sharedInstance.requestConsentInfoUpdate(with: parameters) { [weak self] _ in
-                guard let self = self, let controller = self.topController() else { call.resolve(Self.consentResult(false)); return }
-                UMPConsentForm.loadAndPresentIfRequired(from: controller) { _ in call.resolve(Self.consentResult(true)) }
+        let parameters = RequestParameters()
+        parameters.isTaggedForUnderAgeOfConsent = false   // the audience is 14+
+        ConsentInformation.shared.requestConsentInfoUpdate(with: parameters) { [weak self] error in
+            // the state is refreshed; on an error nothing is shown and whatever the SDK says about `canRequestAds` (true only if consent was already obtained) is reported as it is
+            guard error == nil else { call.resolve(Self.consentResult()); return }
+            Task { @MainActor in
+                guard let self = self, let controller = self.topController(), ConsentInformation.shared.formStatus == FormStatus.available else { call.resolve(Self.consentResult()); return }
+                do { try await ConsentForm.loadAndPresentIfRequired(from: controller) } catch { /* the form failed: the status below decides */ }
+                call.resolve(Self.consentResult())
             }
         }
     }
 
-    private static func consentResult(_ formShown: Bool) -> [String: Any] {
-        let info = UMPConsentInformation.sharedInstance
+    private static func consentResult() -> [String: Any] {
+        let info = ConsentInformation.shared
         let status: String
         switch info.consentStatus {
-        case .required: status = "REQUIRED"
-        case .notRequired: status = "NOT_REQUIRED"
-        case .obtained: status = "OBTAINED"
+        case ConsentStatus.required: status = "REQUIRED"
+        case ConsentStatus.notRequired: status = "NOT_REQUIRED"
+        case ConsentStatus.obtained: status = "OBTAINED"
         default: status = "UNKNOWN"
         }
-        return ["canRequestAds": info.canRequestAds, "status": status, "privacyOptionsRequired": info.privacyOptionsRequirementStatus == .required]
+        return ["canRequestAds": info.canRequestAds, "status": status, "privacyOptionsRequired": info.privacyOptionsRequirementStatus == PrivacyOptionsRequirementStatus.required]
     }
 
     @objc func showPrivacyOptions(_ call: CAPPluginCall) {
-        DispatchQueue.main.async {
+        Task { @MainActor in
             guard let controller = self.topController() else { call.resolve(); return }
-            UMPConsentForm.presentPrivacyOptionsForm(from: controller) { _ in call.resolve() }
+            do { try await ConsentForm.presentPrivacyOptionsForm(from: controller) } catch { /* the user can try again */ }
+            call.resolve()
         }
     }
 
     /// The consent handed to InMobi: GDPR applies / consent available / the IAB TCF string that UMP keeps in UserDefaults.
     private func inmobiConsent() -> [String: Any] {
         let defaults = UserDefaults.standard
-        var consent: [String: Any] = ["gdpr": defaults.integer(forKey: "IABTCF_gdprApplies") == 1 ? "1" : "0", "gdpr_consent_available": UMPConsentInformation.sharedInstance.canRequestAds ? "true" : "false"]   // the official sample passes the strings "true"/"false"
+        var consent: [String: Any] = ["gdpr": defaults.integer(forKey: "IABTCF_gdprApplies") == 1 ? "1" : "0", "gdpr_consent_available": ConsentInformation.shared.canRequestAds ? "true" : "false"]   // the official sample passes the strings "true"/"false"
         if let tc = defaults.string(forKey: "IABTCF_TCString"), !tc.isEmpty { consent["gdpr_consent"] = tc }
         return consent
     }
@@ -115,7 +123,7 @@ public class InMobiAdsPlugin: CAPPlugin, CAPBridgedPlugin {
     // MARK: SDK
     @objc func initialize(_ call: CAPPluginCall) {
         guard let account = call.getString("accountId"), !account.isEmpty else { call.resolve(["ok": false, "code": "not-configured"]); return }
-        guard UMPConsentInformation.sharedInstance.canRequestAds else { call.resolve(["ok": false, "code": "no-consent"]); return }
+        guard ConsentInformation.shared.canRequestAds else { call.resolve(["ok": false, "code": "no-consent"]); return }
         if sdkReady { call.resolve(["ok": true]); return }
         if initializing { call.resolve(["ok": false, "code": "busy"]); return }
         initializing = true
@@ -133,7 +141,7 @@ public class InMobiAdsPlugin: CAPPlugin, CAPBridgedPlugin {
     // MARK: rewarded / interstitial
     @objc func loadAd(_ call: CAPPluginCall) {
         let format = call.getString("format") ?? ""
-        guard sdkReady, let placement = Int64(call.getString("placementId") ?? ""), format == "rewarded" || format == "interstitial" else {
+        guard sdkReady, ConsentInformation.shared.canRequestAds, let placement = Int64(call.getString("placementId") ?? ""), format == "rewarded" || format == "interstitial" else {
             call.resolve(["ready": false, "code": sdkReady ? "invalid" : "not-initialized"]); return
         }
         DispatchQueue.main.async {
@@ -164,7 +172,7 @@ public class InMobiAdsPlugin: CAPPlugin, CAPBridgedPlugin {
 
     // MARK: banner
     @objc func showBanner(_ call: CAPPluginCall) {
-        guard sdkReady, let placement = Int64(call.getString("placementId") ?? "") else { call.resolve(["shown": false, "code": "not-initialized"]); return }
+        guard sdkReady, ConsentInformation.shared.canRequestAds, let placement = Int64(call.getString("placementId") ?? "") else { call.resolve(["shown": false, "code": "not-initialized"]); return }
         let margin = CGFloat(call.getInt("margin") ?? 0)
         DispatchQueue.main.async {
             if self.banner != nil { call.resolve(["shown": true]); return }
