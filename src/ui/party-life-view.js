@@ -1,17 +1,17 @@
 // VITA INTERNA — the people behind the currents, what they ask, the agreements, the congress, the local leaders, the
 // rebuilding of the party and the way it is founded, merged or renamed. All simulated: no real person appears here.
-import { costProblem, lifeOverview, partyOpsAvailability } from '../core/career-engine.js?v=20261118-22';
-import { mergeCandidates } from '../core/world-engine.js?v=20261118-22';
-import { OP_COSTS } from '../core/party-ops-engine.js?v=20261118-22';
-import { CADRE_ACTIONS, REBUILD_FOCUS, RENAME_STYLES } from '../data/simulation/party-life-rules.js?v=20261118-22';
-import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20261118-22';
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261118-22';
-import { badge, bar, card, empty, esc, euro, foldPanel, num, weeksLabel } from './sections-kit.js?v=20261118-22';
-import { glyph, territoryTile, territoryVisual } from './visuals.js?v=20261118-22';
-import { planAddButton } from './plan-view.js?v=20261118-22';
-import { renderNewPartyFields } from './career-wizard.js?v=20261118-22';
-import { LOGO_SHAPES, LOGO_SYMBOLS, LOGO_SECONDARY_PALETTE } from './party-logo.js?v=20261118-22';
-import { NAME_MODES } from '../core/merger-identity.js?v=20261118-22';
+import { costProblem, lifeOverview, partyOpsAvailability } from '../core/career-engine.js?v=20261118-23';
+import { mergeCandidates } from '../core/world-engine.js?v=20261118-23';
+import { OP_COSTS } from '../core/party-ops-engine.js?v=20261118-23';
+import { CADRE_ACTIONS, REBUILD_FOCUS, RENAME_STYLES } from '../data/simulation/party-life-rules.js?v=20261118-23';
+import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20261118-23';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261118-23';
+import { badge, bar, card, empty, esc, euro, foldPanel, num, weeksLabel } from './sections-kit.js?v=20261118-23';
+import { glyph, territoryTile, territoryVisual } from './visuals.js?v=20261118-23';
+import { planAddButton } from './plan-view.js?v=20261118-23';
+import { renderNewPartyFields } from './career-wizard.js?v=20261118-23';
+import { LOGO_SHAPES, LOGO_SYMBOLS, LOGO_SECONDARY_PALETTE } from './party-logo.js?v=20261118-23';
+import { NAME_MODES } from '../core/merger-identity.js?v=20261118-23';
 
 const STANCE = { alleata: ['good', 'Alleata'], neutrale: ['neutral', 'Neutrale'], ostile: ['bad', 'Ostile'] };
 const PACT_STATUS = { attivo: ['good', 'In vigore'], scaduto: ['neutral', 'Scaduto'], rotto: ['bad', 'Rotto'], rinnovato: ['good', 'Rinnovato'] };
@@ -173,7 +173,7 @@ function opsCard(state, view, party, neighbours, ops, { foundOnly = false } = {}
   const ownRecord = state.dataset?.parties?.find(item => item.id === state.career?.partyId) ?? null;
   const modeCard = (id, title, text) => `<label class="mg-mode"><input type="radio" name="merge-nameMode" value="${id}" data-life-field="merge-nameMode"${id === 'own' ? ' checked' : ''}><span><b>${esc(title)}</b><small>${esc(text)}</small></span></label>`;
   const logoCard = (id, title, text) => `<label class="mg-mode"><input type="radio" name="merge-logoMode" value="${id}" data-life-field="merge-logoMode"${id === 'own' ? ' checked' : ''}><span><b>${esc(title)}</b><small>${esc(text)}</small></span></label>`;
-  const identityForm = founder && neighbours.length ? `<form class="pl-merge-form" data-merge-form onsubmit="return false" data-own-label="${esc(party.label ?? '')}" data-own-abbr="${esc(ownRecord?.abbreviation ?? '')}" data-own-color="${esc(ownRecord?.color ?? '#264d82')}" data-own-color2="${esc(ownRecord?.color2 ?? '#f2c14e')}">
+  const identityForm = founder && neighbours.length ? `<form class="pl-merge-form" data-merge-form data-own-label="${esc(party.label ?? '')}" data-own-abbr="${esc(ownRecord?.abbreviation ?? '')}" data-own-color="${esc(ownRecord?.color ?? '#264d82')}" data-own-color2="${esc(ownRecord?.color2 ?? '#f2c14e')}">
     <h5>${glyph('flag', 16)} Identità del nuovo soggetto</h5><p class="quiet-copy">Scegli come si chiamerà e come si presenterà il partito dopo la fusione: lo vedrai in menu, sondaggi, elezioni e risultati. Prima di confermare ti mostriamo un’anteprima.</p>
     <fieldset class="mg-group"><legend>Nome</legend><div class="mg-modes">${modeCard('own', 'Il mio nome', 'Resta il nome attuale del partito.')}${modeCard('partner', 'Il nome del partner', 'Adotti il nome dell’altro partito.')}${modeCard('both', 'I due nomi uniti', 'Es.: «Il tuo – Il partner».')}${modeCard('custom', 'Un nome nuovo', 'Scrivi tu il nome.')}</div>
       <label class="mg-field" data-merge-custom hidden>Nome personalizzato<input type="text" data-life-field="merge-label" maxlength="60" placeholder="Nome del nuovo partito" /></label></fieldset>

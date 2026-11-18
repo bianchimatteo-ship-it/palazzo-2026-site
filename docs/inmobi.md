@@ -86,3 +86,11 @@ La 1.0 (1) è in revisione, **senza pubblicità**, e non è toccata: Bundle ID `
 4. Test su dispositivo in modalità `test` con un test device registrato nella dashboard InMobi; poi, solo dopo, `mode: "live"` e formato per formato.
 5. Informativa/termini, Play Console (annunci, ID pubblicitario, Data safety), App Store (privacy label, ATT se usato), `app-ads.txt`, elenco SKAdNetwork completo.
 6. Variabile `ADS_CONFIG` nel Worker (il file `wrangler*.jsonc` non è stato modificato).
+
+## Altre correzioni fatte in questo intervento
+- `src/ui/party-life-view.js`: tolto un `onsubmit` inline (violava la politica CSP; `check-security` falliva già sul branch precedente); ora un listener delegato in `app.js` blocca l'invio con Invio nel modulo di fusione.
+- Rafforzato l'adattatore: un video è «completato» solo con `shown: true` **e** `rewarded: true` **e** un id nativo (trovato dal test); la validazione numerica della configurazione rifiuta `null`/stringhe vuote (`Number(null)` valeva 0).
+
+## Test eseguiti su questo branch (PASS/FAIL/SKIPPED)
+PASS: `check-inmobi`, `check-inmobi-native` (compilazione Kotlin inclusa), `check-ads-states`, `check-rewards`, `check-rewards-page`, `check-rewards-sync`, `check-capacitor` (anche `--www`), `check-android`, `check-legal`, `check-publication`, `check-service-worker`, `check-account-deletion`, `check-security`, `check-merger-identity-browser`, `check-i18n-offline`, `check-i18n-pages`, `check-guide`.
+Non rieseguita la suite completa (richiesto): l'ultima corsa parziale sul branch `feature/miglioramento-completo` (198 comandi su 278, 3 in parallelo) aveva avuto FAIL su `check-campaign-ui`, `check-presidency`, `check-long-run`, `check-calendar-years`, `check-territory-legibility`, `check-e2e-futuro-nazionale`, `check-regional-ranking`, `check-news-voice`, `check-security` (corretto ora), `check-load`, `check-button-contrast`, `check-account-deletion` e `check-account-isolation` (passa da solo), `check-published-local`, `check-news-popup-setting`, `check-calendar-scheduling`, `check-poll-election-consistency`, `check-i18n` e SKIPPED `check-boot`, `check-panels-stay-put`: in parte preesistenti (presidency, button-contrast, campaign-ui, load) e in parte dovuti alla concorrenza; **non ancora riesaminati in serie**.

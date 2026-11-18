@@ -1,16 +1,16 @@
 // Public policy in the interface: designing a measure, its projected bill, the Government's desk,
 // the budget law and the state of the country's policy areas, security and accounts.
-import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, FINANCING, GOVERNMENT_LINES, INSTRUMENT_KINDS, INTENSITY, MINISTRIES, POLICY_AREAS, SOCIAL_TABLE, SPENDING_REVIEW, TERRITORIAL_TARGETS } from '../data/simulation/policy-rules.js?v=20261118-22';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261118-22';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261118-22';
-import { areaTable, budgetImpact, measureDesign, normalizeBudgetPlan, projectMeasure } from '../core/society-engine.js?v=20261118-22';
-import { BUDGET_SECTORS, EU_CALLS, FISCAL_LEVERS, PROJECT_RULES, PROJECT_TYPES } from '../data/simulation/project-rules.js?v=20261118-22';
-import { callRequirement, euView, isActive, projectQuote, projectView } from '../core/project-engine.js?v=20261118-22';
-import { accordCriterion, accordKindLabel, activeMinisters, budgetReactions, groupProfile, partnerSatisfaction, stageWait } from '../core/parliament-engine.js?v=20261118-22';
-import { GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20261118-22';
-import { glyph } from './visuals.js?v=20261118-22';
-import { renderCabinetLife } from './cabinet-life-view.js?v=20261118-22';
-import { esc, stateBadge } from './charts.js?v=20261118-22';
+import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, FINANCING, GOVERNMENT_LINES, INSTRUMENT_KINDS, INTENSITY, MINISTRIES, POLICY_AREAS, SOCIAL_TABLE, SPENDING_REVIEW, TERRITORIAL_TARGETS } from '../data/simulation/policy-rules.js?v=20261118-23';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261118-23';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261118-23';
+import { areaTable, budgetImpact, measureDesign, normalizeBudgetPlan, projectMeasure } from '../core/society-engine.js?v=20261118-23';
+import { BUDGET_SECTORS, EU_CALLS, FISCAL_LEVERS, PROJECT_RULES, PROJECT_TYPES } from '../data/simulation/project-rules.js?v=20261118-23';
+import { callRequirement, euView, isActive, projectQuote, projectView } from '../core/project-engine.js?v=20261118-23';
+import { accordCriterion, accordKindLabel, activeMinisters, budgetReactions, groupProfile, partnerSatisfaction, stageWait } from '../core/parliament-engine.js?v=20261118-23';
+import { GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20261118-23';
+import { glyph } from './visuals.js?v=20261118-23';
+import { renderCabinetLife } from './cabinet-life-view.js?v=20261118-23';
+import { esc, stateBadge } from './charts.js?v=20261118-23';
 
 const numFormats = new Map();
 const num = (value, digits = 1) => { let nf = numFormats.get(digits); if (!nf) { nf = new Intl.NumberFormat('it-IT', { maximumFractionDigits: digits }); numFormats.set(digits, nf); } return nf.format(Number(value ?? 0)); };

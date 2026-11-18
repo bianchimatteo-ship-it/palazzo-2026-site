@@ -1,16 +1,16 @@
 // The interactive hemicycle of the Parlamento section: Camera and Senato apart, one marker per seat (real
 // parliamentarians in office, the player's seat), colours by group or by party, filters by party, group and
 // committee, a card for every parliamentarian and, for a simulated vote, the vote of every seat.
-import { toneEdge } from '../data/party-brand.js?v=20261118-22';
-import { chamberRoster, committeesOf, forceColorResolver, partyColors, seatColor, UNKNOWN_COLOR } from '../core/hemicycle.js?v=20261118-22';
-import { individualVotes, VOTE_CHOICES, voteCatalog, voteSummary } from '../core/vote-engine.js?v=20261118-22';
-import { BASIS_LABELS, electionListOf, groupAffiliation, groupLabel, politicianAffiliation } from '../data/repositories/party-links.js?v=20261118-22';
-import { formatDate } from '../core/time.js?v=20261118-22';
-import { placeholderPerson } from '../core/seat-roster.js?v=20261118-22';
-import { glyph } from './visuals.js?v=20261118-22';
-import { badge, esc, num, table } from './sections-kit.js?v=20261118-22';
+import { toneEdge } from '../data/party-brand.js?v=20261118-23';
+import { chamberRoster, committeesOf, forceColorResolver, partyColors, seatColor, UNKNOWN_COLOR } from '../core/hemicycle.js?v=20261118-23';
+import { individualVotes, VOTE_CHOICES, voteCatalog, voteSummary } from '../core/vote-engine.js?v=20261118-23';
+import { BASIS_LABELS, electionListOf, groupAffiliation, groupLabel, politicianAffiliation } from '../data/repositories/party-links.js?v=20261118-23';
+import { formatDate } from '../core/time.js?v=20261118-23';
+import { placeholderPerson } from '../core/seat-roster.js?v=20261118-23';
+import { glyph } from './visuals.js?v=20261118-23';
+import { badge, esc, num, table } from './sections-kit.js?v=20261118-23';
 
-import { HEMICYCLE_DEFAULTS } from './hemicycle-defaults.js?v=20261118-22';
+import { HEMICYCLE_DEFAULTS } from './hemicycle-defaults.js?v=20261118-23';
 export { HEMICYCLE_DEFAULTS };
 export const ROSTER_PAGE = 40;
 const CHAMBER_LABELS = { camera: 'Camera dei deputati', senato: 'Senato della Repubblica' };
