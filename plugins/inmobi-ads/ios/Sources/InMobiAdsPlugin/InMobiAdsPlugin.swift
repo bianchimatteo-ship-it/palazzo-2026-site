@@ -48,7 +48,7 @@ public class InMobiAdsPlugin: CAPPlugin, CAPBridgedPlugin {
         func interstitialDidPresent(_ interstitial: IMInterstitial) {}
         func interstitialWillDismiss(_ interstitial: IMInterstitial) {}
         func interstitial(_ interstitial: IMInterstitial, didInteractWithParams params: [String: Any]?) {}
-        func userWillLeaveApplication(fromInterstitial interstitial: IMInterstitial) {}
+        func userWillLeaveApplicationFromInterstitial(_ interstitial: IMInterstitial) {}   // the protocol's real name (Xcode: «nearly matches»); the old spelling never got called
 
         private func finish(displayed: Bool) {
             guard let call = showCall else { return }
@@ -83,11 +83,11 @@ public class InMobiAdsPlugin: CAPPlugin, CAPBridgedPlugin {
         parameters.isTaggedForUnderAgeOfConsent = false   // the audience is 14+
         ConsentInformation.shared.requestConsentInfoUpdate(with: parameters) { [weak self] error in
             // the state is refreshed; on an error nothing is shown and whatever the SDK says about `canRequestAds` (true only if consent was already obtained) is reported as it is
-            guard error == nil else { call.resolve(Self.consentResult()); return }
+            guard error == nil else { call.resolve(InMobiAdsPlugin.consentResult()); return }
             Task { @MainActor in
-                guard let self = self, let controller = self.topController(), ConsentInformation.shared.formStatus == FormStatus.available else { call.resolve(Self.consentResult()); return }
+                guard let self = self, let controller = self.topController(), ConsentInformation.shared.formStatus == FormStatus.available else { call.resolve(InMobiAdsPlugin.consentResult()); return }
                 do { try await ConsentForm.loadAndPresentIfRequired(from: controller) } catch { /* the form failed: the status below decides */ }
-                call.resolve(Self.consentResult())
+                call.resolve(InMobiAdsPlugin.consentResult())
             }
         }
     }
