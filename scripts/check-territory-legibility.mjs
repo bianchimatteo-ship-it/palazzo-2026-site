@@ -81,7 +81,7 @@ try {
   for (const [width, height, mobile] of widths) {
     await viewport(width, height, mobile);
     await pause(300);
-    await evaluate(`(async () => { document.querySelector('[data-nav="sondaggi"]')?.click(); await new Promise(r => setTimeout(r, 700)); document.querySelector('[data-obs-area="territori"]')?.click(); await new Promise(r => setTimeout(r, 600)); return true; })()`);
+    await evaluate(`(async () => { document.querySelector('[data-nav="sondaggi"]')?.click(); await new Promise(r => setTimeout(r, 700)); document.querySelector('[data-section-tab="osservatorio"][data-section-tab-value="territori"]')?.click(); await new Promise(r => setTimeout(r, 600)); return true; })()`);
     if (!(await evaluate('Boolean(document.querySelector(".itmap-tile"))'))) { report.push(`${width}px · la cartina non si apre`); continue; }
     for (const [label, script] of steps) {
       if (script) { await evaluate(`(async () => { ${script}; await new Promise(r => setTimeout(r, 500)); return true; })()`); }
@@ -92,7 +92,7 @@ try {
       if (!result.legend || !result.source || !result.key) report.push(`${width}px · ${label} · legenda (${result.legend}), fonte (${result.source}) o chiave (${result.key}) mancanti`);
     }
     // The line chart of the quadro: the narrow layout on a phone, the wide one from the tablet up.
-    await evaluate(`(async () => { document.querySelector('[data-obs-area="quadro"]')?.click(); await new Promise(r => setTimeout(r, 600)); return true; })()`);
+    await evaluate(`(async () => { document.querySelector('[data-section-tab="osservatorio"][data-section-tab-value="quadro"]')?.click(); await new Promise(r => setTimeout(r, 600)); return true; })()`);
     const lines = await evaluate(`(() => { const block = document.querySelector('.trend-chart'); if (!block) return null; const visible = [...block.querySelectorAll('svg')].filter(s => getComputedStyle(s).display !== 'none').map(s => s.getAttribute('class')); return { visible, width: block.getBoundingClientRect().width }; })()`);
     if (lines) {
       const expected = lines.width <= 380 ? 'lc-narrow' : lines.width <= 600 ? 'lc-mid' : 'lc-wide';
