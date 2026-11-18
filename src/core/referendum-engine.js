@@ -15,7 +15,7 @@ export const ABROGATIVE = Object.freeze({
   note: 'Abroga una legge, in tutto o in parte, solo se vota la maggioranza degli aventi diritto e prevalgono i SÌ.'
 });
 export const CONSTITUTIONAL = Object.freeze({
-  id: 'costituzionale', label: 'Referendum costituzionale', basis: 'art. 138 Cost.', signatures: 500000, councils: 5, fifth: 0.2, twoThirds: 2 / 3, requestWeeks: 13, deliberationGapWeeks: 13, campaignWeeks: 10,
+  id: 'costituzionale', label: 'Referendum costituzionale', basis: 'art. 138 Cost.', signatures: 500000, councils: 5, fifth: 0.2, twoThirds: 2 / 3, requestMonths: 3, deliberationGapMonths: 3, requestWeeks: 13, deliberationGapWeeks: 13, campaignWeeks: 10,
   note: 'Conferma o respinge una riforma costituzionale approvata senza i due terzi: nessun quorum, vince la maggioranza dei voti validi.'
 });
 export const COUNCIL_ROUTE = Object.freeze({ cost: { days: 2, capital: 3, funds: 600 }, chance: 0.42 });
@@ -31,6 +31,16 @@ export const EXCLUDED = Object.freeze([
 ]);
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
 const hash = value => [...String(value)].reduce((n, char) => (Math.imul(n, 31) + char.charCodeAt(0)) >>> 0, 2166136261) || 1;
+// Calendar months, not weeks: «tre mesi» is the same day three months later; when that day does not exist (31 January + 1 month) the last day of the target month is used (so 30 November + 3 months = 28/29
+// February, 31 August + 6 months = 28/29 February), leap years and the change of year included. Dates are noon UTC strings (YYYY-MM-DD), as everywhere in the engine.
+export function addMonths(date, months) {
+  const d = new Date(`${date}T12:00:00Z`);
+  const day = d.getUTCDate();
+  d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() + months);
+  const last = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0, 12)).getUTCDate();
+  d.setUTCDate(Math.min(day, last));
+  return d.toISOString().slice(0, 10);
+}
 const addDays = (date, days) => { const d = new Date(`${date}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().slice(0, 10); };
 const record = (item, date, text, phase = null) => ({ ...item, steps: [{ date, text, phase: phase ?? item.phase }, ...(item.steps ?? [])].slice(0, 40) });
 const pct = value => `${Math.round(value * 10) / 10}%`.replace('.', ',');
@@ -279,7 +289,7 @@ function advanceRevision(input, ctx, rand) {
     changed = true;
     const r = deliberate(ref, ctx, rand, 1);
     if (!(r.camera.absolute && r.senato.absolute)) { ref = close(ref, ctx.date, 'respinta', 'La riforma non ottiene la maggioranza alla prima deliberazione: decade.'); lines.push(`Revisione costituzionale «${ref.title}»: decade alla prima deliberazione.`); return { referendum: ref, lines, effects, changed }; }
-    ref.phase = 'pausa'; ref.secondAt = addDays(ctx.date, CONSTITUTIONAL.deliberationGapWeeks * 7);
+    ref.phase = 'pausa'; ref.secondAt = addMonths(ctx.date, CONSTITUTIONAL.deliberationGapMonths);
     ref = record(ref, ctx.date, 'Prima deliberazione approvata nelle due Camere. Seguono almeno tre mesi di intervallo.');
     lines.push(`Revisione costituzionale «${ref.title}»: prima deliberazione approvata.`);
   } else if (ref.phase === 'pausa' && ctx.date >= ref.secondAt) {
@@ -287,7 +297,7 @@ function advanceRevision(input, ctx, rand) {
     const r = deliberate(ref, ctx, rand, 2);
     if (!(r.camera.absolute && r.senato.absolute)) { ref = close(ref, ctx.date, 'respinta', 'La riforma non ottiene la maggioranza assoluta alla seconda deliberazione: non è approvata.'); lines.push(`Revisione costituzionale «${ref.title}»: respinta alla seconda deliberazione.`); return { referendum: ref, lines, effects, changed }; }
     if (r.camera.twoThirds && r.senato.twoThirds) { ref = close(ref, ctx.date, 'in-vigore', 'La riforma è approvata dai due terzi dei membri di entrambe le Camere alla seconda deliberazione: il referendum non è possibile e la riforma entra in vigore.'); lines.push(`La riforma costituzionale «${ref.title}» è approvata con i due terzi: nessun referendum, entra in vigore.`); effects = { reputation: 0, popularity: 0, constitutional: { carried: true, noReferendum: true } }; return { referendum: ref, lines, effects, changed }; }
-    ref.phase = 'richiesta'; ref.requestUntil = addDays(ctx.date, CONSTITUTIONAL.requestWeeks * 7); ref.opposition = { camera: Math.round((1 - ctx.backing.camera) * 1000) / 10, senato: Math.round((1 - ctx.backing.senato) * 1000) / 10 };
+    ref.phase = 'richiesta'; ref.requestUntil = addMonths(ctx.date, CONSTITUTIONAL.requestMonths); ref.opposition = { camera: Math.round((1 - ctx.backing.camera) * 1000) / 10, senato: Math.round((1 - ctx.backing.senato) * 1000) / 10 };
     ref = record(ref, ctx.date, `Riforma approvata a maggioranza assoluta (senza i due terzi): entro il ${formatDate(ref.requestUntil)} un quinto dei membri di una Camera, 500.000 elettori o cinque Consigli regionali possono chiedere il referendum.`);
     lines.push(`La riforma costituzionale «${ref.title}» è approvata senza i due terzi: si può chiedere il referendum entro tre mesi.`);
   } else if (ref.phase === 'richiesta') {

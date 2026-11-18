@@ -110,7 +110,7 @@ const backing = share => ({ camera: share, senato: share });
   // two thirds at the second deliberation: no referendum
   let r = R.advanceReferendum(revision, ctxAt('2027-01-31', 5, { backing: backing(0.7) })).referendum;
   assert.equal(r.phase, 'pausa', 'prima deliberazione approvata: segue l’intervallo di tre mesi');
-  assert.ok(Date.parse(r.secondAt) - Date.parse('2027-01-31') >= 90 * 86400000, 'l’intervallo è di almeno tre mesi');
+  assert.equal(r.secondAt, R.addMonths('2027-01-31', 3), 'l’intervallo è di tre mesi di calendario (31 gennaio → 30 aprile)'); assert.ok(Date.parse(r.secondAt) - Date.parse('2027-01-31') >= 89 * 86400000);
   const early = R.advanceReferendum(r, ctxAt('2027-03-01', 9, { backing: backing(0.7) })).referendum;
   assert.equal(early.phase, 'pausa', 'prima di tre mesi la seconda deliberazione non si fa');
   const third = R.advanceReferendum(r, ctxAt(r.secondAt, 19, { backing: backing(0.72) }));
@@ -125,11 +125,11 @@ const backing = share => ({ camera: share, senato: share });
   const second = R.advanceReferendum(r, ctxAt(r.secondAt, 19, { backing: backing(0.58) })).referendum;
   assert.equal(second.phase, 'richiesta', 'maggioranza assoluta ma non i due terzi: si può chiedere il referendum');
   assert.ok(second.requestUntil && Date.parse(second.requestUntil) - Date.parse(r.secondAt) >= 85 * 86400000, 'entro tre mesi dalla pubblicazione');
-  assert.throws(() => R.requestConstitutional(second, { route: 'quinto', date: '2027-08-01', week: 30, opposition: { camera: 10, senato: 10 } }), /un quinto/);
-  assert.throws(() => R.requestConstitutional(second, { route: 'firme', date: '2027-08-01', week: 30, valid: 400000 }), /500\.000 firme/);
-  assert.throws(() => R.requestConstitutional(second, { route: 'consigli', date: '2027-08-01', week: 30, regions: ['Lazio', 'Veneto'] }), /cinque Consigli/);
+  assert.throws(() => R.requestConstitutional(second, { route: 'quinto', date: '2027-07-15', week: 30, opposition: { camera: 10, senato: 10 } }), /un quinto/);
+  assert.throws(() => R.requestConstitutional(second, { route: 'firme', date: '2027-07-15', week: 30, valid: 400000 }), /500\.000 firme/);
+  assert.throws(() => R.requestConstitutional(second, { route: 'consigli', date: '2027-07-15', week: 30, regions: ['Lazio', 'Veneto'] }), /cinque Consigli/);
   assert.throws(() => R.requestConstitutional(second, { route: 'quinto', date: '2030-01-01', week: 30, opposition: { camera: 42, senato: 42 } }), /scaduto/);
-  const asked = R.requestConstitutional(second, { route: 'quinto', date: '2027-08-01', week: 30, opposition: { camera: 42, senato: 42 } });
+  const asked = R.requestConstitutional(second, { route: 'quinto', date: '2027-07-15', week: 30, opposition: { camera: 42, senato: 42 } });
   assert.ok(asked.done && asked.referendum.request.by === 'quinto');
   // no request in three months and a weak opposition: the reform enters into force
   const weakOpposition = { ...second, opposition: { camera: 5, senato: 5 } };
@@ -204,4 +204,7 @@ if (current.carried) assert.equal(store.referendumTargets().find(item => item.st
   assert.equal(asked.request.by, 'quinto', 'la richiesta di un quinto dei membri è registrata');
   assert.throws(() => store.requestConstitutionalReferendum('riforma-gioco', 'quinto'), /già stato chiesto/);
 }
+// ---- deadlines in calendar months (art. 138): end of month, leap years, change of year ----
+for (const [from, months, expected] of [['2027-01-31', 3, '2027-04-30'], ['2026-11-30', 3, '2027-02-28'], ['2027-11-30', 3, '2028-02-29'], ['2026-12-15', 3, '2027-03-15'], ['2028-01-31', 1, '2028-02-29'], ['2027-01-31', 1, '2027-02-28'], ['2026-05-31', 3, '2026-08-31'], ['2026-08-31', 6, '2027-02-28'], ['2028-02-29', 12, '2029-02-28'], ['2026-10-01', 3, '2027-01-01']]) assert.equal(R.addMonths(from, months), expected, `${from} + ${months} mesi = ${expected}`);
+assert.equal(R.CONSTITUTIONAL?.deliberationGapMonths ?? 3, 3);
 console.log('check-referendum: ok');
