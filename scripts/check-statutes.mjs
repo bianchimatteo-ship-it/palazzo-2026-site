@@ -22,6 +22,10 @@ assert.equal(L.registerStatutes(p, '2027-03-08').statutes.length, p.statutes.len
 assert.ok(L.statuteBlock(p, { area: 'scuola', instrument: 'investimento' }, '2027-06-01'), 'Stessa area e stesso strumento: bloccata.');
 assert.ok(L.statuteBlock(p, { title: 'Fondo per la Scuola di Montagna!' }, '2027-06-01'), 'Stesso titolo scritto in modo diverso: bloccata.');
 assert.equal(L.statuteBlock(p, { area: 'scuola', instrument: 'regole' }, '2027-06-01'), null, 'Un altro strumento sulla stessa area è un’altra legge.');
+// no false positives: the same area AND the same instrument, but another problem (another title, another content), is another law; an equivalent text under another title is the same law
+assert.equal(L.statuteBlock(p, { area: 'scuola', instrument: 'investimento', title: 'Mense gratuite nelle scuole elementari', summary: 'Ogni scuola elementare offre un servizio di mensa gratuito per i bambini delle famiglie a basso reddito.' }, '2027-06-01'), null, 'Stessa area e stesso strumento ma un problema diverso: libera.');
+assert.equal(L.statuteBlock(p, { area: 'scuola', instrument: 'investimento', title: 'Piano di edilizia scolastica antisismica', summary: 'Messa in sicurezza degli edifici scolastici dalle scosse sismiche con interventi strutturali.' }, '2027-06-01'), null, 'Un altro piano nella stessa area e con lo stesso strumento: libero.');
+assert.ok(L.statuteBlock(p, { area: 'scuola', instrument: 'investimento', title: 'Sostegno degli istituti scolastici montani', summary: statute.summary }, '2027-06-01'), 'Stesso contenuto con un altro titolo: bloccata.');
 assert.equal(L.statuteBlock(p, { area: 'scuola', instrument: 'investimento', amends: statute.id }, '2027-06-01'), null, 'Modificare o abrogare resta possibile.');
 assert.equal(L.statuteBlock(p, { area: 'scuola', instrument: 'investimento' }, '2030-01-01') === null || p.legislature?.number !== undefined, true, 'Il blocco ha una durata.');
 

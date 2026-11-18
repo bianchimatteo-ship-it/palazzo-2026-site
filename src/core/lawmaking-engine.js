@@ -143,7 +143,7 @@ function generateBills(parliament, { date, rand, society, world }) {
   const partyLabel = id => world?.parties?.find(item => item.id === id)?.label ?? null;
   const add = spec => {
     // a law already in force on the same area with the same instrument (or with the same title) is not brought back: it would give the same advantages twice
-    if ((spec.kind ?? 'ddl') === 'ddl' && statuteBlock(next, { area: spec.area, instrument: spec.design?.instrument, title: spec.title, summary: spec.summary }, date)) return null;
+    if ((spec.kind ?? 'ddl') === 'ddl' && statuteBlock(next, { area: spec.area, instrument: spec.design?.instrument, title: spec.title, summary: spec.summary, family: true }, date)) return null;
     const law = newLaw(next, spec);
     next = record({ ...next, laws: [...(next.laws ?? []), law] }, date, 'legge-presentata', `${spec.sponsor.label} presenta “${law.title}”.`, { lawId: law.id, sponsor: spec.sponsor.kind, auto: true });
     created.push(law);

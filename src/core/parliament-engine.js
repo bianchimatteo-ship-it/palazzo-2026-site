@@ -226,11 +226,13 @@ const STOP = new Set(['della', 'delle', 'degli', 'dello', 'dell', 'alla', 'alle'
 export const contentStems = text => new Set(titleKey(text).split(' ').filter(word => word.length > 3 && !STOP.has(word)).map(word => word.slice(0, 5)));
 export const contentOverlap = (a, b) => { const x = contentStems(a), y = contentStems(b); if (x.size < 3 || y.size < 3) return 0; let common = 0; for (const word of x) if (y.has(word)) common++; return common / Math.min(x.size, y.size); };
 export const EQUIVALENT_OVERLAP = 0.6;
-export function statuteBlock(parliament, { area = null, instrument = null, title = null, summary = null, amends = null, repeals = null } = {}, date) {
+// A proposal is blocked when it is the SAME law: the same title, a text that says substantially the same (word-stem overlap ≥ EQUIVALENT_OVERLAP, whatever the title), or — only when nothing but the area and the
+// instrument is known — the same area and instrument; `family: true` (the bills the Chambers generate by themselves, which are variants of one policy per area and instrument) keeps that rule always. Sharing area and instrument with a title and a content that are different is a different problem: it is NOT blocked (no false positives).
+export function statuteBlock(parliament, { area = null, instrument = null, title = null, summary = null, amends = null, repeals = null, family = false } = {}, date) {
   if (amends || repeals) return null;
   const legislature = parliament?.legislature?.number ?? null;
   return statutesOf(parliament).find(item => item.status === 'vigente' && item.blockable !== false
-    && ((area && instrument && item.area === area && item.instrument === instrument) || (title && titleKey(item.title) === titleKey(title)) || (area && item.area === area && (title || summary) && contentOverlap(`${item.title} ${item.summary ?? ''}`, `${title ?? ''} ${summary ?? ''}`) >= EQUIVALENT_OVERLAP))
+    && ((area && instrument && item.area === area && item.instrument === instrument && (family || (!title && !summary))) || (title && titleKey(item.title) === titleKey(title)) || (area && item.area === area && (title || summary) && contentOverlap(`${item.title} ${item.summary ?? ''}`, `${title ?? ''} ${summary ?? ''}`) >= EQUIVALENT_OVERLAP))
     && ((legislature !== null && item.legislature === legislature) || weeksBetweenDates(item.approvedAt, date) < STATUTE_BLOCK_WEEKS)) ?? null;
 }
 const weeksBetweenDates = (from, to) => Math.floor((Date.parse(`${to}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) / 604800000);
