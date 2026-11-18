@@ -26,7 +26,8 @@ const portalFiles = (await walk(join(ROOT, 'portal'))).sort();
 const GAME = /(^|\/)(main\.js|sw\.js|store\.js|app\.js|styles\.css|theme\.css|site\.webmanifest|database\.json)$|^src\/(core|ui|data\/real|data\/simulation|data\/i18n)\//;
 assert.deepEqual(portalFiles.filter(name => GAME.test(name)), [], 'Il portale non contiene file del gioco.');
 const worker = await import('../worker.js');
-for (const name of portalFiles) assert.ok(worker.PORTAL_PATHS.test(`/${name}`), `Il portale serve ${name}.`);
+const { PORTAL_PATHS } = await import('../worker-constants.js');
+for (const name of portalFiles) assert.ok(PORTAL_PATHS.test(`/${name}`), `Il portale serve ${name}.`);
 lines.push(`produzione: risorse invariate, ${portalFiles.length} file pubblici (portale e pagine legali), nessun file del gioco`);
 
 // ---------- 2. production Worker: the game does not come out, not even if the assets held it ----------

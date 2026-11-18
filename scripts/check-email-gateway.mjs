@@ -18,7 +18,7 @@ const SECRET = `segreto-di-prova-${Math.random().toString(16).slice(2)}`;
 const base = { ACCOUNTS: d1, ADMIN_ARCHIVE: { get: async () => null, put: async () => {}, delete: async () => {} }, ASSETS: { fetch: async () => new Response('asset') }, PUBLIC_BASE_URL: ORIGIN };
 const configured = { ...base, EMAIL_GATEWAY_URL: GATEWAY, EMAIL_GATEWAY_SECRET: SECRET };
 const worker = (await import('../worker.js?deploy=email-gateway')).default;
-const { MAIL_SUBJECTS } = await import('../worker.js?deploy=email-gateway');
+const { MAIL_SUBJECTS } = await import('../worker-constants.js');
 
 // the simulated gateway: `behaviour` decides the answer; every call is recorded
 const calls = [];

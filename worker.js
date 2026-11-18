@@ -2,6 +2,7 @@
 // corrections (Workers KV), and player accounts with online career saves (Cloudflare D1).
 // The real dataset files are never written.
 import { handleTranslate } from './worker-translate.js';
+import { REWARD_MIGRATION, REWARD_COLUMNS, ACTIVITY_KEEP_DAYS, MAIL_SUBJECTS, RETENTION, PORTAL_PATHS } from './worker-constants.js';
 import { resolveAds, PLATFORMS } from './src/data/ads-config.js';
 const ARCHIVE_KEY = 'archivio-condiviso';
 const PIN_KEY = 'pin-amministratore';
@@ -187,11 +188,6 @@ let schemaReady = null;
 // Migration «0006-rewards»: the columns that tables made by an earlier version of the rewards lack. The tables are read with PRAGMA table_info and a column is added ONLY when it is missing; any other error
 // (a table that cannot be read, an ALTER that fails for a reason other than a column that another request has just added) is NOT ignored: schemaReady is reset and the request fails, so that nothing runs on a half-migrated schema.
 // Nothing existing is altered or deleted: the rows stay as they were.
-export const REWARD_MIGRATION = '0006-rewards';
-export const REWARD_COLUMNS = {
-  reward_claims: [['device_id', 'TEXT']],
-  reward_time: [['base_ms', 'INTEGER NOT NULL DEFAULT 0'], ['folded_ms', 'INTEGER NOT NULL DEFAULT 0'], ['spans', "TEXT NOT NULL DEFAULT '[]'"], ['total_ms', 'INTEGER NOT NULL DEFAULT 0'], ['rev', 'INTEGER NOT NULL DEFAULT 0'], ['updated_at', "TEXT NOT NULL DEFAULT ''"]]
-};
 const columnsOf = async (db, table) => ((await db.prepare(`PRAGMA table_info(${table})`).all()).results ?? []).map(row => row.name);
 async function migrateRewards(db) {
   for (const [table, wanted] of Object.entries(REWARD_COLUMNS)) {
@@ -385,7 +381,6 @@ async function openSession(db, userId) {
 // What is counted and why: the ACCOUNTS (a registered player), nothing else. A day of activity is «this account signed in or used its online saves on this day» (Europe/Rome); the row holds the account
 // and the day, no address, no device, no user agent, no content of the game. Players with no account are not counted (nothing identifies them, and nothing is added to identify them). Rows older than
 // ACTIVITY_KEEP_DAYS go away; the rows of an account go with the account. Writing is OFF until the owner sets ADMIN_STATS=on, after the privacy notice has been updated (docs/statistiche-admin.md).
-export const ACTIVITY_KEEP_DAYS = 400;
 export const statsOn = env => env?.ADMIN_STATS === 'on';
 let activityPurgedDay = null;
 export async function noteActivity(env, db, userId, now = Date.now()) {
@@ -546,11 +541,6 @@ const conflictAnswer = async (request, db, account, slot, extra = {}) => json(re
 // gateway's SHARED_SECRET. Nothing is simulated: a message counts as sent only when the gateway answers 200 with `{ "ok": true }`. Without both settings nothing is sent and the service says so
 // (/api/account/status). `env.EMAIL_SEND` is a hook only for tests that run the Worker in process: a Worker's secrets and variables are strings, so it cannot be set in production.
 // The gateway only accepts the subjects listed here (its allow-list must contain exactly these); the secret is never logged or put in an error message.
-export const MAIL_SUBJECTS = Object.freeze({
-  verify: 'POLITICANDO 2026 — conferma il tuo indirizzo email',
-  reset: 'POLITICANDO 2026 — nuova password',
-  retention: 'POLITICANDO 2026: il tuo account sarà eliminato per inattività'
-});
 const GATEWAY_TIMEOUT_MS = 15_000; // (EMAIL_GATEWAY_TIMEOUT_MS only lets a test shorten it)
 const mailConfigured = env => typeof env.EMAIL_SEND === 'function' || Boolean(/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(String(env.EMAIL_GATEWAY_URL ?? '')) && env.EMAIL_GATEWAY_SECRET);
 const mailError = (message, code) => Object.assign(new Error(message), { code });
@@ -608,7 +598,6 @@ export async function adminCredentialRecord(pin) {
   const salt = randomToken(12);
   return { salt, hash: await pinHash(pin, salt), since: new Date().toISOString(), epoch: randomToken(8) };
 }
-export const RETENTION = Object.freeze({ inactivityMonths: 12, noticeDays: 30, batch: 50 });
 export function retentionState(env) {
   const reasons = [];
   if (env.RETENTION_ENABLED !== '1') reasons.push('RETENTION_ENABLED non è «1»: la procedura è spenta.');
@@ -1251,7 +1240,6 @@ async function handleApi(request, env) {
   return json(request, { error: 'Richiesta non riconosciuta.' }, 404);
 }
 
-export const PORTAL_PATHS = /^\/(?:index\.html|portal\.(?:js|css)|privacy(?:-en)?\.html|support(?:-en)?\.html|termini\.html|terms-en\.html|elimina-account\.html|delete-account-en\.html|favicon\.(?:ico|svg)|src\/legal\.css|src\/legal\/delete-account\.js|src\/data\/repositories\/(?:account-sync|career-visibility)\.js)?$/;
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
