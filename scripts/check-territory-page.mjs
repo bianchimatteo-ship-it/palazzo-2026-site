@@ -76,7 +76,7 @@ for (let n = 1; n <= pages; n++) {
   const rows = (html.match(/<tr data-territory-row>/g) ?? []).length;
   assert.ok(rows <= PAGE_SIZE && rows >= 1, `pagina ${n}: ${rows} righe`);
   assert.ok(/data-territory-pager/.test(html) && new RegExp(`Pagina ${n} di ${pages}`).test(plain(html)), 'Il paginatore dice dove sei');
-  for (const match of html.matchAll(/<th scope="row" data-label="Comune"><strong>([^<]+)<\/strong>/g)) { assert.ok(!seen.has(match[1]) || true); seen.add(match[1]); }
+  for (const match of html.matchAll(/<th scope="row" data-label="Comune"><strong>(?:<button[^>]*>)?([^<]+)/g)) { assert.ok(!seen.has(match[1]) || true); seen.add(match[1]); }
 }
 assert.ok(seen.size >= romaProvince.comuni.length - 3, `tutte le pagine insieme coprono i comuni della provincia (${seen.size}/${romaProvince.comuni.length})`);
 const p1 = page({ terr: key, terrPage: 1, terrSort: 'nome' }), p2 = page({ terr: key, terrPage: 2, terrSort: 'nome' });
@@ -132,4 +132,28 @@ assert.ok(!/NaN|undefined|\[object/.test(html), 'Nessun valore rotto');
   assert.ok(/data-territory-undocumented/.test(html) && /Lista Senza Dati/.test(html) && /non li inventa/.test(html), 'La pagina lo dichiara.');
   assert.ok(!/data-territory-undocumented/.test(renderTerritoryPage({ game: { week: { index: 1 } }, world: { parties: [] } }, overview, { geography, municipalities: db().municipalities, filters: {}, swatch, colorOf: () => '#456', labelOf: id => id })), 'Nessun avviso se i dati ci sono.');
 }
+
+// ---------- a party: the comuni where it comes first (counted from the votes drawn for every comune, adding up to the level above) ----------
+{
+  const html0 = page({});
+  const ids = [...html0.matchAll(/<select name="party"[\s\S]*?<\/select>/g)][0]?.[0].match(/value="([^"]+)"/g)?.map(v => v.slice(7, -1)).filter(Boolean) ?? [];
+  assert.ok(ids.length >= 3, 'Il menu dei partiti ha le liste del voto.');
+  const countOf = (filters) => { const out = page(filters); const m = out.match(/data-territory-wins-count="(\d+)"/); return m ? Number(m[1]) : null; };
+  const regions = [...html0.matchAll(/<select name="region"[\s\S]*?<\/select>/g)][0][0].match(/value="([^"]+)"/g).map(v => v.slice(7, -1)).filter(Boolean);
+  for (const id of ids.slice(0, 3)) {
+    const italy = countOf({ terrParty: id });
+    assert.ok(Number.isInteger(italy), `${id}: il conteggio dei comuni vinti c’è`);
+    const byRegion = regions.reduce((sum, code) => sum + countOf({ terr: code, terrParty: id }), 0);
+    assert.equal(byRegion, italy, `${id}: i comuni vinti in Italia (${italy}) sono la somma di quelli delle venti Regioni (${byRegion})`);
+    // every comune listed is really won: its votes (from the same draw) are the highest of its comune
+    const region = regions[0];
+    const out = page({ terr: region, terrParty: id });
+    const regionCount = countOf({ terr: region, terrParty: id });
+    assert.equal((out.match(/<tr data-territory-win>/g) ?? []).length, Math.min(25, regionCount), `${id}: le righe dell’elenco sono quelle vinte (fino a 25 per pagina)`);
+  }
+  const none = ids.map(id => countOf({ terrParty: id })).reduce((a, b) => a + b, 0);
+  const comuniTotal = hierarchy.reduce((sum, r) => sum + r.provinces.reduce((a, p) => a + p.comuni.length, 0), 0);
+  assert.equal(none, comuniTotal, 'Ogni comune ha un solo primo partito: la somma dei comuni vinti dai partiti con le liste (e da «Altri») è il totale dei comuni.');
+}
+
 console.log('check-territory-page: ok');

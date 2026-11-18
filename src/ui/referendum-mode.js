@@ -1,11 +1,11 @@
 // The page «Referendum»: the abrogative one (art. 75) and the constitutional confirmatory one (art. 138), kept apart in rules, phases, quorum and effects. Every button calls the store: nothing is decorative.
 // Figures of the votes are a simulation of the game (never a real result).
-import { REVISION_TOPICS, ABROGATIVE, CONSTITUTIONAL, CAMPAIGN_ACTIONS, COUNCIL_ROUTE, EXCLUDED, PHASES, pathOf, isActive } from '../core/referendum-engine.js?v=20261118-11';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261118-11';
-import { badge, card, empty, esc, foldPanel, kpi, sectionTabs } from './sections-kit.js?v=20261118-11';
-import { glyph } from './visuals.js?v=20261118-11';
-import { abrogativeSuggestions, CUSTOM_DRAFT, revisionDrafts } from '../data/referendum-drafts.js?v=20261118-11';
-import { formatDate } from '../core/time.js?v=20261118-11';
+import { REVISION_TOPICS, ABROGATIVE, CONSTITUTIONAL, CAMPAIGN_ACTIONS, COUNCIL_ROUTE, EXCLUDED, PHASES, pathOf, isActive } from '../core/referendum-engine.js?v=20261118-12';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261118-12';
+import { badge, card, empty, esc, foldPanel, kpi, sectionTabs } from './sections-kit.js?v=20261118-12';
+import { glyph } from './visuals.js?v=20261118-12';
+import { abrogativeSuggestions, CUSTOM_DRAFT, revisionDrafts } from '../data/referendum-drafts.js?v=20261118-12';
+import { formatDate } from '../core/time.js?v=20261118-12';
 
 const number = value => Math.round(Number(value) || 0).toLocaleString('it-IT');
 const pct = value => `${(Math.round(value * 10) / 10).toLocaleString('it-IT')}%`;
