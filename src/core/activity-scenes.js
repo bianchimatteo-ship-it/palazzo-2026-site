@@ -44,10 +44,19 @@ const approachText = (spec, sceneKey, familyId, approach) => {
 const STAT_LABELS = Object.freeze({ competence: 'competenza', charisma: 'carisma', reputation: 'reputazione' });
 
 // The family of topics: the ones not met in the last scenes of this kind first; among them by the seed (and a preference, e.g. the segment of the citizens).
-export function pickFamily(spec, seed, recent = [], prefer = null) {
+// `prefer` is a topic the situation REQUIRES (an open commitment to account for, the segment of the citizens met): it wins whenever it is fresh. `lean` is only the topic the activity is about: it makes that
+// topic more likely (three times as much as each of the others) but never certain, so the same activity does not bring the same topic every time it is done.
+export function pickFamily(spec, seed, recent = [], prefer = null, lean = null) {
   const fresh = spec.families.filter(family => !recent.slice(-3).includes(family.id));
   const pool = fresh.length ? fresh : spec.families;
-  return pool.find(family => family.id === prefer) ?? pickBy(pool, `${seed}|famiglia`);
+  const required = pool.find(family => family.id === prefer);
+  if (required) return required;
+  if (lean && pool.some(family => family.id === lean)) {
+    const weights = pool.map(family => family.id === lean ? 3 : 1);
+    let point = (hashOf(`${seed}|famiglia|peso`) % 1000) / 1000 * weights.reduce((a, b) => a + b, 0);
+    for (let index = 0; index < pool.length; index++) { point -= weights[index]; if (point < 0) return pool[index]; }
+  }
+  return pickBy(pool, `${seed}|famiglia`);
 }
 const character = (id, role, spec, seed, used, { roleLabel = null, partyLabel = '' } = {}) => {
   // The gender is explicit in the data: the role fixes it when its grammar does («Ministra», «Delegato», «Una maestra»), otherwise the seed chooses, and the name is taken from the pool of that gender (a name of the
@@ -91,7 +100,7 @@ export function createActivityScene({ id, seed, sceneKey, activityId, target = n
   const spec = ACTIVITY_SCENES[sceneKey];
   if (!spec) throw new Error('Scena non riconosciuta.');
   const context = ACTIVITY_CONTEXT[activityId] ?? null;
-  const family = pickFamily(spec, seed, recent, prefer ?? context?.prefer ?? null);
+  const family = pickFamily(spec, seed, recent, prefer, context?.prefer ?? null);
   const used = new Set();
   const roles = (activityId === 'cittadini' ? CITIZEN_GUESTS[family.id] : null) ?? GUESTS[sceneKey]?.[family.id] ?? [spec.cast[0].tag, spec.cast[1].tag];
   const heading = sceneKey === 'associazioni' ? HEADINGS[activityId === 'cittadini' ? 'cittadini' : 'associazioni'] : null;

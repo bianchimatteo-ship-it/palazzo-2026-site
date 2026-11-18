@@ -33,7 +33,12 @@ assert.equal(new Set(intros).size, intros.length, 'Nessuna apertura ripetuta tra
     const scene = createActivityScene({ id: `ctx-${id}`, seed: `ctx|${id}`, sceneKey: c.scene, activityId: id, player: { name: 'Anna Verdi', tag: 'Deputata' }, playerAvatar: null, stats: {} });
     const node = activityNode(scene);
     assert.equal(node.text, c.intro[0], `${id}: apre con la sua frase.`); assert.equal(node.title, c.title[0]);
-    assert.equal(scene.familyId, c.prefer, `${id}: parte dal suo argomento.`);
+    // the activity leans to its own topic (about three times as often as each other topic) but is not stuck to it: over many encounters other topics come too
+    const counts = new Map();
+    for (let n = 0; n < 60; n++) { const other = createActivityScene({ id: `ctx-${id}-${n}`, seed: `ctx|${id}|${n}`, sceneKey: c.scene, activityId: id, player: { name: 'Anna Verdi', tag: 'Deputata' }, playerAvatar: null, stats: {} }); counts.set(other.familyId, (counts.get(other.familyId) ?? 0) + 1); }
+    assert.ok((counts.get(c.prefer) ?? 0) / 60 >= 0.15, `${id}: parte spesso dal suo argomento (${counts.get(c.prefer) ?? 0}/60).`);
+    assert.ok(counts.size >= 4, `${id}: ma non sempre dallo stesso: ${counts.size} argomenti diversi in 60 incontri.`);
+    assert.ok((counts.get(c.prefer) ?? 0) / 60 <= 0.6, `${id}: l’argomento preferito non domina (${counts.get(c.prefer)}/60).`);
     assert.ok(activityNode(choose(scene, 'continua')).choices.length >= 3, `${id}: le scelte ci sono.`);
   }
 }
