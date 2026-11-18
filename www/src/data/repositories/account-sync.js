@@ -10,7 +10,7 @@
 // The last one is kept per CAREER (not per slot name and not per account) together with what the copy was when it was synced (its local revision and how far it had got). A copy
 // goes online only if it descends from that: an older copy with the same name does not inherit the newest revision. Without that proof (a copy that was never linked, a record written by
 // the old protocol) nothing is uploaded automatically: the player reconciles first.
-import { hiddenOwner, releaseCareersOf } from './career-visibility.js?v=20261118-19';
+import { hiddenOwner, releaseCareersOf } from './career-visibility.js?v=20261118-22';
 const PRODUCTION_ORIGIN = 'https://palazzo-2026-site.bianchimatteo657.workers.dev';
 const ACCOUNT_KEY = 'politicando.account.v1';
 // The old record (revision per slot and per account, with no provenance): never trusted again to authorize an upload; kept only so that nothing is erased.
@@ -331,4 +331,7 @@ export async function deleteCloudSave(slot) {
 export const claimRewardBlocks = body => call('/api/account/rewards/blocks', { method: 'POST', body });
 // A one-off community reward (today «instagram»): the Worker gives it once for each account: { claimed: true } the first time, { claimed: false, already: true, mine } afterwards.
 export const claimAdRewardOnServer = (id, careerId, device = null) => call('/api/account/rewards/ad', { method: 'POST', body: { id: String(id), ...(careerId ? { careerId: String(careerId) } : {}), ...(device ? { device: String(device) } : {}) } });
+// The remote advertising configuration (public, no account) and the booking of a rewarded video of a device without an account: the Worker validates both (docs/inmobi.md).
+export const fetchAdsConfig = () => call('/api/account/ads/config', { auth: false, timeout: 8000 });
+export const claimAdRewardForDevice = (id, careerId, device, platform = null) => call('/api/account/ads/reward', { method: 'POST', auth: false, body: { id: String(id), ...(careerId ? { careerId: String(careerId) } : {}), ...(device ? { device: String(device) } : {}), ...(platform ? { platform: String(platform) } : {}) } });
 export const claimCommunityReward = (reward, careerId, device = null) => call(`/api/account/rewards/community/${encodeURIComponent(reward)}`, { method: 'POST', body: { ...(careerId ? { careerId: String(careerId) } : {}), ...(device ? { device: String(device) } : {}) } });

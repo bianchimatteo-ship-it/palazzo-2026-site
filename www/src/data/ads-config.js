@@ -1,35 +1,61 @@
-// Rewarded advertising: OFF in every release. The ANDROID project does include the Capacitor AdMob plugin (@capacitor-community/admob: Google Mobile Ads SDK + UMP) and its adapter
-// (data/repositories/admob-adapter.js), but ADS_MODE below is 'off': no SDK call, no request, the video reward stays disabled (the button is off and says why). The iOS app has NO advertising SDK
-// and no ads ids (capacitor.config.json: includePlugins []). InMobi is NOT integrated: its account and placements exist in the owner's portal, but there is no InMobi SDK or adapter in this repository
-// (docs/admob.md, «InMobi»). Ids come only from the owner's own accounts, never invented or copied; nothing here may be filled with test or example ids in production.
-export const ADS_CONFIG = Object.freeze({
-  enabled: false,
-  appId: null,
-  rewardedUnitId: null
-});
-
-// ---------- AdMob: the ids of the owner's account, kept apart for each platform, and the mode that decides which ones may ever be used ----------
-// ADS_MODE: 'off' (the default and the value of every release: no SDK call, no request, the buttons say why they are off), 'test' (the official Google TEST ids, for development: never real ads) or 'live' (the owner's real
-// ids). 'live' may be set only after the tests, the privacy documents and the administrative checks of AdMob are done (docs/admob.md): the checks of the repository refuse a build whose mode is not 'off'.
-export const ADS_MODE = 'off';
-// The ids created by the owner in the AdMob account. Android only: the iOS app has no AdMob account, no app id and no ad units yet (the iOS ones will be new, separate ids), so nothing here may be used on iOS.
-export const ADS_PLATFORMS = Object.freeze({
-  android: Object.freeze({ appId: 'ca-app-pub-6404822903303014~1677702221', bannerId: 'ca-app-pub-6404822903303014/4792704744', interstitialId: 'ca-app-pub-6404822903303014/5092627610', rewardedUnitId: 'ca-app-pub-6404822903303014/6230148140' }),
-  ios: Object.freeze({ appId: null, bannerId: null, interstitialId: null, rewardedUnitId: null })
-});
-// The sample ids that Google publishes for testing (they never show real ads and earn nothing).
-export const GOOGLE_TEST_IDS = Object.freeze({ appId: 'ca-app-pub-3940256099942544~3347511713', bannerId: 'ca-app-pub-3940256099942544/6300978111', interstitialId: 'ca-app-pub-3940256099942544/1033173712', rewardedUnitId: 'ca-app-pub-3940256099942544/5224354917' });
-// What is in force for a platform and a mode: `enabled` is false in mode 'off' and on a platform without ids; in 'test' the sample ids are the only ones used (`testing` true).
-export function resolveAds(platform, mode = ADS_MODE) {
-  const own = ADS_PLATFORMS[platform];
-  if (!own || mode === 'off' || !['test', 'live'].includes(mode)) return Object.freeze({ enabled: false, testing: false, platform, mode: 'off', appId: null, bannerId: null, interstitialId: null, rewardedUnitId: null });
-  const ids = mode === 'test' ? GOOGLE_TEST_IDS : own;
-  const has = set => ['appId', 'bannerId', 'interstitialId', 'rewardedUnitId'].every(key => typeof set[key] === 'string' && set[key].startsWith('ca-app-pub-'));
-  // a platform is integrated only when the owner has created ITS OWN ids (iOS has none yet): until then it stays off even in test mode
-  const complete = has(own) && has(ids);
-  return Object.freeze({ enabled: complete, testing: mode === 'test', platform, mode, appId: complete ? ids.appId : null, bannerId: complete ? ids.bannerId : null, interstitialId: complete ? ids.interstitialId : null, rewardedUnitId: complete ? ids.rewardedUnitId : null });
-}
+// Advertising: InMobi is the ONLY provider of the game (Android and iOS). Nothing here calls an SDK: this file holds the SAFE DEFAULTS and the rules that turn the remote configuration (served by the Worker,
+// GET /api/ads/config, see worker.js and docs/inmobi.md) into what the app may do. Whatever the remote answer is, the result is clamped and validated here; an unreachable, invalid or missing answer means
+// the safe defaults below: every format OFF. Real ads stay OFF until the owner verifies the integration (mode 'test' by default: InMobi test mode, never real ads).
+//
+// Identifiers (the owner's, from the InMobi dashboard; they are PLACEMENT ids, not secrets):
+//   · App Key 10000256631 (the dashboard's id of the app: NOT used by the SDK, kept here for the record)
+//   · Rewarded 10000884972 · Banner 10000884973 · Interstitial 10000884974
+// The Account ID that the SDK needs to initialise is NOT any of these (it is the 32-character id of the InMobi account, Settings › Account IDs): the owner has not given it, so it is NOT written here; it is
+// delivered by the remote configuration (`accountId`). Without it the SDK is never initialised and no ad is requested.
+export const INMOBI = Object.freeze({ appKey: '10000256631', placements: Object.freeze({ rewarded: '10000884972', banner: '10000884973', interstitial: '10000884974' }), sdk: Object.freeze({ android: '11.5.1', ios: '11.5.0' }) });
+export const ADS_PROVIDER = 'inmobi';
+// 'test' (the default: InMobi test mode, no real ad, no earnings) or 'live' (set only by the remote configuration, after the checks of docs/inmobi.md). 'off' disables everything.
+export const ADS_MODE = 'test';
+export const FORMATS = Object.freeze(['rewarded', 'banner', 'interstitial']);
+export const PLATFORMS = Object.freeze(['android', 'ios']);
 // The pages (hash) of the game that may carry a banner: secondary screens only, never the home, a scene, the vote, the night or the weekly report.
 export const BANNER_PAGES = Object.freeze(['ricompense', 'notizie', 'archivio', 'impostazioni', 'storico']);
-// Interstitials: only when a week is closed, at most one every INTERSTITIAL.everyWeeks closed weeks, never closer than minGapMs to the previous interstitial or to a rewarded video, at most perDay a day.
+// Interstitials: only when a week is closed, at most one every `everyWeeks` closed weeks, never closer than `minGapMs` to the previous interstitial or to a rewarded video, at most `perDay` a day.
 export const INTERSTITIAL = Object.freeze({ everyWeeks: 3, minGapMs: 4 * 60_000, perDay: 4 });
+// What the remote configuration may change, and the limits it is held to (a value outside the limits is replaced by the default, never trusted).
+export const LIMITS = Object.freeze({ everyWeeks: [1, 52], minGapMs: [60_000, 3_600_000], perDay: [0, 12], rewardPoints: [0, 0.5] });
+const DEFAULT_POINTS = 0.15;
+const PLACEMENT = /^\d{8,20}$/, ACCOUNT_ID = /^[0-9a-f]{32}$/i;
+
+const off = (platform = 'android') => ({
+  platform, provider: ADS_PROVIDER, mode: 'test', testing: true, accountId: null, enabled: false, source: 'default',
+  rewarded: { enabled: false, placementId: INMOBI.placements.rewarded }, banner: { enabled: false, placementId: INMOBI.placements.banner }, interstitial: { enabled: false, placementId: INMOBI.placements.interstitial },
+  interstitialPolicy: { ...INTERSTITIAL }, rewardPoints: DEFAULT_POINTS
+});
+// Safe defaults for a platform: every format off, mode test, no account id.
+export const defaultAds = platform => Object.freeze(deepFreeze(off(platform)));
+const deepFreeze = value => { for (const item of Object.values(value)) if (item && typeof item === 'object') deepFreeze(item); return Object.freeze(value); };
+const num = value => (typeof value === 'number' ? value : typeof value === 'string' && value.trim() !== '' ? Number(value) : NaN);   // null, '' and booleans are not numbers (Number(null) would be 0)
+const clamp = (value, [min, max], fallback) => { const n = num(value); return Number.isFinite(n) && n >= min && n <= max ? n : fallback; };
+const flag = value => value === true;
+
+// The configuration in force for a platform: the safe defaults with the remote answer laid over them, field by field and validated. `remote` is the parsed JSON of the Worker ({ android: {...}, ios: {...}, ... }) or
+// null. A format is enabled only when the remote says `enabled: true` AND it has a well-formed placement id AND the SDK has a valid Account ID AND the mode is not 'off'; the mode can be 'live' only if the remote says so.
+export function resolveAds(platform, remote = null) {
+  const base = off(PLATFORMS.includes(platform) ? platform : 'android');
+  if (!PLATFORMS.includes(platform) || !remote || typeof remote !== 'object') return deepFreeze(base);
+  const shared = remote.all && typeof remote.all === 'object' ? remote.all : {}, mine = remote[platform] && typeof remote[platform] === 'object' ? remote[platform] : {};
+  const pick = key => ({ ...(shared[key] && typeof shared[key] === 'object' ? shared[key] : {}), ...(mine[key] && typeof mine[key] === 'object' ? mine[key] : {}) });
+  const root = { ...shared, ...mine };
+  const mode = root.mode === 'off' ? 'off' : root.mode === 'live' ? 'live' : 'test';
+  const accountId = typeof root.accountId === 'string' && ACCOUNT_ID.test(root.accountId.trim()) ? root.accountId.trim() : null;
+  const master = remote.enabled !== false && root.enabled !== false && mode !== 'off' && Boolean(accountId);
+  const out = { ...base, mode, testing: mode !== 'live', accountId: master ? accountId : null, source: 'remote' };
+  for (const format of FORMATS) {
+    const item = pick(format);
+    const placementId = typeof item.placementId === 'string' && PLACEMENT.test(item.placementId) ? item.placementId : INMOBI.placements[format];
+    out[format] = { enabled: master && flag(item.enabled), placementId };
+  }
+  const policy = pick('interstitialPolicy');
+  out.interstitialPolicy = { everyWeeks: Math.round(clamp(policy.everyWeeks, LIMITS.everyWeeks, INTERSTITIAL.everyWeeks)), minGapMs: Math.round(clamp(policy.minGapMs, LIMITS.minGapMs, INTERSTITIAL.minGapMs)), perDay: Math.round(clamp(policy.perDay, LIMITS.perDay, INTERSTITIAL.perDay)) };
+  out.rewardPoints = Math.round(clamp(root.rewardPoints, LIMITS.rewardPoints, DEFAULT_POINTS) * 100) / 100;
+  out.enabled = FORMATS.some(format => out[format].enabled);
+  return deepFreeze(out);
+}
+// Kept for the code that still reads the old shape (the rewarded button): enabled only when the rewarded format is on.
+export const ADS_CONFIG = Object.freeze({ enabled: false, appId: null, rewardedUnitId: null });

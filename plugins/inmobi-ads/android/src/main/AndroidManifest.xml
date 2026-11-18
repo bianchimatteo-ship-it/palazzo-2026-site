@@ -1,0 +1,3 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- The InMobi SDK declares what it needs (INTERNET, ACCESS_NETWORK_STATE, AD_ID) and the manifest merger adds it; nothing is requested here: no location, no storage, no contacts. -->
+</manifest>

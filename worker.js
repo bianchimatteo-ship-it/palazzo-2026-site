@@ -2,6 +2,7 @@
 // corrections (Workers KV), and player accounts with online career saves (Cloudflare D1).
 // The real dataset files are never written.
 import { handleTranslate } from './worker-translate.js';
+import { resolveAds, PLATFORMS } from './src/data/ads-config.js';
 const ARCHIVE_KEY = 'archivio-condiviso';
 const PIN_KEY = 'pin-amministratore';
 const MAX_BYTES = 1_500_000;
@@ -772,6 +773,29 @@ async function handleLogos(request, env, db, account, path) {
   return json(request, { ok: true, partyId, version, sha256: sha, bytes: bytes.length, mime, updatedAt: now }, row ? 200 : 201);
 }
 
+// ---------- Advertising (InMobi): remote configuration and the validation of every rewarded credit ----------
+// The configuration is the JSON variable `ADS_CONFIG` of the Worker (Cloudflare dashboard > Settings > Variables: no deploy of the code and no new version of the app; docs/inmobi.md lists the keys). It is validated
+// and clamped by the same function the app uses (src/data/ads-config.js): a missing or invalid variable means every format OFF. Nothing secret is in it (placement ids and the Account ID are public identifiers).
+const adsRemote = env => { try { const raw = typeof env.ADS_CONFIG === 'string' ? JSON.parse(env.ADS_CONFIG) : env.ADS_CONFIG; return raw && typeof raw === 'object' ? raw : null; } catch { return null; } };
+const adsFor = (env, platform) => resolveAds(platform, adsRemote(env));
+const adsPublic = env => Object.fromEntries(PLATFORMS.map(platform => { const r = adsFor(env, platform); return [platform, { mode: r.mode, enabled: r.enabled, accountId: r.accountId, rewarded: r.rewarded, banner: r.banner, interstitial: r.interstitial, interstitialPolicy: r.interstitialPolicy, rewardPoints: r.rewardPoints }]; }));
+// The credit of a rewarded video is decided HERE for accounts and guests alike: the rewarded format must be on for the platform, the completion id is booked once (a repeated or concurrent claim is recognised,
+// never credited twice) and the day's limit applies. The answer carries the points in force. NOTE: InMobi offers no server-to-server confirmation of a completion that this code can check (docs/inmobi.md): the
+// Worker validates the claim (configuration, uniqueness, limit), the SDK's own callback on the device validates the completion.
+async function bookAdReward(request, env, db, userId, body) {
+  const id = body?.id;
+  if (typeof id !== 'string' || !AD_COMPLETION_ID.test(id)) return json(request, { error: 'Completamento non valido.' }, 400);
+  const platform = typeof body?.platform === 'string' && PLATFORMS.includes(body.platform) ? body.platform : null;
+  const live = platform ? [adsFor(env, platform)] : PLATFORMS.map(item => adsFor(env, item));
+  const config = live.find(item => item.rewarded.enabled);
+  if (!config) return json(request, { error: 'I video con premio non sono al momento attivi.', code: 'disabled' }, 403);
+  const careerId = typeof body?.careerId === 'string' && REWARD_ID.test(body.careerId) ? body.careerId : null, device = typeof body?.device === 'string' && REWARD_ID.test(body.device) ? body.device : null;
+  const day = romeDay();
+  const written = await db.prepare('INSERT OR IGNORE INTO reward_ads (user_id, ad_id, day, claimed_at, career_id, device_id) SELECT ?, ?, ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM reward_ads WHERE user_id = ? AND day = ?) < ?').bind(userId, id, day, new Date().toISOString(), careerId, device, userId, day, AD_DAILY_MAX).run();
+  if (written?.meta?.changes > 0) return json(request, { ok: true, credited: true, points: config.rewardPoints });
+  if (await db.prepare('SELECT 1 AS found FROM reward_ads WHERE user_id = ? AND ad_id = ?').bind(userId, id).first()) return json(request, { ok: true, credited: false, duplicate: true, points: config.rewardPoints });
+  return json(request, { error: 'Hai raggiunto il limite giornaliero di video con premio.', code: 'limit' }, 429);
+}
 async function handleAccounts(request, env, url) {
   const db = env.ACCOUNTS;
   if (!db) return json(request, { error: 'Gli account non sono ancora configurati su questo sito.' }, 503);
@@ -780,6 +804,14 @@ async function handleAccounts(request, env, url) {
   const mail = mailConfigured(env);
   // The game asks whether the service answers before offering the account (no data, no session needed). `email` says whether messages can really be sent from here.
   if (path === '/api/account/status' && request.method === 'GET') return json(request, { ok: true, service: 'accounts', features: ['account-delete', 'save-protocol-2', 'save-history', 'daily-reward', 'reward-time', 'reward-blocks', 'reward-community', ...(env.LOGOS ? ['logo-sync'] : []), ...(mail ? ['email-recovery'] : [])], email: mail, emailRequired: env.ACCOUNT_EMAIL_REQUIRED === '1' });
+  // Advertising, no account needed: the remote configuration (short cache) and the booking of a rewarded video of a device without an account (its id as the owner of the row).
+  if (path === '/api/account/ads/config' && request.method === 'GET') { const response = json(request, { ok: true, ...adsPublic(env) }); response.headers.set('cache-control', 'public, max-age=300'); return response; }
+  if (path === '/api/account/ads/reward' && request.method === 'POST') {
+    let body = null; try { body = await request.json(); } catch { /* no body */ }
+    const device = typeof body?.device === 'string' && REWARD_ID.test(body.device) ? body.device : null;
+    if (!device) return json(request, { error: 'Dispositivo non valido.' }, 400);
+    return bookAdReward(request, env, db, `device:${device}`, body);
+  }
   if ((path === '/api/account/register' || path === '/api/account/login') && request.method === 'POST') {
     const registering = path.endsWith('register');
     const guard = await accountGuard(db, request, registering ? 'registrazione' : 'accesso');
@@ -949,14 +981,7 @@ async function handleAccounts(request, env, url) {
   // keeps its own record, the Worker is not involved. NOT a server-side verification (SSV) of the ad network: see docs/admob.md.
   if (path === '/api/account/rewards/ad' && request.method === 'POST') {
     let body = null; try { body = await request.json(); } catch { /* no body */ }
-    const id = body?.id;
-    if (typeof id !== 'string' || !AD_COMPLETION_ID.test(id)) return json(request, { error: 'Completamento non valido.' }, 400);
-    const careerId = typeof body?.careerId === 'string' && REWARD_ID.test(body.careerId) ? body.careerId : null, device = typeof body?.device === 'string' && REWARD_ID.test(body.device) ? body.device : null;
-    const day = romeDay();
-    const written = await db.prepare('INSERT OR IGNORE INTO reward_ads (user_id, ad_id, day, claimed_at, career_id, device_id) SELECT ?, ?, ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM reward_ads WHERE user_id = ? AND day = ?) < ?').bind(account.id, id, day, new Date().toISOString(), careerId, device, account.id, day, AD_DAILY_MAX).run();
-    if (written?.meta?.changes > 0) return json(request, { ok: true, credited: true });
-    if (await db.prepare('SELECT 1 AS found FROM reward_ads WHERE user_id = ? AND ad_id = ?').bind(account.id, id).first()) return json(request, { ok: true, credited: false, duplicate: true });
-    return json(request, { error: 'Hai raggiunto il limite giornaliero di video con premio.', code: 'limit' }, 429);
+    return bookAdReward(request, env, db, account.id, body);
   }
   // One-off community rewards («instagram»; «tiktok» exists but is off): the Worker gives each to an account once. The claim is a self-declaration of the player: nothing about the social network is verified or asked for.
   const community = /^\/api\/account\/rewards\/community\/([a-z]{3,20})$/.exec(path);

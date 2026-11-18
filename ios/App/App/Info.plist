@@ -64,5 +64,13 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<!-- InMobi (next update, docs/inmobi.md): the ad network's SKAdNetwork id (case-sensitive, lowercase). The complete list of the bidders' ids must be taken from InMobi's documentation before the release: it is NOT invented here. -->
+	<key>SKAdNetworkItems</key>
+	<array>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>wzmmz9fp6w.skadnetwork</string>
+		</dict>
+	</array>
 </dict>
 </plist>

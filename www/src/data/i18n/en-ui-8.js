@@ -1,6 +1,6 @@
 // English phrase book, part 8 of 8: the administrative area, the account and sign-out screens, the personal logo catalogue, the tutorial invitation and the engine's law-effect and government lines. Same format as part 6: [Italian as shown, English]; `#` stands for a number, `{}` for a free part; in the English a free part is named by its position (`{2}` for the second one).
-import { ALL_PAIRS } from '../studio-lines.js?v=20261118-19';
-import { ALL_PAIRS as ACTIVITY_SCENE_PAIRS } from '../activity-scene-lines.js?v=20261118-19';
+import { ALL_PAIRS } from '../studio-lines.js?v=20261118-22';
+import { ALL_PAIRS as ACTIVITY_SCENE_PAIRS } from '../activity-scene-lines.js?v=20261118-22';
 
 // The explanations of the opening of a general or European campaign (campaign-engine.js campaignOpeningNotes): signed numbers come in both signs.
 function campaignNotePairs() {
@@ -10073,6 +10073,10 @@ export const PHRASES = [
   ["Governo in carica all’avvio ha la fiducia di # gruppi (di cui # dall’esterno); la stabilità è a #/#", "The government in office at the start has the confidence of # groups (# from outside); stability stands at #/#"],
   ["Governo in carica all’avvio ha la fiducia di # gruppi (di cui # dall’esterno); la stabilità è a #/# e il margine nella Camera più stretta è di # seggi.", "The government in office at the start has the confidence of # groups (# from outside); stability stands at #/# and the margin in the narrower Chamber is # seats."],
   ["Consolidato → Rilevato", "Consolidated → Detected"],
+  ["Puoi rivedere o cambiare la scelta sui consensi per gli annunci in qualsiasi momento. Non inviamo posizione, data di nascita, genere né dati delle tue partite.", "You can review or change your choice on ad consent at any time. We do not send your location, date of birth, gender or your game data."],
+  ["Opzioni privacy della pubblicità", "Advertising privacy options"],
+  ["Pubblicità e privacy", "Advertising and privacy"],
+  ["Gli annunci premiati non sono attivi in questo momento.", "Rewarded ads are not active at the moment."],
   ["{}: l’intervista su {}", "{1}: the interview on {2}"],
   ["{}: la conferenza stampa su {}", "{1}: the press conference on {2}"],
   ["{}: l’ospitata televisiva su {}", "{1}: the TV appearance on {2}"],

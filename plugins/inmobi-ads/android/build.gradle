@@ -1,0 +1,62 @@
+// Library of the Capacitor plugin `InMobiAds` (Kotlin). Same Kotlin/JVM setup as the Capacitor plugins already in the project (android.builtInKotlin=false in android/gradle.properties).
+// InMobi SDK 11.5.1 (Kotlin) from Maven Central; the consent form is Google's UMP (IAB TCF): a Google dependency kept ONLY for the CMP, no Google Mobile Ads / AdMob SDK is used.
+ext {
+    androidxAppCompatVersion = project.hasProperty('androidxAppCompatVersion') ? rootProject.ext.androidxAppCompatVersion : '1.7.1'
+    inmobiVersion = '11.5.1'
+    userMessagingPlatformVersion = '4.0.0'
+    androidxCoreKTXVersion = '1.15.0'
+}
+
+buildscript {
+    ext.kotlin_version = project.hasProperty("kotlin_version") ? rootProject.ext.kotlin_version : '2.2.20'
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+
+android {
+    namespace = "it.matteobianchi.politicando.inmobi"
+    compileSdk = project.hasProperty('compileSdkVersion') ? rootProject.ext.compileSdkVersion : 36
+    defaultConfig {
+        minSdkVersion project.hasProperty('minSdkVersion') ? rootProject.ext.minSdkVersion : 24
+        targetSdkVersion project.hasProperty('targetSdkVersion') ? rootProject.ext.targetSdkVersion : 36
+        versionCode 1
+        versionName "1.0"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+    lintOptions {
+        abortOnError = false
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_21
+    }
+}
+
+repositories {
+    google()
+    mavenCentral()
+}
+
+dependencies {
+    implementation project(':capacitor-android')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.core:core-ktx:$androidxCoreKTXVersion"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    implementation "com.inmobi.monetization:inmobi-ads-kotlin:$inmobiVersion"
+    implementation "com.google.android.ump:user-messaging-platform:$userMessagingPlatformVersion"
+}

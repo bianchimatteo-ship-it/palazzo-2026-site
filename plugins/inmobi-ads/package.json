@@ -1,0 +1,13 @@
+{
+  "name": "politicando-inmobi-ads",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Capacitor bridge to the InMobi SDK (Android: Kotlin, SDK 11.5.1; iOS: Swift, SDK 11.5.0) for Politicando 2026: rewarded, banner, interstitial, with the consent (Google UMP, IAB TCF).",
+  "main": "dist/esm/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/esm/index.d.ts",
+  "scripts": { "build": "tsc -p tsconfig.json" },
+  "files": ["android/src/main/", "android/build.gradle", "ios/Sources", "Package.swift", "dist/"],
+  "peerDependencies": { "@capacitor/core": "^8.0.0" },
+  "capacitor": { "ios": { "src": "ios" }, "android": { "src": "android" } }
+}

@@ -149,9 +149,9 @@
     },
     {
       "id": "admob-futuro",
-      "title": "AdMob: la build con l'SDK non può uscire con i documenti attuali",
+      "title": "InMobi (unico provider): la build con l'SDK non può uscire con i documenti attuali",
       "section": "privacy.html §5 · termini.html §9 · schede store",
-      "why": "Il codice di AdMob (Google Mobile Ads SDK + UMP) è nel ramo feature/ios-admob-android, SPENTO (ADS_MODE 'off') e solo su Android. Ma un AAB costruito da questo ramo contiene comunque l'SDK, anche con gli annunci spenti: l'informativa dice che la versione attuale non ha annunci né SDK pubblicitari, il manifest unito aggiunge il permesso AD_ID, e Play Console richiede le dichiarazioni «contiene annunci» e ID pubblicitario e la Sicurezza dei dati aggiornata. La versione 1.0.1 (senza annunci) va costruita dal ramo senza questo codice. Prima di pubblicare la versione con AdMob servono: offerente e titolare definiti, account AdMob intestato a un adulto (pagamenti e dati fiscali) [non verificato], informativa e termini aggiornati (AdMob come servizio presente, dati e identificativi, consenso), Data safety e dichiarazione ID pubblicitario, verifica dell'account AdMob (app-ads.txt, sito e store collegati, pagamenti), verifica del pubblico 14+ e dei Paesi, test con gli ID di prova su dispositivo e passaggio a 'live' solo dopo.",
+      "why": "Il codice di InMobi (SDK 11.5.1 Android, 11.5.0 iOS, con consenso Google UMP/IAB TCF) è nel ramo feature/inmobi-integrazione, SPENTO di base (ogni formato disattivato finché la configurazione remota del Worker non lo accende; nessun Account ID nel repository). Una build che contiene l'SDK, anche con gli annunci spenti, richiede: informativa e termini aggiornati (InMobi come servizio presente, dati e identificativi, consenso), Play Console «contiene annunci» e ID pubblicitario (il manifest unito aggiunge AD_ID), Sicurezza dei dati e scheda privacy dell'App Store aggiornate, messaggio di consenso configurato in AdMob > Privacy e messaggistica (la CMP è Google UMP), account InMobi intestato a un adulto (pagamenti e dati fiscali) [non verificato], app-ads.txt, elenco completo SKAdNetwork di InMobi. La versione iOS 1.0 (1) in revisione è senza pubblicità e non va toccata. Dettagli in docs/inmobi.md.",
       "required": true,
       "status": "mancante",
       "provided": null

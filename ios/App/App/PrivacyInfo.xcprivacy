@@ -2,7 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- App data inventory from privacy.html section 3 and the account Worker: email, account ID, random reward device ID, source IP used for abuse rate-limiting, gameplay saves, optional user-uploaded PNG/JPEG/WebP party-logo images, gameplay-time spans, and derived authentication/session credentials. Every category is linked to the account/device and used for app functionality; no tracking or advertising SDK is present in this iOS build. Reconcile with the App Store privacy label and the actual server/provider contracts before submission. -->
+	<!-- App data inventory from privacy.html section 3 and the account Worker: email, account ID, random reward device ID, source IP used for abuse rate-limiting, gameplay saves, optional user-uploaded PNG/JPEG/WebP party-logo images, gameplay-time spans, and derived authentication/session credentials. Every category is linked to the account/device and used for app functionality; NEXT UPDATE (docs/inmobi.md): the InMobi SDK is included (advertising): the device identifier, product interaction and advertising data are also used for third-party advertising; tracking stays false while the App Tracking Transparency prompt is not shown (if it is enabled by the remote configuration, set NSPrivacyTracking to true and list InMobi's tracking domains). The version 1.0 (1) in review has no advertising SDK. Reconcile with InMobi's own privacy manifest and the App Store privacy label before submission. Reconcile with the App Store privacy label and the actual server/provider contracts before submission. -->
 	<key>NSPrivacyTracking</key>
 	<false/>
 	<key>NSPrivacyTrackingDomains</key>
@@ -45,6 +45,7 @@
 			<key>NSPrivacyCollectedDataTypePurposes</key>
 			<array>
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+				<string>NSPrivacyCollectedDataTypePurposeThirdPartyAdvertising</string>
 			</array>
 		</dict>
 		<dict>
@@ -57,6 +58,7 @@
 			<key>NSPrivacyCollectedDataTypePurposes</key>
 			<array>
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+				<string>NSPrivacyCollectedDataTypePurposeThirdPartyAdvertising</string>
 			</array>
 		</dict>
 		<dict>
@@ -93,6 +95,18 @@
 			<key>NSPrivacyCollectedDataTypePurposes</key>
 			<array>
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeAdvertisingData</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeThirdPartyAdvertising</string>
 			</array>
 		</dict>
 	</array>

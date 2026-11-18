@@ -15,7 +15,7 @@ I requisiti del registro generale non sono tutti requisiti specifici di App Stor
 | `diritti-asset` | Da documentare: marchio, grafica, font, dati/immagini di terzi e licenza per la distribuzione |
 | `trader-dsa` | Il titolare dell'account deve dichiarare lo status; Apple richiede la dichiarazione anche per chi non distribuisce nell'UE. Se trader, contatti verificati sono pubblicati sulla pagina UE |
 | `account-sviluppatore-play` | Relativo a Google Play: non è un campo né un'iscrizione richiesta da App Store; mantenere comunque coerenti i ruoli del servizio tra gli store |
-| `admob-futuro` | Non blocca la prima release iOS ad-free: AdMob è solo Android e non è incluso nell'app iOS |
+| `admob-futuro` | Non blocca la prima release iOS ad-free (1.0 (1), in revisione): InMobi è l'unico provider e il suo codice iOS è preparato nel repository per l'aggiornamento successivo, non nella 1.0 (1) (docs/inmobi.md) |
 
 Non creare segnaposto per i dati legali e non dichiarare chiuso un requisito senza prova o decisione del soggetto responsabile. Il fatto che un requisito non sia specifico di App Store non significa che sia irrilevante per la gestione complessiva del servizio.
 
@@ -75,7 +75,7 @@ Va dichiarato tutto ciò che si trasmette fuori dal dispositivo oltre il tempo n
 | Safe area | ✅ `viewport-fit=cover` + regole iOS; layout verificato dall'utente su simulatore iPhone e iPad |
 | iPad | ✅ layout e funzioni verificati dall'utente su simulatore in verticale e orizzontale |
 | Instagram su iOS | ✅ spento (resta il collegamento senza premio); `check-rewards-sync` |
-| AdMob | non presente su iOS; il pacchetto SPM è riallineato a Capacitor 8.5.3 |
+| Pubblicità | la 1.0 (1) non ha SDK pubblicitari; nel repository il bridge InMobi (SDK 11.5.0) è nel pacchetto SPM per l'aggiornamento successivo (Capacitor 8.5.3) |
 | Login/registrazione/recupero/eliminazione/salvataggi | stessa logica del web, Worker già accetta `capacitor://localhost`; test automatici su web (`check-accounts`, `check-account-deletion`, `check-account-isolation`, `check-saves`); **nessuna prova su iOS** |
 | Build Release / archivio | ✅ Xcode 27.2 + iOS SDK 27.2; `BUILD SUCCEEDED`; `.xcarchive` preliminare senza firma creato e bundle verificato (26 MB, bundle ID/versione corretti) |
 

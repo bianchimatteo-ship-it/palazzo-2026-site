@@ -4,19 +4,19 @@
 // of the campaign (renderCampaignObservatory): what `campaignObservatory()` reads from a valid campaign, and nothing when there is none.
 // Everything here is read from what the game has saved (the world, its observatory, the campaign) and measures the simulation: no number on these
 // pages gives a bonus, and the real parties stay real (their candidates, voters and readings are simulated, source: simulation).
-import { latestPoll, observatoryReport } from '../core/world-engine.js?v=20261118-19';
-import { campaignObservatory } from '../core/campaign-engine.js?v=20261118-19';
-import { coalitionScenario } from '../core/poll-observatory.js?v=20261118-19';
-import { POLL_EXTENSIONS } from '../data/simulation/polling-rules.js?v=20261118-19';
-import { observatorySociety } from '../core/society-engine.js?v=20261118-19';
-import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261118-19';
-import { formatDate } from '../core/time.js?v=20261118-19';
-import { lineChart, SERIES } from './charts.js?v=20261118-19';
-import { emblem, glyph, partyMarkText } from './visuals.js?v=20261118-19';
-import { arrow, bar, card, empty, esc, kpi, num, table } from './sections-kit.js?v=20261118-19';
-import { alliancesList, alliancesOverview, barometer, myCoalitionPanel, chronicle, dataTable, forcesGrid, partyIndex, pct, pollPanel, presencePanel, shortDate, signed, strategyList } from './polls-mode.js?v=20261118-19';
-import { heatmap, italyMap, MACRO_AREAS, partyBars, provenance, regionAbbreviation, regionBars, regionsOfArea, TERRITORY_MEASURES } from './territory-charts.js?v=20261118-19';
-import { forceRegionalVote2022 } from '../core/regional-vote.js?v=20261118-19';
+import { latestPoll, observatoryReport } from '../core/world-engine.js?v=20261118-22';
+import { campaignObservatory } from '../core/campaign-engine.js?v=20261118-22';
+import { coalitionScenario } from '../core/poll-observatory.js?v=20261118-22';
+import { POLL_EXTENSIONS } from '../data/simulation/polling-rules.js?v=20261118-22';
+import { observatorySociety } from '../core/society-engine.js?v=20261118-22';
+import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261118-22';
+import { formatDate } from '../core/time.js?v=20261118-22';
+import { lineChart, SERIES } from './charts.js?v=20261118-22';
+import { emblem, glyph, partyMarkText } from './visuals.js?v=20261118-22';
+import { arrow, bar, card, empty, esc, kpi, num, table } from './sections-kit.js?v=20261118-22';
+import { alliancesList, alliancesOverview, barometer, myCoalitionPanel, chronicle, dataTable, forcesGrid, partyIndex, pct, pollPanel, presencePanel, shortDate, signed, strategyList } from './polls-mode.js?v=20261118-22';
+import { heatmap, italyMap, MACRO_AREAS, partyBars, provenance, regionAbbreviation, regionBars, regionsOfArea, TERRITORY_MEASURES } from './territory-charts.js?v=20261118-22';
+import { forceRegionalVote2022 } from '../core/regional-vote.js?v=20261118-22';
 
 export const OBSERVATORY_VIEWS = Object.freeze([['quadro', 'Quadro'], ['istituti', 'Istituti'], ['segmenti', 'Segmenti e temi'], ['territori', 'Territori'], ['forze', 'Partiti e trattative'], ['candidati', 'Candidati e rivali'], ['flussi', 'Indecisi e flussi'], ['gradimento', 'Gradimento e leggi'], ['scenari', 'Scenari e coalizioni'], ['alleanze', 'Quadro delle alleanze']]);
 // The page has two areas, told apart at the first sight: the surveys of the parties and the alliances and coalitions; their ten views are gathered in them (as a second row of tabs).

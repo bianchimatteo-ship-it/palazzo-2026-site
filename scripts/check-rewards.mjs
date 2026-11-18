@@ -354,7 +354,7 @@ const total = poll => Math.round((poll.results.reduce((sum, row) => sum + row.sh
   const demo = createDemoProvider();
   assert.equal((await createRewardedAds({ provider: demo, grant }).availability()).ok, false, 'Un provider dimostrativo è rifiutato se non lo si ammette esplicitamente.');
   assert.equal(demo.plays, 0, 'E non viene nemmeno mostrato.');
-  const configuredOff = createRewardedAds({ config: { enabled: true, appId: null, rewardedUnitId: null }, provider: { kind: 'admob', isReady: () => true, show: async () => ({ completed: true, verified: true, completionId: 'x'.repeat(12) }) }, grant });
+  const configuredOff = createRewardedAds({ config: { rewarded: { enabled: false } }, provider: { kind: 'inmobi', isReady: () => true, show: async () => ({ completed: true, verified: true, completionId: 'x'.repeat(12) }) }, grant });
   assert.equal((await configuredOff.availability()).ok, false, 'Senza id configurati (non ne esistono) nemmeno un provider reale parte.');
   const transfers = () => (store.getState().world.adTransfers ?? []).length;
   const warm = { ...store.getState() };
@@ -393,7 +393,7 @@ const total = poll => Math.round((poll.results.reduce((sum, row) => sum + row.sh
   const html = renderRewardsPage(store.getState(), { ...snapshot, history: R.rewardHistory(game()) });
   assert.ok(/Ricompensa giornaliera/.test(html) && /\+500 €/.test(html) && /Tempo di gioco/.test(html) && /Ricompense pubblicitarie/.test(html) && /Storico/.test(html), 'Le quattro sezioni.');
   assert.ok(/data-reward-bar="daily"/.test(html) && /data-reward-bar="capital"/.test(html) && /data-reward-bar="preparation"/.test(html), 'Gli avanzamenti.');
-  assert.ok(/data-reward-video[^>]*disabled/.test(html) && /AdMob/.test(html), 'Il pulsante del video è spento finché AdMob non c’è, con il motivo.');
+  assert.ok(/data-reward-video[^>]*disabled/.test(html) && /non sono attivi/.test(html), 'Il pulsante del video è spento finché i video non sono attivi, con il motivo.');
   assert.ok(!/donator|cede|ceduto|scadenza|scade|durata|settimane|redistribu/i.test(html.replace(/Il giorno cambia[^<]*/, '')), 'Nessuna indicazione di durata o donatori.');
   assert.ok(/Fondi personali/.test(html) && /Ricompensa giornaliera/.test(html), 'Lo storico dice tipo, importo e risorsa.');
   assert.ok(/non alla tesoreria del partito/.test(html));
