@@ -126,6 +126,10 @@ if (/name="politicando-api-origin"/.test(wwwIndex)) {
   if (release) assert.fail('www/index.html dichiara il Worker di Test (politicando-api-origin): una build per lo store legge e scrive la Produzione. Ricostruisci www senza POLITICANDO_API_ORIGIN.');
   notes.push('www/index.html dichiara un Worker di Test (build di collaudo): non va usata per lo store');
 }
+if (/name="politicando-local-test"/.test(wwwIndex)) {
+  if (release) assert.fail('www/index.html è una build di prova LOCALE (politicando-local-test, Worker su localhost:8787): una build per lo store non la può contenere. Ricostruisci www senza POLITICANDO_LOCAL_API.');
+  notes.push('www/index.html è una build di prova locale (localhost:8787): non va usata per lo store');
+}
 const stamp = /main\.js\?v=([\w-]+)/.exec(await text('index.html'))?.[1];
 assert.ok(stamp && wwwIndex.includes(`?v=${stamp}`), 'www/index.html ha lo stesso timbro di versione dei sorgenti.');
 assert.equal(buildInfo.buildStamp, stamp, 'www/build-info.json ha il timbro dei sorgenti.');

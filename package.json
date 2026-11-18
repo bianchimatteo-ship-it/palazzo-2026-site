@@ -322,6 +322,8 @@
     "check:review-prompt": "node scripts/check-review-prompt.mjs && node scripts/check-review-prompt-flow.mjs",
     "check:button-response": "node scripts/check-button-response.mjs",
     "check:inmobi": "node scripts/check-inmobi.mjs",
+    "check:local-test-mode": "node scripts/check-local-test-mode.mjs",
+    "ios:test:build": "node scripts/ios-test-build.mjs",
     "check:inmobi-native": "node scripts/check-inmobi-native.mjs",
     "check:publication": "node scripts/check-publication.mjs",
     "cf:deploy:test": "npx --yes wrangler@4 deploy -c wrangler.test.jsonc",

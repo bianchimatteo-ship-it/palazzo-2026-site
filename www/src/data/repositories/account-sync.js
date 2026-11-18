@@ -40,6 +40,9 @@ export function nativeApiOrigin() {
   try {
     const declared = globalThis.document?.querySelector?.('meta[name="politicando-api-origin"]')?.getAttribute('content') ?? '';
     if (/^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)*\.workers\.dev$/.test(declared)) return declared;
+    // The LOCAL test mode of the iOS Simulator (scripts/ios-test-build.mjs, docs/inmobi.md): only the app (never the web), only when the build declares BOTH tags, only the two exact loopback addresses of
+    // `wrangler dev` (port 8787). A build for the store never has them (check-android refuses it), so a published app can never point here, and a local build never reaches Production.
+    if (isNativeApp() && /^http:\/\/(localhost|127\.0\.0\.1):8787$/.test(declared) && globalThis.document?.querySelector?.('meta[name="politicando-local-test"]')?.getAttribute('content') === '1') return declared;
   } catch { /* no document: Production */ }
   return PRODUCTION_ORIGIN;
 }

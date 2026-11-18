@@ -79,6 +79,15 @@ if (TEST_ORIGIN) {
   else files.set('index.html', Buffer.from(text('index.html').replace(/<head>/, `<head>\n  <meta name="politicando-api-origin" content="${TEST_ORIGIN}">`)));
 }
 
+// LOCAL test mode (iOS Simulator + `wrangler dev` on port 8787): POLITICANDO_LOCAL_API=http://localhost:8787 (or 127.0.0.1). Never together with a Test or release build; the CSP of the built index.html (only there)
+// gains that one address. The app then talks ONLY to it (account-sync.js: nativeApiOrigin). check-android / check-capacitor refuse these tags in a release.
+const LOCAL_API = process.env.POLITICANDO_LOCAL_API ?? '';
+if (LOCAL_API) {
+  if (!/^http:\/\/(localhost|127\.0\.0\.1):8787$/.test(LOCAL_API)) fail(`POLITICANDO_LOCAL_API «${LOCAL_API}» non è l'indirizzo locale ammesso (http://localhost:8787 o http://127.0.0.1:8787).`);
+  else if (TEST_ORIGIN || process.env.POLITICANDO_RELEASE) fail('POLITICANDO_LOCAL_API non si combina con POLITICANDO_API_ORIGIN né con una build di rilascio (POLITICANDO_RELEASE).');
+  else files.set('index.html', Buffer.from(text('index.html').replace(/<head>/, `<head>\n  <meta name="politicando-api-origin" content="${LOCAL_API}">\n  <meta name="politicando-local-test" content="1">`).replace(/(connect-src [^;"]*)/, `$1 ${LOCAL_API}`)));
+}
+
 // ---------- 2. one build stamp ----------
 const stamps = new Set();
 for (const [name, data] of files) if (/\.(html|js|css)$/.test(name)) for (const match of data.toString('utf8').matchAll(/[?&]v=([0-9]{8}-[0-9]+)\b/g)) stamps.add(match[1]);
