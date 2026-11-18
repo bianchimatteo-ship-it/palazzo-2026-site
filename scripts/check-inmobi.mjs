@@ -15,7 +15,7 @@ const { createInMobiAdapter } = await load('src/data/repositories/inmobi-adapter
 const { createAdsManager } = await load('src/data/repositories/ads-manager.js');
 const { createRewardedAds } = await load('src/data/repositories/ads-rewarded.js');
 const rules = await load('src/data/simulation/reward-rules.js');
-const ACCOUNT = '0123456789abcdef0123456789abcdef';
+const ACCOUNT = '60d3e31b9c094bd69283e287bc2d4c42';
 const lines = [];
 
 // ---------- 1. safe defaults and identifiers ----------
@@ -24,11 +24,11 @@ assert.deepEqual({ ...INMOBI.placements }, { rewarded: '10000884972', banner: '1
 assert.equal(INMOBI.appKey, '10000256631'); assert.deepEqual({ ...INMOBI.sdk }, { android: '11.5.1', ios: '11.5.0' });
 for (const platform of ['android', 'ios']) {
   const d = defaultAds(platform);
-  assert.equal(d.enabled, false); assert.equal(d.accountId, null, 'L’Account ID non è inventato: senza configurazione remota nessun SDK.');
+  assert.equal(d.enabled, false); assert.equal(d.accountId, '60d3e31b9c094bd69283e287bc2d4c42', 'L’Account ID è quello del titolare, ma da solo non accende nulla.');
   for (const format of ['rewarded', 'banner', 'interstitial']) assert.equal(d[format].enabled, false, `${platform}/${format}: spento di base.`);
   assert.equal(d.rewardPoints, 0.15); assert.deepEqual({ ...d.interstitialPolicy }, { ...INTERSTITIAL });
 }
-assert.ok(!INMOBI.placements.rewarded.includes(ACCOUNT) && !Object.values(INMOBI.placements).includes(INMOBI.appKey), 'App Key, Placement ID e Account ID restano distinti.');
+assert.ok(new Set([INMOBI.appKey, INMOBI.accountId, ...Object.values(INMOBI.placements)]).size === 5, 'App Key, Placement ID e Account ID restano distinti.');
 lines.push('predefiniti sicuri (tutto spento, nessun Account ID inventato), id del proprietario');
 
 // ---------- 2. the remote configuration: validated, clamped, per platform ----------
@@ -37,7 +37,8 @@ const a = resolveAds('android', remote), i = resolveAds('ios', remote);
 assert.equal(a.enabled, true); assert.equal(a.rewarded.enabled, true); assert.equal(a.banner.enabled, true); assert.equal(a.interstitial.enabled, false);
 assert.equal(a.testing, true, 'In modalità test.'); assert.equal(a.rewardPoints, 0.2); assert.deepEqual({ ...a.interstitialPolicy }, { everyWeeks: 5, minGapMs: 120000, perDay: 2 });
 assert.equal(i.rewarded.enabled, true); assert.equal(i.banner.enabled, false, 'Ogni piattaforma ha le sue impostazioni.');
-assert.equal(resolveAds('android', { ...remote, android: { ...remote.android, accountId: undefined } }).enabled, false, 'Senza Account ID valido nessun formato si accende.');
+assert.equal(resolveAds('android', { ...remote, android: { ...remote.android, accountId: 'non-valido' } }).enabled, false, 'Account ID malformato: nessun formato si accende.');
+assert.equal(resolveAds('android', { android: { rewarded: { enabled: true } } }).accountId, '60d3e31b9c094bd69283e287bc2d4c42', 'Senza accountId remoto vale quello del titolare.'); assert.equal(resolveAds('android', { android: {} }).enabled, false, 'Con l’Account ID ma nessun formato acceso: tutto spento.');
 assert.equal(resolveAds('android', { ...remote, android: { ...remote.android, accountId: '10000256631' } }).enabled, false, 'L’App Key non è un Account ID.');
 assert.equal(resolveAds('android', { ...remote, enabled: false }).enabled, false, 'Interruttore generale.');
 assert.equal(resolveAds('android', { ...remote, android: { ...remote.android, mode: 'off' } }).enabled, false, 'Modalità off.');
@@ -160,7 +161,7 @@ try {
   const post = async (path, body) => { const r = await fetch(`${local.origin}${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); return { status: r.status, body: await r.json().catch(() => ({})) }; };
   // no variable: everything off
   let cfg = await get('/api/account/ads/config');
-  assert.equal(cfg.status, 200); assert.equal(cfg.body.android.enabled, false); assert.equal(cfg.body.ios.enabled, false); assert.equal(cfg.body.android.rewarded.enabled, false); assert.equal(cfg.body.android.accountId, null);
+  assert.equal(cfg.status, 200); assert.equal(cfg.body.android.enabled, false); assert.equal(cfg.body.ios.enabled, false); assert.equal(cfg.body.android.rewarded.enabled, false); assert.equal(cfg.body.android.enabled, false);
   assert.match(cfg.cache ?? '', /max-age/, 'La configurazione ha una cache breve.');
   assert.equal((await post('/api/account/ads/reward', { id: 'imb-spento-000001', device: 'dev-1' })).status, 403, 'Formato spento: il credito è rifiutato dal server.');
   // an invalid variable is the same as none

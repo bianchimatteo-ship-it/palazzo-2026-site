@@ -1,17 +1,17 @@
 // Main menu, how-to-play, settings, save slots and the end-of-week report.
-import { renderTutorialInvite } from './tutorial.js?v=20261118-23';
-import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261118-23';
-import { GUIDE_FUNCTIONS, GUIDE_SCENARIOS } from '../data/guide-manual.js?v=20261118-23';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261118-23';
-import { formatDate } from '../core/time.js?v=20261118-23';
-import { illustration } from './illustrations.js?v=20261118-23';
-import { glyph } from './visuals.js?v=20261118-23';
-import { identityMark, identityVars } from './party-identity.js?v=20261118-23';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261118-23';
-import { hallView } from './hall-view.js?v=20261118-23';
-import { renderLogoCatalog } from './logo-catalog.js?v=20261118-23';
-import { esc, signed } from './charts.js?v=20261118-23';
-import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261118-23';
+import { renderTutorialInvite } from './tutorial.js?v=20261118-24';
+import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261118-24';
+import { GUIDE_FUNCTIONS, GUIDE_SCENARIOS } from '../data/guide-manual.js?v=20261118-24';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261118-24';
+import { formatDate } from '../core/time.js?v=20261118-24';
+import { illustration } from './illustrations.js?v=20261118-24';
+import { glyph } from './visuals.js?v=20261118-24';
+import { identityMark, identityVars } from './party-identity.js?v=20261118-24';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261118-24';
+import { hallView } from './hall-view.js?v=20261118-24';
+import { renderLogoCatalog } from './logo-catalog.js?v=20261118-24';
+import { esc, signed } from './charts.js?v=20261118-24';
+import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261118-24';
 
 const when = iso => { try { return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); } catch { return ''; } };
 // The actions of the opening screen, in order of importance: starting a career and resuming one are the two main ones (drawn apart, below); then what concerns the

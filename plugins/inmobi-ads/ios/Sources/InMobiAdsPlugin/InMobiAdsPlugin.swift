@@ -107,7 +107,7 @@ public class InMobiAdsPlugin: CAPPlugin, CAPBridgedPlugin {
     /// The consent handed to InMobi: GDPR applies / consent available / the IAB TCF string that UMP keeps in UserDefaults.
     private func inmobiConsent() -> [String: Any] {
         let defaults = UserDefaults.standard
-        var consent: [String: Any] = ["gdpr": defaults.integer(forKey: "IABTCF_gdprApplies") == 1 ? "1" : "0", "gdpr_consent_available": UMPConsentInformation.sharedInstance.canRequestAds]
+        var consent: [String: Any] = ["gdpr": defaults.integer(forKey: "IABTCF_gdprApplies") == 1 ? "1" : "0", "gdpr_consent_available": UMPConsentInformation.sharedInstance.canRequestAds ? "true" : "false"]   // the official sample passes the strings "true"/"false"
         if let tc = defaults.string(forKey: "IABTCF_TCString"), !tc.isEmpty { consent["gdpr_consent"] = tc }
         return consent
     }
