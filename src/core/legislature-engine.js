@@ -3,16 +3,16 @@
 // Chambers and their groups, the formation of the Government. Everything that happens is simulation: the real data are
 // the geography, the seats and the 2022 results the vote starts from; parties, coalitions, votes and seats of the game
 // are estimates of the game and never presented as real results.
-import { isElectoral } from './alliance-rules.js?v=20261118-25';
-import { populationReferenceDate, residentsOfItaly } from './municipal-rules.js?v=20261118-25';
-import { actualTurnout } from './electorate.js?v=20261118-25';
-import { uniqueId } from './ids.js?v=20261118-25';
-import { advanceDays, formatDate } from './time.js?v=20261118-25';
-import { axisOf, nationalShares } from './world-engine.js?v=20261118-25';
-import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20261118-25';
-import { archiveGovernment, confidenceBallotMissing, voteGovernmentConfidence } from './parliament-engine.js?v=20261118-25';
-import { seededRandom } from './vote-engine.js?v=20261118-25';
-import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20261118-25';
+import { isElectoral } from './alliance-rules.js?v=20261118-31';
+import { populationReferenceDate, residentsOfItaly } from './municipal-rules.js?v=20261118-31';
+import { actualTurnout } from './electorate.js?v=20261118-31';
+import { uniqueId } from './ids.js?v=20261118-31';
+import { advanceDays, formatDate } from './time.js?v=20261118-31';
+import { axisOf, nationalShares } from './world-engine.js?v=20261118-31';
+import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20261118-31';
+import { archiveGovernment, confidenceBallotMissing, voteGovernmentConfidence } from './parliament-engine.js?v=20261118-31';
+import { seededRandom } from './vote-engine.js?v=20261118-31';
+import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20261118-31';
 
 const SIM = 'simulation';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
