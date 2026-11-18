@@ -28,8 +28,9 @@ function crowdOf(notoriety, trust) { return Math.round(clamp(80 + notoriety * 4.
 export function createRallyScene({ id, seed, player, playerAvatar, party = {}, place = {}, mode = 'settimana', campaignId = null, date = null, context = {} }) {
   const stats = context.stats ?? { competence: 50, charisma: 50, reputation: 50, notoriety: 40 };
   const crowd = crowdOf(stats.notoriety, context.territory?.trust ?? 50);
-  const planned = unit(`${seed}|contestazione`) < clamp((context.protestLevel ?? 0) * 0.5 - 0.04, 0, 0.45);
-  const reason = planned ? protestReason(seed, context) : null;
+  const wanted = unit(`${seed}|contestazione`) < clamp((context.protestLevel ?? 0) * 0.5 - 0.04, 0, 0.45);
+  const reason = wanted ? protestReason(seed, context) : null;
+  const planned = Boolean(reason);
   const cast = [{ id: 'giocatore', role: 'giocatore', name: player.name, avatar: playerAvatar, position: 'palco' }];
   // a few characters of the crowd stand out in front (they are drawn, not listed in the credits); the protesters are a group that arrives only if the situation says so
   for (let i = 0; i < 3; i++) cast.push({ id: `sostenitore-${i}`, role: 'sostenitore', name: 'Sostenitore', x: 150 + i * 170 + Math.round(unit(`${seed}|s${i}`) * 40), y: 300 + (i % 2) * 22 });
@@ -69,6 +70,25 @@ export function protestProfile(reason) {
   const [group, slogans] = GROUPS[key];
   return { group, slogans };
 }
+// What stands behind a protest, read from the game: who protests, for which problem, where, which indicator or promise is involved and why it is current now. Every line comes from the state the
+// rally was built from (the promises, the problems of the territory, the diary, the economy, the Government): a protest without such a basis is not generated.
+export function protestEvidence(reason, ctx) {
+  const where = ctx.territory?.name ?? ctx.place?.label ?? 'il territorio';
+  const group = protestProfile(reason).group;
+  const num = value => Math.round(Number(value) || 0);
+  const kinds = {
+    promessa: () => { const item = (ctx.promises ?? []).find(entry => entry.status === 'non-mantenuta' && (entry.area ?? null) === (reason.area ?? null)) ?? (ctx.promises ?? []).find(entry => entry.status === 'non-mantenuta'); return { indicator: `promessa «${item?.label ?? 'su questo tema'}»: non mantenuta`, why: 'è una promessa che avevi fatto e che nel Programma risulta non mantenuta' }; },
+    territorio: () => { const problem = (ctx.territory?.problems ?? []).find(entry => (entry.area ?? null) === (reason.area ?? null)) ?? (ctx.territory?.problems ?? [])[0]; return { indicator: problem ? `${problem.label}: gravità ${num(problem.severity)}` : 'problema registrato sul territorio', why: 'è tra i problemi più gravi registrati oggi nel territorio e non è risolto' }; },
+    memoria: () => ({ indicator: `${num(ctx.memoryBad)} ${num(ctx.memoryBad) === 1 ? 'episodio negativo' : 'episodi negativi'} nel tuo registro recente`, why: 'compaiono tra le decisioni e gli eventi recenti della tua carriera' }),
+    governo: () => ({ indicator: `gradimento del Governo ${num(ctx.government?.approval ?? 50)}/100`, why: 'il gradimento è sotto la soglia del 42 e tu fai parte del Governo' }),
+    economia: () => ({ indicator: `inflazione al ${String(ctx.economy?.inflation ?? '').replace('.', ',')}%`, why: 'i prezzi crescono sopra il 4,5% annuo nello scenario di oggi' }),
+    opera: () => ({ indicator: 'lavori in ritardo, registrati nel diario delle opere', why: 'il cantiere è fermo da settimane e la cosa è documentata nel diario' }),
+    tagli: () => ({ indicator: 'tagli al settore, registrati nel bilancio', why: 'una decisione di spesa recente ha ridotto le risorse del settore' }),
+    evento: () => ({ indicator: 'fatto di cronaca recente nel diario della carriera', why: 'è accaduto nelle ultime settimane e compare nel diario' })
+  };
+  const base = (kinds[reason.kind] ?? kinds.evento)();
+  return { who: group, problem: reason.label, where, indicator: base.indicator, why: base.why };
+}
 function protestReason(seed, ctx) {
   const reasons = [...(ctx.triggers ?? [])];
   const broken = (ctx.promises ?? []).filter(item => item.status === 'non-mantenuta');
@@ -78,12 +98,13 @@ function protestReason(seed, ctx) {
   if ((ctx.memoryBad ?? 0) >= 1) reasons.push({ kind: 'memoria', area: null, label: 'le polemiche che ti hanno accompagnato', weight: 1.1 });
   if (ctx.governing && (ctx.government?.approval ?? 50) < 42) reasons.push({ kind: 'governo', area: null, label: 'l’azione del Governo', weight: 1.6 });
   if ((ctx.economy?.inflation ?? 2) >= 4.5) reasons.push({ kind: 'economia', area: 'costo-vita', label: 'il caro vita', weight: 1.1 });
-  if (!reasons.length) reasons.push({ kind: 'evento', area: null, label: 'il malcontento sul territorio', weight: 1 });
+  // No concrete, checkable reason: no protest at all (a generic «discontent» is never invented).
+  if (!reasons.length) return null;
   // among the strongest reasons the one that comes out is picked by the seed: the same situation does not always give the same protest
   reasons.sort((a, b) => b.weight - a.weight || hashOf(`${seed}${a.label}`) - hashOf(`${seed}${b.label}`));
   const top = reasons.slice(0, 3);
   const reason = top[Math.floor(unit(`${seed}|motivo`) * top.length) % top.length];
-  return { ...reason, ...protestProfile(reason) };
+  return { ...reason, ...protestProfile(reason), evidence: protestEvidence(reason, ctx) };
 }
 // How loud the protest is, 0..1: from the weight of its reason and the discontent of the territory.
 const protestSeverity = scene => clamp(0.28 + (scene.protest.reason?.weight ?? 1) * 0.16 + (50 - (scene.context.territory?.trust ?? 50)) / 160 + (scene.context.stats.notoriety - 40) / 400, 0.2, 0.95);
@@ -195,7 +216,7 @@ export function rallyNode(scene) {
     }
     case 'contestazione': {
       const reason = scene.protest.reason;
-      return { ...base, speaker: me.id, expression: 'sorpresa', gesture: 'ascolta', camera: 'protest', title: 'Una contestazione', text: `Dal fondo arriva un gruppo di contestatori con cartelli e striscioni: protestano per ${reason?.label ?? 'il malcontento sul territorio'}. Cori, fischi, il discorso si ferma. Come reagisci?`, choices: [['ascolta', 'Invita un contestatore a parlare', false, 'Mostri rispetto: funziona se hai reputazione e la protesta è motivata.'], ['rispondi', 'Rispondi nel merito dal palco', false, 'Dati e fatti: serve competenza, e nessuna promessa tradita su quel tema.'], ['prosegui', 'Alza la voce e prosegui', false, 'Carisma e nervi saldi: rischi che la situazione degeneri.'], ['interrompi', 'Interrompi il comizio e lascia il palco', false, 'Eviti lo scontro, ma il comizio finisce qui.']] };
+      return { ...base, speaker: me.id, expression: 'sorpresa', gesture: 'ascolta', camera: 'protest', title: 'Una contestazione', text: `Dal fondo arriva un gruppo di contestatori con cartelli e striscioni: protestano per ${reason?.label ?? 'un motivo che la situazione documenta'}. Cori, fischi, il discorso si ferma. Come reagisci?`, facts: reason?.evidence ? [['Chi protesta', reason.evidence.who], ['Per quale problema', reason.evidence.problem], ['Dove', reason.evidence.where], ['Indicatore o promessa', reason.evidence.indicator], ['Perché adesso', reason.evidence.why]] : [], choices: [['ascolta', 'Invita un contestatore a parlare', false, 'Mostri rispetto: funziona se hai reputazione e la protesta è motivata.'], ['rispondi', 'Rispondi nel merito dal palco', false, 'Dati e fatti: serve competenza, e nessuna promessa tradita su quel tema.'], ['prosegui', 'Alza la voce e prosegui', false, 'Carisma e nervi saldi: rischi che la situazione degeneri.'], ['interrompi', 'Interrompi il comizio e lascia il palco', false, 'Eviti lo scontro, ma il comizio finisce qui.']] };
     }
     case 'chiusura': {
       const topicBest = bestTopic(scene);
