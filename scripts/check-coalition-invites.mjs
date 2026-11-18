@@ -49,8 +49,8 @@ function intesa(world, partner) {
   throw new Error(`Nessuna intesa con ${partner} in 80 prove.`);
 }
 // An invitation that succeeds (and, separately, one that is refused) with different draws.
-function invite(world, id, want = true) {
-  for (let n = 0; n < 120; n++) { const out = W.inviteToAlliance(fresh(world, n), id, { date: DATE }); if (out.success === want) return out; }
+function invite(world, id, want = true, mode = 'merge') {
+  for (let n = 0; n < 120; n++) { const out = W.inviteToAlliance(fresh(world, n), id, { date: DATE, mode }); if (out.success === want) return out; }
   throw new Error(`Nessun invito ${want ? 'riuscito' : 'rifiutato'} per ${id} in 120 prove.`);
 }
 
@@ -147,6 +147,34 @@ const five = world;
   assert.ok(merged.merged && /Intesa Centro A – Centro B/.test(merged.merged) && /confluisce nella coalizione/.test(merged.world.events[0].body), 'La fusione è dichiarata nell’esito e nella cronaca.');
   assert.deepEqual(merged.joined.sort(), ['az', 'iv']);
   coherent(merged.world, 'fusione');
+  // --- a force already in another accord: the individual joining is the default, the full merge a choice; registrations travel with a merger and are never rewritten ---
+  const trio = structuredClone(start);
+  trio.alliances.push({ id: 'accordo-trio', label: 'Alleanza Centro A – Centro B – Centro C', partyIds: ['az', 'iv', 'pe'], cohesion: 60, since: DATE, status: 'active', motive: 'prova', terms: [{ id: 'accordo-trio|collegi|1', kind: 'collegi', partyId: 'az', text: 'Collegi al Centro', status: 'aperto' }], coalitions: [{ electionId: 'politiche-2022', type: 'politiche', label: 'elezioni politiche 2022', status: 'approvata', approvedAt: '2022-09-01', members: ['az', 'iv', 'pe'] }] });
+  for (const pair of [['iv', 'pd'], ['io', 'iv'], ['az', 'pd'], ['az', 'io'], ['pe', 'pd'], ['io', 'pe']]) trio.ties[pair.sort().join('|')] = 60;
+  const impact = W.inviteImpact(trio, 'az');
+  assert.ok(impact && impact.individual && /Alleanza Centro A/.test(impact.alliance), 'L’impatto dice a quale accordo appartiene la forza invitata.');
+  assert.ok([...impact.followers, ...impact.staying].map(item => item.id).sort().join() === 'iv,pe', 'L’impatto elenca esplicitamente i partner che potrebbero seguirla.');
+  const solo = invite(trio, 'az', true, 'individual');
+  const soloAlliance = W.playerAlliance(solo.world);
+  assert.deepEqual(solo.joined, ['az'], 'Adesione individuale: passa solo la forza invitata.'); assert.deepEqual(solo.stayed.sort(), ['iv', 'pe'], 'Gli altri partner restano e il risultato lo dichiara.'); assert.equal(solo.mode, 'individual');
+  assert.ok(soloAlliance.partyIds.includes('az') && !soloAlliance.partyIds.includes('iv') && !soloAlliance.partyIds.includes('pe'));
+  const kept = solo.world.alliances.find(item => item.id === 'accordo-trio');
+  assert.equal(kept.status, 'active'); assert.deepEqual(kept.partyIds.sort(), ['iv', 'pe'], 'L’accordo originale resta con i partiti che rimangono.');
+  assert.ok((kept.terms ?? []).some(term => term.id === 'accordo-trio|collegi|1'), 'Le condizioni dell’accordo originale restano.'); assert.equal(kept.coalitions.length, 1, 'E le sue registrazioni.');
+  assert.ok(kept.history.some(item => /passa a/.test(item.text)), 'L’uscita è registrata nella cronologia dell’accordo che resta.');
+  coherent(solo.world, 'adesione individuale');
+  const full = invite(trio, 'az', true, 'merge');
+  assert.deepEqual(full.joined.sort(), ['az', 'iv', 'pe'], 'Fusione completa (scelta esplicita): seguono i partner compatibili.');
+  const grownTrio = W.playerAlliance(full.world);
+  const carried = (grownTrio.coalitions ?? []).find(item => item.electionId === 'politiche-2022');
+  assert.ok(carried && carried.status === 'approvata' && carried.mergedFrom === 'accordo-trio', 'La registrazione elettorale dell’accordo che confluisce passa al nuovo accordo.');
+  const original = trio.alliances.find(item => item.id === 'accordo-trio').coalitions[0];
+  for (const key of Object.keys(original)) assert.deepEqual(carried[key], original[key], `La registrazione di un’elezione conclusa resta immutata (${key}).`);
+  // an open election: the approval granted to other members is verified again, not taken as it is
+  const open = structuredClone(full.world); const reg = W.registerCoalition(open, grownTrio.id, { id: 'politiche-2022', type: 'politiche', label: 'elezioni politiche 2022' }, '2022-09-02');
+  assert.ok(reg.already !== true, 'Con i membri cambiati l’approvazione di una elezione aperta non vale più «così com’è»: va verificata di nuovo.');
+  assert.ok(full.world.alliances.find(item => item.id === 'accordo-trio').status === 'merged' && Array.isArray(grownTrio.coalitions) && grownTrio.coalitions.length >= 1);
+  coherent(full.world, 'fusione completa con registrazioni');
   lines.push('accordi preesistenti: incompatibile bloccato con il motivo e lasciato intatto, compatibile fuso con partner e condizioni');
 }
 

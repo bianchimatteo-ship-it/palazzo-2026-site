@@ -52,7 +52,7 @@ import { SECTOR_GAINS, competenceIn, gainSector, sectorFloors, standingFactors }
 import { AREA_BY_ID, areasOfPortfolio, BILLION_PER_POINT, BUDGET_SESSION, GOVERNMENT_LINES, POLICY_AREAS, SOCIAL_TABLE, SPENDING_REVIEW, areaOf } from '../data/simulation/policy-rules.js?v=20261118-25';
 import { negotiateCompromise as negotiateCompromiseOn, registerCoalition as registerCoalitionOn, programAnalysis as programAnalysisOf, proposeTerm as proposeTermOn, termOptions as termOptionsOf, requestsView as requestsViewOf, refusedUntil } from './world-engine.js?v=20261118-25';
 import { positionOf as programPositionOf, THEMES as PROGRAM_THEMES, coalitionBlock, coalitionDeadline } from './alliance-rules.js?v=20261118-25';
-import { addAdTransfer, opinionEffect, recordAccordOutcome, settleElectoralTerms, allianceBlock, allianceOf, inviteBlock, inviteOdds, inviteToAlliance, playerAlliance, electionRoster, forceProfiles, mergeCandidates, mergeIntoPlayerForce, renamePlayerForce, setPlayerAgenda, splitPlayerForce, localShares, regionalShares, withRegionalLeans, withLocalCalendar, joinCoalition, acceptAlliance, addWorldEffects, advanceWorld, alignWorldToVote, allianceOdds, applyWorldSignals, axisOf, breakAlliance, campaignPollBonus, createWorld, isLegacyWorld, normalizeWorld, proposeAlliance, setGoverningForces, setPlayerParty, withCanonicalForces, withLatentForces, withPartyIdentities, withPositions } from './world-engine.js?v=20261118-25';
+import { addAdTransfer, opinionEffect, recordAccordOutcome, settleElectoralTerms, allianceBlock, allianceOf, inviteBlock, inviteImpact, inviteOdds, inviteToAlliance, playerAlliance, electionRoster, forceProfiles, mergeCandidates, mergeIntoPlayerForce, renamePlayerForce, setPlayerAgenda, splitPlayerForce, localShares, regionalShares, withRegionalLeans, withLocalCalendar, joinCoalition, acceptAlliance, addWorldEffects, advanceWorld, alignWorldToVote, allianceOdds, applyWorldSignals, axisOf, breakAlliance, campaignPollBonus, createWorld, isLegacyWorld, normalizeWorld, proposeAlliance, setGoverningForces, setPlayerParty, withCanonicalForces, withLatentForces, withPartyIdentities, withPositions } from './world-engine.js?v=20261118-25';
 import { candidacyQuotas, FORMATION_PHASES, LEGISLATURE_RULES, NATIONAL_LINES, acceptMandate, crisisFormation, seatResult, startFormation, buildCoalitions, campaignWeekEffects, coalitionOptions, compactResult, contestedDistricts, createNationalState, europeanListSeats, formationStep, groupOfParty, homeDistricts, legislatureGroups, legislatureTerm, nationalCalendar, nationalHistory, nationalProjection, normalizeNationalState, openLegislature, politicheOutcome, regionalBreakdown, runEuropeanVote, runNationalVote, seatPlayer, voteForces } from './legislature-engine.js?v=20261118-25';
 import { classifyOutcome, nationalListShares, preferenceStanding } from './election-engine.js?v=20261118-25';
 import { DIFFICULTIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261118-25';
@@ -5766,7 +5766,9 @@ export const store = {
   },
   inviteBlock(forceId) { return state.world ? inviteBlock(state.world, forceId) : 'Il mondo politico non è disponibile.'; },
   allianceBlock(forceId) { return state.world ? allianceBlock(state.world, forceId) : null; },
-  inviteToAlliance(forceId) {
+  // Who would follow (and who would stay in the accord it leaves) if this force is invited: by default only the force moves.
+  inviteImpact(forceId) { return state.world ? inviteImpact(state.world, forceId) : null; },
+  inviteToAlliance(forceId, { mode = 'individual' } = {}) {
     if (!state.game?.party) throw new Error('Serve un partito per stringere un’alleanza.');
     requireSecretary();
     const closed = allianceWindow(state);
@@ -5775,7 +5777,7 @@ export const store = {
     if (blocked) throw new Error(blocked);
     const game = spendTime(state.game, 1);
     if (game.resources.politicalCapital < 4) throw new Error('Servono 4 punti di capitale politico per invitare un partito nella coalizione.');
-    const result = inviteToAlliance(state.world, forceId, { ...allianceContext(state, forceId), date: state.clock.currentDate });
+    const result = inviteToAlliance(state.world, forceId, { ...allianceContext(state, forceId), date: state.clock.currentDate, mode });
     let nextGame = { ...game, resources: { ...game.resources, politicalCapital: game.resources.politicalCapital - 4 } };
     const force = state.world.parties.find(item => item.id === forceId);
     if (result.success) { nextGame = deepCopy(nextGame); for (const id of result.joined) remember(nextGame, { date: state.clock.currentDate, kind: 'alleanza', text: `In coalizione con ${state.world.parties.find(item => item.id === id)?.label ?? 'un’altra forza'}`, partyId: id, subject: id, weight: 1 }); }

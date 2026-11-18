@@ -69,8 +69,19 @@ for (const level of levels) {
     const last = views.at(-1);
     assert.equal(last.complete, true);
     assert.equal(last.ballots, night.snapshot.totalVotes, `${level}/${stage}: il totale finale è quello dello snapshot.`);
-        const listedPercent = result.groups.reduce((acc, row) => acc + row.percent, 0);
-    assert.ok(Math.abs(night.snapshot.totalVotes - Math.round(sum(result.groups, 'votes') * 100 / listedPercent)) <= 1 || listedPercent > 99.95, 'Il totale è quello del motore più gli «Altri» dichiarati (le percentuali del motore sono sui voti validi).');
+    // The valid ballots of the CANONICAL result are the base of the night, not a total rebuilt from the rows (that check used to accept a double count of «Altri»): snapshot, twelfth hour and result must agree on them.
+    const ballots = result.electorate.ballots, listedPercent = result.groups.reduce((acc, row) => acc + row.percent, 0), listedVotes = sum(result.groups, 'votes');
+    assert.equal(night.snapshot.totalVotes, ballots, `${level}/${stage}: i voti validi dello snapshot (${night.snapshot.totalVotes}) sono quelli del risultato canonico (${ballots}).`);
+    assert.equal(last.ballots, ballots, `${level}/${stage}: alla dodicesima ora i voti validi (${last.ballots}) sono quelli del risultato (${ballots}).`);
+    const altri = last.rows.find(row => row.id.startsWith('altri'));
+    if (listedPercent < 99.95) {
+      assert.ok(altri, `${level}/${stage}: la quota non elencata compare come «Altri».`);
+      assert.equal(altri.votes, ballots - listedVotes, `${level}/${stage}: gli «Altri» (${altri.votes}) sono i voti validi meno quelli delle liste, non una base ricostruita.`);
+      assert.ok(Math.abs(listedVotes - Math.round(ballots * listedPercent / 100)) <= result.groups.length, `${level}/${stage}: i voti delle liste (${listedVotes}) sono percentuale × voti validi, senza normalizzare a 100 (${Math.round(ballots * listedPercent / 100)}).`);
+      assert.ok(Math.abs(altri.percent - (100 - listedPercent)) <= 0.011, `${level}/${stage}: la percentuale degli «Altri» è il resto delle liste.`);
+    } else assert.equal(listedVotes, ballots, `${level}/${stage}: senza quota non elencata le liste sommano i voti validi.`);
+    // the check must FAIL if «Altri» were counted twice: the same sum, with an artificial extra share added on top, no longer matches the ballots
+    if (altri) assert.notEqual(listedVotes + altri.votes + altri.votes, ballots, 'Il controllo distingue il doppio conteggio degli «Altri».');
     for (const group of result.groups) {
       const row = last.rows.find(item => item.id === group.id);
       assert.equal(row.votes, group.votes, `${level}/${stage}: voti finali di ${group.label} uguali al motore.`);

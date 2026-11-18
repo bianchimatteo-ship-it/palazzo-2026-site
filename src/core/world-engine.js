@@ -985,7 +985,9 @@ function negotiate(world, party, camp) {
 }
 // Whether a force can come into a camp with its own partners: close enough to the leader and not at odds with the members (the same rule when a camp is joined and when a force is invited).
 const campCompatible = (world, party, camp) => campFit(world, party, camp) > -0.4 && distance(party, leaderOf(camp.members)) <= 2;
-function joinCamp(world, camp, party, date, reason, { terms = null, due = null } = {}) {
+// `mode`: 'merge' (the default: a force bound to another accord brings its compatible partners along) or 'individual' (only that force moves; every partner stays in the accord they were in, which keeps its terms,
+// leader and registrations). `joined` collects who moved, so that nobody changes accord without the caller and the chronicle knowing it.
+function joinCamp(world, camp, party, date, reason, { terms = null, due = null, mode = 'merge' } = {}) {
   const alliance = camp.alliance;
   // A force already bound to another accord brings its partners along when they are all compatible (the accords merge, the conditions go with them). When some partner is not, the accord stays
   // with the ones that stay: it loses members only through a recorded decision (chronicle and history), and ends only when fewer than two remain.
@@ -994,7 +996,7 @@ function joinCamp(world, camp, party, date, reason, { terms = null, due = null }
   let stays = [];
   if (previous) {
     const partners = previous.partyIds.filter(item => item !== party.id && !alliance.partyIds.includes(item)).map(id => world.parties.find(item => item.id === id && item.active)).filter(Boolean);
-    const coming = partners.filter(partner => campCompatible(world, partner, camp));
+    const coming = mode === 'individual' ? [] : partners.filter(partner => campCompatible(world, partner, camp));
     stays = partners.filter(partner => !coming.includes(partner));
     newcomers.push(...coming.map(item => item.id));
     if (!stays.length) {
@@ -1002,6 +1004,17 @@ function joinCamp(world, camp, party, date, reason, { terms = null, due = null }
       // The accords of the alliance that merges are not lost: its conditions still stand (and are checked at the vote) and its cohesion weighs on the new one.
       alliance.terms = [...(alliance.terms ?? []), ...(previous.terms ?? [])].slice(-8);
       alliance.cohesion = clamp(Math.round((alliance.cohesion + (previous.cohesion ?? alliance.cohesion)) / 2), 0, 100);
+      // The electoral registrations of the accord that merges are not lost either: each one (the approved, the rejected, the legacy ones) passes to the new accord, unless it already has one for the same election and type.
+      // A registration is never rewritten: the ones of concluded elections stay exactly as they were; the composition (`members`) of the accord that made it travels with it, so that an approval is checked
+      // again for an open election when the members are no longer the ones it was granted to (see coalitionApproval).
+      if (Array.isArray(previous.coalitions) && previous.coalitions.length) {
+        const own = Array.isArray(alliance.coalitions) ? alliance.coalitions : (alliance.coalitions = []);
+        for (const record of previous.coalitions) {
+          if (own.some(item => item.electionId === record.electionId && item.type === record.type)) continue;
+          own.push({ ...record, mergedFrom: previous.id, members: record.members ?? [...previous.partyIds] });
+        }
+        alliance.history = [...(alliance.history ?? []), { date, text: `Le registrazioni elettorali di «${previous.label}» passano all’accordo (${previous.coalitions.length})` }].slice(-12);
+      }
     } else {
       previous.partyIds = previous.partyIds.filter(id => !newcomers.includes(id));
       settleLeader(world, previous);
@@ -1930,6 +1943,16 @@ function inviteMerge(world, force, camp) {
   const partners = other.partyIds.filter(id => id !== force.id).map(id => world.parties.find(item => item.id === id && item.active)).filter(Boolean);
   return { alliance: other, partners, incompatible: partners.filter(partner => !campCompatible(world, partner, camp)) };
 }
+// What inviting this force would do to the accord it already belongs to: who could follow it (compatible partners), who would stay, and that by default only the force itself moves. Null when it is in no accord.
+export function inviteImpact(world, forceId) {
+  const player = playerParty(world), force = world.parties.find(item => item.id === forceId);
+  const own = player && allianceOf(world, player.id);
+  if (!force || !own) return null;
+  const merge = inviteMerge(world, force, inviteCamp(world, own));
+  if (!merge) return null;
+  const label = id => world.parties.find(item => item.id === id)?.label ?? id;
+  return { alliance: merge.alliance.label, individual: true, followers: merge.partners.filter(p => !merge.incompatible.includes(p)).map(p => ({ id: p.id, label: p.label })), staying: merge.incompatible.map(p => ({ id: p.id, label: p.label })), note: `Per impostazione predefinita passa solo ${force.label}: ${merge.partners.length ? merge.partners.map(p => p.label).join(', ') + ' restano nell’accordo «' + merge.alliance.label + '» con le sue condizioni e registrazioni.' : 'nessun altro partner.'}`, label };
+}
 // Why a force cannot be invited now, or null.
 export function inviteBlock(world, forceId) {
   const player = playerParty(world);
@@ -1972,7 +1995,7 @@ export function inviteOdds(world, forceId, context = {}) {
 }
 // The player's party invites a force into its accord. Returns { world, success, stage, chance, reasons, term, joined, merged }.
 //   stage: 'rifiuto' (the force says no), 'trattativa' (it would join, the talks on its conditions fail), 'adesione'.
-function inviteToAllianceCore(input, forceId, { partySupport = 50, influence = 50, date, memory, difficulty = 0, programOverlap = null } = {}) {
+function inviteToAllianceCore(input, forceId, { partySupport = 50, influence = 50, date, memory, difficulty = 0, programOverlap = null, mode: askedMode = 'individual' } = {}) {
   const world = copy(input);
   const blocked = inviteBlock(world, forceId);
   if (blocked) throw new Error(blocked);
@@ -2004,7 +2027,11 @@ function inviteToAllianceCore(input, forceId, { partySupport = 50, influence = 5
     return { world, success: false, stage: 'trattativa', chance: odds.chance, reasons: odds.reasons, term: talks.term };
   }
   const merge = inviteMerge(world, force, camp);
-  joinCamp(world, camp, force, date, 'invito', { terms: talks?.term ?? null });
+  // One force invited, not its accord: by default ONLY that force moves ('individual'); its partners stay where they were with the original accord intact. The caller asks for 'merge' to bring the compatible
+  // partners along (inviteImpact tells beforehand who would follow and who would stay).
+  const mode = askedMode === 'merge' ? 'merge' : 'individual';
+  const before = [...alliance.partyIds];
+  joinCamp(world, camp, force, date, 'invito', { terms: talks?.term ?? null, mode });
   if (talks?.term.kind === 'guida') {
     alliance.leaderId = force.id;
     if (alliance.partyIds.length >= 3) alliance.label = ledName(alliance, force.label);
@@ -2013,7 +2040,13 @@ function inviteToAllianceCore(input, forceId, { partySupport = 50, influence = 5
   addEffect(world, { partyId: player.id, delta: 0.3, remaining: 4, cause: 'alleanza' });
   addEffect(world, { partyId: force.id, delta: 0.2, remaining: 4, cause: 'alleanza' });
   force.playerRelation = round1(clamp(force.playerRelation + 10, -100, 100));
-  return { world, success: true, stage: 'adesione', chance: odds.chance, reasons: odds.reasons, term: talks?.term ?? null, joined: [force.id, ...(merge?.partners.map(item => item.id) ?? [])], merged: merge ? merge.alliance.label : null, allianceId: alliance.id };
+  // who really moved (not who might have): the force and the partners that are now in this accord; the others stayed
+  const joined = alliance.partyIds.filter(id => !before.includes(id));
+  const stayed = (merge?.partners ?? []).filter(item => !joined.includes(item.id)).map(item => item.id);
+  // The composition changed: the approvals for an OPEN election are verified again (coalitionApproval compares the members); the registrations of concluded elections are never rewritten.
+  const open = (alliance.coalitions ?? []).filter(item => item.status === 'approvata' && item.electionId);
+  if (open.length) alliance.history = [...(alliance.history ?? []), { date, text: `Cambia la composizione: ${open.length === 1 ? 'la registrazione' : `le ${open.length} registrazioni`} per elezioni aperte vanno riapprovate` }].slice(-12);
+  return { world, success: true, stage: 'adesione', chance: odds.chance, reasons: odds.reasons, term: talks?.term ?? null, joined, stayed, mode, merged: merge && joined.length > 1 ? merge.alliance.label : null, impact: merge ? { alliance: merge.alliance.label, followers: merge.partners.filter(p => !merge.incompatible.includes(p)).map(p => p.id), staying: merge.incompatible.map(p => p.id) } : null, reapprovals: open.map(item => item.electionId), allianceId: alliance.id };
 }
 // What kind of agreement an alliance of the world is: an intesa of two forces or a coalition of several, and whether it joins the forces of the government.
 export function allianceKind(world, alliance) {
@@ -2082,7 +2115,10 @@ export function registerCoalition(input, allianceId, election, date) {
   const closed = coalitionBlock(election, date);
   if (closed) throw new Error(closed);
   if (!Array.isArray(alliance.coalitions)) alliance.coalitions = alliance.partyIds.length >= 3 || alliance.kind === 'coalizione' ? [{ electionId: null, type: 'politiche', label: 'elezioni politiche', status: 'approvata', approvedAt: alliance.since ?? date, legacy: true }] : [];
-  if (alliance.coalitions.some(item => item.electionId === election.id && item.status === 'approvata')) return { world: input, approved: true, already: true, reasons: [] };
+  // an approval stands only for the composition it was granted to: when the members changed (a merger, a force that came or left) it is verified again for an open election; one that was granted to the same
+  // members, or a legacy one without the composition, stands as it was
+  const sameMembers = item => !Array.isArray(item.members) || (item.members.length === alliance.partyIds.length && item.members.every(id => alliance.partyIds.includes(id)));
+  if (alliance.coalitions.some(item => item.electionId === election.id && item.status === 'approvata' && sameMembers(item))) return { world: input, approved: true, already: true, reasons: [] };
   const members = alliance.partyIds.map(id => world.parties.find(item => item.id === id)).filter(Boolean);
   const reasons = [];
   for (let i = 0; i < members.length; i++) for (let j = i + 1; j < members.length; j++) {
@@ -2090,7 +2126,7 @@ export function registerCoalition(input, allianceId, election, date) {
     if (clash.length) reasons.push(`${members[i].label} e ${members[j].label} sono incompatibili su ${clash.map(row => row.label.toLowerCase()).join(', ')}`);
   }
   if ((alliance.cohesion ?? 60) < 35) reasons.push('la coesione dell’alleanza è troppo bassa per presentarsi insieme');
-  const record = { electionId: election.id, type: election.type, label: election.label, status: reasons.length ? 'respinta' : 'approvata', approvedAt: date, reasons };
+  const record = { electionId: election.id, type: election.type, label: election.label, status: reasons.length ? 'respinta' : 'approvata', approvedAt: date, reasons, members: [...alliance.partyIds] };
   alliance.coalitions.push(record);
   alliance.history = [...(alliance.history ?? []), { date, text: reasons.length ? `Coalizione per ${election.label} non approvata: ${reasons.join('; ')}` : `Approvata la coalizione per ${election.label}: le forze si presentano insieme` }].slice(-12);
   const player = playerParty(world);
