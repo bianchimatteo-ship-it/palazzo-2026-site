@@ -20,7 +20,8 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, send, screensho
   assert.ok(info.allied, 'Il giocatore ha stretto un’alleanza.'); assert.ok(info.election, 'C’è un’elezione politica per cui registrare la coalizione.');
   const open = async () => { await evaluate(`location.hash = '#sondaggi'; true`); await pause(1200); await evaluate(`(() => { const tab = [...document.querySelectorAll('[data-section-tab]')].find(el => /alleanze/i.test(el.textContent)); tab?.click(); return true; })()`); await pause(1500); };
   await open();
-  const text = () => evaluate(`document.querySelector('[data-my-coalition]')?.innerText ?? ''`);
+  // the sections of the panel are accordions: the test opens them all before reading the text (what the player reads when opening them)
+  const text = () => evaluate(`(() => { document.querySelectorAll('[data-my-coalition] details').forEach(d => { d.open = true; }); return document.querySelector('[data-my-coalition]')?.innerText ?? ''; })()`);
   let panel = await text();
   assert.match(panel, /La mia alleanza/, 'Il pannello dice «alleanza», non «coalizione», finché non è registrata.');
   assert.match(panel, /Alleanza politica/); assert.match(panel, /Diventa una coalizione solo se tutti la approvano/);

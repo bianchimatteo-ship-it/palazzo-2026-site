@@ -2,35 +2,35 @@
 // each page renderer is here a small function with the same name and the same arguments as the real one; the first time it is called the module is imported in the background and the page shows a
 // short «loading» block, then the page is drawn again with the real renderer. When a career is opened the modules are fetched in the background (`prefetchViews`), so that the first visit to a page
 // is almost always instant, and the pages seen are in the cache for when the network is missing. Nothing here decides anything: it only delays the code, never the data.
-import { HEMICYCLE_DEFAULTS } from './hemicycle-defaults.js?v=20261118-1';
-import { ARCHIVE_COLLECTIONS } from './archive-collections.js?v=20261118-1';
+import { HEMICYCLE_DEFAULTS } from './hemicycle-defaults.js?v=20261118-4';
+import { ARCHIVE_COLLECTIONS } from './archive-collections.js?v=20261118-4';
 
 export { HEMICYCLE_DEFAULTS, ARCHIVE_COLLECTIONS };
 
 const LOADERS = {
-  'admin-panel': () => import('./admin-panel.js?v=20261118-1'),
-  'agenda-page': () => import('./agenda-page.js?v=20261118-1'),
-  'archive-hub': () => import('./archive-hub.js?v=20261118-1'),
-  'diplomacy-view': () => import('./diplomacy-view.js?v=20261118-1'),
-  'initiative-mode': () => import('./initiative-mode.js?v=20261118-1'),
-  'referendum-mode': () => import('./referendum-mode.js?v=20261118-1'),
-  'territory-page': () => import('./territory-page.js?v=20261118-1'),
-  'election-night': () => import('./election-night.js?v=20261118-1'),
-  'elections-hub': () => import('./elections-hub.js?v=20261118-1'),
-  'hemicycle-view': () => import('./hemicycle-view.js?v=20261118-1'),
-  'members-view': () => import('./members-view.js?v=20261118-1'),
-  'parliament-mode': () => import('./parliament-mode.js?v=20261118-1'),
-  'party-page': () => import('./party-page.js?v=20261118-1'),
-  'scene-view': () => import('./scene-view.js?v=20261118-1'),
-  'career-page': () => import('./career-page.js?v=20261118-1'),
-  'observatory-view': () => import('./observatory-view.js?v=20261118-1'),
-  'presidency-view': () => import('./presidency-view.js?v=20261118-1'),
-  'real-laws': () => import('./real-laws.js?v=20261118-1'),
-  'game-mode': () => import('./game-mode.js?v=20261118-1'),
-  'finance-mode': () => import('./finance-mode.js?v=20261118-1'),
-  'society-mode': () => import('./society-mode.js?v=20261118-1'),
-  'organization-mode': () => import('./organization-mode.js?v=20261118-1'),
-  'local-mode': () => import('./local-mode.js?v=20261118-1')
+  'admin-panel': () => import('./admin-panel.js?v=20261118-4'),
+  'agenda-page': () => import('./agenda-page.js?v=20261118-4'),
+  'archive-hub': () => import('./archive-hub.js?v=20261118-4'),
+  'diplomacy-view': () => import('./diplomacy-view.js?v=20261118-4'),
+  'initiative-mode': () => import('./initiative-mode.js?v=20261118-4'),
+  'referendum-mode': () => import('./referendum-mode.js?v=20261118-4'),
+  'territory-page': () => import('./territory-page.js?v=20261118-4'),
+  'election-night': () => import('./election-night.js?v=20261118-4'),
+  'elections-hub': () => import('./elections-hub.js?v=20261118-4'),
+  'hemicycle-view': () => import('./hemicycle-view.js?v=20261118-4'),
+  'members-view': () => import('./members-view.js?v=20261118-4'),
+  'parliament-mode': () => import('./parliament-mode.js?v=20261118-4'),
+  'party-page': () => import('./party-page.js?v=20261118-4'),
+  'scene-view': () => import('./scene-view.js?v=20261118-4'),
+  'career-page': () => import('./career-page.js?v=20261118-4'),
+  'observatory-view': () => import('./observatory-view.js?v=20261118-4'),
+  'presidency-view': () => import('./presidency-view.js?v=20261118-4'),
+  'real-laws': () => import('./real-laws.js?v=20261118-4'),
+  'game-mode': () => import('./game-mode.js?v=20261118-4'),
+  'finance-mode': () => import('./finance-mode.js?v=20261118-4'),
+  'society-mode': () => import('./society-mode.js?v=20261118-4'),
+  'organization-mode': () => import('./organization-mode.js?v=20261118-4'),
+  'local-mode': () => import('./local-mode.js?v=20261118-4')
 };
 const modules = new Map();
 const pending = new Map();
