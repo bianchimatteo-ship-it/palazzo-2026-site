@@ -9,7 +9,9 @@ const { store, db } = await startCareer({ seed: 'programmi', level: 'deputato', 
 const world = store.getState().world;
 assert.equal(R.THEMES.length, 10, 'dieci temi');
 const documented = world.parties.filter(party => Number.isFinite(party.axis));
-const missing = world.parties.filter(party => !Number.isFinite(party.axis));
+const D = await import(new URL(`../src/data/party-programs.js?v=${build}`, import.meta.url).href);
+const missing = world.parties.filter(party => !Number.isFinite(party.axis) && !D.documentedProgramOf(party));
+const fromSources = world.parties.filter(party => !Number.isFinite(party.axis) && D.documentedProgramOf(party));
 assert.ok(documented.length >= 15, `i partiti del mondo hanno una collocazione documentata (${documented.length}/${world.parties.length})`);
 for (const party of documented) {
   const program = R.programOf(world, party);
@@ -35,8 +37,41 @@ for (const party of missing) {
   const fixed = { ...world, programPositions: { [party.id]: { economia: 1 } } };
   assert.equal(R.positionOf(fixed, party, 'economia'), 1);
 }
+// Progetto Civico Italia: no collocazione, but a programme documented from its official sources (data/party-programs.js): all ten themes covered and documented, nothing invented
+const pci = D.DOCUMENTED_PROGRAMS['party-progetto-civico-italia'];
+assert.ok(pci, 'programma documentato di Progetto Civico Italia');
+assert.deepEqual(Object.keys(pci.themes).sort(), R.THEMES.map(theme => theme.id).sort(), 'tutti e dieci i temi sono trattati (valore o motivo dell’assenza)');
+assert.ok(pci.sources.length >= 3 && pci.sources.every(url => url.startsWith('https://progettocivicoitalia.it/')), 'fonti ufficiali del partito');
+for (const [id, theme] of Object.entries(pci.themes)) {
+  assert.ok(theme.evidence && theme.evidence.length > 40, `${id}: motivazione dalla fonte`);
+  assert.ok(Array.isArray(theme.labs) && theme.labs.length, `${id}: Laboratorio di riferimento`);
+  if (theme.value === null) assert.equal(theme.confidence, 'nessuna', `${id}: dato mancante dichiarato`);
+  else { assert.ok(Number.isFinite(theme.value) && theme.value >= -3 && theme.value <= 3, `${id}: valore sulla scala`); assert.ok(['alta', 'media', 'bassa'].includes(theme.confidence), `${id}: confidenza`); assert.ok(theme.value !== 0 || theme.confidence !== 'alta', `${id}: nessun valore medio automatico con confidenza alta`); }
+}
+assert.ok(pci.areas.length >= 10 && pci.areas.every(area => area.it && area.en && area.lab), 'temi trasversali con testo italiano e inglese');
+assert.deepEqual(pci.areas.map(area => area.id).filter(id => ['scuola', 'giovani', 'welfare', 'agricoltura', 'turismo', 'trasporti', 'innovazione'].includes(id)).length, 7, 'i temi trasversali richiesti ci sono');
+{
+  const pciParty = world.parties.find(party => party.id === 'party-progetto-civico-italia') ?? { id: 'party-progetto-civico-italia', label: 'Progetto Civico Italia' };
+  const program = R.programOf(world, pciParty);
+  assert.equal(Object.values(program).filter(Number.isFinite).length, 9, 'nove temi con posizione');
+  assert.equal(program.istituzioni, null, 'istituzioni: le fonti non rispondono alla domanda della scala');
+  assert.ok(program.europa <= -2 && program.immigrazione < 0 && program.immigrazione > -1.5, 'europeista; immigrazione regolata e inclusiva');
+  const sorted = [...documented].sort((a, b) => a.axis - b.axis);
+  const far = sorted.at(-1), near = sorted[0];
+  const withFar = R.compare(world, pciParty, far), withNear = R.compare(world, pciParty, near);
+  assert.equal(withFar.missing, 1, 'un solo tema non rilevato'); assert.equal(withNear.missing, 1);
+  assert.ok(withNear.score > withFar.score, `più compatibile con ${near.label} che con ${far.label} (${withNear.score} vs ${withFar.score})`);
+  assert.ok(withFar.rows.find(row => row.id === 'europa').level !== 'non-rilevato' && withFar.rows.find(row => row.id === 'istituzioni').level === 'non-rilevato');
+  assert.equal(withFar.rows.find(row => row.id === 'europa').bSource.documented, false);
+  assert.equal(withFar.rows.find(row => row.id === 'europa').aSource.documented, true);
+  // a compromise on a documented theme works and settles it for both sides
+  const gapTheme = withFar.rows.find(row => row.gap >= 2);
+  if (gapTheme) { const deal = R.compromise(world, pciParty, far, gapTheme.id, { roll: 0, ties: 100, relation: 100 }); assert.ok(deal.agreed && Number.isFinite(deal.value), 'compromesso possibile su un tema documentato'); }
+  // the position a player fixes still wins over the documented one
+  assert.equal(R.positionOf({ ...world, programPositions: { [pciParty.id]: { europa: 1 } } }, pciParty, 'europa'), 1);
+}
 // every real party of the catalogue is covered (the ones the player can choose)
 const catalogue = [...db.parties, ...db.politicalMovements];
 const unclassified = catalogue.filter(item => !item.politicalPosition);
 assert.ok(unclassified.length <= 1, `i partiti del catalogo senza collocazione documentata sono pochissimi e dichiarati (${unclassified.map(item => item.name ?? item.officialName).join(', ')})`);
-console.log(`check-party-programs: ok (${documented.length} partiti con programma sui 10 temi, ${missing.length} non rilevato)`);
+console.log(`check-party-programs: ok (${documented.length} partiti con programma sui 10 temi, ${fromSources.length} ricostruiti dalle fonti ufficiali, ${missing.length} non rilevato)`);

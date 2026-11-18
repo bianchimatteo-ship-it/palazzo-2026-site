@@ -2832,4 +2832,10 @@ export const ALL_PAIRS = [
   ["Cambia la composizione: la registrazione per un’elezione aperta va riapprovata", "The composition changes: the registration for an open election must be approved again"],
   ["Cambia la composizione: le # registrazioni per elezioni aperte vanno riapprovate", "The composition changes: the # registrations for open elections must be approved again"],
   ["Le registrazioni elettorali di «{}» passano all’accordo (#)", "The electoral registrations of “{}” pass to the accord (#)"],
+  ["· fonte documentata, confidenza alta", "· documented source, high confidence"],
+  ["· fonte documentata, confidenza media", "· documented source, medium confidence"],
+  ["· fonte documentata, confidenza bassa", "· documented source, low confidence"],
+  ["Altri temi documentati dal partito", "Other topics documented by the party"],
+  ["Programma ricostruito dai documenti ufficiali del partito: i temi che le fonti non affrontano restano «dato non disponibile».", "Programme reconstructed from the party’s official documents: topics the sources do not address stay “data not available”."],
+  ["Fonti:", "Sources:"],
 ];
