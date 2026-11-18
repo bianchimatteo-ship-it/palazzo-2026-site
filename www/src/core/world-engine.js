@@ -1,11 +1,11 @@
-import { uniqueId } from './ids.js?v=20261117-12';
-import { HARD_GAP, THEMES, THEME_BY_ID, compare as compareProgram, compromise as compromiseOn, positionOf as programPositionOf, refusalBlock, refusalKey, recordRefusal, coalitionBlock, registrationsOf, pairKey as programPairKey } from './alliance-rules.js?v=20261117-12';
-import { AD_REWARD } from '../data/simulation/reward-rules.js?v=20261117-12';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261117-12';
-import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261117-12';
-import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261117-12';
-import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261117-12';
-import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261117-12';
+import { uniqueId } from './ids.js?v=20261118-19';
+import { HARD_GAP, THEMES, THEME_BY_ID, compare as compareProgram, compromise as compromiseOn, positionOf as programPositionOf, refusalBlock, refusalKey, recordRefusal, coalitionBlock, registrationsOf, pairKey as programPairKey } from './alliance-rules.js?v=20261118-19';
+import { AD_REWARD } from '../data/simulation/reward-rules.js?v=20261118-19';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261118-19';
+import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261118-19';
+import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261118-19';
+import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261118-19';
+import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261118-19';
 export { houseEffect };
 
 // The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.
@@ -2396,7 +2396,7 @@ export function splitPlayerForce(input, { id, label, abbreviation = null, fracti
   return world;
 }
 // Another force joins the player's party (the same fusion the world makes between simulated forces).
-export function mergeIntoPlayerForce(input, { forceId, label = null, date }) {
+export function mergeIntoPlayerForce(input, { forceId, label = null, abbreviation = null, color = null, date }) {
   const world = copy(input);
   const absorber = world.parties.find(item => item.id === world.playerPartyId) ?? world.parties.find(item => item.isPlayer);
   const absorbed = world.parties.find(item => item.id === forceId && item.active && item !== absorber);
@@ -2404,6 +2404,8 @@ export function mergeIntoPlayerForce(input, { forceId, label = null, date }) {
   merge(world, absorber, absorbed, date);
   absorber.cohesion = clamp((absorber.cohesion ?? 60) - 6, 0, 100);
   if (label) absorber.label = label;
+  if (abbreviation) absorber.abbreviation = abbreviation;
+  if (color && /^#[\da-f]{6}$/i.test(color)) { absorber.brandColor = color; absorber.color = readableOnDark(color); }
   addEffect(world, { partyId: absorber.id, delta: round2(Math.min(1.2, absorbed.baseline * 0.12)), remaining: 12, cause: 'fusione', label: 'Fusione tra partiti', unscaled: true });
   return world;
 }

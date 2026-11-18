@@ -1,6 +1,7 @@
-// Rewarded advertising: NOT configured. The game ships with no advertising SDK (no AdMob, no Capacitor plugin) and no advertising ids: the video reward stays disabled (the button is off and says why)
-// until the owner installs the SDK, sets the ids below (taken from the owner's own AdMob account, never invented or copied) and provides a provider that implements the contract of
-// data/repositories/ads-rewarded.js. Nothing here may be filled with test or example ids in production.
+// Rewarded advertising: OFF in every release. The ANDROID project does include the Capacitor AdMob plugin (@capacitor-community/admob: Google Mobile Ads SDK + UMP) and its adapter
+// (data/repositories/admob-adapter.js), but ADS_MODE below is 'off': no SDK call, no request, the video reward stays disabled (the button is off and says why). The iOS app has NO advertising SDK
+// and no ads ids (capacitor.config.json: includePlugins []). InMobi is NOT integrated: its account and placements exist in the owner's portal, but there is no InMobi SDK or adapter in this repository
+// (docs/admob.md, «InMobi»). Ids come only from the owner's own accounts, never invented or copied; nothing here may be filled with test or example ids in production.
 export const ADS_CONFIG = Object.freeze({
   enabled: false,
   appId: null,

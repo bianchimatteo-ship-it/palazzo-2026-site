@@ -1,40 +1,40 @@
-import { invitedShows } from '../core/scene-engine.js?v=20261117-12';
-import { voteCatalog } from '../core/vote-engine.js?v=20261117-12';
-import { openVotesOf } from '../core/lawmaking-engine.js?v=20261117-12';
-import { floorBand } from './floor-view.js?v=20261117-12';
-import { endedHeadline } from './hall-view.js?v=20261117-12';
-import { activityFor, activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20261117-12';
-import { playerRoles } from '../core/roles.js?v=20261117-12';
-import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20261117-12';
-import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, currentObjectiveLabel, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261117-12';
-import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261117-12';
-import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20261117-12';
-import { careerLevelLabel } from '../data/regions.js?v=20261117-12';
-import { advanceDays, formatDate } from '../core/time.js?v=20261117-12';
-import { renderBarometerPanel } from './polls-mode.js?v=20261117-12';
-import { PRESIDENT_ACTIVITIES } from '../data/simulation/presidency-rules.js?v=20261117-12';
-import { politicalCrisis } from '../core/presidency-engine.js?v=20261117-12';
-import { candidacyAccess } from './campaign-mode.js?v=20261117-12';
-import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20261117-12';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261117-12';
-import { societyMood } from '../core/society-engine.js?v=20261117-12';
-import { financeOutlook } from '../core/finance-engine.js?v=20261117-12';
-import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20261117-12';
-import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20261117-12';
-import { activeInstitutions, institutionLabel } from './local-mode.js?v=20261117-12';
-import { renderFinanceCard } from './finance-mode.js?v=20261117-12';
-import { renderStaffBand } from './staff-view.js?v=20261117-12';
-import { planAddButton } from './plan-view.js?v=20261117-12';
-import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20261117-12';
-import { stateBadge, statusChip } from './charts.js?v=20261117-12';
-import { articleHtml, newsMedia, renderNewsroomTabs } from './news-view.js?v=20261117-12';
-import { relevantArticles } from '../core/news-engine.js?v=20261117-12';
-import { identityMark, kindChip } from './party-identity.js?v=20261117-12';
-import { illustration } from './illustrations.js?v=20261117-12';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261117-12';
-import { avatarOf } from '../core/avatar.js?v=20261117-12';
-import { avatarSvg } from './avatar-svg.js?v=20261117-12';
-import { regionPriorities } from '../core/society-engine.js?v=20261117-12';
+import { invitedShows } from '../core/scene-engine.js?v=20261118-19';
+import { voteCatalog } from '../core/vote-engine.js?v=20261118-19';
+import { openVotesOf } from '../core/lawmaking-engine.js?v=20261118-19';
+import { floorBand } from './floor-view.js?v=20261118-19';
+import { endedHeadline } from './hall-view.js?v=20261118-19';
+import { activityFor, activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20261118-19';
+import { playerRoles } from '../core/roles.js?v=20261118-19';
+import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20261118-19';
+import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, currentObjectiveLabel, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261118-19';
+import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261118-19';
+import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20261118-19';
+import { careerLevelLabel } from '../data/regions.js?v=20261118-19';
+import { advanceDays, formatDate } from '../core/time.js?v=20261118-19';
+import { renderBarometerPanel } from './polls-mode.js?v=20261118-19';
+import { PRESIDENT_ACTIVITIES } from '../data/simulation/presidency-rules.js?v=20261118-19';
+import { politicalCrisis } from '../core/presidency-engine.js?v=20261118-19';
+import { candidacyAccess } from './campaign-mode.js?v=20261118-19';
+import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20261118-19';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261118-19';
+import { societyMood } from '../core/society-engine.js?v=20261118-19';
+import { financeOutlook } from '../core/finance-engine.js?v=20261118-19';
+import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20261118-19';
+import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20261118-19';
+import { activeInstitutions, institutionLabel } from './local-mode.js?v=20261118-19';
+import { renderFinanceCard } from './finance-mode.js?v=20261118-19';
+import { renderStaffBand } from './staff-view.js?v=20261118-19';
+import { planAddButton } from './plan-view.js?v=20261118-19';
+import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20261118-19';
+import { stateBadge, statusChip } from './charts.js?v=20261118-19';
+import { articleHtml, newsMedia, renderNewsroomTabs } from './news-view.js?v=20261118-19';
+import { relevantArticles } from '../core/news-engine.js?v=20261118-19';
+import { identityMark, kindChip } from './party-identity.js?v=20261118-19';
+import { illustration } from './illustrations.js?v=20261118-19';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261118-19';
+import { avatarOf } from '../core/avatar.js?v=20261118-19';
+import { avatarSvg } from './avatar-svg.js?v=20261118-19';
+import { regionPriorities } from '../core/society-engine.js?v=20261118-19';
 
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -806,7 +806,7 @@ function secretaryPanel(state) {
       <div class="secretary-block"><h3>${glyph('megaphone', 16)} Comunicazione</h3><small>Lo stile agisce ogni settimana su reputazione, notorietà e tono della stampa. 1 capitale · ogni 6 settimane.</small><div class="line-options">${Object.entries(COMMUNICATION_STYLES).map(([id, item]) => `<button class="line-option ${party.communication === id ? 'active' : ''}" data-communication="${id}" ${party.communication === id || wait('communication', 6) ? 'disabled' : ''} aria-pressed="${party.communication === id}"><strong>${esc(item.label)}</strong><small>${esc(item.detail)}</small></button>`).join('')}</div></div>
     </div>
     ${org ? `<div class="secretary-block"><h3>${glyph('money', 16)} Investimenti del partito</h3><small>Tesoreria disponibile: ${euro(org.treasury.balance)}.</small><div class="secretary-investments">${investments}</div></div>` : ''}
-    <div class="hq-links"><button class="text-link" data-nav="sondaggi" data-obs-view="forze">Alleanze con gli altri partiti ${arrow}</button><button class="text-link" data-nav="finanze">Bilancio e priorità della tesoreria ${arrow}</button><button class="text-link" data-nav="territori">Territori e sezioni ${arrow}</button></div>
+    <div class="hq-links"><button class="text-link" data-nav="sondaggi" data-obs-view="alleanze">Alleanze con gli altri partiti ${arrow}</button><button class="text-link" data-nav="finanze">Bilancio e priorità della tesoreria ${arrow}</button><button class="text-link" data-nav="territori">Territori e sezioni ${arrow}</button></div>
   </section>`;
 }
 

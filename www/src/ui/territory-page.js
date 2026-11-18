@@ -1,11 +1,11 @@
 // The page «Risultati per territorio»: the last simulated general election of the game read by Region, Province and Comune, with search, filters, pages and a comparison between consultations. It never loads
 // all the 7,894 comuni at once: the hierarchy holds only names and inhabitants, and the votes of the comuni are drawn for ONE province at a time (core/territory-results.js), always adding up to the level above.
 // What is shown is SIMULATED and says so; the only official data are the real 2022 results by Region (the map of the national page) and what the sources document.
-import { addsUp, territoryBreakdown } from '../core/territory-results.js?v=20261117-12';
-import { OTHERS, hierarchyFor, territoryInputs } from './territory-results-card.js?v=20261117-12';
-import { badge, card, empty, esc, num, pct } from './sections-kit.js?v=20261117-12';
-import { formatDate } from '../core/time.js?v=20261117-12';
-import { territoryPaint } from './national-view.js?v=20261117-12';
+import { addsUp, territoryBreakdown } from '../core/territory-results.js?v=20261118-19';
+import { OTHERS, hierarchyFor, territoryInputs } from './territory-results-card.js?v=20261118-19';
+import { badge, card, empty, esc, num, pct } from './sections-kit.js?v=20261118-19';
+import { formatDate } from '../core/time.js?v=20261118-19';
+import { territoryPaint } from './national-view.js?v=20261118-19';
 
 export const PAGE_SIZE = 25;
 const SORTS = [['popolazione', 'più abitanti'], ['nome', 'ordine alfabetico'], ['voti', 'più voti simulati']];
@@ -25,6 +25,28 @@ export function searchComuni(hierarchy, query, { limit = 20 } = {}) {
   return { items: items.slice(0, limit), total };
 }
 const topOf = (row, count = 3) => Object.entries(row.votes).sort((a, b) => b[1] - a[1]).slice(0, count).map(([id, votes]) => ({ id, share: row.valid ? votes * 100 / row.valid : 0 }));
+// The comuni where one list comes FIRST, read from the votes the simulation really draws for every comune (the same draw as the table below, province by province): a list that is not first
+// anywhere has an empty list, and nothing is invented for a comune the model does not cover. The result of a scope is kept, so paging and sorting do not draw again.
+const WINS_CACHE = new Map();
+export function comuneWins({ totals, hierarchy, seed, lean, regionCode = null, provinceCode = null, partyId }) {
+  const key = `${seed}|${regionCode ?? ''}|${provinceCode ?? ''}|${partyId}`;
+  if (WINS_CACHE.has(key)) return WINS_CACHE.get(key);
+  const regions = regionCode ? hierarchy.filter(item => item.code === regionCode) : hierarchy;
+  const wins = []; let total = 0;
+  for (const region of regions) for (const province of provinceCode ? region.provinces.filter(item => item.code === provinceCode) : region.provinces) {
+    const breakdown = territoryBreakdown({ totals, hierarchy, seed, regionLean: lean, regionCode: region.code, provinceCode: province.code });
+    for (const row of breakdown.rows) {
+      total++;
+      const ranked = Object.entries(row.votes).sort((x, y) => y[1] - x[1]);
+      if (ranked[0]?.[0] !== partyId) continue;
+      wins.push({ regionCode: region.code, regionName: region.name, provinceCode: province.code, provinceName: province.name, code: row.code, name: row.name, population: row.population, votes: row.votes[partyId] ?? 0, share: row.valid ? (row.votes[partyId] ?? 0) * 100 / row.valid : 0, margin: row.valid ? ((ranked[0][1] - (ranked[1]?.[1] ?? 0)) * 100 / row.valid) : 0 });
+    }
+  }
+  const out = { total, wins };
+  if (WINS_CACHE.size > 40) WINS_CACHE.clear();
+  WINS_CACHE.set(key, out);
+  return out;
+}
 
 function statusCard(last, geography) {
   const real = geography?.loaded ? `${badge('DATO REALE', 'good')} Politiche del ${esc(formatDate(geography.electionDate))} (2022): i risultati ufficiali sono per collegio e per Regione, mai per Provincia o Comune.` : '';
@@ -32,26 +54,28 @@ function statusCard(last, geography) {
   const poll = `${badge('SONDAGGIO / PROIEZIONE', 'neutral')} Le stime prima del voto (pagina «Sondaggi» e mappa della centrale elettorale) non sono risultati: sono una fotografia che cambia ogni settimana.`;
   return card({ kicker: 'COSA STAI GUARDANDO', title: 'Dati reali, simulati e stime', body: `<ul class="tp-status" data-territory-status><li>${sim}</li><li>${real || `${badge('DATO REALE', 'good')} I dati reali del 2022 sono per collegio e Regione.`}</li><li>${poll}</li></ul>` });
 }
-function controls({ hierarchy, regionCode, provinceCode, q, sort }) {
+function controls({ hierarchy, regionCode, provinceCode, q, sort, partyId, parties }) {
   const regions = hierarchy.map(region => `<option value="${esc(region.code)}"${region.code === regionCode ? ' selected' : ''}>${esc(region.name)}</option>`).join('');
   const region = hierarchy.find(item => item.code === regionCode);
   const provinces = region ? region.provinces.map(item => `<option value="${esc(item.code)}"${item.code === provinceCode ? ' selected' : ''}>${esc(item.name)}</option>`).join('') : '';
+  const partyOptions = parties.map(item => `<option value="${esc(item.id)}"${item.id === partyId ? ' selected' : ''}>${esc(item.label)}</option>`).join('');
   return `<form class="tp-controls" data-territory-form role="search">
     <label class="tp-search">Cerca un comune<input type="search" name="q" value="${esc(q)}" placeholder="Nome del comune (almeno 2 lettere)" autocomplete="off" data-territory-search></label>
     <label>Regione<select name="region" data-territory-region><option value="">Tutta Italia</option>${regions}</select></label>
     <label>Provincia<select name="province" data-territory-province${region ? '' : ' disabled'}><option value="">Tutte</option>${provinces}</select></label>
+    <label>Partito<select name="party" data-territory-party><option value="">Nessun filtro</option>${partyOptions}</select></label>
     <label>Ordina per<select name="sort" data-territory-sort>${SORTS.map(([id, label]) => `<option value="${id}"${id === sort ? ' selected' : ''}>${esc(label)}</option>`).join('')}</select></label>
     <button type="submit" class="primary-button">Cerca</button><button type="button" class="secondary-button" data-territory-reset>Azzera</button></form>`;
 }
 function searchResults(found, q) {
   if (!q || norm(q).length < 2) return '';
   if (!found.total) return `<p class="sx-empty" role="status" data-territory-nomatch>Nessun comune corrisponde a «${esc(q)}».</p>`;
-  const items = found.items.map(item => `<li><button type="button" class="link-button" data-view-filter="terr" data-view-filter-value="${esc(`${item.region.code}|${item.province.code}`)}" data-view-filter-also="terrPage=${esc(String(1))}" data-territory-hit="${esc(item.comune.code)}">${esc(item.comune.name)}</button> <small>${esc(item.province.name)} · ${esc(item.region.name)} · ${num(item.comune.population, 0)} ab.</small></li>`).join('');
+  const items = found.items.map(item => `<li><button type="button" class="link-button" data-view-filter="terr" data-view-filter-value="${esc(`${item.region.code}|${item.province.code}`)}" data-view-filter-also="terrPage=1;terrComune=${esc(item.comune.code)}" data-territory-hit="${esc(item.comune.code)}">${esc(item.comune.name)}</button> <small>${esc(item.province.name)} · ${esc(item.region.name)} · ${num(item.comune.population, 0)} ab.</small></li>`).join('');
   return `<div class="tp-hits" data-territory-hits><p class="quiet-copy">${num(found.total, 0)} ${found.total === 1 ? 'comune trovato' : 'comuni trovati'}${found.total > found.items.length ? ` (i primi ${found.items.length}: affina la ricerca)` : ''}. Scegli per aprire la sua provincia.</p><ul>${items}</ul></div>`;
 }
-const crumbs = (breakdown) => {
-  const list = [['', 'Italia'], breakdown.region ? [breakdown.region.code, breakdown.region.name] : null, breakdown.province ? [`${breakdown.region.code}|${breakdown.province.code}`, breakdown.province.name] : null].filter(Boolean);
-  return `<nav class="nv-crumbs" aria-label="Livello territoriale">${list.map(([value, text], index) => index === list.length - 1 ? `<span aria-current="page"><strong>${esc(text)}</strong></span>` : `<button type="button" data-view-filter="terr" data-view-filter-value="${esc(value)}" data-view-filter-also="terrPage=1">${esc(text)}</button>`).join(' › ')}</nav>`;
+const crumbs = (breakdown, comune = null) => {
+  const list = [['', 'Italia'], breakdown.region ? [breakdown.region.code, breakdown.region.name] : null, breakdown.province ? [`${breakdown.region.code}|${breakdown.province.code}`, breakdown.province.name] : null, comune ? ['*', comune.name] : null].filter(Boolean);
+  return `<nav class="nv-crumbs" aria-label="Livello territoriale" data-territory-crumbs>${list.map(([value, text], index) => index === list.length - 1 ? `<span aria-current="page"><strong>${esc(text)}</strong></span>` : `<button type="button" data-view-filter="terr" data-view-filter-value="${esc(value)}" data-view-filter-also="terrPage=1;terrComune=">${esc(text)}</button>`).join(' › ')}</nav>`;
 };
 function summaryCard(breakdown, ctx) {
   const parent = breakdown.province ?? breakdown.region ?? breakdown.italy;
@@ -70,7 +94,8 @@ function tableCard(breakdown, ctx, { page, sort }) {
   const head = columns.map(id => `<th scope="col" class="num">${esc(id === OTHERS ? 'Altri' : ctx.labelOf(id))}</th>`).join('');
   const body = shown.map(row => {
     const next = row.kind === 'regione' ? row.code : row.kind === 'provincia' ? `${breakdown.region.code}|${row.code}` : '';
-    const name = next ? `<button type="button" class="link-button" data-view-filter="terr" data-view-filter-value="${esc(next)}" data-view-filter-also="terrPage=1" data-territory-open="${esc(row.code)}">${esc(row.name)}</button>` : esc(row.name);
+    const pick = row.kind === 'comune' ? `<button type="button" class="link-button" data-view-filter="terrComune" data-view-filter-value="${esc(row.code)}" data-territory-pick="${esc(row.code)}">${esc(row.name)}</button>` : '';
+    const name = pick || (next ? `<button type="button" class="link-button" data-view-filter="terr" data-view-filter-value="${esc(next)}" data-view-filter-also="terrPage=1" data-territory-open="${esc(row.code)}">${esc(row.name)}</button>` : esc(row.name));
     const cells = columns.map(id => `<td class="num" data-label="${esc(id === OTHERS ? 'Altri' : ctx.labelOf(id))}">${pct(row.valid ? (row.votes[id] ?? 0) * 100 / row.valid : 0)}</td>`).join('');
     return `<tr data-territory-row><th scope="row" data-label="${esc(word)}"><strong>${name}</strong></th><td class="num" data-label="Abitanti">${num(row.population, 0)}</td><td class="num" data-label="Voti simulati">${num(row.valid, 0)}</td>${cells}</tr>`;
   }).join('');
@@ -133,14 +158,35 @@ function undocumentedCard(state) {
   if (!list.length) return '';
   return card({ kicker: 'DATI NON DOCUMENTATI', title: `${list.length} ${list.length === 1 ? 'lista senza' : 'liste senza'} collocazione politica nei dati`, body: `<p class="sx-note" data-territory-undocumented>${esc(list.map(party => party.label).join(', '))}: compaiono con la loro quota nei sondaggi e nei voti simulati, ma il programma e la posizione politica non sono documentati e restano «non rilevati»: il gioco non li inventa.</p>` });
 }
+// The selected comune: its simulated votes list by list, who comes first and how it ranks in its province (population and the winner's share). Source: the same draw as the table.
+function comuneCard(row, breakdown, ctx) {
+  if (!row) return '';
+  const ranked = Object.entries(row.votes).sort((a, b) => b[1] - a[1]);
+  const first = ranked[0], second = ranked[1];
+  const rank = [...breakdown.rows].sort((a, b) => b.population - a.population).findIndex(item => item.code === row.code) + 1;
+  const bars = ranked.slice(0, 8).map(([id, votes]) => `<li><span class="nv-lead">${ctx.swatch(ctx.colorOf(id))}<span>${esc(id === OTHERS ? 'Altri partiti' : ctx.labelOf(id))}</span></span><span class="tp-bar" role="img" aria-label="${esc(pct(row.valid ? votes * 100 / row.valid : 0))}"><i style="width:${Math.max(1, Math.min(100, row.valid ? votes * 100 / row.valid : 0))}%;background:${esc(ctx.colorOf(id))}"></i></span><b>${pct(row.valid ? votes * 100 / row.valid : 0)}</b><small>${num(votes, 0)} voti</small></li>`).join('');
+  return card({ kicker: 'COMUNE SELEZIONATO · RISULTATO SIMULATO', title: `${row.name} (${breakdown.province.name})`, className: 'tp-comune', body: `<div data-territory-comune="${esc(row.code)}"><div class="sx-kpis tp-kpis"><div class="sx-kpi"><small>Abitanti (ISTAT)</small><strong>${num(row.population, 0)}</strong></div><div class="sx-kpi"><small>Voti validi simulati</small><strong>${num(row.valid, 0)}</strong></div><div class="sx-kpi"><small>Primo partito</small><strong>${esc(first ? (first[0] === OTHERS ? 'Altri partiti' : ctx.labelOf(first[0])) : '—')}</strong></div><div class="sx-kpi"><small>Scarto sul secondo</small><strong>${row.valid && first && second ? pct((first[1] - second[1]) * 100 / row.valid) : '—'}</strong></div></div><ul class="tp-leads" data-territory-comune-votes>${bars}</ul><p class="quiet-copy">${rank}º comune della provincia per abitanti su ${breakdown.rows.length}. I voti sono simulati: i dati ufficiali non esistono per il singolo comune.</p></div>` });
+}
+function pagerOf(key, at, pages, total) {
+  const btn = (label, page, off) => `<button type="button" class="secondary-button compact" data-view-filter="${key}" data-view-filter-value="${page}"${off ? ' disabled aria-disabled="true"' : ''}>${label}</button>`;
+  return pages > 1 ? `<nav class="tp-pager" aria-label="Pagine dei risultati" data-territory-pager="${esc(key)}">${btn('« Prima', 1, at <= 1)}${btn('‹ Precedente', at - 1, at <= 1)}<span>Pagina ${at} di ${pages} · ${num(total, 0)} comuni</span>${btn('Successiva ›', at + 1, at >= pages)}${btn('Ultima »', pages, at >= pages)}</nav>` : '';
+}
+function winsCard({ partyId, label, result, scopeName, page, sort, ctx }) {
+  const rows = [...result.wins].sort(sort === 'nome' ? (a, b) => a.name.localeCompare(b.name, 'it') : sort === 'voti' ? (a, b) => b.votes - a.votes : (a, b) => b.population - a.population);
+  const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE)), at = Math.min(page, pages);
+  const shown = rows.slice((at - 1) * PAGE_SIZE, at * PAGE_SIZE);
+  const list = shown.map(item => `<tr data-territory-win><th scope="row" data-label="Comune"><strong><button type="button" class="link-button" data-view-filter="terr" data-view-filter-value="${esc(`${item.regionCode}|${item.provinceCode}`)}" data-view-filter-also="terrPage=1;terrComune=${esc(item.code)}" data-territory-win-open="${esc(item.code)}">${esc(item.name)}</button></strong></th><td data-label="Provincia">${esc(item.provinceName)}</td><td data-label="Regione">${esc(item.regionName)}</td><td class="num" data-label="Abitanti">${num(item.population, 0)}</td><td class="num" data-label="Quota">${pct(item.share)}</td><td class="num" data-label="Scarto">${pct(item.margin)}</td></tr>`).join('');
+  const body = result.wins.length ? `<div class="sx-table-wrap"><table class="sx-table tp-table" data-territory-wins-table><thead><tr><th scope="col">Comune</th><th scope="col">Provincia</th><th scope="col">Regione</th><th scope="col" class="num">Abitanti</th><th scope="col" class="num">Quota</th><th scope="col" class="num">Scarto sul secondo</th></tr></thead><tbody>${list}</tbody></table></div>${pagerOf('terrWinPage', at, pages, result.wins.length)}` : `<p class="sx-empty" data-territory-wins-none>${esc(label)} non risulta prima in nessun comune di ${esc(scopeName)} nel voto simulato.</p>`;
+  return card({ kicker: 'PARTITO · COMUNI VINTI · RISULTATO SIMULATO', title: `${label}: primo in ${num(result.wins.length, 0)} comuni su ${num(result.total, 0)} (${scopeName})`, className: 'tp-wins', body: `<div data-territory-wins="${esc(partyId)}" data-territory-wins-count="${result.wins.length}">${body}</div>` });
+}
 export function renderTerritoryPage(state, overview, { geography = null, municipalities = [], filters = {}, swatch = null, colorOf = null, labelOf = null } = {}) {
   if (!state.game) return empty('Crea prima un politico per vedere i risultati per territorio.', '<button class="primary-button" data-action="new-career">Crea il politico</button>');
   const last = overview?.national?.lastPolitiche ?? null;
   const hierarchy = hierarchyFor(municipalities);
   const status = statusCard(last, geography);
   const compare = comparisonCard(overview?.national?.votes ?? [], filters.terrCompare) + racesCard(state, filters.terrRace);
-  if (!last) return `<div class="territory-page" data-territory-page-root>${status}${card({ kicker: 'RISULTATI PER TERRITORIO', title: 'Ancora nessun voto politico', body: '<p class="sx-empty" role="status" data-territory-state="missing">Dopo le prossime elezioni politiche simulate qui trovi i risultati per regione, provincia e comune. Nel frattempo la mappa della centrale elettorale mostra la proiezione di oggi, che non è un risultato.</p><button type="button" class="secondary-button" data-nav="elezioni">Vai alla centrale elettorale</button>' })}${compare}</div>`;
-  if (!hierarchy) return `<div class="territory-page" data-territory-page-root>${status}${card({ kicker: 'RISULTATI PER TERRITORIO', title: 'Dati ISTAT in caricamento', body: '<p class="sx-empty" role="status" data-territory-state="missing">I dati ISTAT dei comuni non sono ancora caricati: riapri la pagina tra un momento.</p>' })}${compare}</div>`;
+  if (!last) return `<div class="territory-page" data-territory-page-root>${card({ kicker: 'RISULTATI PER TERRITORIO', title: 'Ancora nessun voto politico', body: '<p class="sx-empty" role="status" data-territory-state="missing">Dopo le prossime elezioni politiche simulate qui trovi i risultati per regione, provincia e comune. Nel frattempo la mappa della centrale elettorale mostra la proiezione di oggi, che non è un risultato.</p><button type="button" class="secondary-button" data-nav="elezioni">Vai alla centrale elettorale</button>' })}${compare}</div>${status}`;
+  if (!hierarchy) return `<div class="territory-page" data-territory-page-root>${status}${card({ kicker: 'RISULTATI PER TERRITORIO', title: 'Dati ISTAT in caricamento', body: '<p class="sx-empty" role="status" data-territory-state="missing">I dati ISTAT dei comuni non sono ancora caricati: riapri la pagina tra un momento.</p>' })}${compare}</div>${status}`;
   if (!swatch || !colorOf || !labelOf) ({ swatch, colorOf, labelOf } = territoryPaint(overview));   // the colours and names of the lists come from the national page (a lazy chunk of its own)
   const { totals, lean } = territoryInputs(last, geography);
   const [regionCode = '', provinceCode = ''] = String(filters.terr ?? '').split('|');
@@ -151,8 +197,15 @@ export function renderTerritoryPage(state, overview, { geography = null, municip
   const ctx = { swatch, colorOf, labelOf: id => id === OTHERS ? 'Altri' : labelOf(id), columns: ids };
   const found = searchComuni(hierarchy, q);
   const comuni = hierarchy.reduce((sum, region) => sum + region.provinces.reduce((acc, province) => acc + province.comuni.length, 0), 0);
-  return `<div class="territory-page" data-territory-page-root>${status}
-    ${card({ kicker: 'CERCA E FILTRA', title: `${num(comuni, 0)} comuni consultabili`, body: `${controls({ hierarchy, regionCode, provinceCode, q, sort })}${searchResults(found, q)}` })}
-    ${crumbs(breakdown)}${summaryCard(breakdown, ctx)}${tableCard(breakdown, ctx, { page: Math.max(1, Number(filters.terrPage) || 1), sort })}${compare}${undocumentedCard(state)}
-    <p class="sx-note" data-territory-source>Dato simulato: i voti di lista del voto nazionale del ${esc(formatDate(last.date))} della partita, ripartiti per abitanti (ISTAT) con lo scarto regionale del modello e una piccola variazione locale, sempre la stessa per lo stesso voto. Non è un dato ufficiale: i risultati reali del 2022 sono solo per collegio e Regione.</p></div>`;
+  // the lists the player can pick: every list of the national vote (never a list the simulation did not draw)
+  const parties = Object.entries(totals).filter(([id, votes]) => id !== OTHERS && votes > 0).sort((x, y) => y[1] - x[1]).map(([id]) => ({ id, label: labelOf(id) }));
+  const partyId = parties.some(item => item.id === filters.terrParty) ? filters.terrParty : '';
+  const comuneRow = breakdown.level === 'provincia' ? breakdown.rows.find(row => row.code === String(filters.terrComune ?? '')) ?? null : null;
+  const seed = `${last.id ?? last.date}|territorio`;
+  const winsHtml = partyId ? winsCard({ partyId, label: labelOf(partyId), result: comuneWins({ totals, hierarchy, seed, lean, regionCode: regionCode || null, provinceCode: provinceCode || null, partyId }), scopeName: breakdown.province?.name ?? breakdown.region?.name ?? 'Italia', page: Math.max(1, Number(filters.terrWinPage) || 1), sort, ctx }) : '';
+  return `<div class="territory-page" data-territory-page-root>
+    ${card({ kicker: 'CERCA E FILTRA', title: `${num(comuni, 0)} comuni consultabili`, body: `${controls({ hierarchy, regionCode, provinceCode, q, sort, partyId, parties })}${searchResults(found, q)}` })}
+    ${crumbs(breakdown, comuneRow)}${comuneCard(comuneRow, breakdown, ctx)}${winsHtml}${summaryCard(breakdown, ctx)}${tableCard(breakdown, ctx, { page: Math.max(1, Number(filters.terrPage) || 1), sort })}${compare}${undocumentedCard(state)}
+    ${status}
+    <p class="sx-note" data-territory-source>Dato simulato: i voti di lista del voto nazionale del ${esc(formatDate(last.date))} della partita, ripartiti per abitanti (ISTAT) con lo scarto regionale del modello e una piccola variazione tra territori; ogni livello somma quello superiore.</p></div>`;
 }

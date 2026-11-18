@@ -1,8 +1,8 @@
-import { campaignScope } from '../core/campaign-engine.js?v=20261118-18';
-import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261118-18';
-import { formatDate } from '../core/time.js?v=20261118-18';
-import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261118-18';
-import { distinctSeries, sparkline } from './charts.js?v=20261118-18';
+import { campaignScope } from '../core/campaign-engine.js?v=20261118-19';
+import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261118-19';
+import { formatDate } from '../core/time.js?v=20261118-19';
+import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261118-19';
+import { distinctSeries, sparkline } from './charts.js?v=20261118-19';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const pctFormats = new Map();

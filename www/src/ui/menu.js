@@ -1,17 +1,17 @@
 // Main menu, how-to-play, settings, save slots and the end-of-week report.
-import { renderTutorialInvite } from './tutorial.js?v=20261117-12';
-import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261117-12';
-import { GUIDE_FUNCTIONS, GUIDE_SCENARIOS } from '../data/guide-manual.js?v=20261117-12';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261117-12';
-import { formatDate } from '../core/time.js?v=20261117-12';
-import { illustration } from './illustrations.js?v=20261117-12';
-import { glyph } from './visuals.js?v=20261117-12';
-import { identityMark, identityVars } from './party-identity.js?v=20261117-12';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261117-12';
-import { hallView } from './hall-view.js?v=20261117-12';
-import { renderLogoCatalog } from './logo-catalog.js?v=20261117-12';
-import { esc, signed } from './charts.js?v=20261117-12';
-import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261117-12';
+import { renderTutorialInvite } from './tutorial.js?v=20261118-19';
+import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261118-19';
+import { GUIDE_FUNCTIONS, GUIDE_SCENARIOS } from '../data/guide-manual.js?v=20261118-19';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261118-19';
+import { formatDate } from '../core/time.js?v=20261118-19';
+import { illustration } from './illustrations.js?v=20261118-19';
+import { glyph } from './visuals.js?v=20261118-19';
+import { identityMark, identityVars } from './party-identity.js?v=20261118-19';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261118-19';
+import { hallView } from './hall-view.js?v=20261118-19';
+import { renderLogoCatalog } from './logo-catalog.js?v=20261118-19';
+import { esc, signed } from './charts.js?v=20261118-19';
+import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261118-19';
 
 const when = iso => { try { return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); } catch { return ''; } };
 // The actions of the opening screen, in order of importance: starting a career and resuming one are the two main ones (drawn apart, below); then what concerns the
@@ -30,6 +30,14 @@ const MENU_GROUPS = [
 ];
 
 // How to play: short sections, each with a concrete example.
+// Practical paths: where to start for each goal, step by step, each one a real page. They only open pages (no day, money or capital is spent).
+const GUIDE_PATHS = [
+  ['Primi passi', 'flag', 'Guarda la Home, apri l’Agenda e scegli l’attività della settimana: poi chiudi la settimana.', [['panoramica', 'Home'], ['calendario', 'Agenda']]],
+  ['Gestire il partito', 'users', 'Vedi correnti e dirigenti nella vita interna, poi affida un incarico allo staff e approvalo tu.', [['partito', 'Partito']]],
+  ['Preparare una campagna', 'megaphone', 'Controlla i sondaggi, scegli le alleanze e, dopo il voto, guarda i risultati per territorio.', [['sondaggi', 'Sondaggi'], ['elezioni', 'Centrale elettorale']]],
+  ['Elezioni e risultati', 'ballot', 'Candidati, fai campagna e segui la notte elettorale; poi scendi da Regione a Comune.', [['elezioni', 'Elezioni'], ['risultati', 'Risultati per territorio']]],
+  ['Istituzioni e referendum', 'dome', 'Segui le leggi in Parlamento, promuovi un’iniziativa o un referendum, e controlla i costi in Finanze.', [['referendum', 'Referendum'], ['finanze', 'Finanze']]]
+];
 const HOW_TO = [
   ['L’obiettivo', 'route', 'Costruisci una carriera nella politica italiana, dal consiglio comunale fino alla guida di un partito o del governo. Non c’è un finale unico: conta dove arrivi, quanto resisti e cosa lasci al Paese. Quando vuoi puoi lasciare la politica o andare in pensione: la carriera entra nella Hall of Fame con la sua eredità politica, che una nuova carriera può raccogliere.', 'Parti consigliere a Siena, diventi segretario regionale, poi candidato alle politiche.'],
   ['Iniziare una partita', 'flag', 'Dal menu: Nuova partita. Scegli dove iniziare (Regione e Comune dall’elenco ISTAT), il percorso (comunale, provinciale, regionale, deputato, senatore o eurodeputato), il partito (indipendente, un partito reale o uno fondato da te), la difficoltà, il sondaggio iniziale (Realistico: la Supermedia reale; Casuale: un quadro dei partiti inventato da un seme, sempre lo stesso con lo stesso seme; Personalizzato: le percentuali le scrivi tu e quel che resta è «Altri») e come cominci (un inizio ordinario, da outsider, con debiti politici, in un partito già diviso, con una carriera già consolidata o con uno scenario tutto tuo, ed eventualmente con l’eredità di una carriera conclusa); per ultimo crei il tuo politico. Le condizioni di partenza non sono etichette: cambiano rapporti, risorse e promozioni e producono decisioni per tutta la partita.', 'Comune di Bari, percorso comunale, iscritto a un partito reale, difficoltà Normale, partenza da outsider.'],
@@ -231,7 +239,7 @@ function manualCards(offset) {
 function guideView() {
   const manual = manualCards(HOW_TO.length);
   const titles = [...HOW_TO.map(([title]) => title), ...GUIDE_FUNCTIONS.map(item => item.title), ...GUIDE_SCENARIOS.map(item => item.title)];
-  return `<h2>Come giocare</h2><p class="section-subtitle">Le regole essenziali, il manuale di ogni funzione e gli scenari guidati, con un esempio per ciascuna.</p>${renderTutorialInvite()}<label class="guide-search"><span class="visually-hidden">Cerca nella guida</span><input type="search" data-guide-search placeholder="Cerca un argomento (es. sondaggi, fondi, ballottaggio, dimissioni)…" autocomplete="off" /></label><p class="sheet-empty" data-guide-empty hidden>Nessun argomento corrisponde.</p><nav class="guide-index" aria-label="Sezioni della guida">${titles.map((title, index) => `<a href="#guida-${index}" data-guide-jump="guida-${index}" data-guide-index="${index}">${esc(title)}</a>`).join('')}</nav><h3 class="guide-section-title">Le regole essenziali</h3><div class="guide-grid">${HOW_TO.map(([title, icon, text, example], index) => `<article class="guide-card" id="guida-${index}" data-guide-card="${index}">${guideFold(icon, title, teaserOf(text), `<p>${esc(text)}</p>${example ? `<p class="guide-example"><b>Esempio</b> ${esc(example)}</p>` : ''}`)}</article>`).join('')}</div><h3 class="guide-section-title">Il manuale delle funzioni</h3><div class="guide-grid">${manual.functions.join('')}</div><h3 class="guide-section-title">Scenari guidati</h3><div class="guide-grid">${manual.scenarios.join('')}</div>`;
+  return `<h2>Come giocare</h2><p class="section-subtitle">Le regole essenziali, il manuale di ogni funzione e gli scenari guidati, con un esempio per ciascuna.</p>${renderTutorialInvite()}<h3 class="guide-section-title">Percorsi</h3><div class="guide-paths" data-guide-paths>${GUIDE_PATHS.map(([title, glyph, text, pages]) => `<article class="guide-card guide-path" data-guide-path><b>${esc(title)}</b><p>${esc(text)}</p><p>${pages.map(([page, label]) => `<button type="button" class="go-button" ${guideTarget(page)}><span>${esc(label)}</span><i class="go-arrow" aria-hidden="true"></i></button>`).join(' ')}</p></article>`).join('')}</div><label class="guide-search"><span class="visually-hidden">Cerca nella guida</span><input type="search" data-guide-search placeholder="Cerca un argomento (es. sondaggi, fondi, ballottaggio, dimissioni)…" autocomplete="off" /></label><p class="sheet-empty" data-guide-empty hidden>Nessun argomento corrisponde.</p><nav class="guide-index" aria-label="Sezioni della guida">${titles.map((title, index) => `<a href="#guida-${index}" data-guide-jump="guida-${index}" data-guide-index="${index}">${esc(title)}</a>`).join('')}</nav><h3 class="guide-section-title">Le regole essenziali</h3><div class="guide-grid">${HOW_TO.map(([title, icon, text, example], index) => `<article class="guide-card" id="guida-${index}" data-guide-card="${index}">${guideFold(icon, title, teaserOf(text), `<p>${esc(text)}</p>${example ? `<p class="guide-example"><b>Esempio</b> ${esc(example)}</p>` : ''}`)}</article>`).join('')}</div><h3 class="guide-section-title">Il manuale delle funzioni</h3><div class="guide-grid">${manual.functions.join('')}</div><h3 class="guide-section-title">Scenari guidati</h3><div class="guide-grid">${manual.scenarios.join('')}</div>`;
 }
 // First opening without an account: the account first, then the first career.
 function welcomeView(account = {}, menu = {}) {

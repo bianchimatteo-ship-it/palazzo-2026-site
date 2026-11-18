@@ -1,6 +1,6 @@
 // English phrase book, part 8 of 8: the administrative area, the account and sign-out screens, the personal logo catalogue, the tutorial invitation and the engine's law-effect and government lines. Same format as part 6: [Italian as shown, English]; `#` stands for a number, `{}` for a free part; in the English a free part is named by its position (`{2}` for the second one).
-import { ALL_PAIRS } from '../studio-lines.js?v=20261118-18';
-import { ALL_PAIRS as ACTIVITY_SCENE_PAIRS } from '../activity-scene-lines.js?v=20261118-18';
+import { ALL_PAIRS } from '../studio-lines.js?v=20261118-19';
+import { ALL_PAIRS as ACTIVITY_SCENE_PAIRS } from '../activity-scene-lines.js?v=20261118-19';
 
 // The explanations of the opening of a general or European campaign (campaign-engine.js campaignOpeningNotes): signed numbers come in both signs.
 function campaignNotePairs() {
@@ -10066,6 +10066,13 @@ export const PHRASES = [
   ["Chiarezza #% · omogeneità #%: sono i criteri che guardano l’Ufficio centrale e la Corte. Il quesito che leggeranno:", "Clarity #% · homogeneity #%: these are the criteria the Central Office and the Court look at. The question they will read:"],
   ["Fondi disponibili: # €. La richiesta si presenta solo con la tua conferma: l’ammissibilità la decidono poi l’Ufficio centrale e la Corte.", "Funds available: €#. The request is filed only with your confirmation: admissibility is then decided by the Central Office and the Court."],
   ["Dato simulato: i voti di lista del voto nazionale del {} della partita, ripartiti per abitanti (ISTAT) con lo scarto regionale del modello e una piccola variazione tra territori; ogni livello somma quello superiore.", "Simulated data: the list votes of the game's national vote of {}, split by inhabitants (ISTAT) with the model's regional gap and a small variation between territories; each level adds up to the one above."],
+  ["Governo in carica all’avvio ha la fiducia di # gruppi; la stabilità è a #/# e il margine nella Camera più stretta è di # seggi", "The government in office at the start has the confidence of # groups; stability stands at #/# and the margin in the narrower Chamber is # seats"],
+  ["Governo in carica all’avvio ha la fiducia di # gruppi; la stabilità è a #/#", "The government in office at the start has the confidence of # groups; stability stands at #/#"],
+  ["Governo in carica all’avvio ha la fiducia di # gruppi; la stabilità è a #/# e il margine nella Camera più stretta è di # seggi.", "The government in office at the start has the confidence of # groups; stability stands at #/# and the margin in the narrower Chamber is # seats."],
+  ["Governo in carica all’avvio ha la fiducia di # gruppi (di cui # dall’esterno); la stabilità è a #/# e il margine nella Camera più stretta è di # seggi", "The government in office at the start has the confidence of # groups (# from outside); stability stands at #/# and the margin in the narrower Chamber is # seats"],
+  ["Governo in carica all’avvio ha la fiducia di # gruppi (di cui # dall’esterno); la stabilità è a #/#", "The government in office at the start has the confidence of # groups (# from outside); stability stands at #/#"],
+  ["Governo in carica all’avvio ha la fiducia di # gruppi (di cui # dall’esterno); la stabilità è a #/# e il margine nella Camera più stretta è di # seggi.", "The government in office at the start has the confidence of # groups (# from outside); stability stands at #/# and the margin in the narrower Chamber is # seats."],
+  ["Consolidato → Rilevato", "Consolidated → Detected"],
   ["{}: l’intervista su {}", "{1}: the interview on {2}"],
   ["{}: la conferenza stampa su {}", "{1}: the press conference on {2}"],
   ["{}: l’ospitata televisiva su {}", "{1}: the TV appearance on {2}"],

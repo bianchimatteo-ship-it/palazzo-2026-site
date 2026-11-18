@@ -1,14 +1,14 @@
 // The programme and the promises (program-engine.js): what the party proposes, what the player promised, how credible it is, how each promise is going against what the game really did,
 // the commitments of the coalition, and what the rivals promise. Every button here calls the store (makePromise, modifyPromise, withdrawPromise, announcePromise): nothing is decorative.
-import { AMBITIONS, PROMISE_SCOPES, PROMISE_SETTLED, PROMISE_STATES, promiseLine } from '../core/program-engine.js?v=20261118-18';
-import { AREA_BY_ID, INSTRUMENT_KINDS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261118-18';
-import { badge, bar, card, empty, esc, kpi, num } from './sections-kit.js?v=20261118-18';
-import { glyph, inkOn } from './visuals.js?v=20261118-18';
-import { partyIdentity } from './party-identity.js?v=20261118-18';
-import { allianceOf } from '../core/world-engine.js?v=20261118-18';
-import { PRIORITIES, REVISION_REASONS } from '../core/program-engine.js?v=20261118-18';
-import { FINANCING, TERRITORIES, DEADLINES } from '../core/program-proposals.js?v=20261118-18';
-import { guidedFields } from './program-guide.js?v=20261118-18';
+import { AMBITIONS, PROMISE_SCOPES, PROMISE_SETTLED, PROMISE_STATES, promiseLine } from '../core/program-engine.js?v=20261118-19';
+import { AREA_BY_ID, INSTRUMENT_KINDS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261118-19';
+import { badge, bar, card, empty, esc, kpi, num } from './sections-kit.js?v=20261118-19';
+import { glyph, inkOn } from './visuals.js?v=20261118-19';
+import { partyIdentity } from './party-identity.js?v=20261118-19';
+import { allianceOf } from '../core/world-engine.js?v=20261118-19';
+import { PRIORITIES, REVISION_REASONS } from '../core/program-engine.js?v=20261118-19';
+import { FINANCING, TERRITORIES, DEADLINES } from '../core/program-proposals.js?v=20261118-19';
+import { guidedFields } from './program-guide.js?v=20261118-19';
 
 const TONE = { neutral: 'neutral', info: 'info', good: 'good', warning: 'warning', bad: 'bad' };
 const stateChip = status => { const spec = PROMISE_STATES[status] ?? PROMISE_STATES['non-avviata']; return badge(spec.label, TONE[spec.tone] ?? 'neutral'); };

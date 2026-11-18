@@ -1,11 +1,11 @@
 // English phrase-book pairs of the last release pass (data/i18n/en-ui-8.js reads `ALL_PAIRS`): the guided programme editor, the days of the Quirinale and the rule on the parties, the government room, the live
 // votes of the assemblies, the party headquarters, the TV name plates and the tutorial. Format as in the phrase-book: [Italian as shown, English]; `#` a number, `{}` a free part.
-import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261118-18';
-import { DEBATE_PAIRS } from './debate-choices.js?v=20261118-18';
-import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261118-18';
-import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261118-18';
-import { ALL_PAIRS as TOPIC_PAIRS } from './activity-scene-topics.js?v=20261118-18';
-import { LAW_TERM_PAIRS } from './law-terms.js?v=20261118-18';
+import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261118-19';
+import { DEBATE_PAIRS } from './debate-choices.js?v=20261118-19';
+import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261118-19';
+import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261118-19';
+import { ALL_PAIRS as TOPIC_PAIRS } from './activity-scene-topics.js?v=20261118-19';
+import { LAW_TERM_PAIRS } from './law-terms.js?v=20261118-19';
 export const ALL_PAIRS = [
   ...GUEST_PAIRS,
   ...DEBATE_PAIRS,
@@ -2801,4 +2801,13 @@ export const ALL_PAIRS = [
   ["Chiarezza #% · omogeneità #%: sono i criteri che guardano l’Ufficio centrale e la Corte. Il quesito che leggeranno:", "Clarity #% · homogeneity #%: these are the criteria the Central Office and the Court look at. The question they will read:"],
   ["Fondi disponibili: # €. La richiesta si presenta solo con la tua conferma: l’ammissibilità la decidono poi l’Ufficio centrale e la Corte.", "Funds available: €#. The request is filed only with your confirmation: admissibility is then decided by the Central Office and the Court."],
   ["Dato simulato: i voti di lista del voto nazionale del {} della partita, ripartiti per abitanti (ISTAT) con lo scarto regionale del modello e una piccola variazione tra territori; ogni livello somma quello superiore.", "Simulated data: the list votes of the game's national vote of {}, split by inhabitants (ISTAT) with the model's regional gap and a small variation between territories; each level adds up to the one above."],
+  ["Governo in carica all’avvio ha la fiducia di # gruppi; la stabilità è a #/# e il margine nella Camera più stretta è di # seggi", "The government in office at the start has the confidence of # groups; stability stands at #/# and the margin in the narrower Chamber is # seats"],
+  ["Governo in carica all’avvio ha la fiducia di # gruppi; la stabilità è a #/#", "The government in office at the start has the confidence of # groups; stability stands at #/#"],
+  ["Governo in carica all’avvio ha la fiducia di # gruppi; la stabilità è a #/# e il margine nella Camera più stretta è di # seggi.", "The government in office at the start has the confidence of # groups; stability stands at #/# and the margin in the narrower Chamber is # seats."],
+  ["Governo in carica all’avvio ha la fiducia di # gruppi; la stabilità è a #/#.", "The government in office at the start has the confidence of # groups; stability stands at #/#."],
+  ["Governo in carica all’avvio ha la fiducia di # gruppi (di cui # dall’esterno); la stabilità è a #/# e il margine nella Camera più stretta è di # seggi", "The government in office at the start has the confidence of # groups (# from outside); stability stands at #/# and the margin in the narrower Chamber is # seats"],
+  ["Governo in carica all’avvio ha la fiducia di # gruppi (di cui # dall’esterno); la stabilità è a #/#", "The government in office at the start has the confidence of # groups (# from outside); stability stands at #/#"],
+  ["Governo in carica all’avvio ha la fiducia di # gruppi (di cui # dall’esterno); la stabilità è a #/# e il margine nella Camera più stretta è di # seggi.", "The government in office at the start has the confidence of # groups (# from outside); stability stands at #/# and the margin in the narrower Chamber is # seats."],
+  ["Governo in carica all’avvio ha la fiducia di # gruppi (di cui # dall’esterno); la stabilità è a #/#.", "The government in office at the start has the confidence of # groups (# from outside); stability stands at #/#."],
+  ["Consolidato → Rilevato", "Consolidated → Detected"],
 ];

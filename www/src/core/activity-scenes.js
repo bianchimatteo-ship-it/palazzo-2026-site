@@ -6,16 +6,16 @@
 // activity is applied ONCE, by the store, when the scene ends.
 // Deterministic: the family of topics, the names and the small variations come from the seed of the scene (and from what the player met lately: the same family is not drawn again in a row).
 // Loaded on demand (it is not in the first screen): it registers itself in scene-engine.js and stage-script.js when imported.
-import { AVATAR_OPTIONS, EXTRA_NAMES, F, M, defaultAvatarFor, genderOf, normalizeAvatar, roleGender } from './avatar.js?v=20261117-12';
-import { personName, registerSceneKind } from './scene-engine.js?v=20261117-12';
-import { SPEAK_GESTURES, LISTEN_GESTURES, pickGesture, registerStageScript, stagePose } from './stage-script.js?v=20261117-12';
-import { ACTIVITY_SCENES, ACTIVITY_SCENE_UI } from '../data/activity-scene-lines.js?v=20261117-12';
-import { ACTIVITY_CONTEXT } from '../data/activity-scene-context.js?v=20261117-12';
-import { STAKES } from '../data/activity-scene-stakes.js?v=20261117-12';
-import { BODIES, CITIZEN_GUESTS, CITIZENS, GUESTS, HEADINGS, REFS } from '../data/activity-scene-guests.js?v=20261117-12';
-import { APPROACH_LABELS } from '../data/activity-scene-approaches.js?v=20261117-12';
-import { ONLY, TOPIC_KIND, TOPIC_MOVES, areasOf, newsFits } from '../data/activity-scene-topics.js?v=20261117-12';
-import { APPROACH_FUNCTIONS, COMMITMENTS, COMMITMENT_TEXT, CONSEQUENCE_LINES, EXTRA_Q1, FUNCTIONS, FUND_COST, GUARANTEE_MOVES, MOVES, OUTCOME_KINDS, REACTION_ALT, REACTION_LINES, REACTION_TYPES, STAGE_TEXT, WHY_LINES } from '../data/activity-scene-moves.js?v=20261117-12';
+import { AVATAR_OPTIONS, EXTRA_NAMES, F, M, defaultAvatarFor, genderOf, normalizeAvatar, roleGender } from './avatar.js?v=20261118-19';
+import { personName, registerSceneKind } from './scene-engine.js?v=20261118-19';
+import { SPEAK_GESTURES, LISTEN_GESTURES, pickGesture, registerStageScript, stagePose } from './stage-script.js?v=20261118-19';
+import { ACTIVITY_SCENES, ACTIVITY_SCENE_UI } from '../data/activity-scene-lines.js?v=20261118-19';
+import { ACTIVITY_CONTEXT } from '../data/activity-scene-context.js?v=20261118-19';
+import { STAKES } from '../data/activity-scene-stakes.js?v=20261118-19';
+import { BODIES, CITIZEN_GUESTS, CITIZENS, GUESTS, HEADINGS, REFS } from '../data/activity-scene-guests.js?v=20261118-19';
+import { APPROACH_LABELS } from '../data/activity-scene-approaches.js?v=20261118-19';
+import { ONLY, TOPIC_KIND, TOPIC_MOVES, areasOf, newsFits } from '../data/activity-scene-topics.js?v=20261118-19';
+import { APPROACH_FUNCTIONS, COMMITMENTS, COMMITMENT_TEXT, CONSEQUENCE_LINES, EXTRA_Q1, FUNCTIONS, FUND_COST, GUARANTEE_MOVES, MOVES, OUTCOME_KINDS, REACTION_ALT, REACTION_LINES, REACTION_TYPES, STAGE_TEXT, WHY_LINES } from '../data/activity-scene-moves.js?v=20261118-19';
 
 export { ACTIVITY_SCENES, ACTIVITY_SCENE_UI };
 export const SCENE_KIND = 'attivita';
@@ -44,10 +44,19 @@ const approachText = (spec, sceneKey, familyId, approach) => {
 const STAT_LABELS = Object.freeze({ competence: 'competenza', charisma: 'carisma', reputation: 'reputazione' });
 
 // The family of topics: the ones not met in the last scenes of this kind first; among them by the seed (and a preference, e.g. the segment of the citizens).
-export function pickFamily(spec, seed, recent = [], prefer = null) {
+// `prefer` is a topic the situation REQUIRES (an open commitment to account for, the segment of the citizens met): it wins whenever it is fresh. `lean` is only the topic the activity is about: it makes that
+// topic more likely (three times as much as each of the others) but never certain, so the same activity does not bring the same topic every time it is done.
+export function pickFamily(spec, seed, recent = [], prefer = null, lean = null) {
   const fresh = spec.families.filter(family => !recent.slice(-3).includes(family.id));
   const pool = fresh.length ? fresh : spec.families;
-  return pool.find(family => family.id === prefer) ?? pickBy(pool, `${seed}|famiglia`);
+  const required = pool.find(family => family.id === prefer);
+  if (required) return required;
+  if (lean && pool.some(family => family.id === lean)) {
+    const weights = pool.map(family => family.id === lean ? 3 : 1);
+    let point = (hashOf(`${seed}|famiglia|peso`) % 1000) / 1000 * weights.reduce((a, b) => a + b, 0);
+    for (let index = 0; index < pool.length; index++) { point -= weights[index]; if (point < 0) return pool[index]; }
+  }
+  return pickBy(pool, `${seed}|famiglia`);
 }
 const character = (id, role, spec, seed, used, { roleLabel = null, partyLabel = '' } = {}) => {
   // The gender is explicit in the data: the role fixes it when its grammar does («Ministra», «Delegato», «Una maestra»), otherwise the seed chooses, and the name is taken from the pool of that gender (a name of the
@@ -91,7 +100,7 @@ export function createActivityScene({ id, seed, sceneKey, activityId, target = n
   const spec = ACTIVITY_SCENES[sceneKey];
   if (!spec) throw new Error('Scena non riconosciuta.');
   const context = ACTIVITY_CONTEXT[activityId] ?? null;
-  const family = pickFamily(spec, seed, recent, prefer ?? context?.prefer ?? null);
+  const family = pickFamily(spec, seed, recent, prefer, context?.prefer ?? null);
   const used = new Set();
   const roles = (activityId === 'cittadini' ? CITIZEN_GUESTS[family.id] : null) ?? GUESTS[sceneKey]?.[family.id] ?? [spec.cast[0].tag, spec.cast[1].tag];
   const heading = sceneKey === 'associazioni' ? HEADINGS[activityId === 'cittadini' ? 'cittadini' : 'associazioni'] : null;
@@ -166,8 +175,8 @@ const moveFor = (scene, stage, id) => movesAt(scene, stage).find(item => item.id
 function sequence(scene, move) {
   const fn = move.fn, t = scene.tally, flags = scene.flags ?? {}, last = scene.history.at(-1);
   const informed = t.k >= 1;
-  let delta = 0; const reasons = [];
-  const add = (value, key) => { delta += value; reasons.push(WHY_LINES[key][0]); };
+  let delta = 0; const reasons = [], terms = [];
+  const add = (value, key) => { delta += value; reasons.push(WHY_LINES[key][0]); terms.push({ value, text: WHY_LINES[key][0] }); };
   if (['propose', 'announce', 'fund', 'table'].includes(fn)) informed ? add(6, 'informed') : add(-6, 'uninformed');
   if (['involve', 'compromise'].includes(fn) && informed) add(4, 'informed');
   if (fn === 'contest') t.tension >= 2 ? add(-8, 'heated') : informed ? add(4, 'informed') : add(-3, 'uninformed');
@@ -179,7 +188,7 @@ function sequence(scene, move) {
   if (['vote', 'assign', 'priority'].includes(fn) && flags.opp) add(-3, 'noAuthority');
   if (scene.history.some(item => item.fn === fn)) add(-4, 'repeated');
   if (move.id === 'x-impegno') add(6, 'prior');
-  return { delta, reasons };
+  return { delta, reasons, terms };
 }
 function judge(scene, move, stage) {
   const stat = scene.context.stats[move.stat] ?? 50;
@@ -379,7 +388,32 @@ export function abandonActivityScene(scene) {
   return { ...scene, status: 'abandoned', outcome: { performance, band: band(performance), kind: null, edge: round1(clamp((performance - 55) / 4.5, -6, 6)), summary: ACTIVITY_SCENE_UI.abandoned[0], flavor: null, consequences: after.consequences, audience: scene.audience.mood, left: true }, history: scene.history };
 }
 export const activityProgress = scene => ({ index: Math.max(0, BEATS.indexOf(scene.nodeId)), total: scene.tally?.asked || ['q4', 'r4'].includes(scene.nodeId) ? BEATS.length : BEATS.length - 2 });
-registerSceneKind(SCENE_KIND, { node: activityNode, choose: activityChoose, effects: activityEffects, progress: activityProgress, abandon: abandonActivityScene });
+// Pro and contro of a move, from the terms `judge` and `sequence` really use (the stat the move relies on, what the meeting knows, the tension, the funds, the role, the repetition), and what it gains, costs and
+// commits (`FUNCTIONS`, `FUND_COST`, `COMMITMENTS`: the same tables `sceneAftermath` applies). The «right approach» drawn from the seed is not revealed: it is the part of the scene left to the player's judgement.
+const GAIN_LABEL = { pop: 'popolarità', inf: 'influenza', rel: 'rapporto con questo interlocutore', exp: 'esperienza', rep: 'reputazione', not: 'notorietà', home: 'attenzione al territorio', seg: 'consenso nel gruppo coinvolto', party: 'sostegno nel partito', media: 'rapporto con la stampa' };
+const COST_LABEL = { rel: 'rapporto con questo interlocutore', pop: 'popolarità', capital: 'capitale politico' };
+const fmt = value => String(Math.round(Math.abs(value) * 10) / 10).replace('.', ',');
+export function activityOdds(input, nodeId, choiceId) {
+  if (!['q1', 'q2', 'q3', 'q4'].includes(nodeId)) return null;
+  const scene = upgrade(JSON.parse(JSON.stringify(input)));
+  const move = moveFor(scene, nodeId, choiceId);
+  if (!move) return null;
+  const fn = FUNCTIONS[move.fn], flags = scene.flags ?? {}, stat = scene.context.stats[move.stat] ?? 50;
+  const pro = [], contro = [], effect = [], cost = [];
+  (stat >= 50 ? pro : contro).push(`${STAT_LABELS[move.stat]} ${Math.round(stat)}/100`);
+  for (const term of sequence(scene, move).terms) (term.value > 0 ? pro : contro).push(term.text);
+  const gains = Object.entries(fn.gain ?? {}).filter(([key]) => GAIN_LABEL[key]).map(([key, value]) => `${GAIN_LABEL[key]} +${fmt(value)}`);
+  if (gains.length) effect.push(`se la mossa riesce: ${gains.join(', ')} (la metà se è a metà strada, nulla se fallisce)`);
+  if (fn.tally?.k) effect.push('ti fa sapere di più sul problema');
+  if (fn.tally?.tension < 0) effect.push('abbassa la tensione'); else if (fn.tally?.tension > 0) effect.push('può alzare la tensione');
+  for (const [key, value] of Object.entries(fn.cost ?? {})) if (COST_LABEL[key] && !(key === 'capital' && !flags.capital)) cost.push(`${COST_LABEL[key]} ${value < 0 ? '−' : '+'}${fmt(value)}`);
+  if (fn.fund && (FUND_COST[kindOf(scene)] ?? 0)) cost.push(`${FUND_COST[kindOf(scene)]} € dai fondi`);
+  if (fn.commit && COMMITMENTS[fn.commit]) { cost.push(`ti impegni a farlo entro ${COMMITMENTS[fn.commit].weeks} settimane (diventa un impegno verificabile)`); contro.push('un impegno non mantenuto costa reputazione'); }
+  if (fn.bold) { pro.push('se va bene il sostegno nel partito sale di più'); contro.push('se va male il rapporto peggiora'); }
+  return { pro, contro, effect, cost };
+}
+
+registerSceneKind(SCENE_KIND, { node: activityNode, choose: activityChoose, effects: activityEffects, odds: activityOdds, progress: activityProgress, abandon: abandonActivityScene });
 
 // ---------- the stage ----------
 // Where the people stand: the building site and the civic hall standing, the other four rooms around a table. The player arrives from the left in the opening; everyone else is already there.
