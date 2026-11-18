@@ -1565,13 +1565,19 @@ button:not(:disabled):active, a.primary-button:active, a.secondary-button:active
 .tp-compare label { display: grid; gap: 4px; }
 .tp-table td.num, .tp-table th.num { white-space: nowrap; }
 @media (max-width: 520px) { .tp-leads li { grid-template-columns: 1fr auto; } .tp-leads li > b { grid-column: 2; grid-row: 1; } .tp-leads .tp-bar { grid-column: 1 / -1; grid-row: 2; } .tp-pager { justify-content: center; } }
-.birth-field { border: 1px solid rgba(127, 140, 134, .35); border-radius: 12px; padding: 10px 12px; margin: 0; display: grid; gap: 8px; }
-.birth-field legend { padding: 0 6px; font-weight: 600; }
-.birth-row { display: grid; grid-template-columns: 1fr 2fr 1.4fr; gap: 10px; }
-.birth-row label { display: grid; gap: 4px; }
-.birth-row input, .birth-row select { width: 100%; box-sizing: border-box; min-height: 48px; font-size: 1.05rem; }
-.birth-hint { opacity: .9; } .birth-hint.is-error { color: var(--sem-bad, #d9625b); font-weight: 600; opacity: 1; }
-@media (max-width: 360px) { .birth-row { grid-template-columns: 1fr 1.6fr 1.2fr; gap: 6px; } }
+/* The identity block of the wizard: the date of birth takes the whole row (three fields side by side, never squeezed in half a column), the gender and the profession follow, aligned and of the same height. */
+.wizard-profile .wizard-form-grid { align-items: start; }
+.wizard-profile .birth-field { grid-column: 1 / -1; }
+.birth-field { border: 1px solid var(--line, rgba(127, 140, 134, .35)); border-radius: 12px; padding: 10px 12px 12px; margin: 0; min-width: 0; display: grid; gap: 8px; }
+.birth-field legend { padding: 0 6px; font: 700 12.5px/1.2 Manrope, sans-serif; letter-spacing: .04em; color: var(--ink-2); }
+.birth-row { display: grid; grid-template-columns: minmax(52px, .8fr) minmax(100px, 2fr) minmax(64px, 1fr); gap: 10px; }
+.birth-row label { display: grid; gap: 4px; min-width: 0; }
+.career-wizard .birth-row input, .career-wizard .birth-row select, .career-wizard .wizard-profile select[name="gender"], .career-wizard .wizard-profile select[name="previousProfession"] { width: 100%; box-sizing: border-box; min-height: 48px; font-size: 1rem; }
+.birth-row input { text-align: center; }
+.career-wizard .birth-row select { text-overflow: ellipsis; }
+.birth-hint { margin: 0; font-size: .86rem; line-height: 1.35; opacity: .9; } .birth-hint.is-error { color: var(--sem-bad, #d9625b); font-weight: 600; opacity: 1; }
+@media (max-width: 360px) { .birth-row { gap: 6px; } .birth-field { padding-inline: 8px; } }
+@media (max-width: 560px) { .wizard-profile .wizard-form-grid > label:has(select[name="gender"]) { grid-column: 1 / -1; } }
 .guide-card:has(.guide-fold):not([hidden]) { display: block; padding: 0; }
 .guide-fold { display: block; }
 .guide-fold > summary { list-style: none; display: flex; gap: 12px; align-items: flex-start; padding: 14px; cursor: pointer; min-height: 44px; }
