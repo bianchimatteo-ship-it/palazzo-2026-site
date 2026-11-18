@@ -25,7 +25,8 @@ const waitFor = async (check, timeout = 20000, what = 'condizione') => { const s
 const server = spawn(process.execPath, ['server.mjs'], { cwd: root, env: { ...process.env, PORT: String(PORT) }, stdio: 'ignore' });
 const profile = await mkdtemp(join(tmpdir(), 'politicando-campagna-'));
 const chrome = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${DEBUG}`, `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--disable-extensions', '--hide-scrollbars', '--mute-audio', '--no-proxy-server', ...(process.getuid?.() === 0 ? ['--no-sandbox'] : [])], { stdio: 'ignore' });
-const cleanup = async () => { chrome.kill('SIGKILL'); server.kill('SIGKILL'); await pause(200); await rm(profile, { recursive: true, force: true }).catch(() => {}); };
+let finished = false;   // set when the check itself closes the browser: only an unexpected close is a crash
+const cleanup = async () => { finished = true; chrome.kill('SIGKILL'); server.kill('SIGKILL'); await pause(200); await rm(profile, { recursive: true, force: true }).catch(() => {}); };
 
 const checks = [];
 const ok = (condition, message) => { if (!condition) throw new Error(message); checks.push(message); };
@@ -39,7 +40,7 @@ try {
   const pending = new Map();
   const send = (method, params = {}) => new Promise((resolve, reject) => { const key = ++id; pending.set(key, { resolve, reject }); socket.send(JSON.stringify({ id: key, method, params })); });
   // A Chrome that dies (crash) must fail the check at once instead of leaving every pending call waiting for ever.
-  socket.onclose = () => { console.error('Chrome si è chiuso durante il controllo (crash del browser): controllo NON eseguito.'); chrome.kill('SIGKILL'); server.kill('SIGKILL'); process.exit(2); };
+  socket.onclose = () => { if (finished) return; console.error('Chrome si è chiuso durante il controllo (crash del browser): controllo NON eseguito.'); chrome.kill('SIGKILL'); server.kill('SIGKILL'); process.exit(2); };
   socket.onmessage = message => { const data = JSON.parse(message.data); if (data.id && pending.has(data.id)) { const { resolve, reject } = pending.get(data.id); pending.delete(data.id); data.error ? reject(new Error(data.error.message)) : resolve(data.result); } };
   const evaluate = async (expression, commandLine = false) => { const result = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true, includeCommandLineAPI: commandLine }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description ?? result.exceptionDetails.text); return result.result.value; };
   const q = selector => JSON.stringify(selector);
