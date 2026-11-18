@@ -1,7 +1,7 @@
 // The desk of the minister on the page «Governo»: the department with its areas and problems, the priority, the crises of the sector, what the Prime Minister asks, the proposals (prepare, sound out
 // colleagues, submit to the Council of Ministers, see how each minister voted). Every button calls store.ministryAction: nothing is decorative.
-import { MINISTRY_RULES } from '../core/ministry-engine.js?v=20261118-25';
-import { badge, card, esc } from './sections-kit.js?v=20261118-25';
+import { MINISTRY_RULES } from '../core/ministry-engine.js?v=20261118-35';
+import { badge, card, esc } from './sections-kit.js?v=20261118-35';
 
 const meter = value => `<b class="dp-meter ${value < 38 ? 'bad' : value < 50 ? 'warn' : ''}" role="img" aria-label="${esc(String(Math.round(value ?? 0)))}"><i style="width:${Math.max(0, Math.min(100, Number(value) || 0))}%"></i></b>`;
 const btn = (kind, attrs, label, tone = 'secondary-button') => `<button type="button" class="${tone} compact" data-ministry-kind="${esc(kind)}" ${Object.entries(attrs).map(([key, value]) => `data-min-${key}="${esc(value)}"`).join(' ')}>${esc(label)}</button>`;

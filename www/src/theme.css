@@ -21,9 +21,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .date-chip, .icon-button { border-color: var(--line-strong); color: var(--ink-2); background: var(--panel); }
 .icon-button:hover { border-color: var(--accent); color: var(--accent); }
 .advance-button, .primary-button { background: var(--accent); color: var(--accent-ink); font-weight: 750; border: 0; }
-.advance-button:hover, .primary-button:hover { background: var(--gold-soft); color: var(--accent-ink); }
+.advance-button:hover:not(:disabled), .primary-button:hover:not(:disabled) { background: var(--gold-soft); color: var(--accent-ink); }   /* more specific than the generic button hover (white text): dark ink on gold-soft keeps WCAG AA */
 /* Disabled gold stays gold (dimmed, with dark text), never grey: the palette of the game is the gold of the main actions and the dark of the secondary ones. */
-.advance-button:disabled, .primary-button:disabled { background: rgba(196,166,106,.34); color: rgba(26,21,7,.62); transform: none; cursor: not-allowed; }
+.advance-button:disabled, .primary-button:disabled { background: #8a7648; color: #1a1507; transform: none; cursor: not-allowed; }   /* dimmed gold, dark ink: about 4.4:1 (it was a translucent gold that vanished into the dark panel: 1.29:1) */
 /* Every button of the game has one of the two looks. A button that no rule of its own styles (a bare «button», a local class) gets the dark one, never the browser's grey: the selector has no weight, so every
    specific rule of the game wins over it. */
 :where(button, input[type="button"], input[type="submit"], input[type="reset"]) { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line-strong); border-radius: var(--radius, 6px); font-family: var(--font-ui, inherit); font-weight: 700; }

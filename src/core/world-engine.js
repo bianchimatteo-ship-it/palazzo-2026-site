@@ -1,11 +1,11 @@
-import { uniqueId } from './ids.js?v=20261118-33';
-import { HARD_GAP, THEMES, THEME_BY_ID, compare as compareProgram, compromise as compromiseOn, positionOf as programPositionOf, refusalBlock, refusalKey, recordRefusal, coalitionBlock, registrationsOf, pairKey as programPairKey } from './alliance-rules.js?v=20261118-33';
-import { AD_REWARD } from '../data/simulation/reward-rules.js?v=20261118-33';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261118-33';
-import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261118-33';
-import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261118-33';
-import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261118-33';
-import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261118-33';
+import { uniqueId } from './ids.js?v=20261118-35';
+import { HARD_GAP, THEMES, THEME_BY_ID, compare as compareProgram, compromise as compromiseOn, positionOf as programPositionOf, refusalBlock, refusalKey, recordRefusal, coalitionBlock, registrationsOf, pairKey as programPairKey } from './alliance-rules.js?v=20261118-35';
+import { AD_REWARD } from '../data/simulation/reward-rules.js?v=20261118-35';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261118-35';
+import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261118-35';
+import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261118-35';
+import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261118-35';
+import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261118-35';
 export { houseEffect };
 
 // The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.
@@ -1951,7 +1951,7 @@ export function inviteImpact(world, forceId) {
   const merge = inviteMerge(world, force, inviteCamp(world, own));
   if (!merge) return null;
   const label = id => world.parties.find(item => item.id === id)?.label ?? id;
-  return { alliance: merge.alliance.label, individual: true, followers: merge.partners.filter(p => !merge.incompatible.includes(p)).map(p => ({ id: p.id, label: p.label })), staying: merge.incompatible.map(p => ({ id: p.id, label: p.label })), note: `Per impostazione predefinita passa solo ${force.label}: ${merge.partners.length ? merge.partners.map(p => p.label).join(', ') + ' restano nell’accordo «' + merge.alliance.label + '» con le sue condizioni e registrazioni.' : 'nessun altro partner.'}`, label };
+  return { alliance: merge.alliance.label, individual: true, followers: merge.partners.filter(p => !merge.incompatible.includes(p)).map(p => ({ id: p.id, label: p.label })), staying: merge.incompatible.map(p => ({ id: p.id, label: p.label })), note: merge.partners.length ? `Per impostazione predefinita passa solo ${force.label}: ${merge.partners.map(p => p.label).join(', ')} restano nell’accordo «${merge.alliance.label}» con le sue condizioni e registrazioni.` : `Per impostazione predefinita passa solo ${force.label}: nessun altro partner.`, label };
 }
 // Why a force cannot be invited now, or null.
 export function inviteBlock(world, forceId) {
@@ -2045,7 +2045,7 @@ function inviteToAllianceCore(input, forceId, { partySupport = 50, influence = 5
   const stayed = (merge?.partners ?? []).filter(item => !joined.includes(item.id)).map(item => item.id);
   // The composition changed: the approvals for an OPEN election are verified again (coalitionApproval compares the members); the registrations of concluded elections are never rewritten.
   const open = (alliance.coalitions ?? []).filter(item => item.status === 'approvata' && item.electionId);
-  if (open.length) alliance.history = [...(alliance.history ?? []), { date, text: `Cambia la composizione: ${open.length === 1 ? 'la registrazione' : `le ${open.length} registrazioni`} per elezioni aperte vanno riapprovate` }].slice(-12);
+  if (open.length) alliance.history = [...(alliance.history ?? []), { date, text: open.length === 1 ? 'Cambia la composizione: la registrazione per un’elezione aperta va riapprovata' : `Cambia la composizione: le ${open.length} registrazioni per elezioni aperte vanno riapprovate` }].slice(-12);
   return { world, success: true, stage: 'adesione', chance: odds.chance, reasons: odds.reasons, term: talks?.term ?? null, joined, stayed, mode, merged: merge && joined.length > 1 ? merge.alliance.label : null, impact: merge ? { alliance: merge.alliance.label, followers: merge.partners.filter(p => !merge.incompatible.includes(p)).map(p => p.id), staying: merge.incompatible.map(p => p.id) } : null, reapprovals: open.map(item => item.electionId), allianceId: alliance.id };
 }
 // What kind of agreement an alliance of the world is: an intesa of two forces or a coalition of several, and whether it joins the forces of the government.

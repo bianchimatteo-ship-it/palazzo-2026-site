@@ -5,11 +5,11 @@
 // it needs or puts the question of confidence; the bills of the opposition often never reach the floor. The player sits
 // in one Chamber: speaks, amends and casts a personal vote on every bill there — and the vote has consequences.
 // Everything here is simulation (source: simulation); the groups of the real XIX legislature keep their real reference.
-import { DATA_SOURCES } from '../data/schema.js?v=20261118-25';
-import { AREA_BY_ID, DECREE_RULES, FINANCING, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261118-25';
-import { statuteBlock, statutesOf, amendLawPolicy, campOfAxis, cohesiveShare, confidenceBallotMissing, directiveOf, governingGroupIds, groupDirectiveEffect, groupProfile, parliamentInternals, playerSeatedOn } from './parliament-engine.js?v=20261118-25';
-import { openLocalFloors, playerVotesIn } from './local-engine.js?v=20261118-25';
-import { absentOf, groupLine, seededRandom, spreadAbsent, splitGroupVote } from './vote-engine.js?v=20261118-25';
+import { DATA_SOURCES } from '../data/schema.js?v=20261118-35';
+import { AREA_BY_ID, DECREE_RULES, FINANCING, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261118-35';
+import { statuteBlock, statutesOf, amendLawPolicy, campOfAxis, cohesiveShare, confidenceBallotMissing, directiveOf, governingGroupIds, groupDirectiveEffect, groupProfile, parliamentInternals, playerSeatedOn } from './parliament-engine.js?v=20261118-35';
+import { openLocalFloors, playerVotesIn } from './local-engine.js?v=20261118-35';
+import { absentOf, groupLine, seededRandom, spreadAbsent, splitGroupVote } from './vote-engine.js?v=20261118-35';
 
 const { getGroup, allGroups, record, replaceLaw, demandFor, contentAffinity, setRelation } = parliamentInternals;
 const SIM = DATA_SOURCES.SIMULATION;
@@ -143,7 +143,7 @@ function generateBills(parliament, { date, rand, society, world }) {
   const partyLabel = id => world?.parties?.find(item => item.id === id)?.label ?? null;
   const add = spec => {
     // a law already in force on the same area with the same instrument (or with the same title) is not brought back: it would give the same advantages twice
-    if ((spec.kind ?? 'ddl') === 'ddl' && statuteBlock(next, { area: spec.area, instrument: spec.design?.instrument, title: spec.title, summary: spec.summary }, date)) return null;
+    if ((spec.kind ?? 'ddl') === 'ddl' && statuteBlock(next, { area: spec.area, instrument: spec.design?.instrument, title: spec.title, summary: spec.summary, family: true }, date)) return null;
     const law = newLaw(next, spec);
     next = record({ ...next, laws: [...(next.laws ?? []), law] }, date, 'legge-presentata', `${spec.sponsor.label} presenta “${law.title}”.`, { lawId: law.id, sponsor: spec.sponsor.kind, auto: true });
     created.push(law);

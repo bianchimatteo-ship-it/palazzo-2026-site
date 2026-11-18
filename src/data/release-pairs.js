@@ -1,11 +1,11 @@
 // English phrase-book pairs of the last release pass (data/i18n/en-ui-8.js reads `ALL_PAIRS`): the guided programme editor, the days of the Quirinale and the rule on the parties, the government room, the live
 // votes of the assemblies, the party headquarters, the TV name plates and the tutorial. Format as in the phrase-book: [Italian as shown, English]; `#` a number, `{}` a free part.
-import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261118-33';
-import { DEBATE_PAIRS } from './debate-choices.js?v=20261118-33';
-import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261118-33';
-import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261118-33';
-import { ALL_PAIRS as TOPIC_PAIRS } from './activity-scene-topics.js?v=20261118-33';
-import { LAW_TERM_PAIRS } from './law-terms.js?v=20261118-33';
+import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261118-35';
+import { DEBATE_PAIRS } from './debate-choices.js?v=20261118-35';
+import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261118-35';
+import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261118-35';
+import { ALL_PAIRS as TOPIC_PAIRS } from './activity-scene-topics.js?v=20261118-35';
+import { LAW_TERM_PAIRS } from './law-terms.js?v=20261118-35';
 export const ALL_PAIRS = [
   ...GUEST_PAIRS,
   ...DEBATE_PAIRS,
@@ -2814,4 +2814,22 @@ export const ALL_PAIRS = [
   ["Opzioni privacy della pubblicità", "Advertising privacy options"],
   ["Pubblicità e privacy", "Advertising and privacy"],
   ["Gli annunci premiati non sono attivi in questo momento.", "Rewarded ads are not active at the moment."],
+  ["Apri la pagina Carriera e la scheda «Obiettivi».", "Open the Career page and the “Goals” tab."],
+  ["Menu «Altro» › Carriera, poi la scheda «Obiettivi».", "“More” menu › Career, then the “Goals” tab."],
+  ["Gli obiettivi non si spuntano: si misurano su ciò che fai e decidi. Guardarli non costa nulla e non cambia la carriera.", "Goals are not ticked off: they are measured on what you do and decide. Looking at them costs nothing and changes nothing in the career."],
+  ["Nell’Agenda apri la scheda «Attività».", "In the Agenda, open the “Activities” tab."],
+  ["Ecco le attività: ogni voce dice quanti giorni costa e che cosa può cambiare. Per ora le hai solo lette, nessun giorno è stato speso.", "Here are the activities: each says how many days it costs and what it can change. For now you have only read them: no day was spent."],
+  ["Nella Centrale elettorale apri la scheda «Risultati».", "In the Electoral Centre, open the “Results” tab."],
+  ["Qui trovi gli esiti delle elezioni, con la distinzione tra dati reali e risultati simulati dal gioco.", "Here are the election outcomes, telling real data from results simulated by the game."],
+  ["Nelle Notizie scegli un filtro diverso da «Tutto».", "In the News, choose a filter other than “All”."],
+  ["I filtri sono in alto nella pagina Notizie.", "The filters are at the top of the News page."],
+  ["Hai filtrato le notizie: la redazione è simulata e ogni articolo dice di che si tratta. Il filtro non cambia nulla nella partita.", "You filtered the news: the newsroom is simulated and each article says what it is. The filter changes nothing in the game."],
+  ["comune di residenza del candidato", "candidate's home municipality"],
+  ["provincia del candidato", "candidate's province"],
+  ["regione del candidato", "candidate's region"],
+  ["Per impostazione predefinita passa solo {}: {} restano nell’accordo «{}» con le sue condizioni e registrazioni.", "By default only {1} moves: {2} stay in the accord “{3}” with its terms and registrations."],
+  ["Per impostazione predefinita passa solo {}: nessun altro partner.", "By default only {} moves: no other partner."],
+  ["Cambia la composizione: la registrazione per un’elezione aperta va riapprovata", "The composition changes: the registration for an open election must be approved again"],
+  ["Cambia la composizione: le # registrazioni per elezioni aperte vanno riapprovate", "The composition changes: the # registrations for open elections must be approved again"],
+  ["Le registrazioni elettorali di «{}» passano all’accordo (#)", "The electoral registrations of “{}” pass to the accord (#)"],
 ];

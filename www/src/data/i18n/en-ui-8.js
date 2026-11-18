@@ -1,6 +1,6 @@
 // English phrase book, part 8 of 8: the administrative area, the account and sign-out screens, the personal logo catalogue, the tutorial invitation and the engine's law-effect and government lines. Same format as part 6: [Italian as shown, English]; `#` stands for a number, `{}` for a free part; in the English a free part is named by its position (`{2}` for the second one).
-import { ALL_PAIRS } from '../studio-lines.js?v=20261118-25';
-import { ALL_PAIRS as ACTIVITY_SCENE_PAIRS } from '../activity-scene-lines.js?v=20261118-25';
+import { ALL_PAIRS } from '../studio-lines.js?v=20261118-35';
+import { ALL_PAIRS as ACTIVITY_SCENE_PAIRS } from '../activity-scene-lines.js?v=20261118-35';
 
 // The explanations of the opening of a general or European campaign (campaign-engine.js campaignOpeningNotes): signed numbers come in both signs.
 function campaignNotePairs() {
@@ -10077,6 +10077,24 @@ export const PHRASES = [
   ["Opzioni privacy della pubblicità", "Advertising privacy options"],
   ["Pubblicità e privacy", "Advertising and privacy"],
   ["Gli annunci premiati non sono attivi in questo momento.", "Rewarded ads are not active at the moment."],
+  ["Apri la pagina Carriera e la scheda «Obiettivi».", "Open the Career page and the “Goals” tab."],
+  ["Menu «Altro» › Carriera, poi la scheda «Obiettivi».", "“More” menu › Career, then the “Goals” tab."],
+  ["Gli obiettivi non si spuntano: si misurano su ciò che fai e decidi. Guardarli non costa nulla e non cambia la carriera.", "Goals are not ticked off: they are measured on what you do and decide. Looking at them costs nothing and changes nothing in the career."],
+  ["Nell’Agenda apri la scheda «Attività».", "In the Agenda, open the “Activities” tab."],
+  ["Ecco le attività: ogni voce dice quanti giorni costa e che cosa può cambiare. Per ora le hai solo lette, nessun giorno è stato speso.", "Here are the activities: each says how many days it costs and what it can change. For now you have only read them: no day was spent."],
+  ["Nella Centrale elettorale apri la scheda «Risultati».", "In the Electoral Centre, open the “Results” tab."],
+  ["Qui trovi gli esiti delle elezioni, con la distinzione tra dati reali e risultati simulati dal gioco.", "Here are the election outcomes, telling real data from results simulated by the game."],
+  ["Nelle Notizie scegli un filtro diverso da «Tutto».", "In the News, choose a filter other than “All”."],
+  ["I filtri sono in alto nella pagina Notizie.", "The filters are at the top of the News page."],
+  ["Hai filtrato le notizie: la redazione è simulata e ogni articolo dice di che si tratta. Il filtro non cambia nulla nella partita.", "You filtered the news: the newsroom is simulated and each article says what it is. The filter changes nothing in the game."],
+  ["comune di residenza del candidato", "candidate's home municipality"],
+  ["provincia del candidato", "candidate's province"],
+  ["regione del candidato", "candidate's region"],
+  ["Per impostazione predefinita passa solo {}: {} restano nell’accordo «{}» con le sue condizioni e registrazioni.", "By default only {1} moves: {2} stay in the accord “{3}” with its terms and registrations."],
+  ["Per impostazione predefinita passa solo {}: nessun altro partner.", "By default only {} moves: no other partner."],
+  ["Cambia la composizione: la registrazione per un’elezione aperta va riapprovata", "The composition changes: the registration for an open election must be approved again"],
+  ["Cambia la composizione: le # registrazioni per elezioni aperte vanno riapprovate", "The composition changes: the # registrations for open elections must be approved again"],
+  ["Le registrazioni elettorali di «{}» passano all’accordo (#)", "The electoral registrations of “{}” pass to the accord (#)"],
   ["{}: l’intervista su {}", "{1}: the interview on {2}"],
   ["{}: la conferenza stampa su {}", "{1}: the press conference on {2}"],
   ["{}: l’ospitata televisiva su {}", "{1}: the TV appearance on {2}"],

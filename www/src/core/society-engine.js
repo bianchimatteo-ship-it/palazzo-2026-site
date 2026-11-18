@@ -1,10 +1,10 @@
-import { uniqueId } from './ids.js?v=20261118-25';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261118-25';
-import { INDICATORS, ISSUE_THRESHOLD, ISSUE_TOPICS, MEDIA_OUTLETS, REAL_TOPIC_AREAS, SCENARIO_EXECUTIVE, SEGMENTS } from '../data/simulation/society-rules.js?v=20261118-25';
-import { SOCIAL_TABLE, SPENDING_REVIEW } from '../data/simulation/policy-rules.js?v=20261118-25';
-import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, EU_PROCEDURE_WEEKS, FINANCING, INSTRUMENT_KINDS, INTENSITY, MACRO_AREAS, POLICY_AREAS, SPREAD_BASE, TERRITORIAL_TARGETS, areaOf, macroAreaOf } from '../data/simulation/policy-rules.js?v=20261118-25';
-import { BUDGET_SECTORS, FISCAL_LEVERS } from '../data/simulation/project-rules.js?v=20261118-25';
-import { euWeek, openCallWeek, projectsOf, projectsWeek } from './project-engine.js?v=20261118-25';
+import { uniqueId } from './ids.js?v=20261118-35';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261118-35';
+import { INDICATORS, ISSUE_THRESHOLD, ISSUE_TOPICS, MEDIA_OUTLETS, REAL_TOPIC_AREAS, SCENARIO_EXECUTIVE, SEGMENTS } from '../data/simulation/society-rules.js?v=20261118-35';
+import { SOCIAL_TABLE, SPENDING_REVIEW } from '../data/simulation/policy-rules.js?v=20261118-35';
+import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, EU_PROCEDURE_WEEKS, FINANCING, INSTRUMENT_KINDS, INTENSITY, MACRO_AREAS, POLICY_AREAS, SPREAD_BASE, TERRITORIAL_TARGETS, areaOf, macroAreaOf } from '../data/simulation/policy-rules.js?v=20261118-35';
+import { BUDGET_SECTORS, FISCAL_LEVERS } from '../data/simulation/project-rules.js?v=20261118-35';
+import { euWeek, openCallWeek, projectsOf, projectsWeek } from './project-engine.js?v=20261118-35';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
