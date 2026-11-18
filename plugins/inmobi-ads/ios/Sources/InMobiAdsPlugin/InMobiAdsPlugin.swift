@@ -127,10 +127,11 @@ public class InMobiAdsPlugin: CAPPlugin, CAPBridgedPlugin {
         if sdkReady { call.resolve(["ok": true]); return }
         if initializing { call.resolve(["ok": false, "code": "busy"]); return }
         initializing = true
-        DispatchQueue.main.async {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { call.resolve(["ok": false, "code": "error"]); return }   // the plugin is gone: nothing to initialise
             IMSdk.setLogLevel(call.getBool("testMode") == true ? .debug : .none)
             IMSdk.setIsAgeRestricted(false)
-            IMSdk.initWithAccountID(account, consentDictionary: self.inmobiConsent()) { [weak self] error in
+            IMSdk.initWithAccountID(account, consentDictionary: self.inmobiConsent()) { [weak self] error in   // weak again: the SDK keeps this callback, it must not keep the plugin
                 self?.initializing = false
                 self?.sdkReady = (error == nil)
                 call.resolve(error == nil ? ["ok": true] : ["ok": false, "code": "init-failed"])
@@ -144,7 +145,8 @@ public class InMobiAdsPlugin: CAPPlugin, CAPBridgedPlugin {
         guard sdkReady, ConsentInformation.shared.canRequestAds, let placement = Int64(call.getString("placementId") ?? ""), format == "rewarded" || format == "interstitial" else {
             call.resolve(["ready": false, "code": sdkReady ? "invalid" : "not-initialized"]); return
         }
-        DispatchQueue.main.async {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { call.resolve(["ready": false, "code": "error"]); return }
             if let current = self.full[format] {
                 if current.loaded && !current.showing { call.resolve(["ready": true]); return }
                 if current.loadCall != nil { call.resolve(["ready": false, "code": "loading"]); return }
