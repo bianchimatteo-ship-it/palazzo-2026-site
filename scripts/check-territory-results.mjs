@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { indexMunicipalPopulation } from '../src/core/municipal-rules.js';
-import { addsUp, buildHierarchy, distribute, shareExactly, territoryBreakdown } from '../src/core/territory-results.js';
+import { addsUp, buildHierarchy, distribute, shareExactly, territoryBreakdown, localLeanOf, effectsFromHome, LOCAL_FACTOR } from '../src/core/territory-results.js';
 
 // ---------- the primitive ----------
 for (const [total, weights] of [[100, [1, 1, 1]], [7, [5, 0, 0]], [0, [1, 2]], [1000003, [3, 5, 7, 11]], [5, [0, 0]], [13, [0.2, 0.7, 0.1]]]) {
@@ -47,4 +47,25 @@ assert.ok(provincesChecked >= 100 && comuniChecked > 300, `Controllati ${provinc
 assert.deepEqual(territoryBreakdown({ totals, hierarchy, seed: 'prova', regionLean: lean }), italy, 'Deterministico.');
 const other = territoryBreakdown({ totals, hierarchy, seed: 'altro', regionLean: lean });
 assert.notDeepEqual(other.rows.map(r => r.votes), italy.rows.map(r => r.votes), 'Un altro voto ha un’altra distribuzione locale.');
+
+// ---------- local effects (candidate home, campaign): deterministic, exact, national result unchanged ----------
+{
+  const province = hierarchy.find(region => region.code === hierarchy[3].code).provinces[0];
+  const home = province.comuni[Math.floor(province.comuni.length / 2)];
+  const region = hierarchy[3];
+  const effects = effectsFromHome({ hierarchy, comuneCode: home.code, key: 'lista-b', edge: 0.3 });
+  assert.equal(effects.length, 3, 'Comune, provincia e regione del candidato.'); assert.deepEqual(effectsFromHome({ hierarchy, comuneCode: home.code, key: 'lista-b', edge: 0 }), [], 'Senza vantaggio registrato nessun effetto inventato.'); assert.deepEqual(effectsFromHome({ hierarchy, comuneCode: 'xx', key: 'lista-b', edge: 0.3 }), [], 'Comune sconosciuto: nessun effetto.');
+  const args = { totals, hierarchy, seed: 'prova', regionLean: lean, regionCode: region.code, provinceCode: province.code };
+  const plain = territoryBreakdown(args), local = territoryBreakdown({ ...args, local: localLeanOf(effects) }), again = territoryBreakdown({ ...args, local: localLeanOf(effects) });
+  assert.deepEqual(local, again, 'Deterministico.'); assert.ok(addsUp(local), 'I comuni sommano ancora alla provincia, lista per lista.');
+  assert.deepEqual(local.province.votes.length === undefined ? Object.keys(local.province.votes) : [], Object.keys(plain.province.votes), 'Le liste sono le stesse.');
+  const plainHome = plain.rows.find(row => row.code === home.code), localHome = local.rows.find(row => row.code === home.code);
+  assert.ok(localHome.votes['lista-b'] > plainHome.votes['lista-b'], 'La lista del candidato guadagna nel suo comune.');
+  const regional = territoryBreakdown({ totals, hierarchy, seed: 'prova', regionLean: lean, regionCode: region.code, local: localLeanOf(effects) });
+  assert.ok(addsUp(regional) && addsUp(territoryBreakdown({ totals, hierarchy, seed: 'prova', regionLean: lean, local: localLeanOf(effects) })), 'Province, regioni e Italia sommano ancora.');
+  const nation = territoryBreakdown({ totals, hierarchy, seed: 'prova', regionLean: lean, local: localLeanOf(effects) });
+  assert.deepEqual(nation.italy.votes, totals, 'Il risultato nazionale non si muove.');
+  assert.equal(localLeanOf([{ level: 'comune', code: 'a', key: 'k', factor: 99 }])('comune', 'a', 'k'), LOCAL_FACTOR.max, 'Il fattore è limitato.');
+  assert.equal(localLeanOf([{ level: 'comune', code: 'a' }, null, { factor: 2 }])('comune', 'a', 'k'), 1, 'Effetti incompleti ignorati.');
+}
 console.log(`Risultati per territorio verificati: Italia → 20 regioni → ${provincesChecked} province → ${comuniChecked} comuni controllati sul gerarchia ISTAT, sempre in somma lista per lista, interi, deterministici, con scarto regionale e popolazione.`);
