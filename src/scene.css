@@ -230,3 +230,14 @@ html[data-scene-motion="full"] .cm-protest .cm-arm { animation: st-arms .45s eas
   .scene-choice:active:not(:disabled) { transform: scale(.985); }
   @keyframes scene-line-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 }
+
+/* The ambience of a room (ui/room-art.js): a flash of the cameras, a slow nod of the crowd. Only when the visitor has not asked for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .rm-live { animation: rm-nod 3.2s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+  .rm-live.rm-flash { animation: rm-flash 3.6s ease-in-out infinite; }
+  @keyframes rm-nod { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+  @keyframes rm-flash { 0%, 86%, 100% { opacity: 0; } 90%, 94% { opacity: 1; } }
+}
+[data-motion="off"] .rm-live { animation: none !important; }
+.rm-live.rm-flash { opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .rm-live.rm-flash { opacity: .8; } }

@@ -3,6 +3,7 @@
 // made from the avatars of the game), and a front layer (the table in front of whoever sits). Name straps with the full name and the role of everyone are drawn over the camera (never cut: the text is
 // wrapped). Loaded with the scene page; it registers its settings in stage-art.js. Nothing here decides anything: it draws the poses that core/activity-scenes.js gives.
 import { actorSvg, inkOn, registerStageSetting, strap } from './stage-art.js?v=20261118-35';
+import { ambienceOf } from '../data/activity-scene-variety.js?v=20261118-35';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const R = (x, y, w, h, fill, extra = '') => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}"${extra ? ` ${extra}` : ''}/>`;
@@ -94,15 +95,26 @@ export function partyHeadquarters(identity, { uid = 'sede' } = {}) {
     + `${Array.from({ length: 6 }, (_, i) => `<g transform="translate(${64 + i * 92},246)">${R(-18, 0, 36, 34, '#6f5a43')}${R(-18, -10, 36, 12, primary ? darken(primary, .25) : '#80684e')}</g>`).join('')}`;
 }
 
+// What the room has around it for this activity, behind the characters: small shapes in the upper part of the stage (never over the faces or the straps). The shapes with a class `rm-live` move a little
+// (a flash, a nod of the crowd) only when the visitor has not asked for less motion (scene.css).
+const AMBIENCE_ART = {
+  folla: () => `<g class="rm-ambience" data-ambience="folla">${[78, 118, 158, 198, 238].map((x, i) => `<g class="${i % 2 ? 'rm-live' : ''}" style="animation-delay:${i * 0.4}s"><circle cx="${x}" cy="${168 - (i % 2) * 5}" r="7" fill="#6b5a48" opacity=".55"/>${R(x - 9, 175 - (i % 2) * 5, 18, 14, '#5a4a3a', 'opacity=".5"')}</g>`).join('')}</g>`,
+  stampa: () => `<g class="rm-ambience" data-ambience="stampa">${[560, 592, 620].map((x, i) => `<g><rect x="${x - 10}" y="${150 + i * 5}" width="20" height="13" rx="2" fill="#2a2a30" opacity=".75"/><circle cx="${x}" cy="${156.5 + i * 5}" r="4" fill="#9aa4b2" opacity=".8"/><circle class="rm-live rm-flash" style="animation-delay:${i * 0.9}s" cx="${x + 7}" cy="${152 + i * 5}" r="2" fill="#fff6c8"/></g>`).join('')}${R(14, 144, 60, 4, '#2a2a30', 'opacity=".6"')}</g>`,
+  cantiere: () => `<g class="rm-ambience" data-ambience="cantiere"><path d="M30 190 L30 120 L96 120" stroke="#c98a1c" stroke-width="5" fill="none" opacity=".75"/><path d="M96 120 L96 138" stroke="#c98a1c" stroke-width="2" opacity=".75"/>${[60, 80].map(x => `<path d="M${x} 190 V150" stroke="#e8b440" stroke-width="3" opacity=".6"/>`).join('')}${R(560, 180, 46, 10, '#d8a63a', 'opacity=".55"')}${R(566, 168, 34, 12, '#e8b440', 'opacity=".55"')}</g>`,
+  carte: () => `<g class="rm-ambience" data-ambience="carte">${[0, 1, 2].map(i => `<g transform="translate(${420 + i * 58},${178 - (i % 2) * 6}) rotate(${i % 2 ? 4 : -3})">${R(0, 0, 34, 44, '#f1ece0', 'opacity=".7" stroke="#b6ac96"')}<path d="M5 10H29M5 18H27M5 26H29" stroke="#8a826e" stroke-width="2"/></g>`).join('')}</g>`,
+  bilancio: () => `<g class="rm-ambience" data-ambience="bilancio"><g transform="translate(14,92)">${R(0, 0, 112, 64, '#f4f1e6', 'opacity=".85" stroke="#8f8573"')}${[8, 28, 48, 68, 88].map((x, i) => R(x + 4, 56 - [18, 30, 22, 40, 34][i], 14, [18, 30, 22, 40, 34][i], '#3a6b72', 'opacity=".8"')).join('')}</g></g>`,
+  palazzo: () => `<g class="rm-ambience" data-ambience="palazzo">${R(250, 60, 140, 8, '#b09a5a', 'opacity=".5"')}${[262, 300, 338, 376].map(x => R(x - 4, 68, 8, 96, '#cbbf9a', 'opacity=".4"')).join('')}</g>`
+};
 function roomSvg(scene, stage, node, uid, identity = null) {
   const setting = scene.setting;
-  const actors = [...scene.cast].sort((a, b) => (stage.poses[a.id]?.y ?? 0) - (stage.poses[b.id]?.y ?? 0)).map((member, index) => actorSvg(member, stage.poses[member.id], `${uid}a${index}`, { speaking: node?.speaker === member.id, expression: node?.speaker === member.id ? node.expression : null })).join('');
+  const actors = [...scene.cast, ...(scene.extras ?? []).filter(item => stage.poses[item.id])].sort((a, b) => (stage.poses[a.id]?.y ?? 0) - (stage.poses[b.id]?.y ?? 0)).map((member, index) => actorSvg(member, stage.poses[member.id], `${uid}a${index}`, { speaking: node?.speaker === member.id, expression: node?.speaker === member.id ? node.expression : null })).join('');
   const speaking = id => node?.speaker === id;
   const [me, one, two] = [scene.cast.find(item => item.role === 'giocatore'), ...scene.cast.filter(item => item.role === 'ospite')];
   const body = scene.bodyLabel ?? '';
   const straps = `${strap(me, 8, 204, 334, speaking(me.id), body)}${strap(one, 218, 204, 334, speaking(one.id), body)}${strap(two, 428, 204, 334, speaking(two.id), body)}`;
   const back = setting === 'sede' ? partyHeadquarters(identity, { uid }) : BACK[setting](scene);
-  return { body: `<g class="st-room" data-room="${esc(setting)}">${back}</g><g class="st-actors">${actors}</g><g class="st-room-front">${FRONT[setting]()}</g>`, overlay: `<g class="st-straps">${straps}</g>` };
+  const ambience = (AMBIENCE_ART[ambienceOf(scene.activityId)] ?? AMBIENCE_ART.carte)();
+  return { body: `<g class="st-room" data-room="${esc(setting)}">${back}</g>${ambience}<g class="st-actors">${actors}</g><g class="st-room-front">${FRONT[setting]()}</g>`, overlay: `<g class="st-straps">${straps}</g>` };
 }
 for (const setting of Object.keys(BACK)) registerStageSetting(setting, roomSvg);
 export const ROOMS = Object.freeze(Object.keys(BACK));

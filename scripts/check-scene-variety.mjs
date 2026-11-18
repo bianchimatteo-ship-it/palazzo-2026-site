@@ -44,11 +44,11 @@ for (const kind of KINDS) {
   for (let n = 0; n < 40; n++) {
     const scene = scenes.createActivityScene({ id: `r-${kind}-${n}`, seed: `riferimenti|${kind}|${n}`, sceneKey: kind, activityId: spec.activityIds[0], player, playerAvatar: null, party: { label: 'Rotta Civica' }, refs, pool: [] });
     const node = scenes.activityNode(scene);
-    if (scene.ref) { seen.add(scene.ref.type); const value = refs[scene.ref.type]; assert.ok(node.lines?.[0]?.includes(value), `${kind}: la scena cita il dato vero (${scene.ref.type}).`); }
+    if (scene.ref) { seen.add(scene.ref.type); const value = refs[scene.ref.type]; assert.ok(node.lines?.some(line => line.includes(value)), `${kind}: la scena cita il dato vero (${scene.ref.type}).`); }
   }
   assert.ok(seen.size >= 4, `${kind}: la scena può citare almeno quattro dati diversi della carriera (${[...seen].join(', ')}).`);
   const bare = scenes.createActivityScene({ id: `b-${kind}`, seed: `senza|${kind}`, sceneKey: kind, activityId: spec.activityIds[0], player, playerAvatar: null, refs: {} });
-  assert.ok(!bare.ref && !scenes.activityNode(bare).lines, `${kind}: senza dati la scena resta com’era.`);
+  assert.ok(!bare.ref && (scenes.activityNode(bare).lines ?? []).length === 1, `${kind}: senza dati la scena ha solo la nota d’ambiente.`);
   assert.equal(scenes.activityNode(sample).text, (spec.intro.default)[0], 'Il testo di apertura resta quello del catalogo (il dato vero è una riga a parte, tradotta a parte).');
 }
 // the texts of the families are not recycled between the kinds
