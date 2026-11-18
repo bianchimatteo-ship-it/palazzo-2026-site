@@ -1,11 +1,11 @@
 // The page «Referendum»: the abrogative one (art. 75) and the constitutional confirmatory one (art. 138), kept apart in rules, phases, quorum and effects. Every button calls the store: nothing is decorative.
 // Figures of the votes are a simulation of the game (never a real result).
-import { REVISION_TOPICS, ABROGATIVE, CONSTITUTIONAL, CAMPAIGN_ACTIONS, COUNCIL_ROUTE, EXCLUDED, PHASES, pathOf, isActive } from '../core/referendum-engine.js?v=20261118-15';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261118-15';
-import { badge, card, empty, esc, foldPanel, kpi, sectionTabs } from './sections-kit.js?v=20261118-15';
-import { glyph } from './visuals.js?v=20261118-15';
-import { abrogativeSuggestions, CUSTOM_DRAFT, revisionDrafts } from '../data/referendum-drafts.js?v=20261118-15';
-import { formatDate } from '../core/time.js?v=20261118-15';
+import { REVISION_TOPICS, ABROGATIVE, CONSTITUTIONAL, CAMPAIGN_ACTIONS, COUNCIL_ROUTE, EXCLUDED, PHASES, pathOf, isActive } from '../core/referendum-engine.js?v=20261118-18';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261118-18';
+import { badge, card, empty, esc, foldPanel, kpi, sectionTabs } from './sections-kit.js?v=20261118-18';
+import { glyph } from './visuals.js?v=20261118-18';
+import { abrogativeSuggestions, CUSTOM_DRAFT, revisionDrafts } from '../data/referendum-drafts.js?v=20261118-18';
+import { formatDate } from '../core/time.js?v=20261118-18';
 
 const number = value => Math.round(Number(value) || 0).toLocaleString('it-IT');
 const pct = value => `${(Math.round(value * 10) / 10).toLocaleString('it-IT')}%`;
@@ -121,7 +121,7 @@ export function checkBox(check) {
   const reasons = [...(check.excluded ?? []).map(item => `Non ammesso: ${item.label}.`), ...(check.problems ?? [])];
   return `<div class="ref-check ${tone}" data-ref-check role="status" aria-live="polite"><strong>${check.ok ? `${glyph('shield', 16)} Il quesito può essere presentato` : `${glyph('alert', 16)} Il quesito non è ammissibile così`}</strong>
     ${reasons.length ? `<ul>${reasons.map(item => `<li>${esc(item)}</li>`).join('')}</ul>` : ''}
-    <p class="quiet-copy">Chiarezza ${pct((check.clarity ?? 0) * 100)} · omogeneità ${pct((check.homogeneity ?? 0) * 100)}: sono i criteri che guardano l’Ufficio centrale e la Corte. Il quesito che leggeranno: <i>«${esc(check.text ?? '')}»</i></p></div>`;
+    <p class="quiet-copy">Chiarezza ${pct((check.clarity ?? 0) * 100)} · omogeneità ${pct((check.homogeneity ?? 0) * 100)}: sono i criteri che guardano l’Ufficio centrale e la Corte. Il quesito che leggeranno: <i>${esc(check.text ?? '')}</i></p></div>`;
 }
 export function suggestionsBox(target, scope, partText) {
   if (!target) return '';

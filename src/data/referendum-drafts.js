@@ -1,25 +1,29 @@
 // Guided drafting of the referendum requests: formulations of the question for an abrogative referendum (from the law chosen: its title, area, instrument and date, never an invented content) and drafts
 // of constitutional revisions by topic. All of them are SUGGESTIONS the player can edit freely: nothing here is submitted, approved or admitted by itself, and no effect that the engine does not apply is promised.
-import { POLICY_AREAS } from './simulation/policy-rules.js?v=20261118-15';
+import { POLICY_AREAS } from './simulation/policy-rules.js?v=20261118-18';
 
 const AREA_LABEL = Object.fromEntries(POLICY_AREAS.map(area => [area.id, area.label]));
-const lower = text => String(text ?? '').charAt(0).toLocaleLowerCase('it-IT') + String(text ?? '').slice(1);
+// The kinds of act and their grammar (article, participle ending): the question must read right for each, and every form is translated whole (see release-pairs).
+export const INSTRUMENT_FORMS = Object.freeze({ legge: ['la', 'a'], 'legge di delega': ['la', 'a'], 'decreto-legge': ['il', 'o'], 'decreto legislativo': ['il', 'o'], 'legge di spesa': ['la', 'a'], 'legge di riforma': ['la', 'a'] });
 const INSTRUMENT = { regole: 'legge', 'legge-delega': 'legge di delega', decreto: 'decreto-legge', 'decreto-legislativo': 'decreto legislativo', fondi: 'legge di spesa', riforma: 'legge di riforma' };
 const instrumentOf = target => INSTRUMENT[target.instrument] ?? 'legge';
 
 // What the request would do, told by the area of the law: the rule of the game is always the same (abrogating takes the law out of force and stops its continuing effects, the history stays).
 export function abrogativeSuggestions(target, scope = 'totale', partText = '') {
-  const title = target.title, area = AREA_LABEL[target.area] ?? 'la materia', date = target.approvedAt ? new Date(`${target.approvedAt}T12:00:00Z`).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) : null;
-  const kind = instrumentOf(target);
+  const title = target.title, area = AREA_LABEL[target.area] ?? null, date = target.approvedAt ? new Date(`${target.approvedAt}T12:00:00Z`).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) : null;
+  const kind = instrumentOf(target), [art, end] = INSTRUMENT_FORMS[kind];
   const part = String(partText ?? '').trim();
   const list = [];
   if (scope === 'parziale') {
-    list.push({ id: 'parti', label: 'Quesito sulle parti indicate', text: `Volete voi che sia abrogata la ${kind} «${title}»${date ? `, approvata il ${date},` : ''} limitatamente a ${part || '[indica le parti: articoli o commi]'}?` });
+    list.push({ id: 'parti', label: 'Quesito sulle parti indicate', text: `Volete voi che sia abrogat${end} ${art} ${kind} «${title}»${date ? `, approvat${end} il ${date},` : ''} limitatamente a ${part || '[indica le parti: articoli o commi]'}?` });
     list.push({ id: 'finalita', label: 'Una sola finalità', text: `Volete voi che siano abrogate, nella ${kind} «${title}», le sole disposizioni su ${part || '[indica le parti]'}, lasciando in vigore il resto?` });
   } else {
-    list.push({ id: 'standard', label: 'Quesito standard', text: `Volete voi che sia abrogata la ${kind} «${title}»${date ? `, approvata il ${date}` : ''}?` });
-    list.push({ id: 'materia', label: `Con la materia (${area})`, text: `Volete voi che sia abrogata la ${kind} «${title}», che regola la materia «${lower(area)}»?` });
-    list.push({ id: 'effetti', label: 'Con l’effetto sulla materia', text: `Volete voi che cessi di avere effetto la ${kind} «${title}» e che la materia «${lower(area)}» torni alla disciplina precedente?` });
+    list.push({ id: 'standard', label: 'Quesito standard', text: `Volete voi che sia abrogat${end} ${art} ${kind} «${title}»${date ? `, approvat${end} il ${date}` : ''}?` });
+    // the subject of the law, only when the simulation knows it (never a placeholder)
+    if (area) {
+      list.push({ id: 'materia', label: `Con la materia (${area})`, text: `Volete voi che sia abrogat${end} ${art} ${kind} «${title}», che regola la materia «${area}»?` });
+      list.push({ id: 'effetti', label: 'Con l’effetto sulla materia', text: `Volete voi che cessi di avere effetto ${art} ${kind} «${title}» e che la materia «${area}» torni alla disciplina precedente?` });
+    }
   }
   return list;
 }
