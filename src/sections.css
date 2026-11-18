@@ -2132,3 +2132,4 @@ details[open].program-proposal > .program-proposal-head::after { transform: rota
 .guide-path p + p { margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .guide-path { display: block; padding: 14px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); }
 .guide-path p { color: var(--ink-2); font-size: 13px; line-height: 1.5; }
+.tutorial-card.is-compact .tutorial-task { margin: 4px 0; padding: 6px 8px; gap: 8px; } .tutorial-card.is-compact .tutorial-task small { display: none; } .tutorial-card.is-compact .tutorial-task-mark { width: 22px; height: 22px; }

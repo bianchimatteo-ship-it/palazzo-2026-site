@@ -40,6 +40,7 @@ await withBrowser(async browser => {
       check(t?.text.includes('Non costa giorni né denaro'), `${item.id}: dichiara che non costa nulla.`);
       // the practice: go where it says, then do it
       if (item.id === 'istituzioni') { await evaluate(`location.hash = '#referendum'; true`); await pause(2000); }
+      else if (TUTORIAL_TASKS[item.id].page) { await evaluate(`location.hash = '#${TUTORIAL_TASKS[item.id].page}'; true`); await pause(1500); }
       const pointed = await task();
       check(pointed?.pointed, `${item.id}: il controllo da usare è evidenziato.`);
       const target = await evaluate(`document.querySelector('[data-tutorial-task]').dataset.taskTarget`);

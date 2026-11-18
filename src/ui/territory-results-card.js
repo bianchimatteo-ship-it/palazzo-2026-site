@@ -1,10 +1,10 @@
 // "Risultati per territorio": the last simulated vote of the player's game read by Region, Province and Comune (core/territory-results.js). Everything here is SIMULATED and says so: the votes of every list
 // in the country are shared down the ISTAT hierarchy in proportion to the inhabitants, with the regional lean of the model and a small local deviation, and every level adds up to the one above. The only official
 // figures are the national ones of 2022 and the winners of the uninominal colleges by Region (the map above): the page never shows an official figure for a Province or a Comune.
-import { districtRows, nationalElectorate } from '../core/legislature-engine.js?v=20261118-31';
-import { municipalPopulationIndex } from '../core/municipal-rules.js?v=20261118-31';
-import { addsUp, buildHierarchy, territoryBreakdown } from '../core/territory-results.js?v=20261118-31';
-import { card, esc, num, pct } from './sections-kit.js?v=20261118-31';
+import { districtRows, nationalElectorate } from '../core/legislature-engine.js?v=20261118-32';
+import { municipalPopulationIndex } from '../core/municipal-rules.js?v=20261118-32';
+import { addsUp, buildHierarchy, territoryBreakdown } from '../core/territory-results.js?v=20261118-32';
+import { card, esc, num, pct } from './sections-kit.js?v=20261118-32';
 
 const MAX_COMUNI = 40;
 export const OTHERS = 'altri';
