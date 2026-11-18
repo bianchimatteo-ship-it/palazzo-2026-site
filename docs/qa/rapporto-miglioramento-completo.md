@@ -110,3 +110,46 @@ Inoltre: digitazione nel wizard (ricerca partiti/comuni/gruppi) ora ridisegna do
 - TEST Cloudflare: niente `wrangler.test.local.jsonc`, `.dev.vars` né credenziali; `wrangler.test.jsonc` ha solo segnaposto. Nessuna migrazione e nessun deploy; produzione intatta.
 - `check-start-screen`: intermittenza preesistente (anche su `main`, 1 volta su 4; sul branch più spesso): il primo ricaricamento allo stesso indirizzo resta sulla schermata «Caricamento…» e la navigazione successiva lo completa. Causa non individuata (sembra il documento precedente che trattiene lo storage del browser). Il test ora ritenta una volta; passa 3/3. Da indagare prima della prossima AAB se si vuole escludere un blocco all'avvio con più schede aperte.
 - Limiti noti: una sola battuta d'apertura per argomento per scena; le 44 attività contestuali riusano i 6 cast di scena.
+
+## Aggiornamento 3 — lavoro residuale e preparazione al rilascio (build 20261118-35, branch `feature/inmobi-integrazione`)
+
+Solo ciò che è nuovo rispetto agli aggiornamenti precedenti. `main` non è stato toccato; nessun merge, push o deploy.
+
+### Nuove correzioni
+- **Voti e Notte Elettorale, «Altri» contati due volte (causa alla radice).** `electorate.js` (`withVotes`): il resto non mostrato (`others:false`) resta come peso nascosto nella ripartizione, quindi la somma dei voti di lista non supera più i validi; `countProblems` accetta lo scarto atteso. `night-engine.js`: lo snapshot usa i voti validi canonici `result.electorate.ballots`, ripartisce liste + resto con `distributeVotes` e ricava «Altri» dal resto, non da una seconda formula. Test: asserzioni dirette su `result.electorate.ballots` (totali dello snapshot e della dodicesima ora = schede valide; Altri = schede − liste; un doppio conteggio artificiale viene distinto).
+- **Alleanze.** `joinCamp` non perde più le iscrizioni precedenti (`coalitions`); l'invito a un partito già in coalizione ha due modi, «singolo» o «fusione completa» (`mode`), con anteprima `inviteImpact`; le iscrizioni concluse sono immutabili e riportano la composizione (`members`); le approvazioni ancora aperte vengono riverificate se la composizione cambia (nota nello storico).
+- **Referendum.** Scadenze in mesi di calendario (`addMonths`, 3 mesi per richiesta e tra le due deliberazioni) invece di 13 settimane.
+- **Falsi positivi `statuteBlock`.** Le leggi generate (famiglia) non sono più bloccate per errore; il controllo resta per i testi del giocatore.
+- **Contrasto pulsanti (WCAG AA).** `.primary-button`/`.advance-button` in hover e il primario disabilitato ora superano la soglia (era 1,86:1).
+- **Ascoltatori `change` duplicati** in `app.js` (6 ascoltatori) → registro unico `onChange`; invio dei moduli di fusione non più in linea (CSP).
+- **Effetti locali del territorio.** `localLeanOf`/`effectsFromHome` e ripartizione esatta dei resti: candidato e campagna incidono sul risultato locale, con somme conservate. Copertura: **7.894 comuni** nella gerarchia reale; i **5.075** sono solo i campioni dei test.
+- **Tutorial.** Esercizi pratici non distruttivi (ruolo, attività, voto, notizie) verificati dallo stato dell'interfaccia; nessun giorno, denaro o capitale consumato.
+- **Animazioni delle scene.** Gesti ed espressioni variati dal seme per apertura e domande; entrata morbida delle battute solo con `prefers-reduced-motion: no-preference`.
+- **Pubblicità: InMobi unico fornitore** (vedi `docs/qa/rapporto-inmobi.md`): configurazione remota `ADS_CONFIG` (tutto spento di default, modalità test), crediti premio validati dal Worker, UMP solo per il consenso. Nessun annuncio reale attivo.
+- **Wrangler 4 / Worker locale:** costanti spostate in `worker-constants.js` (il modulo principale esporta solo funzioni).
+- **i18n:** frasi inglesi per tutorial, alleanze, effetti locali.
+
+### File modificati (principali)
+`src/core/electorate.js`, `src/core/night-engine.js`, `src/core/world-engine.js`, `src/core/store.js`, `src/core/referendum-engine.js`, `src/core/parliament-engine.js`, `src/core/lawmaking-engine.js`, `src/core/territory-results.js`, `src/core/activity-scenes.js`, `src/ui/app.js`, `src/ui/tutorial.js`, `src/theme.css`, `src/sections.css`, `src/scene.css`, `src/data/ads-config.js`, `src/data/repositories/*`, `src/data/release-pairs.js`, `worker.js`, `worker-constants.js`, `plugins/inmobi-ads/**`, `scripts/lib/browser.mjs`, test `check-election-night-engine`, `check-coalition-invites`, `check-referendum`, `check-statutes`, `check-tutorial-tasks`, `check-territory-results`, `check-inmobi*`, `check-local-test-mode`, e2e territorio/ranking.
+
+### Test (PASS / FAIL / SKIPPED)
+- **PASS:** check-election-night-engine, check-coalition-invites, check-referendum, check-statutes, check-tutorial-tasks, check-territory-results, check-button-contrast, check-start-screen, check-regional-ranking, check-guide, check-i18n (+ offline, pages, audit), check:inmobi, check:inmobi-native, check:capacitor, check:android, check:publication, check:security, check:legal.
+- **FAIL, identici su `main` (preesistenti):** check-presidency, check-promise-reminders, check-territory-legibility (selettori obsoleti), check-election-night-language (timeout), check-load se in parallelo.
+- **SKIPPED / non eseguibile qui:** check-campaign-ui (Chrome chiude la connessione websocket in questo contenitore; il difetto reale dei 6 ascoltatori è stato corretto), build Gradle/AAB, build Xcode/IPA, prove su dispositivo (UMP, annuncio premiato), `check:legal -- --release` (13 voci a carico del titolare).
+- Nessun test dichiarato risolto solo perché passato al secondo tentativo.
+
+### Screenshot (`artifacts/qa/screenshots/after/`)
+`pulsante-primario-hover-1280.png`, `guida-percorsi-390.png`, `tutorial-esercizio-390.png`, `referendum-390.png`, `sondaggi-osservatorio-1280.png`.
+
+### Problemi residui
+- Schermata «Caricamento…» intermittente: **non riprodotta** (28 ricaricamenti, anche sotto carico); causa **non dimostrata**, resta solo la mitigazione già presente.
+- Programma di Progetto Civico Italia: **non completato**; il sito ufficiale non è raggiungibile da qui e non è stato inventato nulla.
+- Animazioni: le 44 attività contestuali riusano ancora i 6 cast di scena.
+- Candidatura a vice-consigliere: non riproducibile senza il salvataggio del titolare.
+- Statistiche, popup recensione su Google Play, `versionCode` ultimo pubblicato: dipendono dal titolare/dal dispositivo.
+
+### Prerequisiti esterni
+Chiave di upload e Android SDK per l'AAB; `versionCode` ultimo su Play; macOS/Xcode per archivio iOS (iOS 1.0 (1) invariato: Bundle ID, Team, firma, versione, nessuna pubblicità); ID InMobi di placement e conferma dell'Account ID dal pannello InMobi; credenziali e risorse Cloudflare TEST (`wrangler.test.local.jsonc`, `.dev.vars`, D1/KV/R2, Access): non presenti → **nessun deploy TEST eseguito**; decisioni legali del titolare (13 voci).
+
+### Preparazione Android
+Progetto coerente (`it.matteobianchi.politicando2026`, versionCode 1 / «1.0», permesso `INTERNET`), copia web sincronizzata (`cap sync android`), meta-data AdMob rimosso, plugin InMobi collegato; `check:android` e `check:capacitor` passano. **AAB non generato**: mancano SDK e chiave; pubblicità reali spente.
