@@ -37,3 +37,23 @@ Android: App ID `ca-app-pub-6404822903303014~1677702221`; banner `…/4792704744
 5. Solo dopo: `ADS_MODE = 'live'`, nuova build, controlli (`npm run check:admob`), `versionCode` maggiore.
 
 Test: `npm run check:admob` (configurazione, separazione delle piattaforme, consenso, politica, premio); il lato Worker è in `check-rewards-sync`.
+
+## InMobi (separato da AdMob e da iOS)
+Stato verificato nel repository (snapshot di questo ciclo):
+- **InMobi non è integrato.** Nel portale InMobi del titolare risultano un account e tre placement, ma nel repository non c'è alcun SDK InMobi, alcun adapter, alcun identificativo InMobi: nessun file o dipendenza Gradle/Pod lo cita.
+- Le due reti non si fondono: l'adapter attuale (`data/repositories/admob-adapter.js`) parla solo con il plugin AdMob; un provider InMobi richiede un adapter proprio che implementi lo stesso contratto di `ads-rewarded.js`.
+
+Lavoro ancora necessario per InMobi su **Android** (non iniziato; nessuna decisione presa qui):
+1. Decidere se InMobi sostituisce AdMob, lo affianca (mediazione) o resta fuori: scelta del titolare, con effetti su informativa, Data safety e dichiarazione «Annunci».
+2. Individuare un plugin Capacitor o scrivere un bridge nativo per l'SDK InMobi (nessuna dipendenza npm è stata aggiunta in questo ciclo), con ID dei tre placement presi dal portale del titolare, mai inventati.
+3. Consenso: InMobi usa il proprio meccanismo oltre a UMP/TCF; vanno verificati col fornitore. Pubblico 14+: nessuna personalizzazione per minori.
+4. Un adapter `inmobi-adapter.js` con gli stessi tre stati (non configurato / nessun annuncio / ricompensa) e premio **solo** a completamento valido; test con provider finto come per AdMob; nuovo controllo `check:inmobi`.
+5. Costruire e provare un AAB di prova su dispositivo (richiede l'Android SDK), poi aggiornare `ADS_MODE` e i documenti.
+Non vanno usati gli ID AdMob per InMobi né viceversa.
+
+## iOS: nessuna pubblicità nella prima versione
+- `capacitor.config.json` ha `includePlugins: []`: nessun plugin, quindi nessun SDK pubblicitario nell'app iOS; `ADS_PLATFORMS.ios` ha tutti gli ID a `null` e `resolveAds('ios')` non abilita nulla.
+- L'SDK InMobi **non** va aggiunto a iOS in questa versione; gli ID AdMob Android non valgono su iOS.
+- `ios/App/App/PrivacyInfo.xcprivacy`: nessun tracciamento, nessun dominio di tracciamento, nessun SDK pubblicitario.
+- Identificativi nel repository (coerenti tra loro): `appId` e `PRODUCT_BUNDLE_IDENTIFIER` = `it.matteobianchi.politicando2026`, `MARKETING_VERSION` 1.0, `CURRENT_PROJECT_VERSION` 1; nel `project.pbxproj` non c'è alcun `DEVELOPMENT_TEAM` (il team si imposta in Xcode, non modificato qui).
+- **Da verificare dal titolare:** il Bundle ID della build 1.0 (1) già caricata su App Store Connect non è leggibile da qui (nessun accesso ad App Store Connect). Se lo screenshot del titolare mostra un Bundle ID diverso da `it.matteobianchi.politicando2026`, **si ferma su quel punto**: nessun identificativo viene cambiato automaticamente.
