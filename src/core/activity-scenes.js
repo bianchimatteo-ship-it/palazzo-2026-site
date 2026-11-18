@@ -166,8 +166,8 @@ const moveFor = (scene, stage, id) => movesAt(scene, stage).find(item => item.id
 function sequence(scene, move) {
   const fn = move.fn, t = scene.tally, flags = scene.flags ?? {}, last = scene.history.at(-1);
   const informed = t.k >= 1;
-  let delta = 0; const reasons = [];
-  const add = (value, key) => { delta += value; reasons.push(WHY_LINES[key][0]); };
+  let delta = 0; const reasons = [], terms = [];
+  const add = (value, key) => { delta += value; reasons.push(WHY_LINES[key][0]); terms.push({ value, text: WHY_LINES[key][0] }); };
   if (['propose', 'announce', 'fund', 'table'].includes(fn)) informed ? add(6, 'informed') : add(-6, 'uninformed');
   if (['involve', 'compromise'].includes(fn) && informed) add(4, 'informed');
   if (fn === 'contest') t.tension >= 2 ? add(-8, 'heated') : informed ? add(4, 'informed') : add(-3, 'uninformed');
@@ -179,7 +179,7 @@ function sequence(scene, move) {
   if (['vote', 'assign', 'priority'].includes(fn) && flags.opp) add(-3, 'noAuthority');
   if (scene.history.some(item => item.fn === fn)) add(-4, 'repeated');
   if (move.id === 'x-impegno') add(6, 'prior');
-  return { delta, reasons };
+  return { delta, reasons, terms };
 }
 function judge(scene, move, stage) {
   const stat = scene.context.stats[move.stat] ?? 50;
@@ -379,7 +379,32 @@ export function abandonActivityScene(scene) {
   return { ...scene, status: 'abandoned', outcome: { performance, band: band(performance), kind: null, edge: round1(clamp((performance - 55) / 4.5, -6, 6)), summary: ACTIVITY_SCENE_UI.abandoned[0], flavor: null, consequences: after.consequences, audience: scene.audience.mood, left: true }, history: scene.history };
 }
 export const activityProgress = scene => ({ index: Math.max(0, BEATS.indexOf(scene.nodeId)), total: scene.tally?.asked || ['q4', 'r4'].includes(scene.nodeId) ? BEATS.length : BEATS.length - 2 });
-registerSceneKind(SCENE_KIND, { node: activityNode, choose: activityChoose, effects: activityEffects, progress: activityProgress, abandon: abandonActivityScene });
+// Pro and contro of a move, from the terms `judge` and `sequence` really use (the stat the move relies on, what the meeting knows, the tension, the funds, the role, the repetition), and what it gains, costs and
+// commits (`FUNCTIONS`, `FUND_COST`, `COMMITMENTS`: the same tables `sceneAftermath` applies). The «right approach» drawn from the seed is not revealed: it is the part of the scene left to the player's judgement.
+const GAIN_LABEL = { pop: 'popolarità', inf: 'influenza', rel: 'rapporto con questo interlocutore', exp: 'esperienza', rep: 'reputazione', not: 'notorietà', home: 'attenzione al territorio', seg: 'consenso nel gruppo coinvolto', party: 'sostegno nel partito', media: 'rapporto con la stampa' };
+const COST_LABEL = { rel: 'rapporto con questo interlocutore', pop: 'popolarità', capital: 'capitale politico' };
+const fmt = value => String(Math.round(Math.abs(value) * 10) / 10).replace('.', ',');
+export function activityOdds(input, nodeId, choiceId) {
+  if (!['q1', 'q2', 'q3', 'q4'].includes(nodeId)) return null;
+  const scene = upgrade(JSON.parse(JSON.stringify(input)));
+  const move = moveFor(scene, nodeId, choiceId);
+  if (!move) return null;
+  const fn = FUNCTIONS[move.fn], flags = scene.flags ?? {}, stat = scene.context.stats[move.stat] ?? 50;
+  const pro = [], contro = [], effect = [], cost = [];
+  (stat >= 50 ? pro : contro).push(`${STAT_LABELS[move.stat]} ${Math.round(stat)}/100`);
+  for (const term of sequence(scene, move).terms) (term.value > 0 ? pro : contro).push(term.text);
+  const gains = Object.entries(fn.gain ?? {}).filter(([key]) => GAIN_LABEL[key]).map(([key, value]) => `${GAIN_LABEL[key]} +${fmt(value)}`);
+  if (gains.length) effect.push(`se la mossa riesce: ${gains.join(', ')} (la metà se è a metà strada, nulla se fallisce)`);
+  if (fn.tally?.k) effect.push('ti fa sapere di più sul problema');
+  if (fn.tally?.tension < 0) effect.push('abbassa la tensione'); else if (fn.tally?.tension > 0) effect.push('può alzare la tensione');
+  for (const [key, value] of Object.entries(fn.cost ?? {})) if (COST_LABEL[key] && !(key === 'capital' && !flags.capital)) cost.push(`${COST_LABEL[key]} ${value < 0 ? '−' : '+'}${fmt(value)}`);
+  if (fn.fund && (FUND_COST[kindOf(scene)] ?? 0)) cost.push(`${FUND_COST[kindOf(scene)]} € dai fondi`);
+  if (fn.commit && COMMITMENTS[fn.commit]) { cost.push(`ti impegni a farlo entro ${COMMITMENTS[fn.commit].weeks} settimane (diventa un impegno verificabile)`); contro.push('un impegno non mantenuto costa reputazione'); }
+  if (fn.bold) { pro.push('se va bene il sostegno nel partito sale di più'); contro.push('se va male il rapporto peggiora'); }
+  return { pro, contro, effect, cost };
+}
+
+registerSceneKind(SCENE_KIND, { node: activityNode, choose: activityChoose, effects: activityEffects, odds: activityOdds, progress: activityProgress, abandon: abandonActivityScene });
 
 // ---------- the stage ----------
 // Where the people stand: the building site and the civic hall standing, the other four rooms around a table. The player arrives from the left in the opening; everyone else is already there.

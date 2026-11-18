@@ -270,6 +270,58 @@ export function rallyChoose(scene, choiceId) {
   scene.nodeId = next;
   return scene;
 }
+// Pro and contro of each decision of the rally, read from the very terms `rallyChoose` and `judgeSpeech` use (stats, credibility, promises, the territory, the mood, the protest): nothing here is
+// said that the engine does not apply. `effect` tells what the engine does with the result, `cost` what the choice commits the player to.
+export function rallyOdds(scene, nodeId, choiceId) {
+  const ctx = scene.context, st = ctx.stats, pro = [], contro = [], effect = [], cost = [];
+  const side = (ok, good, bad) => (ok ? pro : contro).push(ok ? good : bad);
+  const num = value => Math.round(value);
+  if (nodeId === 'saluto') {
+    if (choiceId === 'caloroso') side(st.charisma >= 50, `carisma ${num(st.charisma)}/100`, `carisma ${num(st.charisma)}/100: il calore suona forzato`);
+    else if (choiceId === 'sobrio') { side(st.reputation >= 50, `reputazione ${num(st.reputation)}/100`, `reputazione ${num(st.reputation)}/100`); contro.push('scalda meno la piazza'); }
+    else if (choiceId === 'locale') { side((ctx.territory?.problems ?? []).length > 0, 'la piazza ha problemi reali da nominare', 'nessun problema locale registrato da citare'); side((ctx.relations?.civic ?? 50) >= 50, 'buoni rapporti con la società civile locale', 'rapporti freddi con la società civile locale'); }
+    else if (choiceId === 'combattivo') { side(scene.audience.mood >= 50, 'la piazza è già calda', 'la piazza è fredda: l’attacco cade nel vuoto'); contro.push('rischio di polemica'); }
+    effect.push('cambia l’umore della piazza; il saluto pesa poco nel giudizio (0,6)');
+    return { pro, contro, effect, cost };
+  }
+  if (nodeId === 'tema1' || nodeId === 'tema2') {
+    const option = speechOptions(scene, nodeId).find(item => item.id === choiceId);
+    if (!option) return null;
+    const result = judgeSpeech(scene, option, nodeId);
+    const broken = (ctx.promises ?? []).some(item => item.status === 'non-mantenuta' && item.area === option.area);
+    if (option.kind === 'promessa') { side((ctx.credibility ?? 55) >= 50, `credibilità ${num(ctx.credibility ?? 55)}/100`, `credibilità ${num(ctx.credibility ?? 55)}/100`); side(option.promise?.status !== 'ritardata', 'promessa ancora in corso', 'promessa in ritardo: la piazza lo sa'); if (broken) contro.push('una promessa tradita sullo stesso tema'); }
+    else if (option.kind === 'territorio') { pro.push('un problema che la piazza sente'); side(st.competence >= 55, `competenza ${num(st.competence)}/100`, `competenza ${num(st.competence)}/100`); if (broken) contro.push('hai promesso e non hai mantenuto'); if (scene.protest.planned && scene.protest.reason?.kind === 'territorio' && scene.protest.reason.area === option.area && nodeId === 'tema1') pro.push('può disinnescare la contestazione prevista (se il discorso va bene)'); }
+    else if (option.kind === 'attualita') { side(st.charisma >= 50, `carisma ${num(st.charisma)}/100`, `carisma ${num(st.charisma)}/100`); }
+    else if (option.kind === 'governo') { side((ctx.government?.approval ?? 50) >= 50, `gradimento del Governo ${num(ctx.government?.approval ?? 50)}`, `gradimento del Governo ${num(ctx.government?.approval ?? 50)}`); }
+    else if (option.kind === 'proposta') { pro.push('coerente con il programma del partito'); contro.push('senza una promessa tua: pesa meno'); }
+    else { side(st.charisma >= 50, `carisma ${num(st.charisma)}/100`, `carisma ${num(st.charisma)}/100`); contro.push('tono duro: rischio di polemica'); side(scene.audience.mood >= 50, 'la piazza è con te', 'la piazza è fredda'); }
+    if ((ctx.rallyMemory ?? []).slice(-2).some(item => (item.topics ?? []).includes(option.area ?? option.id))) contro.push('ne hai già parlato di recente');
+    effect.push(`cambia l’umore della piazza; il discorso pesa molto nel giudizio (1,3)${result.score >= 60 ? '' : ''}`);
+    if (nodeId === 'tema1' && scene.protest.planned && option.kind !== 'territorio') contro.push('la contestazione prevista arriverà comunque dopo questo punto');
+    return { pro, contro, effect, cost };
+  }
+  if (nodeId === 'contestazione') {
+    const severity = protestSeverity(scene), broken = scene.protest.reason?.kind === 'promessa';
+    const gravity = `gravità della protesta ${num(severity * 100)}%`;
+    if (choiceId === 'ascolta') { side(st.reputation >= 50, `reputazione ${num(st.reputation)}/100`, `reputazione ${num(st.reputation)}/100`); if (broken) pro.push('la protesta nasce da una tua promessa tradita: ascoltare vale di più'); }
+    else if (choiceId === 'rispondi') { side(st.competence >= 55, `competenza ${num(st.competence)}/100`, `competenza ${num(st.competence)}/100`); if (broken) contro.push('hai tradito quella promessa: rispondere nel merito è più difficile'); }
+    else if (choiceId === 'prosegui') { side(st.charisma >= 50, `carisma ${num(st.charisma)}/100`, `carisma ${num(st.charisma)}/100`); contro.push('rischi che la situazione degeneri e il comizio salti'); }
+    else { pro.push('eviti lo scontro in piazza'); contro.push('il comizio finisce qui (prestazione al massimo 40)'); effect.push('umore della piazza in calo; il comizio si chiude subito'); return { pro, contro, effect, cost }; }
+    (severity > 0.6 ? contro : pro).push(gravity);
+    effect.push('riuscita: la contestazione si ricompone e il comizio riparte; fallimento: comizio interrotto');
+    return { pro, contro, effect, cost };
+  }
+  if (nodeId === 'chiusura') {
+    const top = bestTopic(scene);
+    if (choiceId === 'appello') side(st.charisma >= 50, `carisma ${num(st.charisma)}/100`, `carisma ${num(st.charisma)}/100`);
+    else if (choiceId === 'impegno') { side((ctx.credibility ?? 55) >= 50, `credibilità ${num(ctx.credibility ?? 55)}/100`, `credibilità ${num(ctx.credibility ?? 55)}/100`); if (top?.area) { cost.push(`diventa una promessa nel Programma su ${areaLabel(top.area)}: se non la mantieni cala la fiducia`); } }
+    else if (choiceId === 'coro') { side(scene.audience.mood >= 50, 'la piazza è già calda', 'la piazza è fredda'); contro.push('bella da vedere, poca sostanza'); }
+    else { pro.push('chiusura sicura e cordiale'); contro.push('non aggiunge nulla al discorso'); }
+    effect.push('chiude il comizio e fissa il giudizio finale (0,7)');
+    return { pro, contro, effect, cost };
+  }
+  return null;
+}
 // The verdict of the rally: performance, the effects on the numbers of the game (applied by the store with the rules of its engines), a line for the history.
 function finishRally(scene) {
   const stats = scene.context.stats;

@@ -218,3 +218,5 @@ html[data-scene-motion="full"] .cm-protest .cm-arm { animation: st-arms .45s eas
 .scene-procon em { font-style: normal; display: block; }
 .scene-procon .pro b { color: #4cae7a; }
 .scene-procon .contro b { color: #d9825b; }
+.scene-procon .effetto b { color: #7fb4e8; }
+.scene-procon .costo b { color: #e6bd5c; }
