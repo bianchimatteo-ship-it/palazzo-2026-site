@@ -1,11 +1,11 @@
 // English phrase-book pairs of the last release pass (data/i18n/en-ui-8.js reads `ALL_PAIRS`): the guided programme editor, the days of the Quirinale and the rule on the parties, the government room, the live
 // votes of the assemblies, the party headquarters, the TV name plates and the tutorial. Format as in the phrase-book: [Italian as shown, English]; `#` a number, `{}` a free part.
-import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261118-12';
-import { DEBATE_PAIRS } from './debate-choices.js?v=20261118-12';
-import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261118-12';
-import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261118-12';
-import { ALL_PAIRS as TOPIC_PAIRS } from './activity-scene-topics.js?v=20261118-12';
-import { LAW_TERM_PAIRS } from './law-terms.js?v=20261118-12';
+import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261118-15';
+import { DEBATE_PAIRS } from './debate-choices.js?v=20261118-15';
+import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261118-15';
+import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261118-15';
+import { ALL_PAIRS as TOPIC_PAIRS } from './activity-scene-topics.js?v=20261118-15';
+import { LAW_TERM_PAIRS } from './law-terms.js?v=20261118-15';
 export const ALL_PAIRS = [
   ...GUEST_PAIRS,
   ...DEBATE_PAIRS,

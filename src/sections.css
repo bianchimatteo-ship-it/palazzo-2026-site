@@ -2121,3 +2121,12 @@ details[open].program-proposal > .program-proposal-head::after { transform: rota
 .mg-sw { display: inline-block; width: 14px; height: 14px; border-radius: 4px; border: 1px solid rgba(255,255,255,.4); vertical-align: -2px; margin-right: 2px; }
 .mg-problem { color: #f0908a; }
 .mg-consequences { margin: 0; font-size: .92rem; }
+.tutorial-task { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; margin: 8px 0; padding: 8px 10px; border: 1px solid rgba(217,180,90,.7); border-radius: 10px; background: rgba(217,180,90,.1); }
+.tutorial-task div { display: grid; gap: 2px; } .tutorial-task small { opacity: .88; }
+.tutorial-task-mark { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: rgba(217,180,90,.25); font-weight: 800; }
+.tutorial-task.is-done { border-color: rgba(76,174,122,.7); background: rgba(76,174,122,.12); } .tutorial-task.is-done .tutorial-task-mark { background: rgba(76,174,122,.3); }
+.tutorial-point { outline: 3px solid var(--gold, #d9b45a) !important; outline-offset: 3px; border-radius: 10px; animation: tutorial-pulse 1.6s ease-in-out infinite; }
+@keyframes tutorial-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(217,180,90,.5); } 50% { box-shadow: 0 0 0 8px rgba(217,180,90,0); } }
+@media (prefers-reduced-motion: reduce) { .tutorial-point { animation: none; } }
+.guide-paths { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 10px; margin-bottom: 14px; }
+.guide-path p { margin: 6px 0 0; display: flex; flex-wrap: wrap; gap: 6px; }

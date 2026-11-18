@@ -1,6 +1,6 @@
 // Guided drafting of the referendum requests: formulations of the question for an abrogative referendum (from the law chosen: its title, area, instrument and date, never an invented content) and drafts
 // of constitutional revisions by topic. All of them are SUGGESTIONS the player can edit freely: nothing here is submitted, approved or admitted by itself, and no effect that the engine does not apply is promised.
-import { POLICY_AREAS } from './simulation/policy-rules.js?v=20261118-12';
+import { POLICY_AREAS } from './simulation/policy-rules.js?v=20261118-15';
 
 const AREA_LABEL = Object.fromEntries(POLICY_AREAS.map(area => [area.id, area.label]));
 const lower = text => String(text ?? '').charAt(0).toLocaleLowerCase('it-IT') + String(text ?? '').slice(1);
