@@ -2129,4 +2129,6 @@ details[open].program-proposal > .program-proposal-head::after { transform: rota
 @keyframes tutorial-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(217,180,90,.5); } 50% { box-shadow: 0 0 0 8px rgba(217,180,90,0); } }
 @media (prefers-reduced-motion: reduce) { .tutorial-point { animation: none; } }
 .guide-paths { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 10px; margin-bottom: 14px; }
-.guide-path p { margin: 6px 0 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.guide-path p + p { margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.guide-path { display: block; padding: 14px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); }
+.guide-path p { color: var(--ink-2); font-size: 13px; line-height: 1.5; }
