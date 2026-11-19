@@ -48,3 +48,4 @@ wrangler.local.jsonc
 *.jks
 worker-test-access.js
 worker-constants.js
+app-identity.json

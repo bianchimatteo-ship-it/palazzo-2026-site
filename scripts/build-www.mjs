@@ -11,7 +11,7 @@
 //   - nothing that is not part of the game: Worker, Wrangler, scripts, docs, tests, migrations, node/ios/android projects, notes, environment files, keys;
 //   - no secrets (private keys, Cloudflare/GitHub tokens, session tokens, owner PIN or setup code) and no call to an external host in the page, the style sheets or the code;
 //   - the fonts, the public pages (privacy, terms, account deletion) and the icons of the manifest are there;
-//   - Capacitor: `webDir` is the folder built here, `appId` is valid and equals the bundle identifier of the iOS project; the platforms present and the ones missing are reported.
+//   - Capacitor: `webDir` is the folder built here, `appId` is the ANDROID identity (app-identity.json), the iOS project has its OWN bundle identifier (app-identity.json); the platforms present and the ones missing are reported.
 import { createHash } from 'node:crypto';
 import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, posix, relative, resolve, sep } from 'node:path';
@@ -138,23 +138,27 @@ if (/fonts\.(googleapis|gstatic)\.com/.test(html) || [...files.keys()].some(name
 
 // ---------- 5. Capacitor ----------
 const platforms = { ios: false, android: false };
-let appId = null;
+let appId = null; // the ANDROID identity (capacitor.config.json is the common file and carries it); the iOS bundle identifier is separate (app-identity.json)
+const identity = JSON.parse(await readFile(join(ROOT, 'app-identity.json'), 'utf8'));
 try {
   const config = JSON.parse(await readFile(join(ROOT, 'capacitor.config.json'), 'utf8'));
   appId = config.appId;
+  if (appId !== identity.android.applicationId) fail(`capacitor.config.json (appId ${appId}) deve portare l’identità Android di app-identity.json (${identity.android.applicationId}).`);
+  if (identity.ios.bundleId === identity.android.applicationId) fail('Gli identificativi iOS e Android non possono coincidere.');
   if (resolve(ROOT, config.webDir ?? '') !== resolve(ROOT, 'www')) fail(`capacitor.config.json: webDir «${config.webDir}» non è la cartella costruita qui (www).`);
   if (!/^[a-z][a-z0-9]*(\.[a-z][a-z0-9_]*)+$/.test(appId ?? '')) fail(`capacitor.config.json: appId «${appId}» non valido.`);
   platforms.ios = await stat(join(ROOT, 'ios/App/App.xcodeproj/project.pbxproj')).then(() => true, () => false);
   platforms.android = await stat(join(ROOT, 'android/app/build.gradle')).then(() => true, () => false);
   if (platforms.ios) {
     const ids = new Set([...(await readFile(join(ROOT, 'ios/App/App.xcodeproj/project.pbxproj'), 'utf8')).matchAll(/PRODUCT_BUNDLE_IDENTIFIER = ([^;]+);/g)].map(match => match[1].trim()));
-    if (ids.size !== 1 || !ids.has(appId)) fail(`Il progetto iOS ha come identificativo ${[...ids].join(', ')}, capacitor.config.json ${appId}.`);
+    if (ids.size !== 1 || !ids.has(identity.ios.bundleId)) fail(`Il progetto iOS ha come identificativo ${[...ids].join(', ')}, app-identity.json ${identity.ios.bundleId}.`);
+    if (ids.has(identity.android.applicationId)) fail('Il progetto iOS usa l’identificativo di Android.');
   }
 } catch (error) { fail(`capacitor.config.json: ${error.message}`); }
 
 // ---------- 6. build-info ----------
 const contentHash = sha([...files].sort(([a], [b]) => a.localeCompare(b)).map(([name, data]) => `${name}:${sha(data)}`).join('\n'));
-const info = { app: 'POLITICANDO 2026', appId, buildStamp: STAMP, files: files.size, bytes: [...files.values()].reduce((sum, data) => sum + data.length, 0), contentHash };
+const info = { app: 'POLITICANDO 2026', appIds: { android: identity.android.applicationId, ios: identity.ios.bundleId }, buildStamp: STAMP, files: files.size, bytes: [...files.values()].reduce((sum, data) => sum + data.length, 0), contentHash };
 files.set('build-info.json', Buffer.from(`${JSON.stringify(info, null, 2)}\n`));
 
 if (problems.length) { console.error(`Build di ${relative(ROOT, OUT)} interrotta:\n- ${problems.join('\n- ')}`); process.exit(1); }

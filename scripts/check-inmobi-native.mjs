@@ -58,12 +58,14 @@ lines.push('versioni SDK, Gradle/SPM sincronizzati, permessi, SKAdNetwork, priva
 
 // ---- C ----
 const pbx = read('ios/App/App.xcodeproj/project.pbxproj');
-assert.ok([...pbx.matchAll(/PRODUCT_BUNDLE_IDENTIFIER = ([^;]+);/g)].every(m => m[1] === 'it.matteobianchi.politicando2026'), 'iOS: Bundle ID invariato.');
-assert.ok([...pbx.matchAll(/MARKETING_VERSION = ([^;]+);/g)].every(m => m[1] === '1.0') && [...pbx.matchAll(/CURRENT_PROJECT_VERSION = ([^;]+);/g)].every(m => m[1] === '1'), 'iOS: versione 1.0 (1) invariata.');
+assert.ok([...pbx.matchAll(/PRODUCT_BUNDLE_IDENTIFIER = ([^;]+);/g)].every(m => m[1] === 'it.politicando2026.app'), 'iOS: Bundle ID it.politicando2026.app (quello registrato in App Store Connect), non quello Android.');
+assert.ok([...pbx.matchAll(/MARKETING_VERSION = ([^;]+);/g)].every(m => m[1] === '1.0.1') && [...pbx.matchAll(/CURRENT_PROJECT_VERSION = ([^;]+);/g)].every(m => m[1] === '2'), 'iOS: versione 1.0.1 (2) in Debug e Release (la 1.0 (1) è quella già inviata ad Apple).');
+assert.ok(!/DEVELOPMENT_TEAM|CODE_SIGN_IDENTITY = "?(iPhone|Apple) Distribution/.test(pbx), 'iOS: nessun Team né identità di firma nel repository.');
+assert.match(sw, /func showPrivacyOptions[\s\S]{0,500}call\.resolve\(InMobiAdsPlugin\.consentResult\(\)\)[\s\S]{0,60}\}\s*\}/, 'Swift: le opzioni privacy restituiscono lo stato dopo il modulo, come su Android 1.0.2.');
 assert.ok(!/DEVELOPMENT_TEAM = [A-Z0-9]{10}/.test(pbx), 'iOS: nessun Team nel repository.'); assert.ok(!/ca-app-pub|GADApplication/.test(pbx));
 const app = read('android/app/build.gradle'); assert.match(app, /applicationId "it\.matteobianchi\.politicando2026"/); assert.match(app, /versionCode 3\b/); assert.match(app, /versionName "1\.0\.2"/);
-assert.equal(JSON.parse(read('capacitor.config.json')).appId, 'it.matteobianchi.politicando2026');
-lines.push('Bundle ID, versione iOS 1.0 (1), versionCode Android 3 (1.0.2); firma e Team: invariati');
+assert.equal(JSON.parse(read('capacitor.config.json')).appId, 'it.matteobianchi.politicando2026', 'capacitor.config.json porta l’appId Android.');
+lines.push('Bundle ID iOS it.politicando2026.app e versione iOS 1.0.1 (2); applicationId Android e versionCode 3 (1.0.2): separati; firma e Team: invariati');
 
 // ---- D ----
 function compileKotlin() {

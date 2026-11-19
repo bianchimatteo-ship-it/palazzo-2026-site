@@ -104,11 +104,13 @@ public class InMobiAdsPlugin: CAPPlugin, CAPBridgedPlugin {
         return ["canRequestAds": info.canRequestAds, "status": status, "privacyOptionsRequired": info.privacyOptionsRequirementStatus == PrivacyOptionsRequirementStatus.required]
     }
 
+    // The privacy options form (accept, refuse, change, WITHDRAW the consent). It works after a refusal too: it does not need `canRequestAds`. As on Android (1.0.2), the answer carries the state AFTER the form
+    // (also when the form could not be shown), so the game can start the SDK when the consent was given later, or stop using it when it was withdrawn.
     @objc func showPrivacyOptions(_ call: CAPPluginCall) {
         Task { @MainActor in
-            guard let controller = self.topController() else { call.resolve(); return }
+            guard let controller = self.topController() else { call.resolve(InMobiAdsPlugin.consentResult()); return }
             do { try await ConsentForm.presentPrivacyOptionsForm(from: controller) } catch { /* the user can try again */ }
-            call.resolve()
+            call.resolve(InMobiAdsPlugin.consentResult())
         }
     }
 

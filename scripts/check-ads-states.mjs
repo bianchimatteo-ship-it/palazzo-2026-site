@@ -26,7 +26,7 @@ const card = async ads => { const rewards = service(ads); await rewards.refreshA
 assert.equal(ADS_CONFIG.enabled, false, 'La configurazione degli annunci di base è spenta.');
 const read = path => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const { ADS_MODE } = await module('src/data/ads-config.js');
-assert.equal(ADS_MODE, 'test', 'La modalità predefinita è «test»: nessun annuncio reale, e ogni formato spento finché la configurazione remota non lo accende.');
+assert.equal(ADS_MODE, 'off', 'La modalità predefinita è «off» (più prudente di «test»): nessuna richiesta e nessun annuncio reale, e ogni formato spento finché la configurazione remota non lo accende.');
 // the SDK is in the Android project now (plugin + App ID in the manifest, see check-inmobi.mjs), never on iOS; the ids live in ONE file of the game and nowhere else
 const iosShipped = ['ios/App/App/Info.plist', 'ios/App/CapApp-SPM/Package.swift', 'ios/App/App.xcodeproj/project.pbxproj'].map(read).join('\n');
 assert.ok(!/admob|google-mobile-ads|ca-app-pub|GADApplicationIdentifier/i.test(iosShipped), 'Nel progetto iOS non ci sono SDK, plugin o identificativi AdMob (l’unico provider è InMobi).');

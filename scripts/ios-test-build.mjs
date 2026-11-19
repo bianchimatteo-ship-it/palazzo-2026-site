@@ -29,6 +29,6 @@ else if (process.argv.includes('--run')) {
   const derived = path.join(ROOT, 'ios/build-test');
   run('xcodebuild', ['-project', 'ios/App/App.xcodeproj', '-scheme', 'App', '-destination', 'generic/platform=iOS Simulator', '-derivedDataPath', derived, 'CODE_SIGNING_ALLOWED=NO', 'build']);
   const app = path.join(derived, 'Build/Products/Debug-iphonesimulator/App.app');
-  run('xcrun', ['simctl', 'boot', 'iPhone 16']); run('xcrun', ['simctl', 'install', 'booted', app]); run('xcrun', ['simctl', 'launch', 'booted', 'it.matteobianchi.politicando2026']);
+  run('xcrun', ['simctl', 'boot', 'iPhone 16']); run('xcrun', ['simctl', 'install', 'booted', app]); run('xcrun', ['simctl', 'launch', 'booted', 'it.politicando2026.app']);
 } else console.log('   (Mac con Xcode rilevato: aggiungi --run per compilare e avviare)');
 console.log(missing.length ? `\nPrerequisiti mancanti:\n- ${missing.join('\n- ')}\n\nSul Mac: 1) npm run cf:dev -- --var 'ADS_CONFIG:{...}' (vedi docs/inmobi.md) 2) node scripts/ios-test-build.mjs --run, oppure apri ios/App/App.xcodeproj in Xcode e premi Run sul Simulatore.` : '\nFatto.');

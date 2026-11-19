@@ -64,7 +64,7 @@ Va dichiarato tutto ciò che si trasmette fuori dal dispositivo oltre il tempo n
 - ☐ Versione/build number crescente a ogni invio.
 
 ## G. Stato tecnico iOS (15/11/2026) e decisioni prese
-**Decisioni dei genitori:** app universale iPhone + iPad; iPhone solo verticale; iPad verticale e orizzontale; Bundle ID invariato `it.matteobianchi.politicando2026`; prima release senza pubblicità; ricompensa Instagram spenta su iOS.
+**Decisioni dei genitori:** app universale iPhone + iPad; iPhone solo verticale; iPad verticale e orizzontale; Bundle ID iOS `it.politicando2026.app` (come registrato in App Store Connect, confermato il 19/11/2026; **diverso** dall'applicationId Android `it.matteobianchi.politicando2026`); prima release senza pubblicità; ricompensa Instagram spenta su iOS.
 
 | Voce | Stato |
 |---|---|

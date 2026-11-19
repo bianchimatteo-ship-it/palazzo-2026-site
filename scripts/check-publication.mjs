@@ -52,7 +52,7 @@ lines.push('Worker di produzione: 404 per il gioco, portale e API servite, origi
 
 // ---------- 3. the Android app: bundled game, production Worker ----------
 const cap = JSON.parse(await read('capacitor.config.json'));
-assert.equal(cap.webDir, 'www'); assert.equal(cap.appId, 'it.matteobianchi.politicando2026');
+assert.equal(cap.webDir, 'www'); assert.equal(cap.appId, 'it.matteobianchi.politicando2026', 'capacitor.config.json porta l’appId ANDROID (quello iOS è in app-identity.json).');
 const sync = await import('../src/data/repositories/account-sync.js?pub=1');
 globalThis.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
 globalThis.location = new URL('https://localhost/'); globalThis.Capacitor = { isNativePlatform: () => true };
