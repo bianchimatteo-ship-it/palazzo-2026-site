@@ -317,3 +317,17 @@ Solo voci nuove; dettaglio in `docs/qa/rapporto-miglioramento-completo.md` (Aggi
 | 24.6 | 13 voci legali | Elenco preciso preparato; decisioni del titolare | docs/qa/decisioni-titolare-legali.md | check:legal PASS, `--release` blocca (13) | — |
 | 24.7 | Preparazione deploy TEST da VS Code | Documento pronto; deploy non eseguito | docs/qa/deploy-test-vscode.md, .gitignore | wrangler dry-run | — |
 | 24.8 | AAB / IPA / prove su dispositivo | Bloccato (SDK, keystore, macOS, dispositivo) | — | — | — |
+
+
+## 25. Rifinitura del 19/11 (build 20261119-2)
+
+| Punto | Richiesta | Stato | Test | Note |
+|---|---|---|---|---|
+| 25.1 | Privacy/termini senza segnaposto | Completato (11 voci legali ancora «mancante») | check:legal | domande in docs/qa/decisioni-titolare-legali.md |
+| 25.2 | Alleanze: invito individuale non bloccato, scelta esplicita, anteprima, fusione con consensi | Completato | check-coalition-invites, check-alliance-invite-ui | alleanze-invito-scelta-{it,en}-390.png |
+| 25.3 | Vecchi salvataggi: migrazione voti «Altri» versionata e non distruttiva | Completato (limiti documentati) | check-old-saves-votes | territori e candidati non ricalcolati |
+| 25.4 | Account: registrazione, accesso, recupero, logout, isolamento, cancellazione | Completato; invio reale e-mail SKIPPED | check:accounts, email-gateway, account-isolation, logout-careers, account-deletion, security, account-recovery | richiede TEST con gateway |
+| 25.5 | Animazioni: movimento attivo/ridotto/disattivato/sistema | Verificato | check-scene-motion | scena-movimento-*.png |
+| 25.6 | check-i18n-pages intermittente: causa alla fonte | Corretto (anteprime tagliate a fine frase) | check-news-preview, check-i18n-pages ×3 | |
+| 25.7 | «Caricamento…»: guardia di avvio, messaggio, Riprova, una sola ripetizione automatica | Completato | check-boot-failure | errore-caricamento-{it,en}.png |
+| 25.8 | Preparazione TEST da VS Code | Documento aggiornato (§7, §8); deploy non eseguito | wrangler dry-run | |

@@ -1,11 +1,11 @@
 // English phrase-book pairs of the last release pass (data/i18n/en-ui-8.js reads `ALL_PAIRS`): the guided programme editor, the days of the Quirinale and the rule on the parties, the government room, the live
 // votes of the assemblies, the party headquarters, the TV name plates and the tutorial. Format as in the phrase-book: [Italian as shown, English]; `#` a number, `{}` a free part.
-import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261118-36';
-import { DEBATE_PAIRS } from './debate-choices.js?v=20261118-36';
-import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261118-36';
-import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261118-36';
-import { ALL_PAIRS as TOPIC_PAIRS } from './activity-scene-topics.js?v=20261118-36';
-import { LAW_TERM_PAIRS } from './law-terms.js?v=20261118-36';
+import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261119-2';
+import { DEBATE_PAIRS } from './debate-choices.js?v=20261119-2';
+import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261119-2';
+import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261119-2';
+import { ALL_PAIRS as TOPIC_PAIRS } from './activity-scene-topics.js?v=20261119-2';
+import { LAW_TERM_PAIRS } from './law-terms.js?v=20261119-2';
 export const ALL_PAIRS = [
   ...GUEST_PAIRS,
   ...DEBATE_PAIRS,
@@ -2862,8 +2862,10 @@ export const ALL_PAIRS = [
   ["{} deve acconsentire; se rifiuta resta nell’accordo originale.", "{1} must agree; if it refuses it stays in the original accord."],
   ["Con la fusione passano composizione, leadership, rapporti, condizioni, storico e registrazioni dell’accordo.", "With the merger the composition, leadership, relations, conditions, history and registrations of the accord pass over."],
   ["Le elezioni concluse non cambiano; le approvazioni per elezioni ancora aperte vanno riverificate.", "Concluded elections do not change; approvals for elections still open have to be checked again."],
-  ["Invita soltanto questo partito · 1 giorno · 4 cap.", "Invite only this party · 1 day · 4 cap."],
-  ["Proponi la fusione delle intere alleanze · 1 giorno · 4 cap.", "Propose merging the whole alliances · 1 day · 4 cap."],
-  ["Invita soltanto il partito scelto · 1 giorno · 4 cap.", "Invite only the chosen party · 1 day · 4 cap."],
+  ["Invita soltanto questo partito · # giorno · # cap.", "Invite only this party · # day · # cap."],
+  ["Proponi la fusione delle intere alleanze · # giorno · # cap.", "Propose merging the whole alliances · # day · # cap."],
+  ["Invita soltanto il partito scelto · # giorno · # cap.", "Invite only the chosen party · # day · # cap."],
   ["Invito respinto: potrai ripeterlo dal {}.", "Invitation refused: you can repeat it from {1}."],
+  ["devono acconsentire uno per uno; chi rifiuta resta nell’accordo originale.", "must each agree; whoever refuses stays in the original accord."],
+  ["deve acconsentire; se rifiuta resta nell’accordo originale.", "must agree; if it refuses it stays in the original accord."],
 ];

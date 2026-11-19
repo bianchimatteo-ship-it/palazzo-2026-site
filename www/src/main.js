@@ -1,10 +1,10 @@
-import { mountApp } from './ui/app.js?v=20261118-36';
-import { refreshSharedArchive } from './data/repositories/admin-sync.js?v=20261118-36';
-import { isNativeApp } from './data/repositories/account-sync.js?v=20261118-36';
-import { store } from './core/store.js?v=20261118-36';
-import { isRealCollectionLoaded, loadRealCollectionsSettled, loadRealDatabase, loadOptionalRealDocument, loadRealDocument, realDatabase, realDataUrls, refreshAdminOverrides } from './data/repositories/real-data.js?v=20261118-36';
-import { PARTY_LINK_COLLECTIONS, governingEntityIds } from './data/repositories/party-links.js?v=20261118-36';
-import { referenceGovernmentSpec } from './data/repositories/government-reference.js?v=20261118-36';
+import { mountApp } from './ui/app.js?v=20261119-2';
+import { refreshSharedArchive } from './data/repositories/admin-sync.js?v=20261119-2';
+import { isNativeApp } from './data/repositories/account-sync.js?v=20261119-2';
+import { store } from './core/store.js?v=20261119-2';
+import { isRealCollectionLoaded, loadRealCollectionsSettled, loadRealDatabase, loadOptionalRealDocument, loadRealDocument, realDatabase, realDataUrls, refreshAdminOverrides } from './data/repositories/real-data.js?v=20261119-2';
+import { PARTY_LINK_COLLECTIONS, governingEntityIds } from './data/repositories/party-links.js?v=20261119-2';
+import { referenceGovernmentSpec } from './data/repositories/government-reference.js?v=20261119-2';
 
 const BUILD = new URL(import.meta.url).searchParams.get('v');
 // iPhone and iPad (WKWebView, viewport-fit=cover): the content may run under the notch, the Dynamic Island and the home indicator, so the iOS-only rules of theme.css (class platform-ios) keep it inside the safe area.
@@ -122,6 +122,7 @@ try {
     // The creator of a career and the first game need the institutions and the documents: they are asked for at once and waited for.
     needBackground: () => loadBackground()
   });
+  window.__politicandoBooted = true;   // the start-up guard (boot-guard.js) stops watching: the screen is mounted
 } catch (error) { bootError(error); throw error; }
 
 let touched = false;

@@ -4,19 +4,19 @@
 // of the campaign (renderCampaignObservatory): what `campaignObservatory()` reads from a valid campaign, and nothing when there is none.
 // Everything here is read from what the game has saved (the world, its observatory, the campaign) and measures the simulation: no number on these
 // pages gives a bonus, and the real parties stay real (their candidates, voters and readings are simulated, source: simulation).
-import { latestPoll, observatoryReport } from '../core/world-engine.js?v=20261118-36';
-import { campaignObservatory } from '../core/campaign-engine.js?v=20261118-36';
-import { coalitionScenario } from '../core/poll-observatory.js?v=20261118-36';
-import { POLL_EXTENSIONS } from '../data/simulation/polling-rules.js?v=20261118-36';
-import { observatorySociety } from '../core/society-engine.js?v=20261118-36';
-import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261118-36';
-import { formatDate } from '../core/time.js?v=20261118-36';
-import { lineChart, SERIES } from './charts.js?v=20261118-36';
-import { emblem, glyph, partyMarkText } from './visuals.js?v=20261118-36';
-import { arrow, bar, card, empty, esc, kpi, num, table } from './sections-kit.js?v=20261118-36';
-import { alliancesList, alliancesOverview, barometer, myCoalitionPanel, chronicle, dataTable, forcesGrid, partyIndex, pct, pollPanel, presencePanel, shortDate, signed, strategyList } from './polls-mode.js?v=20261118-36';
-import { heatmap, italyMap, MACRO_AREAS, partyBars, provenance, regionAbbreviation, regionBars, regionsOfArea, TERRITORY_MEASURES } from './territory-charts.js?v=20261118-36';
-import { forceRegionalVote2022 } from '../core/regional-vote.js?v=20261118-36';
+import { latestPoll, observatoryReport } from '../core/world-engine.js?v=20261119-2';
+import { campaignObservatory } from '../core/campaign-engine.js?v=20261119-2';
+import { coalitionScenario } from '../core/poll-observatory.js?v=20261119-2';
+import { POLL_EXTENSIONS } from '../data/simulation/polling-rules.js?v=20261119-2';
+import { observatorySociety } from '../core/society-engine.js?v=20261119-2';
+import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261119-2';
+import { formatDate } from '../core/time.js?v=20261119-2';
+import { lineChart, SERIES } from './charts.js?v=20261119-2';
+import { emblem, glyph, partyMarkText } from './visuals.js?v=20261119-2';
+import { arrow, bar, card, empty, esc, kpi, num, table } from './sections-kit.js?v=20261119-2';
+import { alliancesList, alliancesOverview, barometer, myCoalitionPanel, chronicle, dataTable, forcesGrid, partyIndex, pct, pollPanel, presencePanel, shortDate, signed, strategyList } from './polls-mode.js?v=20261119-2';
+import { heatmap, italyMap, MACRO_AREAS, partyBars, provenance, regionAbbreviation, regionBars, regionsOfArea, TERRITORY_MEASURES } from './territory-charts.js?v=20261119-2';
+import { forceRegionalVote2022 } from '../core/regional-vote.js?v=20261119-2';
 
 export const OBSERVATORY_VIEWS = Object.freeze([['quadro', 'Quadro'], ['istituti', 'Istituti'], ['segmenti', 'Segmenti e temi'], ['territori', 'Territori'], ['forze', 'Partiti e trattative'], ['candidati', 'Candidati e rivali'], ['flussi', 'Indecisi e flussi'], ['gradimento', 'Gradimento e leggi'], ['scenari', 'Scenari e coalizioni'], ['alleanze', 'Quadro delle alleanze']]);
 // The page has two areas, told apart at the first sight: the surveys of the parties and the alliances and coalitions; their ten views are gathered in them (as a second row of tabs).
@@ -415,7 +415,7 @@ function alliances(ctx) {
   const win = options.window?.() ?? { open: true };
   const notice = win.open === false ? card({ kicker: 'ALLEANZE · SIMULAZIONE', title: 'Intese ferme fino al voto', tone: 'warn', body: `<p class="sx-note">${esc(win.reason)}</p>` }) : '';
   const player = world.parties.find(item => item.isPlayer);
-  const mine = player ? myCoalitionPanel(state, world, index, poll, { secretary: Boolean(options.secretary), windowClosed: win.open === false, allyKinds: options.allyKinds, allyActivities: options.allyActivities, allyOdds: options.allyOdds, funds: options.funds, capital: options.capital, inviteOdds: options.inviteOdds, programAnalysis: options.programAnalysis, allianceTalkOptions: options.allianceTalkOptions, allianceRequests: options.allianceRequests, coalitionElections: options.coalitionElections, refusedUntil: options.refusedUntil, inviteBlock: options.inviteBlock }) : '';
+  const mine = player ? myCoalitionPanel(state, world, index, poll, { secretary: Boolean(options.secretary), windowClosed: win.open === false, allyKinds: options.allyKinds, allyActivities: options.allyActivities, allyOdds: options.allyOdds, funds: options.funds, capital: options.capital, inviteOdds: options.inviteOdds, programAnalysis: options.programAnalysis, allianceTalkOptions: options.allianceTalkOptions, allianceRequests: options.allianceRequests, coalitionElections: options.coalitionElections, refusedUntil: options.refusedUntil, inviteBlock: options.inviteBlock, inviteImpact: options.inviteImpact }) : '';
   return `${notice}${mine}${pollPanel('ALLEANZE E COALIZIONI · SIMULAZIONE', 'Tutte le alleanze', alliancesOverview(state, world, index, poll, options))}`;
 }
 
@@ -425,7 +425,7 @@ function forces(ctx) {
   const notice = win.open === false
     ? card({ kicker: 'ALLEANZE · SIMULAZIONE', title: 'Intese ferme fino al voto', tone: 'warn', body: `<p class="sx-note">${esc(win.reason)}</p>` })
     : '';
-  const grid = forcesGrid(state, world, poll, index, logo, options.realLeader, options.secretary, { allianceOdds: options.allianceOdds, inviteOdds: options.inviteOdds, programAnalysis: options.programAnalysis, allianceTalkOptions: options.allianceTalkOptions, allianceRequests: options.allianceRequests, coalitionElections: options.coalitionElections, refusedUntil: options.refusedUntil, inviteBlock: options.inviteBlock, allianceBlock: options.allianceBlock, allyKinds: options.allyKinds, allyActivities: options.allyActivities, allyOdds: options.allyOdds, funds: options.funds, capital: options.capital, kindOf: options.kindOf, windowClosed: win.open === false, withoutCoalition: true });
+  const grid = forcesGrid(state, world, poll, index, logo, options.realLeader, options.secretary, { allianceOdds: options.allianceOdds, inviteOdds: options.inviteOdds, programAnalysis: options.programAnalysis, allianceTalkOptions: options.allianceTalkOptions, allianceRequests: options.allianceRequests, coalitionElections: options.coalitionElections, refusedUntil: options.refusedUntil, inviteBlock: options.inviteBlock, inviteImpact: options.inviteImpact, allianceBlock: options.allianceBlock, allyKinds: options.allyKinds, allyActivities: options.allyActivities, allyOdds: options.allyOdds, funds: options.funds, capital: options.capital, kindOf: options.kindOf, windowClosed: win.open === false, withoutCoalition: true });
   return `${notice}${pollPanel('PARTITI, MOVIMENTI E COALIZIONI · COMPORTAMENTI SIMULATI', 'Le forze in campo', grid)}
     ${pollPanel('PRESENZA NEI SONDAGGI · SIMULAZIONE', 'Chi entra e chi esce', presencePanel(world))}
     <div class="poll-grid">${pollPanel('ALLEANZE · SIMULATE', 'Intese, coalizioni e rotture', alliancesList(world, index))}${pollPanel('STRATEGIE · SIMULATE', 'Chi sta dove', strategyList(world))}</div>

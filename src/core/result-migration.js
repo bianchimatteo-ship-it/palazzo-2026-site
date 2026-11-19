@@ -4,8 +4,8 @@
 // votes are EXACTLY what the old formula gives from the saved percentages and the valid ballots (largest remainder on the percentages alone). Anything else (a different shape, edited, already repaired, rows that
 // reach 100 %, missing data) is left exactly as it is and reported as «non ricostruibile»: nothing is invented and nothing is changed silently. The original votes are kept in `votesBefore`, the repair is marked
 // in `votesMigration` (so it runs once) and the caller keeps a copy of the whole save (storage.backup) before anything is written.
-import { distributeVotes } from './electorate.js?v=20261118-36';
-import { nightSnapshot } from './night-engine.js?v=20261118-36';
+import { distributeVotes } from './electorate.js?v=20261119-2';
+import { nightSnapshot } from './night-engine.js?v=20261119-2';
 
 export const VOTES_MIGRATION_VERSION = 1;
 const NATIONAL = new Set(['politiche', 'europee']);
@@ -13,24 +13,24 @@ const REST_MIN = 0.05;   // a rest below this was never given a row of its own
 
 // Judges one count: { status: 'ok' | 'riparato' | 'gia-riparato' | 'non-ricostruibile' | 'non-applicabile', reason, votes? }
 export function judgeVotes(groups, count, electionType = null) {
-  if (electionType && !NATIONAL.has(electionType)) return { status: 'non-applicabile', reason: 'non è un voto di liste nazionale' };
-  if (!Array.isArray(groups) || !groups.length) return { status: 'non-applicabile', reason: 'nessuna lista' };
-  if (groups.some(row => row.votesMigration || row.votesBefore)) return { status: 'gia-riparato', reason: 'già riparato' };
+  if (electionType && !NATIONAL.has(electionType)) return { status: 'non-applicabile', reason: 'not a national list vote' };
+  if (!Array.isArray(groups) || !groups.length) return { status: 'non-applicabile', reason: 'no lists' };
+  if (groups.some(row => row.votesMigration || row.votesBefore)) return { status: 'gia-riparato', reason: 'already repaired' };
   const valid = Number(count?.valid ?? count?.ballots);
-  if (!count || count.normalized || !Number.isInteger(valid) || valid <= 0) return { status: 'non-ricostruibile', reason: 'totale dei voti validi assente o non intero' };
-  if (groups.some(row => !Number.isFinite(Number(row.percent)) || !Number.isInteger(row.votes) || row.votes < 0)) return { status: 'non-ricostruibile', reason: 'percentuali o voti per lista mancanti' };
+  if (!count || count.normalized || !Number.isInteger(valid) || valid <= 0) return { status: 'non-ricostruibile', reason: 'valid ballots missing or not an integer' };
+  if (groups.some(row => !Number.isFinite(Number(row.percent)) || !Number.isInteger(row.votes) || row.votes < 0)) return { status: 'non-ricostruibile', reason: 'percentages or list votes missing' };
   const percents = groups.map(row => Number(row.percent));
   const shown = percents.reduce((sum, value) => sum + value, 0);
   const rest = Math.round((100 - shown) * 100) / 100;
-  if (rest < REST_MIN) return { status: 'ok', reason: 'le liste coprono tutto il voto: nessun «Altri» da ricavare' };
+  if (rest < REST_MIN) return { status: 'ok', reason: 'the lists cover the whole vote: no rest to derive' };
   const stored = groups.map(row => row.votes);
   const current = distributeVotes([...percents, rest], valid).slice(0, groups.length);
-  if (current.every((value, index) => value === stored[index])) return { status: 'ok', reason: 'già coerente con la regola corrente' };
-  if (stored.reduce((sum, value) => sum + value, 0) !== valid) return { status: 'non-ricostruibile', reason: 'i voti salvati non seguono né la regola precedente né quella corrente: non si tocca' };
+  if (current.every((value, index) => value === stored[index])) return { status: 'ok', reason: 'already consistent with the current rule' };
+  if (stored.reduce((sum, value) => sum + value, 0) !== valid) return { status: 'non-ricostruibile', reason: 'saved votes follow neither the previous nor the current rule: left as they are' };
   const old = distributeVotes(percents, valid);
-  if (old.some((value, index) => value !== stored[index])) return { status: 'non-ricostruibile', reason: 'i voti salvati non coincidono con la regola precedente: non si tocca' };
+  if (old.some((value, index) => value !== stored[index])) return { status: 'non-ricostruibile', reason: 'saved votes do not match the previous rule: left as they are' };
   const repaired = distributeVotes([...percents, rest], valid).slice(0, groups.length);
-  return { status: 'riparato', reason: 'voti gonfiati dalla regola precedente, ricostruiti da percentuali e voti validi', votes: repaired, rest, restVotes: valid - repaired.reduce((sum, value) => sum + value, 0) };
+  return { status: 'riparato', reason: 'votes stretched by the previous rule, rebuilt from percentages and valid ballots', votes: repaired, rest, restVotes: valid - repaired.reduce((sum, value) => sum + value, 0) };
 }
 
 // Applies the repair to the rows of one count. Returns { groups, outcome }; the rows are copied, never edited in place.
@@ -52,12 +52,12 @@ export function migrateElectionVotes(state) {
     return holder;
   };
   if (campaign?.result) {
-    let result = fix(campaign.result, 'groups', item => item.electorate, campaign.electionType ?? campaign.result.electionType, 'campagna · risultato');
-    if (result.firstRound) result = { ...result, firstRound: fix(result.firstRound, 'groups', item => item.electorate, campaign.electionType, 'campagna · primo turno') };
+    let result = fix(campaign.result, 'groups', item => item.electorate, campaign.electionType ?? campaign.result.electionType, 'campaign.result');
+    if (result.firstRound) result = { ...result, firstRound: fix(result.firstRound, 'groups', item => item.electorate, campaign.electionType, 'campaign.firstRound') };
     if (result !== campaign.result) campaign = { ...campaign, result };
   }
   if (career?.lastElectionReport) {
-    const report = fix(career.lastElectionReport, 'groups', item => item.count, career.lastElectionReport.electionType, 'resoconto storico');
+    const report = fix(career.lastElectionReport, 'groups', item => item.count, career.lastElectionReport.electionType, 'career.lastElectionReport');
     if (report !== career.lastElectionReport) career = { ...career, lastElectionReport: report };
   }
   // A night still in progress (not concluded) whose snapshot was made by the old rule: it is made again from the same result (same seed, same hour reached), keeping the old snapshot beside it. The
@@ -66,8 +66,8 @@ export function migrateElectionVotes(state) {
   if (night && !night.concluded && night.snapshot && campaign?.result && night.campaignId === campaign.id && !night.snapshotBefore) {
     const fresh = nightSnapshot(campaign, night.stage);
     const same = fresh && fresh.groups.filter(group => !group.others).every(group => night.snapshot.groups.some(old => old.id === group.id && Math.abs(old.percent - group.percent) < 0.005)) && fresh.groups.length === night.snapshot.groups.length;
-    if (same && fresh.groups.some(group => night.snapshot.groups.find(old => old.id === group.id)?.votes !== group.votes)) { night = { ...night, snapshot: fresh, snapshotBefore: night.snapshot, votesMigration: { version: VOTES_MIGRATION_VERSION } }; changed = true; notes.push({ where: 'Notte Elettorale in corso', status: 'riparato', reason: 'istantanea ricostruita dallo stesso risultato' }); }
-    else if (!same) notes.push({ where: 'Notte Elettorale in corso', status: 'non-ricostruibile', reason: 'le liste dell’istantanea non coincidono con il risultato: non si tocca' });
+    if (same && fresh.groups.some(group => night.snapshot.groups.find(old => old.id === group.id)?.votes !== group.votes)) { night = { ...night, snapshot: fresh, snapshotBefore: night.snapshot, votesMigration: { version: VOTES_MIGRATION_VERSION } }; changed = true; notes.push({ where: 'night.inProgress', status: 'riparato', reason: 'snapshot rebuilt from the same result' }); }
+    else if (!same) notes.push({ where: 'night.inProgress', status: 'non-ricostruibile', reason: 'snapshot lists do not match the result: left as they are' });
   }
   return { state: changed ? { ...state, campaign, career, night } : state, changed, notes };
 }

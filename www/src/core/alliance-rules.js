@@ -6,7 +6,7 @@
 //   · the REFUSAL: a force that said no to a request is not asked again by the same party for seven days of the game;
 //   · the COALITION as an agreement for ONE election, apart from the alliance (the standing political agreement): it is registered for that election by an explicit approval and only until the filing of the lists.
 // Nothing here draws a random number or reads a clock: the callers pass the roll and the date, so every rule can be tested.
-import { documentedProgramOf } from '../data/party-programs.js?v=20261118-36';
+import { documentedProgramOf } from '../data/party-programs.js?v=20261119-2';
 export const THEMES = Object.freeze([
   { id: 'immigrazione', label: 'Immigrazione e integrazione', low: 'accoglienza senza restrizioni', high: 'remigrazione e chiusura', weight: 1.4, veto: true },
   { id: 'sicurezza', label: 'Sicurezza', low: 'prevenzione e garanzie', high: 'pugno duro e controllo', weight: 1.0, veto: false },

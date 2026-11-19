@@ -1,4 +1,20 @@
-# Decisioni e informazioni che deve fornire il titolare (13 voci di `check:legal -- --release`)
+# Domande precise al titolare e decisioni ancora aperte (19/11/2026)
+
+**Stato delle pagine pubbliche:** `privacy.html`, `privacy-en.html`, `termini.html`, `terms-en.html` non hanno più segnaposto. Sono scritte con i dati forniti: gestore/sviluppatore Matteo Bianchi; **titolare del trattamento e offerente del servizio: Ramona Bianchi** (indicata da te come maggiorenne); recapito `politicando2026simulazione@gmail.com`; Gmail/Apps Script con quell'account; account Cloudflare intestato a Matteo Bianchi; nessun indirizzo postale; nessun accordo con Cloudflare o Google dichiarato. `docs/legale-requisiti.json` registra come «fornito» solo titolare e offerente. Le altre 11 voci restano «mancante»: `check:legal -- --release` resta **bloccato** (corretto: non è stato aggirato).
+
+## Un'unica lista di domande (rispondi a tutte insieme)
+1. **Ramona Bianchi** — nome e cognome completi come devono comparire; rapporto con Matteo (genitore, tutore…); conferma che accetta di essere indicata pubblicamente come titolare del trattamento e offerente del servizio e di rispondere verso utenti, store e Garante; se è lei l'intestataria dell'account Google Play (oggi la pagina dice solo «un genitore»). Serve un atto scritto (anche semplice) che lo documenti: lo ha già prodotto o va preparato con un professionista?
+2. **Indirizzo** — vuoi pubblicare un indirizzo postale/PEC di Ramona Bianchi o di un domicilio eletto? Altrimenti restiamo con la sola e-mail: confermi, dopo parere di un professionista, che per un servizio gratuito senza attività d'impresa basta? (D.Lgs. 70/2003 art. 7; per Apple/Google come «trader» DSA l'indirizzo diventa pubblico.)
+3. **Cloudflare** — chi ha accettato le condizioni (data e persona); piano usato; nella Dashboard (Account → Legal / «Data Processing Addendum») il DPA risulta accettato? Vuoi spostare/riaprire l'account a nome di Ramona Bianchi? Quale giurisdizione hanno D1, KV e R2 (impostazioni di localizzazione)? Quanto conservano i backup/Time Travel di D1?
+4. **Gmail / Google** — l'account `politicando2026simulazione@gmail.com` di chi è (regole di Google sull'età)? Il gateway Apps Script può passare a un account intestato a un adulto? Esiste un accordo/un'impostazione Workspace diversa dalle condizioni standard?
+5. **Minori ed età** — elenco dei Paesi in cui distribuire l'app; conferma del pubblico 14+ e delle risposte su classificazione (IARC/Apple), Data safety, privacy label.
+6. **Diritti sugli asset** — dichiarazione di paternità di marchio, illustrazioni e testata «La Politica 24»; strumenti e fonti usati; licenze di loghi/dati di terzi; regole per i loghi caricati dagli utenti.
+7. **Apple Developer** — persona (individuale/organizzazione) e nome che comparirà come venditore; dichiarazione «trader» (sì/no, con parere); contatti pubblici.
+8. **InMobi (prima di qualunque build con annunci)** — conferma dell'Account ID dal pannello InMobi, placement creati, testo del consenso; aggiornamento di privacy/termini/schede store.
+9. **Conservazione** — vuoi eliminare gli account inattivi dopo 12 mesi (preavviso di 30 giorni via e-mail verificata)? Oggi è disattivato (`RETENTION_ENABLED=0`).
+10. **Prova reale dell'e-mail su TEST** — indica una casella di prova controllata da te e conferma che sul Worker TEST esistono `EMAIL_GATEWAY_URL` ed `EMAIL_GATEWAY_SECRET` (non me li dare): la prova la esegui tu col comando in `docs/qa/deploy-test-vscode.md` §7.
+
+## Elenco originale delle 13 voci di `check:legal -- --release`
 
 Fonte: `docs/legale-requisiti.json` (stato «non fornito»). Nulla qui è stato inventato né dichiarato al posto del titolare: per ogni voce c’è solo **cosa serve** e **chi può rispondere**. Dove la voce richiede una valutazione giuridica, la decisione spetta a un professionista (art. 13 GDPR, D.Lgs. 70/2003, DSA, norme sull’età).
 

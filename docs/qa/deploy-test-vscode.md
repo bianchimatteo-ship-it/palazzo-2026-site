@@ -53,3 +53,15 @@ npx wrangler@4 deploy -c wrangler.test.local.jsonc
 - Non eseguire `npm run cf:deploy`, `wrangler deploy` senza `-c`, né modificare `wrangler.jsonc`.
 - Non impostare `ADS_CONFIG` sul Worker TEST con formati attivi: la pubblicità reale resta spenta.
 - Non incollare token, chiavi o id di produzione in chat, in file tracciati o nei commit.
+
+## 7. Prova reale dell’e-mail (solo TEST, casella di prova tua)
+Il gateway simulato dei test automatici (`check:email-gateway`, `check:account-recovery`) **non prova** l’invio reale. Dopo il deploy TEST, e solo se sul Worker TEST sono impostati `EMAIL_GATEWAY_URL` e il secret `EMAIL_GATEWAY_SECRET` (di un gateway **separato** da quello di produzione):
+1. `curl -s https://<sito-test>/api/account/status` → deve dire `"email": true`. Con `false` il gioco mostra «Al momento il servizio non riesce a spedire e-mail»: l’invio non è attivo.
+2. Registra un account di prova con un indirizzo di una casella **tua** di prova; deve arrivare il messaggio «POLITICANDO 2026 — conferma il tuo indirizzo email»; apri il collegamento (si apre sul dominio TEST, valido 48 ore, una sola volta).
+3. «Password dimenticata» → indirizzo → arriva «nuova password» (collegamento valido 30 minuti, una sola volta); scegli una nuova password; la vecchia deve fallire, la nuova funzionare, le altre sessioni chiudersi.
+4. Elimina l’account di prova dal gioco. Non usare indirizzi di utenti reali.
+
+## 8. Dopo il deploy: verifiche in 5 minuti
+- Home: nessuna schermata «Caricamento…» fissa; se un file non si carica compare il messaggio con «Riprova» (guardia di avvio).
+- «Carica partita» di una carriera salvata prima del 18/11 con un voto politico/europeo concluso: il resoconto storico mostra «Altri» coerente (migrazione versionata, copia di sicurezza `prima-correzione-voti` nel browser).
+- Sondaggi → Alleanze: invitare un partito che è già in un altro accordo mostra la scelta «Invita soltanto questo partito» / «Proponi la fusione delle intere alleanze» con l’anteprima.

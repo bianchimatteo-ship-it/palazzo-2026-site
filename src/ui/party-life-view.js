@@ -1,17 +1,17 @@
 // VITA INTERNA — the people behind the currents, what they ask, the agreements, the congress, the local leaders, the
 // rebuilding of the party and the way it is founded, merged or renamed. All simulated: no real person appears here.
-import { costProblem, lifeOverview, partyOpsAvailability } from '../core/career-engine.js?v=20261118-36';
-import { mergeCandidates } from '../core/world-engine.js?v=20261118-36';
-import { OP_COSTS } from '../core/party-ops-engine.js?v=20261118-36';
-import { CADRE_ACTIONS, REBUILD_FOCUS, RENAME_STYLES } from '../data/simulation/party-life-rules.js?v=20261118-36';
-import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20261118-36';
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261118-36';
-import { badge, bar, card, empty, esc, euro, foldPanel, num, weeksLabel } from './sections-kit.js?v=20261118-36';
-import { glyph, territoryTile, territoryVisual } from './visuals.js?v=20261118-36';
-import { planAddButton } from './plan-view.js?v=20261118-36';
-import { renderNewPartyFields } from './career-wizard.js?v=20261118-36';
-import { LOGO_SHAPES, LOGO_SYMBOLS, LOGO_SECONDARY_PALETTE } from './party-logo.js?v=20261118-36';
-import { NAME_MODES } from '../core/merger-identity.js?v=20261118-36';
+import { costProblem, lifeOverview, partyOpsAvailability } from '../core/career-engine.js?v=20261119-2';
+import { mergeCandidates } from '../core/world-engine.js?v=20261119-2';
+import { OP_COSTS } from '../core/party-ops-engine.js?v=20261119-2';
+import { CADRE_ACTIONS, REBUILD_FOCUS, RENAME_STYLES } from '../data/simulation/party-life-rules.js?v=20261119-2';
+import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20261119-2';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261119-2';
+import { badge, bar, card, empty, esc, euro, foldPanel, num, weeksLabel } from './sections-kit.js?v=20261119-2';
+import { glyph, territoryTile, territoryVisual } from './visuals.js?v=20261119-2';
+import { planAddButton } from './plan-view.js?v=20261119-2';
+import { renderNewPartyFields } from './career-wizard.js?v=20261119-2';
+import { LOGO_SHAPES, LOGO_SYMBOLS, LOGO_SECONDARY_PALETTE } from './party-logo.js?v=20261119-2';
+import { NAME_MODES } from '../core/merger-identity.js?v=20261119-2';
 
 const STANCE = { alleata: ['good', 'Alleata'], neutrale: ['neutral', 'Neutrale'], ostile: ['bad', 'Ostile'] };
 const PACT_STATUS = { attivo: ['good', 'In vigore'], scaduto: ['neutral', 'Scaduto'], rotto: ['bad', 'Rotto'], rinnovato: ['good', 'Rinnovato'] };

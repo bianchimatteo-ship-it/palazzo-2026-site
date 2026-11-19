@@ -192,3 +192,38 @@ Android SDK assente (`ANDROID_HOME` vuoto, `dl.google.com` irraggiungibile), nes
 
 ### Git
 Verificato che tutti i branch locali e remoti rilevanti sono antenati di `feature/inmobi-integrazione` tranne `claude/p1-fixes`/`claude/android-icon-fix` (icona launcher: già equivalente nel branch, `check:android` la verifica; `p1-fixes` riattiverebbe «animazioni disattivate di default»: non ripreso) e `probe/cf-1bc241f` (sonda Cloudflare, non ripresa).
+
+
+## Aggiornamento 5 — privacy senza segnaposto, alleanze, vecchi salvataggi, avvio, account (build 20261119-2)
+
+Solo ciò che è nuovo. `main` non toccato; nessun deploy; nessuna build iOS/Android (solo `www` e sincronizzazione degli asset).
+
+### Privacy e termini
+- Nessun segnaposto in `privacy.html`, `privacy-en.html`, `termini.html`, `terms-en.html` (+ copie `portal/`, `www/`, asset nativi). Dati usati: gestore/sviluppatore Matteo Bianchi; **titolare del trattamento e offerente del servizio Ramona Bianchi** (maggiorenne, indicata dal titolare del progetto); recapito `politicando2026simulazione@gmail.com`; Gmail/Apps Script con quell'account; account Cloudflare intestato a Matteo Bianchi. Nessun indirizzo postale, nessun accordo con Cloudflare/Google dichiarato (non documentati). `legale-requisiti.json`: solo `titolare-trattamento` e `offerente-servizio` passano a «fornito»; le altre 11 restano «mancante», quindi `check:legal -- --release` continua a bloccare. Domande da sottoporre: `docs/qa/decisioni-titolare-legali.md`.
+
+### Alleanze
+- `inviteBlock(world, forceId, mode)`: l'invito **individuale** non è più bloccato dall'incompatibilità di un partner che non si sposta (la compatibilità del partito invitato è valutata da `inviteOdds`); solo la **fusione** richiede che tutti i partner siano compatibili.
+- Fusione: ogni partner deve acconsentire (rapporti con la coalizione); chi rifiuta resta nell'accordo originale, che conserva condizioni e registrazioni; esito con `declined`.
+- `inviteImpact` ora riporta partner con compatibilità, condizioni, registrazioni, motivo del blocco della fusione. UI (Alleanze, «Invita un partito»): scelta «Invita soltanto questo partito» / «Proponi la fusione delle intere alleanze» con anteprima, motivi, scadenza del rifiuto; italiano e inglese (anche «insieme #%» nel riepilogo, prima in italiano nell'inglese).
+- Test: `check-coalition-invites` (individuale con partner incompatibili e compatibili, fusione con consensi e rifiuto, vecchi accordi conservati, registrazioni nazionali/europee/regionali/provinciali/comunali immutate e senza duplicati, nessuna doppia appartenenza, elezioni concluse e candidature chiuse), `check-alliance-invite-ui` (nuovo, Chrome, IT/EN, 390 px).
+
+### Vecchi salvataggi (voti e «Altri»)
+- `src/core/result-migration.js`, chiamata da `prepareState`: ripara i voti di lista di politiche/europee **solo se** i voti salvati coincidono esattamente con la vecchia regola (liste gonfiate a tutti i voti validi) calcolata da percentuali e voti validi; conserva i voti originali (`votesBefore`), marca (`votesMigration`), scrive una copia di sicurezza (`prima-correzione-voti`) e una nota nel salvataggio. Ricostruisce una Notte Elettorale in corso (stessa ora, istantanea precedente conservata); una Notte conclusa e i risultati non dimostrabili restano intatti, con la limitazione dichiarata.
+- Non coperti (documentato): i voti per territorio e le righe `candidates` del resoconto non sono ricalcolati; i risultati con liste che coprono il 100 %, locali, senza totale dei voti validi o modificati a mano non vengono toccati.
+- Test: `check-old-saves-votes` (fixture politiche ed europee invecchiati con la regola precedente, caricati con `store.loadGame`).
+
+### Avvio e traduzioni
+- **«Caricamento…»**: riprodotta e corretta la criticità verificata (un modulo non caricato lasciava la schermata ferma). Nuova guardia `src/boot-guard.js` (script classico prima del modulo): rileva script non caricati, promise rifiutate del caricatore e un limite di 30 s; mostra messaggio localizzato, dettaglio tecnico, «Riprova», scrive una diagnostica (console e `localStorage`), ricarica **una sola volta** per sessione al ritorno della connessione; `main.js` segnala l'avvio riuscito. Test: `check-boot-failure` (richieste bloccate davvero via CDP, IT/EN, recupero). Non risolta la causa dell'intermittenza originale: non riprodotta.
+- **Traduzione alla fonte** (`check-i18n-pages` intermittente): la causa era l'anteprima delle notizie tagliata a 220 caratteri fissi (`summaryOf` in `news-view.js`), che lasciava mezze proposizioni italiane («… il margine nella Camera più stretta è di +»). Ora taglia a fine frase/proposizione con puntini (`clipAtBoundary`). Test: `check-news-preview`.
+
+### Animazioni
+- Il «Animazioni disattivate» dello screenshot dell'intervista era l'impostazione scritta dallo script di cattura, non un difetto. `check-scene-motion` (Chrome): con movimento attivo l'ambiente si muove davvero e le battute entrano con animazione; con «Ridotte», «Disattivate» e con `prefers-reduced-motion` non si anima nulla e la scena è completa. Corretto il selettore CSS dell'ambiente (`html[data-scene-motion]`). Screenshot: `scena-movimento-attivo|ridotto|disattivato|preferenza-sistema-intervista-1280.png`.
+
+### Account (verifica completa, nessun secondo sistema)
+- Eseguiti in sequenza e realmente (Chrome dove serve): `check:accounts`, `check:email-gateway`, `check:account-isolation`, `check:logout-careers`, `check:account-deletion`, `check:security`: PASS. Aggiunto `check-account-recovery` (due richieste e un reset: l'altro collegamento si annulla; collegamenti non validi/usati/scaduti; account senza e-mail e indirizzo non verificato con la stessa risposta; 30 minuti e 48 ore; sessioni chiuse; vecchia password rifiutata, nuova accettata; impronta malformata rifiutata). Nessun difetto trovato nel flusso. La password viaggia solo come impronta PBKDF2 (invariato).
+- **SKIPPED**: invio reale dell'e-mail su TEST: mancano credenziali/segreti TEST in questo ambiente; il gateway simulato non prova l'invio reale. Procedura in `docs/qa/deploy-test-vscode.md` §7.
+
+### Test dell'aggiornamento 5 (serie finale, in sequenza, Chrome reale dove serve)
+- **PASS:** check-party-programs, check-pci-program-ui, check-alliance-rules, check-alliance-ui, check-alliance-invite-ui, check-coalition-invites, check-old-saves-votes, check-election-night-engine, check-election-night-language, check-news-preview, check-activity-variety/-scenes/-scenes-ui, check-scene-variety/-ui/-motion, check-boot, check-boot-failure, check-start-screen, check-referendum, check-statutes, check-tutorial-tasks, check-territory-results/-legibility, check-button-contrast, check-campaign-ui, check-promise-reminders, check-presidency, check-account-recovery, check-i18n, check-i18n-offline (dopo aver corretto 3 frasi mancanti e il test del censimento per la guardia di avvio), check-i18n-pages ×3 consecutive; check:accounts, email-gateway, logout-careers, account-deletion, security, legal, publication, www, capacitor, android, inmobi, inmobi-native.
+- **Intermittente, non dichiarato risolto:** `check:account-isolation` è fallito 1 volta nella serie (attesa di 25 s del pulsante «Continua» dopo un ricaricamento, a macchina sotto carico) e poi è passato 2 volte su 2 da solo (e nella serie precedente). Causa non individuata.
+- **SKIPPED:** invio reale e-mail su TEST, AAB/IPA, prove su dispositivo, `check:legal -- --release` (11 voci a carico del titolare).

@@ -2,35 +2,35 @@
 // each page renderer is here a small function with the same name and the same arguments as the real one; the first time it is called the module is imported in the background and the page shows a
 // short «loading» block, then the page is drawn again with the real renderer. When a career is opened the modules are fetched in the background (`prefetchViews`), so that the first visit to a page
 // is almost always instant, and the pages seen are in the cache for when the network is missing. Nothing here decides anything: it only delays the code, never the data.
-import { HEMICYCLE_DEFAULTS } from './hemicycle-defaults.js?v=20261118-36';
-import { ARCHIVE_COLLECTIONS } from './archive-collections.js?v=20261118-36';
+import { HEMICYCLE_DEFAULTS } from './hemicycle-defaults.js?v=20261119-2';
+import { ARCHIVE_COLLECTIONS } from './archive-collections.js?v=20261119-2';
 
 export { HEMICYCLE_DEFAULTS, ARCHIVE_COLLECTIONS };
 
 const LOADERS = {
-  'admin-panel': () => import('./admin-panel.js?v=20261118-36'),
-  'agenda-page': () => import('./agenda-page.js?v=20261118-36'),
-  'archive-hub': () => import('./archive-hub.js?v=20261118-36'),
-  'diplomacy-view': () => import('./diplomacy-view.js?v=20261118-36'),
-  'initiative-mode': () => import('./initiative-mode.js?v=20261118-36'),
-  'referendum-mode': () => import('./referendum-mode.js?v=20261118-36'),
-  'territory-page': () => import('./territory-page.js?v=20261118-36'),
-  'election-night': () => import('./election-night.js?v=20261118-36'),
-  'elections-hub': () => import('./elections-hub.js?v=20261118-36'),
-  'hemicycle-view': () => import('./hemicycle-view.js?v=20261118-36'),
-  'members-view': () => import('./members-view.js?v=20261118-36'),
-  'parliament-mode': () => import('./parliament-mode.js?v=20261118-36'),
-  'party-page': () => import('./party-page.js?v=20261118-36'),
-  'scene-view': () => import('./scene-view.js?v=20261118-36'),
-  'career-page': () => import('./career-page.js?v=20261118-36'),
-  'observatory-view': () => import('./observatory-view.js?v=20261118-36'),
-  'presidency-view': () => import('./presidency-view.js?v=20261118-36'),
-  'real-laws': () => import('./real-laws.js?v=20261118-36'),
-  'game-mode': () => import('./game-mode.js?v=20261118-36'),
-  'finance-mode': () => import('./finance-mode.js?v=20261118-36'),
-  'society-mode': () => import('./society-mode.js?v=20261118-36'),
-  'organization-mode': () => import('./organization-mode.js?v=20261118-36'),
-  'local-mode': () => import('./local-mode.js?v=20261118-36')
+  'admin-panel': () => import('./admin-panel.js?v=20261119-2'),
+  'agenda-page': () => import('./agenda-page.js?v=20261119-2'),
+  'archive-hub': () => import('./archive-hub.js?v=20261119-2'),
+  'diplomacy-view': () => import('./diplomacy-view.js?v=20261119-2'),
+  'initiative-mode': () => import('./initiative-mode.js?v=20261119-2'),
+  'referendum-mode': () => import('./referendum-mode.js?v=20261119-2'),
+  'territory-page': () => import('./territory-page.js?v=20261119-2'),
+  'election-night': () => import('./election-night.js?v=20261119-2'),
+  'elections-hub': () => import('./elections-hub.js?v=20261119-2'),
+  'hemicycle-view': () => import('./hemicycle-view.js?v=20261119-2'),
+  'members-view': () => import('./members-view.js?v=20261119-2'),
+  'parliament-mode': () => import('./parliament-mode.js?v=20261119-2'),
+  'party-page': () => import('./party-page.js?v=20261119-2'),
+  'scene-view': () => import('./scene-view.js?v=20261119-2'),
+  'career-page': () => import('./career-page.js?v=20261119-2'),
+  'observatory-view': () => import('./observatory-view.js?v=20261119-2'),
+  'presidency-view': () => import('./presidency-view.js?v=20261119-2'),
+  'real-laws': () => import('./real-laws.js?v=20261119-2'),
+  'game-mode': () => import('./game-mode.js?v=20261119-2'),
+  'finance-mode': () => import('./finance-mode.js?v=20261119-2'),
+  'society-mode': () => import('./society-mode.js?v=20261119-2'),
+  'organization-mode': () => import('./organization-mode.js?v=20261119-2'),
+  'local-mode': () => import('./local-mode.js?v=20261119-2')
 };
 const modules = new Map();
 const pending = new Map();

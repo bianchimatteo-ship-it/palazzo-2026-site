@@ -1,6 +1,6 @@
 // English phrase book, part 8 of 8: the administrative area, the account and sign-out screens, the personal logo catalogue, the tutorial invitation and the engine's law-effect and government lines. Same format as part 6: [Italian as shown, English]; `#` stands for a number, `{}` for a free part; in the English a free part is named by its position (`{2}` for the second one).
-import { ALL_PAIRS } from '../studio-lines.js?v=20261118-36';
-import { ALL_PAIRS as ACTIVITY_SCENE_PAIRS } from '../activity-scene-lines.js?v=20261118-36';
+import { ALL_PAIRS } from '../studio-lines.js?v=20261119-2';
+import { ALL_PAIRS as ACTIVITY_SCENE_PAIRS } from '../activity-scene-lines.js?v=20261119-2';
 
 // The explanations of the opening of a general or European campaign (campaign-engine.js campaignOpeningNotes): signed numbers come in both signs.
 function campaignNotePairs() {
@@ -10305,10 +10305,12 @@ export const PHRASES = [
   ["{} deve acconsentire; se rifiuta resta nell’accordo originale.", "{1} must agree; if it refuses it stays in the original accord."],
   ["Con la fusione passano composizione, leadership, rapporti, condizioni, storico e registrazioni dell’accordo.", "With the merger the composition, leadership, relations, conditions, history and registrations of the accord pass over."],
   ["Le elezioni concluse non cambiano; le approvazioni per elezioni ancora aperte vanno riverificate.", "Concluded elections do not change; approvals for elections still open have to be checked again."],
-  ["Invita soltanto questo partito · 1 giorno · 4 cap.", "Invite only this party · 1 day · 4 cap."],
-  ["Proponi la fusione delle intere alleanze · 1 giorno · 4 cap.", "Propose merging the whole alliances · 1 day · 4 cap."],
-  ["Invita soltanto il partito scelto · 1 giorno · 4 cap.", "Invite only the chosen party · 1 day · 4 cap."],
+  ["Invita soltanto questo partito · # giorno · # cap.", "Invite only this party · # day · # cap."],
+  ["Proponi la fusione delle intere alleanze · # giorno · # cap.", "Propose merging the whole alliances · # day · # cap."],
+  ["Invita soltanto il partito scelto · # giorno · # cap.", "Invite only the chosen party · # day · # cap."],
   ["Invito respinto: potrai ripeterlo dal {}.", "Invitation refused: you can repeat it from {1}."],
+  ["devono acconsentire uno per uno; chi rifiuta resta nell’accordo originale.", "must each agree; whoever refuses stays in the original accord."],
+  ["deve acconsentire; se rifiuta resta nell’accordo originale.", "must agree; if it refuses it stays in the original accord."],
   ["{}: l’intervista su {}", "{1}: the interview on {2}"],
   ["{}: la conferenza stampa su {}", "{1}: the press conference on {2}"],
   ["{}: l’ospitata televisiva su {}", "{1}: the TV appearance on {2}"],

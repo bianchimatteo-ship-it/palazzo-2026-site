@@ -238,6 +238,7 @@ html[data-scene-motion="full"] .cm-protest .cm-arm { animation: st-arms .45s eas
   @keyframes rm-nod { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
   @keyframes rm-flash { 0%, 86%, 100% { opacity: 0; } 90%, 94% { opacity: 1; } }
 }
-[data-motion="off"] .rm-live { animation: none !important; }
+html[data-scene-motion="off"] .rm-live, html[data-scene-motion="reduced"] .rm-live { animation: none !important; }
+html[data-scene-motion="off"] .rm-live.rm-flash, html[data-scene-motion="reduced"] .rm-live.rm-flash { opacity: 0; }
 .rm-live.rm-flash { opacity: 0; }
 @media (prefers-reduced-motion: reduce) { .rm-live.rm-flash { opacity: .8; } }
