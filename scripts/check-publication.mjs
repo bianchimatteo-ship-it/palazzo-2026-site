@@ -1,5 +1,5 @@
 // The architecture of publication: the game reaches the users only as the Android app; the production Worker answers the API and the portal (confirm the e-mail, new password, legal pages) and NEVER the game; the full web game lives
-// in a private test site (Cloudflare Access) with its own D1/KV/R2 and no production e-mail. Nothing here touches the network or a real resource.
+// in a private test site (password gate of the Worker) with its own D1/KV/R2 and no production e-mail. Nothing here touches the network or a real resource.
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -77,7 +77,7 @@ const bad = await ask('/api/account/email/verify', { method: 'POST', body: JSON.
 assert.ok([400, 503].includes(bad.status) || bad.status < 500, 'Il token non valido è rifiutato dal servizio.');
 lines.push('portale: aggiornato rispetto ai sorgenti, stessi collegamenti e token, nessun gioco');
 
-// ---------- 5. the private test site: protected by Access (manual), isolated, no production e-mail ----------
+// ---------- 5. the private test site: protected by the Worker's own password gate (TEST_ACCESS_ENABLED + secret), isolated, no production e-mail ----------
 const testSource = await read('wrangler.test.jsonc');
 const test = await jsonc('wrangler.test.jsonc');
 assert.notEqual(test.name, prod.name);
@@ -93,6 +93,9 @@ const gameEnv = { ...env, GAME_WEB: '1' };
 assert.equal((await ask('/src/main.js', {}, gameEnv)).status, 200, 'Il sito di prova serve il gioco completo.');
 const ignore = await read('.assetsignore');
 assert.ok(/wrangler\.test\.jsonc/.test(ignore), 'La configurazione di prova non è pubblicata come file.');
+for (const pattern of ['wrangler.test.local.jsonc', '.dev.vars', '.dev.vars.*']) assert.ok(ignore.split('\n').includes(pattern), `.assetsignore esclude ${pattern}.`);
+assert.equal(test.vars.TEST_ACCESS_ENABLED, '1', 'Il sito di prova ha il cancello con password.'); assert.deepEqual(test.assets.run_worker_first, ['/*'], 'Nel sito di prova ogni richiesta passa dal Worker.');
+assert.ok(!('TEST_ACCESS_ENABLED' in prod.vars), 'La produzione non ha il cancello di prova.');
 lines.push('sito di prova: gioco completo, risorse e nomi diversi dalla produzione, segnaposto non distribuibili, nessuna e-mail di produzione, nessun segreto');
 
 // ---------- 6. the repository carries no secret and the e-mail gateway is still Apps Script (no Resend) ----------

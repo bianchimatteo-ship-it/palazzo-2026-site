@@ -1,6 +1,7 @@
 // POLITICANDO 2026 on Cloudflare Workers: static assets for the game, a small shared archive for the owner's
 // corrections (Workers KV), and player accounts with online career saves (Cloudflare D1).
 // The real dataset files are never written.
+import { testAccessGate, privateResponse } from './worker-test-access.js';
 import { handleTranslate } from './worker-translate.js';
 import { REWARD_MIGRATION, REWARD_COLUMNS, ACTIVITY_KEEP_DAYS, MAIL_SUBJECTS, RETENTION, PORTAL_PATHS } from './worker-constants.js';
 import { resolveAds, PLATFORMS } from './src/data/ads-config.js';
@@ -1241,8 +1242,7 @@ async function handleApi(request, env) {
   return json(request, { error: 'Richiesta non riconosciuta.' }, 404);
 }
 
-export default {
-  async fetch(request, env) {
+async function serveRequest(request, env) {
     const url = new URL(request.url);
     if (url.pathname.startsWith('/api/')) {
       try { return await handleApi(request, env); }
@@ -1251,6 +1251,15 @@ export default {
     // The production Worker serves no game: only the pages of the portal (confirm the e-mail, new password, legal pages, account deletion). The private test site sets GAME_WEB=1 (behind Cloudflare Access) and serves everything.
     if (env.GAME_WEB !== '1' && !PORTAL_PATHS.test(url.pathname)) return new Response('Non trovato.', { status: 404, headers: { 'content-type': 'text/plain; charset=utf-8', 'x-content-type-options': 'nosniff' } });
     return env.ASSETS.fetch(request);
+  }
+
+export default {
+  async fetch(request, env) {
+    // Private TEST site only (TEST_ACCESS_ENABLED=1): nothing, API and assets included, is reachable without the password session.
+    const gated = await testAccessGate(request, env);
+    if (gated) return gated;
+    const answer = await serveRequest(request, env);
+    return env.TEST_ACCESS_ENABLED === '1' ? privateResponse(answer) : answer;
   },
   // Daily (wrangler.jsonc, triggers.crons): expired sessions and old attempts go even when nobody logs in.
   async scheduled(event, env, ctx) {

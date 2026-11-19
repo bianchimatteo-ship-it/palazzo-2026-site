@@ -7,8 +7,8 @@
 //     thirds of the members of both Chambers at the second deliberation the referendum is not possible; otherwise, within three months from the publication, a fifth of the members of a Chamber, 500,000
 //     voters or five Regional Councils can ask for it. NO quorum: YES wins if it has the majority of the valid votes; if the reform is rejected it does not come into force.
 // Every figure is a simulation of the game (the electorate, the polls, the votes): nothing here is a real result.
-import { seededRandom } from './vote-engine.js?v=20261119-6';
-import { formatDate } from './time.js?v=20261119-6';
+import { seededRandom } from './vote-engine.js?v=20261119-7';
+import { formatDate } from './time.js?v=20261119-7';
 
 export const ABROGATIVE = Object.freeze({
   id: 'abrogativo', label: 'Referendum abrogativo', basis: 'art. 75 Cost.', signatures: 500000, councils: 5, quorum: 0.5, cassationWeeks: 5, courtWeeks: 8, campaignWeeks: 9,

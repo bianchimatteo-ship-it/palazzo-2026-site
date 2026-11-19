@@ -14,9 +14,9 @@
 2. In `wrangler.test.jsonc` sostituisci i segnaposto `REPLACE_WITH_…` con gli id di PROVA (mai quelli di produzione; `check:publication` fallisce se compaiono).
 3. Distribuisci il sito di prova: `npm run cf:deploy:test` (crea il Worker `politicando-test`). Le tabelle D1 si creano da sole al primo uso (`migrations/` solo se vuoi applicarle: `wrangler d1 migrations apply politicando-accounts-test --remote -c wrangler.test.jsonc`).
 4. Imposta `PUBLIC_BASE_URL` del sito di prova all'indirizzo del sito di prova (variabile nel Dashboard o nel file) e ridistribuisci.
-5. **Proteggi il sito di prova con Cloudflare Access PRIMA di usarlo**: Zero Trust → Access → Applications → Add → Self-hosted; dominio = `politicando-test.<tuo-account>.workers.dev` (Workers → politicando-test → Settings → Domains & Routes: abilita "Cloudflare Access" per workers.dev); policy **Allow** → Include → Emails → solo il tuo indirizzo; nessuna policy Bypass/Everyone. Verifica da una finestra anonima che l'indirizzo chieda il login e rifiuti altri indirizzi.
+5. **Proteggi il sito di prova con la password del Worker PRIMA di usarlo** (nessun Cloudflare Access, nessun servizio a pagamento): `wrangler.test.jsonc` imposta `TEST_ACCESS_ENABLED=1` e `run_worker_first: ["/*"]`; la password è il secret `TEST_ACCESS_PASSWORD`, da impostare nel tuo terminale: `npx wrangler@4 secret put TEST_ACCESS_PASSWORD -c wrangler.test.local.jsonc` (minimo 8 caratteri, mai in chat o nel repository). Senza il secret il sito risponde 503 a tutto. Dopo il deploy: `npm run verify:test-deploy`.
 6. (Facoltativo) secret del sito di prova: nessuno è necessario; `EMAIL_GATEWAY_SECRET` NON va impostato (nessuna e-mail dal sito di prova). Per provare i messaggi crea un gateway Apps Script separato e imposta `EMAIL_GATEWAY_URL` e il suo secret solo sul Worker di prova.
-7. **Non applicare Access** né al Worker di produzione né alle sue API `/api/*`.
+7. **Non impostare `TEST_ACCESS_ENABLED`** sul Worker di produzione.
 
 **B. Produzione (solo dopo A e dopo avere letto l'esito di `check:publication`)**
 8. Disattiva GitHub Pages del repository (Settings → Pages → Unpublish): è la copia web pubblica del gioco.

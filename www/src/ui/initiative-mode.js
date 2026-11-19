@@ -1,12 +1,12 @@
 // The page «Iniziative»: popular initiatives (50,000 signatures, art. 71) and signatures for a referendum (500,000, art. 75), kept apart from the bills of the members of Parliament («Leggi»).
 // Every button calls the store (startInitiative, organizeInitiative, depositInitiative, withdrawInitiative): nothing is decorative.
-import { INITIATIVE_KINDS, CHANNELS, PARLIAMENTARY_NOTE, SETUP_COST, ESTIMATED_VALID_SHARE, PARLIAMENT_STAGES, overview } from '../core/initiative-engine.js?v=20261119-6';
-import { phaseOf } from '../core/citizen-requests-engine.js?v=20261119-6';
-import { POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261119-6';
-import { badge, card, empty, esc, foldPanel, kpi } from './sections-kit.js?v=20261119-6';
-import { glyph } from './visuals.js?v=20261119-6';
-import { topicsFor, topicById, draftOf } from '../data/initiative-drafts.js?v=20261119-6';
-import { formatDate } from '../core/time.js?v=20261119-6';
+import { INITIATIVE_KINDS, CHANNELS, PARLIAMENTARY_NOTE, SETUP_COST, ESTIMATED_VALID_SHARE, PARLIAMENT_STAGES, overview } from '../core/initiative-engine.js?v=20261119-7';
+import { phaseOf } from '../core/citizen-requests-engine.js?v=20261119-7';
+import { POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261119-7';
+import { badge, card, empty, esc, foldPanel, kpi } from './sections-kit.js?v=20261119-7';
+import { glyph } from './visuals.js?v=20261119-7';
+import { topicsFor, topicById, draftOf } from '../data/initiative-drafts.js?v=20261119-7';
+import { formatDate } from '../core/time.js?v=20261119-7';
 
 const number = value => Math.round(Number(value) || 0).toLocaleString('it-IT');
 const STATUS = {

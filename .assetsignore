@@ -30,3 +30,21 @@ capacitor.config.json
 worker-translate.js
 wrangler.test.jsonc
 portal
+
+# Never published as files: local configurations and secrets (the TEST deploy once uploaded wrangler.test.local.jsonc), and the password gate of the test site.
+wrangler.test.local.jsonc
+wrangler.*.local.jsonc
+wrangler.local.jsonc
+*.local.jsonc
+*.local.json
+.dev.vars
+.dev.vars.*
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.keystore
+*.jks
+worker-test-access.js
+worker-constants.js

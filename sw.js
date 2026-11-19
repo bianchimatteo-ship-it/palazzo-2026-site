@@ -1,6 +1,6 @@
 // POLITICANDO 2026 offline cache: network first, so a new build is always picked up online;
 // when the network is missing, the last copy of the page, the code and the real data is used.
-const CACHE = 'politicando-offline-v2';
+const CACHE = 'politicando-offline-v3';
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', event => {
@@ -44,6 +44,8 @@ self.addEventListener('fetch', event => {
     }
     try {
       const response = await fetch(request);
+      // A protected site (the private test) answers 401 once the session is over: the copy kept offline goes too, so an old remembered version cannot be opened without logging in again.
+      if (response.status === 401) { event.waitUntil(caches.delete(CACHE)); return response; }
       event.waitUntil(remember(request, response.clone()));
       return response;
     } catch (error) {

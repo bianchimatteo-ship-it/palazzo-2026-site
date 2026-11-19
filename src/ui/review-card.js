@@ -1,7 +1,7 @@
 // The invitation to review the game on Google Play, as a card of the game's own style (not the generic confirmation dialog): a quiet sheet at the bottom of the screen (above the tab bar on a phone, centred on a
 // tablet) that never dims or blocks the game, with the shield mark of Politicando, a short text, a gold button that opens the Play Store page and a plain «Non ora». It is shown only in a quiet moment (the caller
 // hides it while a scene, a vote, the night or a dialog is on, and brings it back after) and answers to Escape. The rules (once for each installation, enough use, recorded as shown first) are in data/repositories/review-prompt.js.
-import { translateTree } from '../core/i18n.js?v=20261119-6';
+import { translateTree } from '../core/i18n.js?v=20261119-7';
 
 const esc = text => String(text).replace(/[&<>"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[char]);
 const MARK = '<svg viewBox="0 0 64 64" width="34" height="34" aria-hidden="true"><defs><linearGradient id="rv-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0cf8d"/><stop offset="1" stop-color="#b8893a"/></linearGradient></defs><path d="M14 10h36v26c0 9-7 15-18 18-11-3-18-9-18-18z" fill="#142019" stroke="url(#rv-g)" stroke-width="3.5" stroke-linejoin="round"/><path d="M32 19l3.6 7.4 8.1 1.1-5.9 5.7 1.4 8-7.2-3.9-7.2 3.9 1.4-8-5.9-5.7 8.1-1.1z" fill="url(#rv-g)"/></svg>';

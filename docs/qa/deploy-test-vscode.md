@@ -1,6 +1,6 @@
 # Deploy di Politicando TEST da Visual Studio Code
 
-Solo il sito **TEST** (`politicando-test`, protetto da Cloudflare Access). Il Worker di produzione (`wrangler.jsonc`) e i suoi D1/KV/R2 **non si toccano**: non usare mai `npm run cf:deploy` né `-c wrangler.jsonc`.
+Solo il sito **TEST** (`politicando-test`, protetto da una password gestita dal Worker (`TEST_ACCESS_ENABLED=1`, secret `TEST_ACCESS_PASSWORD`)). Il Worker di produzione (`wrangler.jsonc`) e i suoi D1/KV/R2 **non si toccano**: non usare mai `npm run cf:deploy` né `-c wrangler.jsonc`.
 
 ## 1. Branch e commit
 - Branch da selezionare: **`feature/inmobi-integrazione`** (contiene anche `miglioramento-completo`, `qa-completamento`, `ios-admob-android` e `test/ambiente-privato`; `main` non è toccato).
@@ -29,12 +29,20 @@ Se `wrangler.test.local.jsonc` non esiste: `cp wrangler.test.jsonc wrangler.test
 npm ci                              # solo se node_modules manca o package-lock è cambiato
 npm run check:publication           # nessun id/nome/URL/segreto di produzione nei file TEST
 npm run check:security
+npm run check:test-access           # cancello con password: tutto chiuso senza sessione
 npx wrangler@4 deploy --dry-run --outdir .wrangler/dry -c wrangler.test.local.jsonc   # costruisce il Worker, non pubblica nulla
 ```
 Nella tabella delle risorse stampata dal dry-run controlla che:
 - `ADMIN_ARCHIVE` (KV), `ACCOUNTS` (D1: nome `politicando-accounts-test`) e `LOGOS` (R2: `politicando-logos-test`) siano **le risorse di prova**;
 - `PUBLIC_BASE_URL` sia l’indirizzo del sito TEST;
 - non compaia nessun nome/id di produzione.
+
+## 3b. Aggiorna `wrangler.test.local.jsonc` e imposta la password (nel TUO terminale)
+Il file locale (non tracciato) deve avere le stesse novità di `wrangler.test.jsonc`: in `vars` aggiungi `"TEST_ACCESS_ENABLED": "1"` e in `assets` usa `"run_worker_first": ["/*"]`. Poi:
+```bash
+npx wrangler@4 secret put TEST_ACCESS_PASSWORD -c wrangler.test.local.jsonc   # la password si digita nel terminale, mai in chat
+```
+`.assetsignore` ora esclude `wrangler.test.local.jsonc`, `.dev.vars*`, `.env*`, chiavi e il modulo del cancello: il deploy precedente aveva caricato il file locale come asset pubblico, questo no.
 
 ## 4. Comando di deploy (solo TEST)
 ```bash
@@ -45,7 +53,7 @@ npx wrangler@4 deploy -c wrangler.test.local.jsonc
 ## 5. Database e verifica dell’URL
 1. Le tabelle D1 si creano al primo uso; per applicare le migrazioni a mano: `npx wrangler@4 d1 migrations apply politicando-accounts-test --remote -c wrangler.test.local.jsonc`.
 2. Controlla che il database sia quello di prova: `npx wrangler@4 d1 list` → deve comparire `politicando-accounts-test` con **lo stesso `database_id`** scritto in `wrangler.test.local.jsonc`; non deve essere l’id del D1 di produzione.
-3. Apri `https://politicando-test.<tuo-account>.workers.dev/` da una finestra anonima: deve chiedere il login Cloudflare Access e accettare **solo** il tuo indirizzo e-mail. Se apre direttamente il gioco, Access non è attivo: non usare il sito (docs/ambiente-test-privato.md, punto 5).
+3. Verifica automatica (dal tuo terminale, la password solo nell'ambiente del comando): `TEST_BASE_URL=https://politicando-test.<tuo-account>.workers.dev TEST_ACCESS_PASSWORD='…' npm run verify:test-deploy` controlla: tutto 401 senza password, password errata, login con cookie Secure/HttpOnly/Strict, asset e API con sessione, `/wrangler.test.local.jsonc` → 404, uscita. Poi apri l'URL da una finestra anonima: deve mostrare il modulo della password. Se apre direttamente il gioco, **non usare il sito**.
 4. Dopo il login: la schermata iniziale si apre, «Nuova partita» crea una carriera, il pannello Sondaggi → Alleanze mostra «Progetto Civico Italia» con il programma documentato.
 5. `https://palazzo-2026-site.bianchimatteo657.workers.dev/` (produzione) deve restare invariato: solo portale, nessun cambiamento di versione.
 
