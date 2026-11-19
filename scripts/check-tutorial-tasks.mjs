@@ -9,15 +9,32 @@ const _build = (await readFile(new URL('../index.html', import.meta.url), 'utf8'
 const { TUTORIAL_STEPS, TUTORIAL_TASKS, tutorialTaskDone } = await import(`../src/ui/tutorial.js?v=${_build}`);
 
 // pure rules: a practice is never done by default, and each one needs an action beyond the page the tutorial opens by itself
-for (const [id, task] of Object.entries(TUTORIAL_TASKS)) {
-  check(TUTORIAL_STEPS.some(step => step.id === id), `${id}: la prova appartiene a un passo esistente.`);
-  check(task.prompt && task.where && task.result && task.target, `${id}: prova completa (cosa fare, dove, risultato, controllo indicato).`);
-  const stepPage = TUTORIAL_STEPS.find(step => step.id === id)?.page;
-  check(!tutorialTaskDone(id, { page: stepPage }), `${id}: aprire solo la pagina del passo non basta a completarla.`);
-  check(!tutorialTaskDone(id, {}) && !tutorialTaskDone(id, undefined), `${id}: senza stato non è completata.`);
+const PAGES = ['panoramica', 'carriera', 'calendario', 'finanze', 'partito', 'elezioni', 'sondaggi', 'parlamento', 'governo', 'notizie', 'impostazioni'];
+check(TUTORIAL_STEPS.length === 13, `Tredici passi (${TUTORIAL_STEPS.length}).`);
+check(new Set(TUTORIAL_STEPS.map(step => step.id)).size === TUTORIAL_STEPS.length, 'Nessun passo ripetuto.');
+check(new Set(TUTORIAL_STEPS.map(step => step.title)).size === TUTORIAL_STEPS.length, 'Nessun titolo ripetuto.');
+for (const step of TUTORIAL_STEPS) {
+  check(step.goal && step.what && step.cost && step.next && typeof step.example === 'function', `${step.id}: obiettivo, spiegazione, costo, seguito ed esempio.`);
+  check(PAGES.includes(step.page), `${step.id}: la pagina «${step.page}» è una pagina reale.`);
+  check(TUTORIAL_TASKS[step.id], `${step.id}: ogni passo ha un esercizio con una condizione verificabile.`);
 }
-check(tutorialTaskDone('agenda', { page: 'calendario', tabs: { agenda: { value: 'calendario' } } }), 'agenda: completata con la scheda Calendario.');
+for (const [id, task] of Object.entries(TUTORIAL_TASKS)) {
+  const step = TUTORIAL_STEPS.find(item => item.id === id);
+  check(step, `${id}: la prova appartiene a un passo esistente.`);
+  check(task.prompt && task.where && task.result && task.target && task.page, `${id}: prova completa (cosa fare, dove, risultato, controllo indicato, pagina di arrivo).`);
+  check(PAGES.includes(task.page), `${id}: la pagina della prova «${task.page}» è reale.`);
+  // the page of the practice is the page of the step, or the page a tap on the indicated control leads to: never a page that has nothing to do with it
+  const leadsAway = task.page !== step?.page;
+  const navTarget = task.target.match(/data-nav="([a-z-]+)"/)?.[1];
+  check(leadsAway ? (navTarget ? navTarget === task.page : id === 'ruolo' && task.page === 'carriera' && /data-section-tab="carriera"/.test(task.target)) : !navTarget || navTarget === step.page, `${id}: pagina del passo (${step?.page}), pagina della prova (${task.page}) e controllo (${task.target}) coerenti.`);
+  check(!tutorialTaskDone(id, { page: step?.page, tabs: {}, proof: {} }) || leadsAway, `${id}: aprire solo la pagina del passo non basta a completarla.`);
+  check(!tutorialTaskDone(id, {}) && !tutorialTaskDone(id, undefined), `${id}: senza stato non è completata.`);
+  check(!tutorialTaskDone(id, { page: 'carriera', tabs: {}, newsFilter: 'tutto', proof: {} }), `${id}: su una pagina estranea non è completata.`);
+}
+check(tutorialTaskDone('agenda', { page: 'calendario', tabs: { agenda: { value: 'calendario' } } }) && !tutorialTaskDone('agenda', { page: 'calendario', tabs: { agenda: { value: 'attivita' } } }), 'agenda: serve la scheda Calendario.');
 check(tutorialTaskDone('campagna', { page: 'elezioni', tabs: { elezioni: { value: 'programma' } } }) && !tutorialTaskDone('campagna', { page: 'elezioni', tabs: { elezioni: { value: 'campagna' } } }), 'campagna: serve la scheda Programma.');
+check(tutorialTaskDone('istituzioni', { page: 'governo' }) && !tutorialTaskDone('istituzioni', { page: 'parlamento' }), 'istituzioni: serve aprire il Governo da Istituzioni.');
+check(tutorialTaskDone('salvataggio', { page: 'impostazioni', proof: { saved: true } }) && !tutorialTaskDone('salvataggio', { page: 'impostazioni', proof: {} }), 'salvataggio: serve aver premuto «Salva ora».');
 
 await withBrowser(async browser => {
   const { evaluate, viewport, pause, errors, version } = browser;
@@ -38,18 +55,19 @@ await withBrowser(async browser => {
     if (TUTORIAL_TASKS[item.id]) {
       check(t && t.id === item.id && t.done === '0', `${item.id}: la prova compare, non ancora fatta (${JSON.stringify(t)}).`);
       check(t?.text.includes('Non costa giorni né denaro'), `${item.id}: dichiara che non costa nulla.`);
-      // the practice: go where it says, then do it
-      if (item.id === 'istituzioni') { await evaluate(`location.hash = '#referendum'; true`); await pause(2000); }
-      else if (TUTORIAL_TASKS[item.id].page) { await evaluate(`location.hash = '#${TUTORIAL_TASKS[item.id].page}'; true`); await pause(1500); }
+      // the practice is done where the step opened it, with the real control (nothing is navigated by hand)
+      check(await evaluate(`location.hash === '#${item.page}'`), `${item.id}: il passo apre la sua pagina (${item.page}).`);
+      check(!await evaluate(`Boolean(document.querySelector('[data-tutorial-go]'))`), `${item.id}: sulla pagina del passo non compare «Vai alla schermata».`);
       const pointed = await task();
       check(pointed?.pointed, `${item.id}: il controllo da usare è evidenziato.`);
       const target = await evaluate(`document.querySelector('[data-tutorial-task]').dataset.taskTarget`);
       check(await click(target.split(',')[0].trim()) || await click(target.split(',')[1]?.trim() ?? 'x'), `${item.id}: il controllo indicato esiste (${target}).`);
-      await pause(400);
+      await pause(600);
       const after = await task();
+      check(await evaluate(`location.hash === '#${TUTORIAL_TASKS[item.id].page}' && !document.querySelector('[data-tutorial-go]')`), `${item.id}: dopo l’esercizio la pagina riconosciuta è ${TUTORIAL_TASKS[item.id].page} e non compare «Vai alla schermata» che lo annullerebbe.`);
       check(after?.done === '1' && after.text.includes('Fatto!') && after.text.includes(TUTORIAL_TASKS[item.id].result.slice(0, 30)), `${item.id}: completata e verificata, con il risultato spiegato (${after?.done}).`);
       done.push(item.id);
-    } else check(t === null, `${item.id}: un passo senza prova non mostra finte prove.`);
+    }
     if (step < TUTORIAL_STEPS.length) await click('[data-tutorial=next]');
   }
   check(done.length === Object.keys(TUTORIAL_TASKS).length, `Tutte le prove eseguite (${done.join(', ')}).`);
@@ -58,4 +76,4 @@ await withBrowser(async browser => {
   if (errors.length) problems.push(`Errori JavaScript: ${errors.slice(0, 3).join(' | ')}`);
 });
 if (problems.length) { console.error(`Tutorial pratico: ${problems.length} problemi.\n${[...new Set(problems)].slice(0, 30).join('\n')}`); process.exit(1); }
-console.log('Tutorial pratico verificato: prove sulle pagine vere (Agenda, Partito, Campagna, Sondaggi, Referendum), controllo evidenziato, verifica dallo stato reale, risultato spiegato, nessun costo; percorsi nella guida.');
+console.log('Tutorial pratico verificato: tredici passi, ognuno con la sua prova sulla pagina vera (Home, Agenda, Finanze, Partito, Elezioni, Sondaggi, Istituzioni→Governo, Notizie, Impostazioni), pagina del passo e della prova coerenti, controllo evidenziato, verifica dallo stato reale, risultato spiegato, nessun costo; percorsi nella guida.');
