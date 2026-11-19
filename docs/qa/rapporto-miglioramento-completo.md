@@ -153,3 +153,42 @@ Chiave di upload e Android SDK per l'AAB; `versionCode` ultimo su Play; macOS/Xc
 
 ### Preparazione Android
 Progetto coerente (`it.matteobianchi.politicando2026`, versionCode 1 / «1.0», permesso `INTERNET`), copia web sincronizzata (`cap sync android`), meta-data AdMob rimosso, plugin InMobi collegato; `check:android` e `check:capacitor` passano. **AAB non generato**: mancano SDK e chiave; pubblicità reali spente.
+
+
+## Aggiornamento 4 — Progetto Civico Italia, scene, test falliti, rilascio (build 20261118-36)
+
+Solo ciò che è nuovo. `main` non toccato; nessun deploy; produzione e TEST non modificati.
+
+### Progetto Civico Italia: programma documentato
+- **Fonti lette** (progettocivicoitalia.it, letto il 2026-11-18): `/programma/` (20 Laboratori Civici Nazionali) e `/carta-dei-valori/`; il PDF della Carta è citato come fonte ma non letto separatamente (la pagina ne riporta i contenuti). L’host era fuori dalla rete consentita: è stato aggiunto all’ambiente (solo quell’host) per leggerlo.
+- **Dove sta**: `src/data/party-programs.js` (posizione −3…+3 e confidenza per tema; temi trasversali in coppie IT/EN) e `src/data/real/party-program-sources.json` (motivazione, Laboratorio d’origine, fonti). `alliance-rules.js` usa il programma documentato prima della stima dalla collocazione (`positionOf`, `programSource`); chi ha un valore deciso dal giocatore (compromesso) resta prioritario.
+- **Mappa sui dieci temi**: immigrazione −0,5 (media) · sicurezza 0 (media: presidio *e* prevenzione dichiarati) · economia +1 (media) · sanità −1,5 (media) · lavoro −1 (bassa) · ambiente −1,5 (media) · Europa −2,5 (alta, «Europa fino in fondo», integrazione economica/fiscale e difesa) · diritti −1,5 (media) · **istituzioni: non rilevato** (le fonti trattano partecipazione, PA e trasparenza, non premierato/Parlamento, che è ciò che misura la scala) · politica estera +0,5 (bassa: nessuna posizione su NATO). Nessuna posizione su aborto, fine vita, nucleare o NATO è stata ricavata.
+- **Effetto reale**: confronti tra partiti, incompatibilità, trattative, compromessi e coalizioni lo usano (verificato: con un partito di destra l’alleanza viene respinta per incompatibilità su Europa e diritti; con un giocatore compatibile viene accettata). Il pannello Alleanze mostra la confidenza per tema, «dato non disponibile» dove manca, e l’elenco dei 12 temi trasversali (scuola, giovani, welfare, agricoltura, turismo, cultura, sport, trasporti, innovazione/digitale/space economy, giustizia, Mezzogiorno, difesa e sicurezza urbana). Gli altri partiti non sono stati modificati.
+- Test: `check-party-programs` (esteso), `check-pci-program-ui` (nuovo, IT+EN, 390 px senza scorrimento).
+
+### Scene delle attività (62 attività)
+Misura (30 settimane × 3 semi, `scripts/measure-scene-variety.mjs`) **prima → dopo**, per attività: aperture diverse **1 → 8**; gruppi di personaggi **7 → ≥29**; nomi diversi **5–22 → ≥20**; dialoghi (domande con battuta della stanza) **7 → ≥62**; reazioni invariate (22–37). Caso peggiore dopo: apertura più frequente 14 %, gruppo 12 %, dialogo 7 %, reazione 26 %.
+Cosa è cambiato (nessuna conseguenza o malus toccati): nota d’atmosfera di apertura per ogni stanza (8 per tipo), battuta della stanza prima delle prime due domande (5+5 per tipo), una **persona nella stanza che non parla e reagisce** (6 ruoli per tipo, con gesti: applaude/appunti/dissenso), **ambiente per attività** disegnato dietro i personaggi (folla, fotocamere con lampo, ponteggi ed elmetti, fascicoli, grafico, colonne) con micro-animazioni solo se `prefers-reduced-motion: no-preference` e movimenti non disattivati, pool di nomi allargato. Coppie bilingui IT/EN (168), censimento traduzioni a 0 lacune. Test: `check-activity-variety` (nuovo), aggiornati `check-activity-scenes(-ui)` e `check-scene-variety`.
+Limite rimasto: l’aspetto delle stanze resta quello dei sei ambienti; non sono stati aggiunti nuovi sfondi.
+
+### Test falliti: causa e stato
+| Test | Causa trovata | Esito |
+|---|---|---|
+| `check-presidency` | Il test dava il seggio della XX legislatura; durante le 90 settimane le Camere si rinnovano e chi non si è ricandidato non è più grande elettore: il motore è corretto. Il test ora dà un seggio nelle Camere in carica (premessa originale). | PASS (209 s) |
+| `check-promise-reminders` | Il popup delle notizie (nuovo) restava aperto: la scheda si nasconde giustamente. Il test ora lo chiude. | PASS |
+| `check-territory-legibility` | Selettori obsoleti (`data-obs-area="territori"`) già corretti. | PASS |
+| `check-election-night-language` | Non era un timeout di rete: dopo la fine del voto compare la scena del voto personale al seggio, il test aspettava `.night` per 25 s. Il test salta la scena (come `check-election-night-ui`). In inglese il rilevatore segnalava 60 volte il cognome simulato «Bosco» come parola italiana: i cognomi del motore sono ora passati come nomi propri. | PASS (84 schermate, 7436 testi, 3 min) |
+| `check-campaign-ui` | Il «crash di Chrome» era il test stesso: a fine controllo chiudeva il browser e il suo `onclose` lo segnalava come crash. Tutti i 35 controlli passano (incluso un solo ascoltatore per tipo di evento). | PASS |
+| `check-button-contrast` | Hover del pulsante primario corretto (da 1,86:1 a contrasto AA). | PASS |
+
+### Schermata «Caricamento…»
+Analizzati `index.html`, `main.js` (promesse, `loadRealDatabase`, `bootError`), ricaricamenti consecutivi e accessi diretti: **nessuna causa riprodotta e nessuna modifica fatta** (nessun retry artificiale). Verifica sperimentale: se un modulo del grafo non si carica (richiesta bloccata via CDP su `src/core/ids.js`) la schermata resta su «Caricamento… · Loading…» **senza alcun messaggio**, perché `bootError` copre solo l’errore dentro `main.js`, non il fallimento di un `import` statico. È una classe di cause compatibile con l’intermittenza (rete, cache incoerente fra build), **non provata** come causa del caso osservato. Proposta non applicata: un messaggio con «Riprova» se il modulo di avvio non parte entro un tempo limite.
+
+### Traduzioni inglesi
+`check-i18n`, `-offline`, `-audit` (7 min, nessun italiano) PASS; `check-i18n-pages`: **intermittente** (2 esecuzioni su ~9 ha mostrato una frase della notizia «Programma di governo … la stabilità è a 50/100 e il margine nella Camera più stretta è di +…» ancora in italiano; riesecuzioni successive 0 testi). Causa non chiusa; non dipende dalle modifiche di questa sessione.
+
+### Verifiche esterne (ambiente attuale)
+Android SDK assente (`ANDROID_HOME` vuoto, `dl.google.com` irraggiungibile), nessuna keystore → **AAB non generato**; nessun macOS/Xcode → IPA/archivio non generati; nessun dispositivo → UMP e annunci premiati non provati; Java e Gradle presenti ma senza SDK la build non parte. `wrangler deploy --dry-run -c wrangler.test.jsonc` costruisce il Worker (risorse segnaposto). `.dev.vars` e `wrangler.test.local.jsonc` non sono nel repository e ora sono in `.gitignore`. Le 13 decisioni del titolare: `docs/qa/decisioni-titolare-legali.md`. Deploy TEST: `docs/qa/deploy-test-vscode.md`. Pubblicità reali spente, `ADS_MODE` e ID non toccati; iOS (Bundle ID, Team, firma, versione 1.0 (1)) e Android (versionCode 1) invariati.
+
+### Git
+Verificato che tutti i branch locali e remoti rilevanti sono antenati di `feature/inmobi-integrazione` tranne `claude/p1-fixes`/`claude/android-icon-fix` (icona launcher: già equivalente nel branch, `check:android` la verifica; `p1-fixes` riattiverebbe «animazioni disattivate di default»: non ripreso) e `probe/cf-1bc241f` (sonda Cloudflare, non ripresa).

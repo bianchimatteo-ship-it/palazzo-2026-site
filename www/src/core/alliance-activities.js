@@ -1,7 +1,7 @@
 // Concrete activities with the allies of the player's alliance or coalition: a meeting of the leaders, a programme table, a territorial initiative, a press conference, a mobilisation. Each one has a
 // cost (days, political capital, funds), a duration, and an outcome that depends on how the allies are doing (cohesion, the relation with the partners, how well the programmes fit): it succeeds, it
 // half-succeeds or it fails, and what it leaves is told once — on the cohesion of the alliance, on the relations with the partners and on the player's standing. Pure and deterministic.
-import { seededRandom } from './vote-engine.js?v=20261118-35';
+import { seededRandom } from './vote-engine.js?v=20261118-36';
 
 export const ALLY_ACTIVITIES = Object.freeze({
   riunione: { id: 'riunione', label: 'Riunione dei leader', hint: 'Un incontro riservato tra i leader per ricucire e coordinarsi.', cost: { days: 1, capital: 1, funds: 0 }, weeks: 1, base: 0.72, target: 'partner', win: { cohesion: 4, relation: 4 }, lose: { cohesion: -3, relation: -3 } },

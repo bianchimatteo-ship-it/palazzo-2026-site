@@ -1,11 +1,11 @@
 // The Council of Ministers at work: the dossiers each minister took on (objective, term, progress read from the game, results and who is to blame) and the balance of
 // the Government's programme against the measures enacted. The Prime Minister can help a dossier; everyone else reads.
-import { DOSSIER_KINDS, DOSSIER_RULES } from '../data/simulation/dossier-rules.js?v=20261118-35';
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261118-35';
-import { isPrimeMinister } from '../core/roles.js?v=20261118-35';
-import { dossiersOf, openDossiers, programReport } from '../core/dossier-engine.js?v=20261118-35';
-import { esc, meter } from './charts.js?v=20261118-35';
-import { glyph } from './visuals.js?v=20261118-35';
+import { DOSSIER_KINDS, DOSSIER_RULES } from '../data/simulation/dossier-rules.js?v=20261118-36';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261118-36';
+import { isPrimeMinister } from '../core/roles.js?v=20261118-36';
+import { dossiersOf, openDossiers, programReport } from '../core/dossier-engine.js?v=20261118-36';
+import { esc, meter } from './charts.js?v=20261118-36';
+import { glyph } from './visuals.js?v=20261118-36';
 
 const BLAME = { ministro: 'colpa del ministro', maggioranza: 'maggioranza troppo stretta', circostanze: 'le circostanze' };
 const OUTCOME = { riuscito: 'Riuscito', fallito: 'Fallito', ritirato: 'Ritirato' };

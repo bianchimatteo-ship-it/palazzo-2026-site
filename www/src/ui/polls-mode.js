@@ -1,8 +1,9 @@
-import { campaignScope } from '../core/campaign-engine.js?v=20261118-35';
-import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261118-35';
-import { formatDate } from '../core/time.js?v=20261118-35';
-import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261118-35';
-import { distinctSeries, sparkline } from './charts.js?v=20261118-35';
+import { campaignScope } from '../core/campaign-engine.js?v=20261118-36';
+import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261118-36';
+import { formatDate } from '../core/time.js?v=20261118-36';
+import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261118-36';
+import { distinctSeries, sparkline } from './charts.js?v=20261118-36';
+import { documentedProgramOf } from '../data/party-programs.js?v=20261118-36';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const pctFormats = new Map();
@@ -234,10 +235,13 @@ function programPanel(members, options, secretary) {
   const blocks = partners.map(member => {
     const analysis = options.programAnalysis(member.id);
     if (!analysis) return '';
-    const rows = analysis.rows.map(row => `<tr class="level-${esc(row.level)}" data-program-theme="${esc(row.id)}"><th scope="row">${esc(row.label)}</th><td>${esc(row.aText)}</td><td>${esc(row.bText)}</td><td><span class="badge ${row.level === 'incompatibile' ? 'badge-bad' : ''}">${esc(LEVEL_LABEL[row.level] ?? row.level)}</span>${secretary && !options.windowClosed && (row.level === 'incompatibile' || row.level === 'conflitto') ? ` <button type="button" class="secondary-button compact" data-world-compromise="${esc(member.id)}|${esc(row.id)}">Cerca un compromesso · 1 giorno · 3 cap.</button>` : ''}</td></tr>`).join('');
+    const rows = analysis.rows.map(row => `<tr class="level-${esc(row.level)}" data-program-theme="${esc(row.id)}"><th scope="row">${esc(row.label)}</th><td>${esc(row.aText)}</td><td>${esc(row.bText)}${row.bSource?.documented && Number.isFinite(row.b) ? ` <small class="quiet-copy" data-program-confidence="${esc(row.bSource.confidence)}">· fonte documentata, confidenza ${esc(row.bSource.confidence)}</small>` : ''}</td><td><span class="badge ${row.level === 'incompatibile' ? 'badge-bad' : ''}">${esc(LEVEL_LABEL[row.level] ?? row.level)}</span>${secretary && !options.windowClosed && (row.level === 'incompatibile' || row.level === 'conflitto') ? ` <button type="button" class="secondary-button compact" data-world-compromise="${esc(member.id)}|${esc(row.id)}">Cerca un compromesso · 1 giorno · 3 cap.</button>` : ''}</td></tr>`).join('');
+    const documented = documentedProgramOf(member);
+    const english = typeof document !== 'undefined' && document.documentElement.lang === 'en';
+    const docNote = documented ? `<small class="quiet-copy" data-program-documented="${esc(member.id)}">Programma ricostruito dai documenti ufficiali del partito: i temi che le fonti non affrontano restano «dato non disponibile».</small><details class="coalition-program-areas" data-program-areas="${esc(member.id)}"><summary>Altri temi documentati dal partito</summary><ul>${documented.areas.map(area => `<li data-program-area="${esc(area.id)}">${esc(english ? area.text[1] : area.text[0])}</li>`).join('')}</ul><p class="quiet-copy">Fonti: ${documented.sources.map(url => esc(url.replace(/^https:\/\//, ''))).join(' · ')}</p></details>` : '';
     return `<details class="coalition-program" data-coalition-program="${esc(member.id)}"${analysis.hard.length ? ' open' : ''}><summary>Programma con ${esc(member.label)} · compatibilità ${Math.round(analysis.score * 100)}%${analysis.hard.length ? ` · <b class="bad-ink">${analysis.hard.length} incompatibilità da negoziare</b>` : ''}</summary>
       <div class="table-scroll"><table class="program-table"><thead><tr><th>Tema</th><th>Tu</th><th>${esc(member.label)}</th><th>Esito</th></tr></thead><tbody>${rows}</tbody></table></div>
-      <small class="quiet-copy">Posizioni stimate dal gioco (simulazione) dalla collocazione del partito e dalle tue decisioni: non sono dichiarazioni dei partiti reali.</small></details>`;
+      <small class="quiet-copy">Posizioni stimate dal gioco (simulazione) dalla collocazione del partito e dalle tue decisioni: non sono dichiarazioni dei partiti reali.</small>${docNote}</details>`;
   }).join('');
   return blocks ? `<h4>Programma comune</h4>${blocks}` : '';
 }

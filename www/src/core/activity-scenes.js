@@ -6,16 +6,17 @@
 // activity is applied ONCE, by the store, when the scene ends.
 // Deterministic: the family of topics, the names and the small variations come from the seed of the scene (and from what the player met lately: the same family is not drawn again in a row).
 // Loaded on demand (it is not in the first screen): it registers itself in scene-engine.js and stage-script.js when imported.
-import { AVATAR_OPTIONS, EXTRA_NAMES, F, M, defaultAvatarFor, genderOf, normalizeAvatar, roleGender } from './avatar.js?v=20261118-35';
-import { personName, registerSceneKind } from './scene-engine.js?v=20261118-35';
-import { SPEAK_GESTURES, LISTEN_GESTURES, pickGesture, registerStageScript, stagePose } from './stage-script.js?v=20261118-35';
-import { ACTIVITY_SCENES, ACTIVITY_SCENE_UI } from '../data/activity-scene-lines.js?v=20261118-35';
-import { ACTIVITY_CONTEXT } from '../data/activity-scene-context.js?v=20261118-35';
-import { STAKES } from '../data/activity-scene-stakes.js?v=20261118-35';
-import { BODIES, CITIZEN_GUESTS, CITIZENS, GUESTS, HEADINGS, REFS } from '../data/activity-scene-guests.js?v=20261118-35';
-import { APPROACH_LABELS } from '../data/activity-scene-approaches.js?v=20261118-35';
-import { ONLY, TOPIC_KIND, TOPIC_MOVES, areasOf, newsFits } from '../data/activity-scene-topics.js?v=20261118-35';
-import { APPROACH_FUNCTIONS, COMMITMENTS, COMMITMENT_TEXT, CONSEQUENCE_LINES, EXTRA_Q1, FUNCTIONS, FUND_COST, GUARANTEE_MOVES, MOVES, OUTCOME_KINDS, REACTION_ALT, REACTION_LINES, REACTION_TYPES, STAGE_TEXT, WHY_LINES } from '../data/activity-scene-moves.js?v=20261118-35';
+import { AVATAR_OPTIONS, EXTRA_NAMES, F, M, defaultAvatarFor, genderOf, normalizeAvatar, roleGender } from './avatar.js?v=20261118-36';
+import { personName, registerSceneKind } from './scene-engine.js?v=20261118-36';
+import { SPEAK_GESTURES, LISTEN_GESTURES, pickGesture, registerStageScript, stagePose } from './stage-script.js?v=20261118-36';
+import { ACTIVITY_SCENES, ACTIVITY_SCENE_UI } from '../data/activity-scene-lines.js?v=20261118-36';
+import { ACTIVITY_CONTEXT } from '../data/activity-scene-context.js?v=20261118-36';
+import { STAKES } from '../data/activity-scene-stakes.js?v=20261118-36';
+import { BODIES, CITIZEN_GUESTS, CITIZENS, GUESTS, HEADINGS, REFS } from '../data/activity-scene-guests.js?v=20261118-36';
+import { ATMOSPHERE, BYSTANDERS, LEADIN } from '../data/activity-scene-variety.js?v=20261118-36';
+import { APPROACH_LABELS } from '../data/activity-scene-approaches.js?v=20261118-36';
+import { ONLY, TOPIC_KIND, TOPIC_MOVES, areasOf, newsFits } from '../data/activity-scene-topics.js?v=20261118-36';
+import { APPROACH_FUNCTIONS, COMMITMENTS, COMMITMENT_TEXT, CONSEQUENCE_LINES, EXTRA_Q1, FUNCTIONS, FUND_COST, GUARANTEE_MOVES, MOVES, OUTCOME_KINDS, REACTION_ALT, REACTION_LINES, REACTION_TYPES, STAGE_TEXT, WHY_LINES } from '../data/activity-scene-moves.js?v=20261118-36';
 
 export { ACTIVITY_SCENES, ACTIVITY_SCENE_UI };
 export const SCENE_KIND = 'attivita';
@@ -66,7 +67,10 @@ const character = (id, role, spec, seed, used, { roleLabel = null, partyLabel = 
   const ofGender = list => list.filter(name => genderOf({ name }) === gender);
   const own = ofGender(spec.names), extra = EXTRA_NAMES[gender];
   const free = [...own.filter(name => !used.has(name)), ...extra.filter(name => !used.has(name))];
-  const name = personName(pickBy(own.filter(item => !used.has(item)).length ? own.filter(item => !used.has(item)) : free.length ? free : own.length ? own : extra, `${seed}|${id}|nome`), spec.tag[0]);
+  // The names written for the role come first half of the time; the others are drawn from the wider pool of the gender (a scene with four names alone repeated the same people every few weeks).
+  const ownFree = own.filter(item => !used.has(item));
+  const pool = ownFree.length && hashOf(`${seed}|${id}|fonte`) % 2 === 0 ? ownFree : free.length ? free : own.length ? own : extra;
+  const name = personName(pickBy(pool, `${seed}|${id}|nome`), spec.tag[0]);
   used.add(name);
   // each person of a scene is a different person: face, skin, hair, style and jacket are drawn from the seed with a different salt each (never two alike in the same room)
   const base = defaultAvatarFor(`${seed}|${id}`);
@@ -110,6 +114,10 @@ export function createActivityScene({ id, seed, sceneKey, activityId, target = n
     character('ospite1', 'ospite', spec.cast[0], seed, used, { roleLabel: roles[0]?.[0] ?? null, partyLabel: partyOf(1) }),
     character('ospite2', 'ospite', spec.cast[1], seed, used, { roleLabel: roles[1]?.[0] ?? null, partyLabel: partyOf(2) })
   ];
+  // A person in the room who does not speak (an usher, a photographer, a foreman…): drawn behind the others, it reacts to what is said.
+  const bystanders = BYSTANDERS[activityId === 'cittadini' ? 'mercato' : sceneKey] ?? [];
+  const bystander = bystanders.length ? bystanders[hashOf(`${seed}|comparsa`) % bystanders.length] : null;
+  const extras = bystander ? [character('comparsa1', 'comparsa', { names: [], tag: bystander }, seed, used, { roleLabel: bystander[0] })] : [];
   const bodyLabel = AFFILIATION[sceneKey] === 'party' && party?.label ? party.label : heading?.body[0] ?? BODIES[sceneKey]?.[0] ?? '';
   // What the career holds is quoted only when it is about the subject of the encounter: a promise of the programme whose policy area is the family's, a headline of the diary that speaks of it. A scene made
   // without the lists (a test, an old call) keeps the plain values it is given.
@@ -119,7 +127,7 @@ export function createActivityScene({ id, seed, sceneKey, activityId, target = n
   const newsRef = Array.isArray(news) ? news.find(item => newsFits(family.id, item)) ?? '' : refs.news ?? '';
   const ref = pickRef(sceneKey, seed, { ...refs, promise: promiseRef, news: newsRef, party: AFFILIATION[sceneKey] === 'party' || refs.party ? (refs.party ?? party?.label ?? '') : '' });
   return {
-    id, kind: SCENE_KIND, sceneKey, activityId, target, variant: spec.intro[variant] ? variant : 'default', setting: sceneKey === 'associazioni' && activityId === 'cittadini' ? CITIZENS_SETTING : spec.setting, seed, date, status: 'active', nodeId: 'apertura', cast,
+    id, kind: SCENE_KIND, sceneKey, activityId, target, variant: spec.intro[variant] ? variant : 'default', setting: sceneKey === 'associazioni' && activityId === 'cittadini' ? CITIZENS_SETTING : spec.setting, seed, date, status: 'active', nodeId: 'apertura', cast, extras,
     topic: { id: family.id, label: family.label[0] }, place: { label: (sceneKey === 'associazioni' && activityId === 'cittadini' ? CITIZENS.place : spec.place)[0] }, familyId: family.id, bodyLabel, heading: heading ? { kicker: heading.kicker[0], title: heading.title[0], banner: heading.banner[0] } : null, partyLabel: party?.label ?? '', ref: ref ? { type: ref.type, text: ref.text } : null,
     context: { stats: { competence: stats.competence ?? 50, charisma: stats.charisma ?? 50, reputation: stats.reputation ?? 50 } },
     // what the encounter knows of the situation of the player when it starts (kept in the scene: a saved scene resumed later offers the same moves) and what has happened in it so far
@@ -224,6 +232,10 @@ const guest = (scene, n) => scene.cast.filter(item => item.role === 'ospite')[n 
 const choicesOf = (scene, stage) => movesAt(scene, stage).map(move => [move.id, move.label[0], move.disabled, move.disabled ? move.reason[0] : FUNCTIONS[move.fn].detail[0]]);
 // The stage the reaction beat belongs to.
 const STAGE_OF = Object.freeze({ r1: 'q1', r2: 'q2', r3: 'q3', r4: 'q4' });
+// The colour of the encounter: the moment of the room before the situation, and a line of the room before each of the first two questions (the same scene always gets the same ones).
+const roomKey = scene => isCitizens(scene) ? 'mercato' : scene.sceneKey;
+const atmosphereOf = scene => { const list = ATMOSPHERE[roomKey(scene)] ?? []; return list.length ? list[hashOf(`${scene.seed}|atmosfera`) % list.length][0] : ''; };
+const leadinOf = (scene, node) => { const list = LEADIN[roomKey(scene)]?.[node] ?? []; return list.length ? list[hashOf(`${scene.seed}|${node}|intermezzo`) % list.length][0] : ''; };
 export function activityNode(scene) {
   upgrade(scene);
   const spec = ACTIVITY_SCENES[scene.sceneKey];
@@ -232,9 +244,9 @@ export function activityNode(scene) {
   const base = { id: scene.nodeId, setting: scene.setting };
   const citizens = isCitizens(scene);
   switch (scene.nodeId) {
-    case 'apertura': return { ...base, speaker: me(scene).id, expression: pickGesture(scene, 'apertura', 'espressione', ['serena', 'sorridente', 'serena']), gesture: pickGesture(scene, 'apertura', 'giocatore', ['saluta', 'apre', 'saluta', 'palmi']), camera: 'wide', title: ACTIVITY_CONTEXT[scene.activityId]?.title[0] ?? scene.heading?.title ?? spec.title[0], text: (ACTIVITY_CONTEXT[scene.activityId]?.intro ?? (citizens ? CITIZENS.intro : (spec.intro[scene.variant] ?? spec.intro.default)))[0], ...(scene.ref?.text ? { lines: [scene.ref.text] } : {}), choices: [['continua', 'Continua']] };
-    case 'q1': return { ...base, speaker: guest(scene, 1).id, expression: 'determinata', gesture: pickGesture(scene, 'q1', 'ospite1', SPEAK_GESTURES), camera: 'wide', title: family.label[0], text: (citizens ? CITIZENS.families[family.id]?.open ?? family.open : family.open)[0], choices: choicesOf(scene, 'q1') };
-    case 'q2': return { ...base, speaker: guest(scene, 2).id, expression: 'determinata', gesture: pickGesture(scene, 'q2', 'ospite2', SPEAK_GESTURES), camera: 'wide', title: family.label[0], text: (citizens ? CITIZENS.families[family.id]?.follow ?? family.follow : family.follow)[0], choices: choicesOf(scene, 'q2') };
+    case 'apertura': return { ...base, speaker: me(scene).id, expression: pickGesture(scene, 'apertura', 'espressione', ['serena', 'sorridente', 'serena']), gesture: pickGesture(scene, 'apertura', 'giocatore', ['saluta', 'apre', 'saluta', 'palmi']), camera: 'wide', title: ACTIVITY_CONTEXT[scene.activityId]?.title[0] ?? scene.heading?.title ?? spec.title[0], text: (ACTIVITY_CONTEXT[scene.activityId]?.intro ?? (citizens ? CITIZENS.intro : (spec.intro[scene.variant] ?? spec.intro.default)))[0], lines: [atmosphereOf(scene), ...(scene.ref?.text ? [scene.ref.text] : [])], choices: [['continua', 'Continua']] };
+    case 'q1': return { ...base, speaker: guest(scene, 1).id, expression: 'determinata', gesture: pickGesture(scene, 'q1', 'ospite1', SPEAK_GESTURES), camera: 'wide', title: family.label[0], preface: [leadinOf(scene, 'q1')], text: (citizens ? CITIZENS.families[family.id]?.open ?? family.open : family.open)[0], choices: choicesOf(scene, 'q1') };
+    case 'q2': return { ...base, speaker: guest(scene, 2).id, expression: 'determinata', gesture: pickGesture(scene, 'q2', 'ospite2', SPEAK_GESTURES), camera: 'wide', title: family.label[0], preface: [leadinOf(scene, 'q2')], text: (citizens ? CITIZENS.families[family.id]?.follow ?? family.follow : family.follow)[0], choices: choicesOf(scene, 'q2') };
     case 'q3': {
       const text = scene.tally.tension >= 2 ? STAGE_TEXT.q3.tense : STAGE_TEXT.q3[last?.band ?? 'mid'];
       return { ...base, speaker: guest(scene, 1).id, expression: last?.band === 'bad' || scene.tally.tension >= 2 ? 'determinata' : 'serena', gesture: 'sottolinea', camera: 'wide', title: STAGE_TEXT.titles.q3[0], text: text[0], choices: choicesOf(scene, 'q3') };
@@ -426,6 +438,8 @@ const LAYOUT = {
   redazione: { posture: 'sit', giocatore: [150, 300, 1], ospite1: [460, 292, -1], ospite2: [556, 296, -1] },
   consiglio: { posture: 'sit', giocatore: [150, 300, 1], ospite1: [460, 292, -1], ospite2: [556, 296, -1] }
 };
+// where the bystander stands (behind the table, between the player and the guests)
+const EXTRA_SPOT = Object.freeze({ sala: [300, 262, -1], mercato: [240, 258, 1], cantiere: [300, 262, -1], sede: [300, 258, -1], commissione: [300, 258, -1], redazione: [300, 258, -1], consiglio: [300, 258, -1] });
 export const ROOM_SETTINGS = Object.freeze(Object.keys(LAYOUT));
 // How far the player steps toward the others for a move (the standing rooms only): a challenge or a mediation brings him into the middle, a handshake brings the two closer.
 const STEP = Object.freeze({ contest: 110, mediate: 70, compromise: 90, announce: 60, propose: 45, assign: 50, vote: 0, involve: 40, fund: 70, story: 40 });
@@ -447,6 +461,12 @@ export function activityStage(scene, node) {
     else gesture = node?.speaker ? pickGesture(scene, nodeId, member.id, LISTEN_GESTURES) : null;
     if (member.id === 'giocatore' && nodeId === 'apertura') out[member.id] = stagePose(x, y, { facing, posture: layout.posture, gesture: speaking ? 'saluta' : null, path: [{ x: -70, y: 304 }, { x, y }] });
     else out[member.id] = stagePose(x, y, { facing, posture: nodeId === 'esito' ? 'stand' : layout.posture, gesture });
+  }
+  // the bystander: standing behind, turned to the room, and doing what the room does while the others speak (a clap, a note, a nod)
+  for (const extra of scene.extras ?? []) {
+    const spot = EXTRA_SPOT[scene.setting] ?? EXTRA_SPOT.sala;
+    const mood = reacting ? (SIDE_GESTURE[node.reaction] ?? 'ascolta') : node?.speaker ? pickGesture(scene, nodeId, extra.id, ['ascolta', 'appunti', 'ascolta', 'esita', null]) : null;
+    out[extra.id] = stagePose(spot[0], spot[1], { facing: spot[2], posture: 'stand', gesture: nodeId === 'esito' ? 'saluta' : mood });
   }
   const camera = nodeId === 'apertura' || nodeId === 'esito' ? 'wide' : reacting ? (node?.reaction === 'protesta' ? 'protest' : 'stage') : node?.speaker === 'giocatore' ? 'left' : 'right';
   return { setting: scene.setting, poses: out, camera: ['q1', 'q2', 'q3', 'q4', 'r1', 'r2', 'r3', 'r4'].includes(nodeId) ? camera : 'wide', crowd: 'quiet', props: { room: scene.setting, mood: scene.audience.mood >= 58 ? 'warm' : scene.audience.mood < 45 ? 'cold' : 'mixed' } };

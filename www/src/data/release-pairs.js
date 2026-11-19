@@ -1,11 +1,11 @@
 // English phrase-book pairs of the last release pass (data/i18n/en-ui-8.js reads `ALL_PAIRS`): the guided programme editor, the days of the Quirinale and the rule on the parties, the government room, the live
 // votes of the assemblies, the party headquarters, the TV name plates and the tutorial. Format as in the phrase-book: [Italian as shown, English]; `#` a number, `{}` a free part.
-import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261118-35';
-import { DEBATE_PAIRS } from './debate-choices.js?v=20261118-35';
-import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261118-35';
-import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261118-35';
-import { ALL_PAIRS as TOPIC_PAIRS } from './activity-scene-topics.js?v=20261118-35';
-import { LAW_TERM_PAIRS } from './law-terms.js?v=20261118-35';
+import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261118-36';
+import { DEBATE_PAIRS } from './debate-choices.js?v=20261118-36';
+import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261118-36';
+import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261118-36';
+import { ALL_PAIRS as TOPIC_PAIRS } from './activity-scene-topics.js?v=20261118-36';
+import { LAW_TERM_PAIRS } from './law-terms.js?v=20261118-36';
 export const ALL_PAIRS = [
   ...GUEST_PAIRS,
   ...DEBATE_PAIRS,
@@ -2832,4 +2832,10 @@ export const ALL_PAIRS = [
   ["Cambia la composizione: la registrazione per un’elezione aperta va riapprovata", "The composition changes: the registration for an open election must be approved again"],
   ["Cambia la composizione: le # registrazioni per elezioni aperte vanno riapprovate", "The composition changes: the # registrations for open elections must be approved again"],
   ["Le registrazioni elettorali di «{}» passano all’accordo (#)", "The electoral registrations of “{}” pass to the accord (#)"],
+  ["· fonte documentata, confidenza alta", "· documented source, high confidence"],
+  ["· fonte documentata, confidenza media", "· documented source, medium confidence"],
+  ["· fonte documentata, confidenza bassa", "· documented source, low confidence"],
+  ["Altri temi documentati dal partito", "Other topics documented by the party"],
+  ["Programma ricostruito dai documenti ufficiali del partito: i temi che le fonti non affrontano restano «dato non disponibile».", "Programme reconstructed from the party’s official documents: topics the sources do not address stay “data not available”."],
+  ["Fonti:", "Sources:"],
 ];

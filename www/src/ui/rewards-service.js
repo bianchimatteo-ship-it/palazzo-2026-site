@@ -1,12 +1,12 @@
 // Wires the rewards to the page: the play clock (visibility, foreground, one tab at a time, the career that is open), the journal of the device, the time of an account (kept by the Worker, merged across devices),
 // the daily reward and the one-off community reward (the Worker decides for an account, the device for a guest), the notices the player is shown and the rewarded videos. The rules are in core/rewards-engine.js and the store;
 // this file only decides WHEN time is counted, what is sent to the Worker and who may claim what.
-import { createPlayClock, createStorageLease } from '../core/play-clock.js?v=20261118-35';
-import { normalizeRewards, playProgress, romeDay, rewardHistory } from '../core/rewards-engine.js?v=20261118-35';
-import { COMMUNITY_REWARD, DAILY_REWARD, PLAY_CLOCK, PLAY_REWARDS } from '../data/simulation/reward-rules.js?v=20261118-35';
-import { rewardsJournal } from '../data/repositories/rewards-journal.js?v=20261118-35';
-import { setAdRewardPoints } from '../data/simulation/reward-rules.js?v=20261118-35';
-import { createRewardedAds } from '../data/repositories/ads-rewarded.js?v=20261118-35';
+import { createPlayClock, createStorageLease } from '../core/play-clock.js?v=20261118-36';
+import { normalizeRewards, playProgress, romeDay, rewardHistory } from '../core/rewards-engine.js?v=20261118-36';
+import { COMMUNITY_REWARD, DAILY_REWARD, PLAY_CLOCK, PLAY_REWARDS } from '../data/simulation/reward-rules.js?v=20261118-36';
+import { rewardsJournal } from '../data/repositories/rewards-journal.js?v=20261118-36';
+import { setAdRewardPoints } from '../data/simulation/reward-rules.js?v=20261118-36';
+import { createRewardedAds } from '../data/repositories/ads-rewarded.js?v=20261118-36';
 
 const RETRY_MS = 30000;
 const BLOCK_KINDS = { capitale: PLAY_REWARDS.capital.everyMinutes, preparazione: PLAY_REWARDS.preparation.everyMinutes };

@@ -303,3 +303,17 @@ Solo voci nuove; dettaglio in `docs/qa/rapporto-miglioramento-completo.md` (Aggi
 | 23.11 | Test check-presidency, promise-reminders, campaign-ui | Preesistenti | | | FAIL anche su `main`; campaign-ui SKIPPED (Chrome) |
 | 23.12 | Build www, cap sync, check:www/android/capacitor/publication/security/legal | Completato | | PASS | `check:legal -- --release`: 13 voci del titolare |
 | 23.13 | AAB / IPA / deploy TEST | Bloccato |  |  | Mancano SDK, chiave, macOS, credenziali Cloudflare TEST; nessun deploy |
+
+
+## 24. Rifinitura finale (build 20261118-36)
+
+| Punto | Richiesta | Stato | File | Test | Screenshot / note |
+|---|---|---|---|---|---|
+| 24.1 | Progetto Civico Italia: programma documentato sui dieci temi | Completato (9 temi con valore, 1 «non rilevato»: istituzioni) | party-programs.js, party-program-sources.json, alliance-rules.js, polls-mode.js | check-party-programs, check-pci-program-ui | progetto-civico-italia-programma-{1280,it-390,en-390}.png |
+| 24.2 | Scene: aperture, dialoghi, personaggi, gesti, ambienti, 62 attività | Completato (stanze invariate) | activity-scene-variety.js, activity-scenes.js, room-art.js, scene.css | check-activity-variety (62×3×30) | scena-variata-*.png |
+| 24.3 | check-presidency, promise-reminders, territory-legibility, election-night-language, campaign-ui | Completato (cause: test, non il motore) | scripts/ | tutti PASS | — |
+| 24.4 | «Caricamento…» | Non riprodotto; nessuna modifica | — | check-start-screen PASS | meccanismo di blocco senza messaggio documentato |
+| 24.5 | Traduzioni inglesi | Completato salvo intermittenza di check-i18n-pages | release-pairs.js | check-i18n, -offline, -audit PASS | censimento 0 lacune |
+| 24.6 | 13 voci legali | Elenco preciso preparato; decisioni del titolare | docs/qa/decisioni-titolare-legali.md | check:legal PASS, `--release` blocca (13) | — |
+| 24.7 | Preparazione deploy TEST da VS Code | Documento pronto; deploy non eseguito | docs/qa/deploy-test-vscode.md, .gitignore | wrangler dry-run | — |
+| 24.8 | AAB / IPA / prove su dispositivo | Bloccato (SDK, keystore, macOS, dispositivo) | — | — | — |
