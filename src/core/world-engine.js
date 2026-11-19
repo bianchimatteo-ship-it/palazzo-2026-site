@@ -1,11 +1,11 @@
-import { uniqueId } from './ids.js?v=20261119-5';
-import { HARD_GAP, THEMES, THEME_BY_ID, compare as compareProgram, compromise as compromiseOn, positionOf as programPositionOf, refusalBlock, refusalKey, recordRefusal, coalitionBlock, registrationsOf, pairKey as programPairKey } from './alliance-rules.js?v=20261119-5';
-import { AD_REWARD } from '../data/simulation/reward-rules.js?v=20261119-5';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261119-5';
-import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261119-5';
-import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261119-5';
-import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261119-5';
-import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261119-5';
+import { uniqueId } from './ids.js?v=20261119-6';
+import { HARD_GAP, THEMES, THEME_BY_ID, compare as compareProgram, compromise as compromiseOn, positionOf as programPositionOf, refusalBlock, refusalKey, recordRefusal, coalitionBlock, registrationsOf, pairKey as programPairKey } from './alliance-rules.js?v=20261119-6';
+import { AD_REWARD } from '../data/simulation/reward-rules.js?v=20261119-6';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261119-6';
+import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261119-6';
+import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261119-6';
+import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261119-6';
+import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261119-6';
 export { houseEffect };
 
 // The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.
