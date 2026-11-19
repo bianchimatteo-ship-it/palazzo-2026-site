@@ -61,13 +61,15 @@ class InMobiAdsPlugin : Plugin() {
             a.runOnUiThread {
                 info.requestConsentInfoUpdate(a, params.build(), {
                     UserMessagingPlatform.loadAndShowConsentFormIfRequired(a) { formError ->
-                        call.resolve(consentResult(info.canRequestAds(), statusName(info), info.privacyOptionsRequirementStatus == ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED && formError == null))
+                        call.resolve(consentResult(info.canRequestAds(), statusName(info), privacyRequired(info)))
                     }
                 }, { call.resolve(consentResult(info.canRequestAds(), statusName(info), false)) })
             }
         } catch (e: Throwable) { call.resolve(consentResult(false, "UNKNOWN", false)) }
     }
 
+    // The privacy options entry must stay available after a refusal and after a form error: it depends only on what UMP says is required.
+    private fun privacyRequired(info: ConsentInformation) = info.privacyOptionsRequirementStatus == ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED
     private fun statusName(info: ConsentInformation) = when (info.consentStatus) {
         ConsentInformation.ConsentStatus.REQUIRED -> "REQUIRED"
         ConsentInformation.ConsentStatus.NOT_REQUIRED -> "NOT_REQUIRED"
@@ -76,11 +78,19 @@ class InMobiAdsPlugin : Plugin() {
     }
     private fun consentResult(can: Boolean, status: String, options: Boolean) = JSObject().apply { put("canRequestAds", can); put("status", status); put("privacyOptionsRequired", options) }
 
+    // The privacy options form (accept, refuse, change, WITHDRAW the consent). It works after a refusal too: it does not need `canRequestAds`. The answer carries the state AFTER the form, so the game can start the SDK
+    // when the consent was given later, or stop using it when it was withdrawn.
     @PluginMethod
     fun showPrivacyOptions(call: PluginCall) {
         val a = activityOrNull()
-        if (a == null) { call.resolve(); return }
-        try { a.runOnUiThread { UserMessagingPlatform.showPrivacyOptionsForm(a) { call.resolve() } } } catch (e: Throwable) { call.resolve() }
+        if (a == null) { call.resolve(consentResult(false, "UNKNOWN", false)); return }
+        try {
+            val info = consentInfo ?: UserMessagingPlatform.getConsentInformation(a).also { consentInfo = it }
+            a.runOnUiThread {
+                try { UserMessagingPlatform.showPrivacyOptionsForm(a) { call.resolve(consentResult(info.canRequestAds(), statusName(info), privacyRequired(info))) } }
+                catch (e: Throwable) { call.resolve(consentResult(info.canRequestAds(), statusName(info), privacyRequired(info))) }
+            }
+        } catch (e: Throwable) { call.resolve(consentResult(false, "UNKNOWN", false)) }
     }
 
     // The consent handed to InMobi: GDPR applies / consent available / the IAB TCF string that UMP keeps in the default SharedPreferences.

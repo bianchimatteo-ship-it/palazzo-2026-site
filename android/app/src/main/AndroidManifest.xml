@@ -24,6 +24,13 @@
 
         </activity>
 
+        <!-- AdMob APPLICATION ID (the App ID with «~», NOT an Ad Unit ID with «/»), from the owner's AdMob account (it was in the repository history, commit e919e5f). The Google UMP SDK
+             (the consent form of Privacy & messaging) reads it from the manifest; without it requestConsentInfoUpdate can fail. It starts no ad: there is no Google Mobile Ads SDK in the app and every ad format is
+             off (ADS_MODE off); the only ads provider is InMobi, behind the remote configuration. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-6404822903303014~1677702221" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

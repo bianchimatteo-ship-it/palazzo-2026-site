@@ -22,7 +22,7 @@ export interface InMobiAdsPlugin {
   showBanner(options: { placementId: string; margin?: number; testMode?: boolean }): Promise<{ shown: boolean; code?: string }>;
   hideBanner(): Promise<void>;
   /** The privacy options form of the CMP, when `privacyOptionsRequired`. */
-  showPrivacyOptions(): Promise<void>;
+  showPrivacyOptions(): Promise<ConsentResult | void>;
   /** iOS only, and only if the remote configuration asks for it: the App Tracking Transparency prompt. Resolves the status (never prompts on Android). */
   requestTracking(): Promise<{ status: string }>;
 }

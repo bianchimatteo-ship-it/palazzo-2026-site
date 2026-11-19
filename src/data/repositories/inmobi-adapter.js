@@ -4,7 +4,7 @@
 // The reward is counted ONLY when the native side reports the SDK's own confirmation (Android `onRewardsUnlocked`, iOS `rewardActionCompletedWithRewards`, both turned into `rewarded: true` by the plugin);
 // a video closed early, a failed show, a missing plugin or any error gives nothing, and one completion id is made natively for each video (so it can never be credited twice).
 // No data of the player (position, birth date, gender, career) is ever sent: the only things passed to the plugin are the Account ID, the placement ids and the test flag.
-import { FORMATS, defaultAds } from '../ads-config.js?v=20261119-2';
+import { FORMATS, defaultAds } from '../ads-config.js?v=20261119-3';
 
 export function createInMobiAdapter({ plugin = globalThis.Capacitor?.Plugins?.InMobiAds ?? null, platform = 'android', config = null } = {}) {
   let ids = config ?? defaultAds(platform);
@@ -70,8 +70,21 @@ export function createInMobiAdapter({ plugin = globalThis.Capacitor?.Plugins?.In
       ready.delete('interstitial');
       try { const out = await plugin.showAd({ format: 'interstitial' }); return out?.shown === true; } catch { return false; } finally { load('interstitial'); }
     },
-    // The privacy options form of the CMP (settings), when the plugin says it must be offered.
-    async showPrivacyOptions() { if (!plugin?.showPrivacyOptions || !(await isReady())) return false; try { await plugin.showPrivacyOptions(); return true; } catch { return false; } },
+    // The privacy options form of the CMP (settings): accept, refuse, change or withdraw. It works after a refusal (it does not need the consent). The state after the form is read back: a consent given now starts the SDK,
+    // a consent withdrawn stops it (banner hidden, loaded formats forgotten, the next start asks again).
+    async showPrivacyOptions() {
+      if (!plugin?.showPrivacyOptions) return false;
+      try {
+        const info = await plugin.showPrivacyOptions();
+        if (info && typeof info === 'object') {
+          const before = consent.canRequestAds;
+          consent = { canRequestAds: info.canRequestAds === true, status: info.status ?? consent.status, privacyOptions: info.privacyOptionsRequired === true };
+          if (before && !consent.canRequestAds) { await this.hideBanner(); ready.clear(); initPromise = null; }
+          else if (!before && consent.canRequestAds) { initPromise = null; if (usable()) start().catch(() => {}); }
+        }
+        return true;
+      } catch { return false; }
+    },
     formats: FORMATS
   };
 }

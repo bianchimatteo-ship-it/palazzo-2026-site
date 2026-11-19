@@ -1,7 +1,7 @@
 // The native side of InMobi, checked without a device, Xcode or an Android SDK:
 //  A. consistency: the same eight methods in the TypeScript definitions, the Kotlin plugin and the Swift plugin; no AdMob anywhere; no personal data to the SDK; the rewards only from the SDK's confirmation callbacks;
 //  B. configuration: SDK versions (Android 11.5.1 Kotlin, iOS 11.5.0 Swift), Capacitor sync (Android plugin registered, iOS plugin in the SPM package), SKAdNetwork, privacy manifest, ATT text, permissions;
-//  C. protected release: bundle id, iOS version 1.0 (1), Android versionCode untouched, no signing / team in the repository;
+//  C. protected release: bundle id, iOS version 1.0 (1), Android versionCode 3 / versionName 1.0.2, no signing / team in the repository;
 //  D. COMPILATION of the Kotlin plugin against the real InMobi SDK 11.5.1 (Maven Central + the Kotlin compiler shipped with Gradle). SKIPPED (said aloud) when the network, Java or Gradle are missing.
 // NOT done here, and said in docs/inmobi.md: the Gradle build with the Android SDK (not available), the Swift compilation (no Xcode), any run on a device.
 import assert from 'node:assert/strict';
@@ -44,7 +44,9 @@ const gradle = read('plugins/inmobi-ads/android/build.gradle');
 assert.match(gradle, /inmobiVersion = '11\.5\.1'/); assert.match(gradle, /com\.inmobi\.monetization:inmobi-ads-kotlin:\$inmobiVersion/); assert.match(gradle, /user-messaging-platform/); assert.ok(!/play-services-ads|admob/i.test(code(gradle)), 'Nessun SDK Google Mobile Ads.');
 assert.match(read('plugins/inmobi-ads/Package.swift'), /InMobiSDK-Swift-Package", exact: "11\.5\.0"/, 'iOS: SDK 11.5.0 con Swift Package.');
 assert.ok(!/<uses-permission/.test(read('plugins/inmobi-ads/android/src/main/AndroidManifest.xml')), 'Il plugin non aggiunge permessi: li porta l’SDK InMobi (INTERNET, ACCESS_NETWORK_STATE, AD_ID).');
-const appManifest = read('android/app/src/main/AndroidManifest.xml'); assert.deepEqual([...appManifest.matchAll(/uses-permission android:name="([^"]+)"/g)].map(m => m[1]), ['android.permission.INTERNET'], 'Il manifest dell’app dichiara solo INTERNET.'); assert.ok(!/APPLICATION_ID|gms\.ads/.test(appManifest), 'Nessun meta-data AdMob.');
+const appManifest = read('android/app/src/main/AndroidManifest.xml'); assert.deepEqual([...appManifest.matchAll(/uses-permission android:name="([^"]+)"/g)].map(m => m[1]), ['android.permission.INTERNET'], 'Il manifest dell’app dichiara solo INTERNET.'); const ADMOB_APP_ID = 'ca-app-pub-6404822903303014~1677702221';   // the owner's AdMob APPLICATION id (with «~»); it was in the history of the repository (e919e5f) and is read by the Google UMP SDK
+assert.deepEqual([...appManifest.matchAll(/<meta-data\s+android:name="com\.google\.android\.gms\.ads\.APPLICATION_ID"\s+android:value="([^"]+)"/g)].map(m => m[1]), [ADMOB_APP_ID], 'Il manifest ha il solo App ID AdMob (con «~») richiesto da UMP.');
+assert.ok(!/ca-app-pub-\d+\/\d+/.test(appManifest) && !/gms\.ads\.(?!APPLICATION_ID)/.test(appManifest.replace(/com\.google\.android\.gms\.ads\.APPLICATION_ID/g, '')), 'Nessun Ad Unit ID (con «/») né altro meta-data pubblicitario nel manifest.');
 assert.match(read('android/capacitor.settings.gradle'), /politicando-inmobi-ads/); assert.ok(!/admob/i.test(read('android/capacitor.settings.gradle') + read('android/app/capacitor.build.gradle')), 'Gradle sincronizzato: niente AdMob.');
 assert.match(read('android/app/capacitor.build.gradle'), /project\(':politicando-inmobi-ads'\)/);
 const cap = JSON.parse(read('capacitor.config.json')); assert.deepEqual(cap.ios.includePlugins, ['politicando-inmobi-ads'], 'iOS: solo il bridge InMobi.');
@@ -59,9 +61,9 @@ const pbx = read('ios/App/App.xcodeproj/project.pbxproj');
 assert.ok([...pbx.matchAll(/PRODUCT_BUNDLE_IDENTIFIER = ([^;]+);/g)].every(m => m[1] === 'it.matteobianchi.politicando2026'), 'iOS: Bundle ID invariato.');
 assert.ok([...pbx.matchAll(/MARKETING_VERSION = ([^;]+);/g)].every(m => m[1] === '1.0') && [...pbx.matchAll(/CURRENT_PROJECT_VERSION = ([^;]+);/g)].every(m => m[1] === '1'), 'iOS: versione 1.0 (1) invariata.');
 assert.ok(!/DEVELOPMENT_TEAM = [A-Z0-9]{10}/.test(pbx), 'iOS: nessun Team nel repository.'); assert.ok(!/ca-app-pub|GADApplication/.test(pbx));
-const app = read('android/app/build.gradle'); assert.match(app, /applicationId "it\.matteobianchi\.politicando2026"/); assert.match(app, /versionCode 1\b/); assert.match(app, /versionName "1\.0"/);
+const app = read('android/app/build.gradle'); assert.match(app, /applicationId "it\.matteobianchi\.politicando2026"/); assert.match(app, /versionCode 3\b/); assert.match(app, /versionName "1\.0\.2"/);
 assert.equal(JSON.parse(read('capacitor.config.json')).appId, 'it.matteobianchi.politicando2026');
-lines.push('Bundle ID, versione iOS 1.0 (1), versionCode Android, firma e Team: invariati');
+lines.push('Bundle ID, versione iOS 1.0 (1), versionCode Android 3 (1.0.2); firma e Team: invariati');
 
 // ---- D ----
 function compileKotlin() {

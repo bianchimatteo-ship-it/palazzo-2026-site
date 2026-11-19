@@ -7,6 +7,6 @@ export const InMobiAdsWeb = {
     showAd: async () => ({ shown: false, rewarded: false, code: 'unavailable' }),
     showBanner: async () => ({ shown: false, code: 'unavailable' }),
     hideBanner: async () => undefined,
-    showPrivacyOptions: async () => undefined,
+    showPrivacyOptions: async () => ({ canRequestAds: false, status: 'UNKNOWN', privacyOptionsRequired: false }),
     requestTracking: async () => ({ status: 'unavailable' })
 };

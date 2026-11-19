@@ -19,7 +19,7 @@ const ACCOUNT = '60d3e31b9c094bd69283e287bc2d4c42';
 const lines = [];
 
 // ---------- 1. safe defaults and identifiers ----------
-assert.equal(ADS_PROVIDER, 'inmobi'); assert.equal(ADS_MODE, 'test', 'Modalità predefinita: test.');
+assert.equal(ADS_PROVIDER, 'inmobi'); assert.equal(ADS_MODE, 'off', 'Modalità predefinita: off (nessuna pubblicità, nessuna richiesta di consenso all’avvio).');
 assert.deepEqual({ ...INMOBI.placements }, { rewarded: '10000884972', banner: '10000884973', interstitial: '10000884974' }, 'I Placement ID sono quelli del proprietario.');
 assert.equal(INMOBI.appKey, '10000256631'); assert.deepEqual({ ...INMOBI.sdk }, { android: '11.5.1', ios: '11.5.0' });
 for (const platform of ['android', 'ios']) {
@@ -187,7 +187,11 @@ lines.push('Worker: configurazione pubblica, credito validato dal server per osp
 
 // ---------- 7. no AdMob left, no invented id ----------
 const files = fs.readdirSync(new URL('src/', ROOT), { recursive: true }).filter(name => /\.(js|json|html|css)$/.test(name) && !/^data\/(real|i18n)\//.test(name) && !/release-pairs|dictionary/.test(name)).map(name => [`src/${name}`, fs.readFileSync(new URL(`src/${name}`, ROOT), 'utf8')]);
-for (const [name, text] of [...files, ['worker.js', fs.readFileSync(new URL('worker.js', ROOT), 'utf8')], ['package.json', fs.readFileSync(new URL('package.json', ROOT), 'utf8')], ['android/app/src/main/AndroidManifest.xml', fs.readFileSync(new URL('android/app/src/main/AndroidManifest.xml', ROOT), 'utf8')], ['android/app/capacitor.build.gradle', fs.readFileSync(new URL('android/app/capacitor.build.gradle', ROOT), 'utf8')]]) assert.ok(!/ca-app-pub-|capacitor-community\/admob|capacitor-community-admob|play-services-ads|com\.google\.android\.gms\.ads\.APPLICATION_ID/.test(text), `${name}: nessun resto di AdMob.`);
+for (const [name, text] of [...files, ['worker.js', fs.readFileSync(new URL('worker.js', ROOT), 'utf8')], ['package.json', fs.readFileSync(new URL('package.json', ROOT), 'utf8')], ['android/app/src/main/AndroidManifest.xml', fs.readFileSync(new URL('android/app/src/main/AndroidManifest.xml', ROOT), 'utf8')], ['android/app/capacitor.build.gradle', fs.readFileSync(new URL('android/app/capacitor.build.gradle', ROOT), 'utf8')]]) {
+  // the only AdMob thing allowed is the owner's APPLICATION id (with «~») in the manifest, for the Google UMP SDK (see check-inmobi-native); no Ad Unit id, no Mobile Ads SDK anywhere
+  const scanned = name.endsWith('AndroidManifest.xml') ? text.replace(/<meta-data\s+android:name="com\.google\.android\.gms\.ads\.APPLICATION_ID"\s+android:value="ca-app-pub-6404822903303014~1677702221"\s*\/>/, '').replace(/<!--[\s\S]*?-->/g, '') : text;
+  assert.ok(!/ca-app-pub-|capacitor-community\/admob|capacitor-community-admob|play-services-ads|com\.google\.android\.gms\.ads\.APPLICATION_ID/.test(scanned), `${name}: nessun resto di AdMob.`);
+}
 assert.ok(!fs.existsSync(new URL('src/data/repositories/admob-adapter.js', ROOT)), 'Il vecchio adattatore AdMob è stato eliminato.');
 assert.ok(!fs.existsSync(new URL('node_modules/@capacitor-community/admob', ROOT)), 'Il pacchetto AdMob non è più installato.');
 lines.push('nessun resto di AdMob (adattatore, SDK, manifest, id)');

@@ -1,5 +1,5 @@
 /** The ad formats of the game. `rewarded` and `interstitial` are full-screen; `banner` is an overlay at the bottom. */
-export declare type AdFormat = 'rewarded' | 'interstitial';
+export type AdFormat = 'rewarded' | 'interstitial';
 export interface ConsentResult {
     /** `true` only when the CMP (Google UMP, IAB TCF) says ads may be requested: consent given, or not required. */
     canRequestAds: boolean;
@@ -49,7 +49,7 @@ export interface InMobiAdsPlugin {
     }>;
     hideBanner(): Promise<void>;
     /** The privacy options form of the CMP, when `privacyOptionsRequired`. */
-    showPrivacyOptions(): Promise<void>;
+    showPrivacyOptions(): Promise<ConsentResult | void>;
     /** iOS only, and only if the remote configuration asks for it: the App Tracking Transparency prompt. Resolves the status (never prompts on Android). */
     requestTracking(): Promise<{
         status: string;

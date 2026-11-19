@@ -9,8 +9,8 @@
 // It is a public identifier, not a secret. The remote configuration may override it (`accountId`); one that is present but malformed switches everything off. Having it turns NO format on: all stay OFF until the remote configuration says so.
 export const INMOBI = Object.freeze({ appKey: '10000256631', accountId: '60d3e31b9c094bd69283e287bc2d4c42', placements: Object.freeze({ rewarded: '10000884972', banner: '10000884973', interstitial: '10000884974' }), sdk: Object.freeze({ android: '11.5.1', ios: '11.5.0' }) });
 export const ADS_PROVIDER = 'inmobi';
-// 'test' (the default: InMobi test mode, no real ad, no earnings) or 'live' (set only by the remote configuration, after the checks of docs/inmobi.md). 'off' disables everything.
-export const ADS_MODE = 'test';
+// 'off' (the DEFAULT: nothing is asked, nothing is shown), 'test' (InMobi test mode, no real ad, no earnings: only the remote configuration can set it) or 'live' (set only by the remote configuration, after the checks of docs/inmobi.md). 'off' disables everything.
+export const ADS_MODE = 'off';
 export const FORMATS = Object.freeze(['rewarded', 'banner', 'interstitial']);
 export const PLATFORMS = Object.freeze(['android', 'ios']);
 // The pages (hash) of the game that may carry a banner: secondary screens only, never the home, a scene, the vote, the night or the weekly report.
@@ -23,7 +23,7 @@ const DEFAULT_POINTS = 0.15;
 const PLACEMENT = /^\d{8,20}$/, ACCOUNT_ID = /^[0-9a-f]{32,36}$/i;
 
 const off = (platform = 'android') => ({
-  platform, provider: ADS_PROVIDER, mode: 'test', testing: true, accountId: INMOBI.accountId, enabled: false, source: 'default',
+  platform, provider: ADS_PROVIDER, mode: ADS_MODE, testing: true, accountId: INMOBI.accountId, enabled: false, source: 'default',
   rewarded: { enabled: false, placementId: INMOBI.placements.rewarded }, banner: { enabled: false, placementId: INMOBI.placements.banner }, interstitial: { enabled: false, placementId: INMOBI.placements.interstitial },
   interstitialPolicy: { ...INTERSTITIAL }, rewardPoints: DEFAULT_POINTS
 });

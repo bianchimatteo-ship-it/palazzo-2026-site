@@ -4,8 +4,8 @@
 // votes are EXACTLY what the old formula gives from the saved percentages and the valid ballots (largest remainder on the percentages alone). Anything else (a different shape, edited, already repaired, rows that
 // reach 100 %, missing data) is left exactly as it is and reported as «non ricostruibile»: nothing is invented and nothing is changed silently. The original votes are kept in `votesBefore`, the repair is marked
 // in `votesMigration` (so it runs once) and the caller keeps a copy of the whole save (storage.backup) before anything is written.
-import { distributeVotes } from './electorate.js?v=20261119-2';
-import { nightSnapshot } from './night-engine.js?v=20261119-2';
+import { distributeVotes } from './electorate.js?v=20261119-3';
+import { nightSnapshot } from './night-engine.js?v=20261119-3';
 
 export const VOTES_MIGRATION_VERSION = 1;
 const NATIONAL = new Set(['politiche', 'europee']);

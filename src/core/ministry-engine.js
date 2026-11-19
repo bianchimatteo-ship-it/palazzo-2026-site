@@ -1,8 +1,8 @@
 // The desk of a minister (the player when he holds a ministry): the department with its areas, the problems that the indicators show, a priority; the proposals he prepares, sounds out with his
 // colleagues and submits to the Council of Ministers, where each minister and the Prime Minister vote; what the Prime Minister asks him (reports, plans) with a deadline; the crises of his sector.
 // He acts only in the areas of his department: a proposal outside it is refused and says who is competent. Pure and deterministic (choices are hashes of the keys, never the game's random sequence).
-import { AREA_BY_ID, areasOfPortfolio } from '../data/simulation/policy-rules.js?v=20261119-2';
-import { seededRandom } from './vote-engine.js?v=20261119-2';
+import { AREA_BY_ID, areasOfPortfolio } from '../data/simulation/policy-rules.js?v=20261119-3';
+import { seededRandom } from './vote-engine.js?v=20261119-3';
 
 export const MINISTRY_RULES = Object.freeze({ maxProposals: 3, prepWeeks: 2, sessionEvery: 4, assignmentEvery: 8, assignmentWeeks: 3, crisisBelow: 38, crisisWeeks: 4, lobbyBoost: 0.22 });
 export const FINANCING = Object.freeze({ evasione: 'lotta all’evasione', deficit: 'deficit', tagli: 'tagli di spesa', ue: 'fondi europei' });
