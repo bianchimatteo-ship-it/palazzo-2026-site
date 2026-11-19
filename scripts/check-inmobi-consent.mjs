@@ -21,7 +21,7 @@ function fakePlugin(script) {
   };
   return plugin;
 }
-const ON = { enabled: true, accountId: '60d3e31b9c094bd69283e287bc2d4c42', testing: true, banner: { enabled: true, placementId: '1' }, interstitial: { enabled: true, placementId: '2' }, rewarded: { enabled: true, placementId: '3' } };
+const ON = { enabled: true, accountId: 'abcdef0123456789abcdef0123456789', testing: true, banner: { enabled: true, placementId: '1' }, interstitial: { enabled: true, placementId: '2' }, rewarded: { enabled: true, placementId: '3' } };
 
 // 1. ADS OFF: nothing is asked, nothing is called
 {

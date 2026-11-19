@@ -2,12 +2,20 @@
 // GET /api/ads/config, see worker.js and docs/inmobi.md) into what the app may do. Whatever the remote answer is, the result is clamped and validated here; an unreachable, invalid or missing answer means
 // the safe defaults below: every format OFF. Real ads stay OFF until the owner verifies the integration (mode 'test' by default: InMobi test mode, never real ads).
 //
-// Identifiers (the owner's, from the InMobi dashboard; they are PLACEMENT ids, not secrets):
-//   · App Key 10000256631 (the dashboard's id of the app: NOT used by the SDK, kept here for the record)
-//   · Rewarded 10000884972 · Banner 10000884973 · Interstitial 10000884974
-// The Account ID that the SDK needs to initialise is NOT any of these: it is the owner's InMobi account id (official guide: a string of 32 to 36 characters; the owner's is 32 hex characters, the same format).
-// It is a public identifier, not a secret. The remote configuration may override it (`accountId`); one that is present but malformed switches everything off. Having it turns NO format on: all stay OFF until the remote configuration says so.
-export const INMOBI = Object.freeze({ appKey: '10000256631', accountId: '60d3e31b9c094bd69283e287bc2d4c42', placements: Object.freeze({ rewarded: '10000884972', banner: '10000884973', interstitial: '10000884974' }), sdk: Object.freeze({ android: '11.5.1', ios: '11.5.0' }) });
+// Identifiers (the owner's, from the InMobi dashboard; they are PLACEMENT ids, not secrets). ONE set PER PLATFORM, never mixed: Android reads only `INMOBI.android`, iOS only `INMOBI.ios`.
+//   Android · App Key 10000256631 (the dashboard's id of the app: NOT used by the SDK, kept for the record) · Rewarded 10000884972 · Banner 10000884973 · Interstitial 10000884974
+//   iOS     · Bundle ID it.politicando2026.app · App Key 10000257482 (same remark) · Rewarded 10000888244 · Banner 10000888245 · Interstitial 10000888243 (from the dashboard, verified)
+//   The two sets are different and never mixed: a platform reads only its own.
+// The Account ID that the SDK needs to initialise (iOS `IMSdk.initWithAccountID`, Android `InMobiSdk.init`) is NOT any of these ids, and NOT the user id of the profile or the Publisher Payment ID: it is the InMobi ACCOUNT id,
+// verified by the owner from the dashboard. It is a public identifier, not a secret. The remote configuration may override it (`accountId`); one that is present but malformed switches everything off. Having it turns NO
+// format on: all stay OFF until the remote configuration says so (and `ADS_MODE` is 'off' by default).
+export const INMOBI = Object.freeze({
+  accountId: '60d3e31b9c094bd69283e287bc2d4c42',   // the InMobi Account ID, verified by the owner from the dashboard (19/11/2026); shared by both platforms; public, not a secret
+  android: Object.freeze({ appKey: '10000256631', placements: Object.freeze({ rewarded: '10000884972', banner: '10000884973', interstitial: '10000884974' }) }),
+  ios: Object.freeze({ bundleId: 'it.politicando2026.app', appKey: '10000257482', placements: Object.freeze({ rewarded: '10000888244', banner: '10000888245', interstitial: '10000888243' }) }),
+  sdk: Object.freeze({ android: '11.5.1', ios: '11.5.0' })
+});
+// Test Mode OFF and Audience Bidding OFF in the dashboard (both apps); Global eCPM floor 0.01 is a dashboard setting, not read by the code.
 export const ADS_PROVIDER = 'inmobi';
 // 'off' (the DEFAULT: nothing is asked, nothing is shown), 'test' (InMobi test mode, no real ad, no earnings: only the remote configuration can set it) or 'live' (set only by the remote configuration, after the checks of docs/inmobi.md). 'off' disables everything.
 export const ADS_MODE = 'off';
@@ -22,9 +30,11 @@ export const LIMITS = Object.freeze({ everyWeeks: [1, 52], minGapMs: [60_000, 3_
 const DEFAULT_POINTS = 0.15;
 const PLACEMENT = /^\d{8,20}$/, ACCOUNT_ID = /^[0-9a-f]{32,36}$/i;
 
+// the identifiers of ONE platform (an unknown platform is Android, as everywhere else in this file)
+const ids = platform => (platform === 'ios' ? INMOBI.ios : INMOBI.android);
 const off = (platform = 'android') => ({
   platform, provider: ADS_PROVIDER, mode: ADS_MODE, testing: true, accountId: INMOBI.accountId, enabled: false, source: 'default',
-  rewarded: { enabled: false, placementId: INMOBI.placements.rewarded }, banner: { enabled: false, placementId: INMOBI.placements.banner }, interstitial: { enabled: false, placementId: INMOBI.placements.interstitial },
+  rewarded: { enabled: false, placementId: ids(platform).placements.rewarded }, banner: { enabled: false, placementId: ids(platform).placements.banner }, interstitial: { enabled: false, placementId: ids(platform).placements.interstitial },
   interstitialPolicy: { ...INTERSTITIAL }, rewardPoints: DEFAULT_POINTS
 });
 // Safe defaults for a platform: every format off, mode test, no account id.
@@ -48,7 +58,7 @@ export function resolveAds(platform, remote = null) {
   const out = { ...base, mode, testing: mode !== 'live', accountId: master ? accountId : null, source: 'remote' };
   for (const format of FORMATS) {
     const item = pick(format);
-    const placementId = typeof item.placementId === 'string' && PLACEMENT.test(item.placementId) ? item.placementId : INMOBI.placements[format];
+    const placementId = typeof item.placementId === 'string' && PLACEMENT.test(item.placementId) ? item.placementId : ids(platform).placements[format];
     out[format] = { enabled: master && flag(item.enabled), placementId };
   }
   const policy = pick('interstitialPolicy');

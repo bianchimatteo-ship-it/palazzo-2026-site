@@ -37,6 +37,9 @@ for (const [name, text] of [['Kotlin', kt], ['Swift', sw]]) { assert.match(text,
 assert.match(kt, /canRequestAds\(\) != true[\s\S]{0,120}no-consent/, 'Kotlin: niente inizializzazione senza consenso.'); assert.match(sw, /canRequestAds else \{ call\.resolve\(\["ok": false, "code": "no-consent"\]/, 'Swift: niente inizializzazione senza consenso.');
 assert.match(kt, /full\.remove\(format\)/, 'Kotlin: un annuncio si mostra una volta (oggetto nuovo per il prossimo).'); assert.match(sw, /removeValue\(forKey: key\)/, 'Swift: un annuncio si mostra una volta.');
 assert.ok(!/requestTrackingAuthorization/.test(sw.replace(/@objc func requestTracking[\s\S]*$/, '')), 'Swift: l’ATT si chiede solo da requestTracking.');
+for (const [name, source] of [['Kotlin', kt], ['Swift', sw]]) assert.ok(!/\b1000\d{6,}\b|60d3e31b/.test(source), `${name}: nessun App Key, Placement ID o Account ID scritto nel codice nativo: li passa il livello web, per piattaforma.`);
+assert.match(kt, /getString\("placementId"\)/, 'Kotlin: il Placement ID arriva dalla chiamata.'); assert.match(sw, /getString\("placementId"\)/, 'Swift: il Placement ID arriva dalla chiamata.');
+assert.match(kt, /getString\("accountId"\)/, 'Kotlin: l’Account ID arriva dalla chiamata (nulla da inizializzare se manca).'); assert.match(sw, /getString\("accountId"\), !account\.isEmpty/, 'Swift: senza Account ID l’SDK non parte.');
 lines.push('contratto uguale in TypeScript/Kotlin/Swift, nessun AdMob, nessun dato personale, premio solo dalla conferma dell’SDK, consenso prima dell’init');
 
 // ---- B ----
@@ -49,12 +52,14 @@ assert.deepEqual([...appManifest.matchAll(/<meta-data\s+android:name="com\.googl
 assert.ok(!/ca-app-pub-\d+\/\d+/.test(appManifest) && !/gms\.ads\.(?!APPLICATION_ID)/.test(appManifest.replace(/com\.google\.android\.gms\.ads\.APPLICATION_ID/g, '')), 'Nessun Ad Unit ID (con «/») né altro meta-data pubblicitario nel manifest.');
 assert.match(read('android/capacitor.settings.gradle'), /politicando-inmobi-ads/); assert.ok(!/admob/i.test(read('android/capacitor.settings.gradle') + read('android/app/capacitor.build.gradle')), 'Gradle sincronizzato: niente AdMob.');
 assert.match(read('android/app/capacitor.build.gradle'), /project\(':politicando-inmobi-ads'\)/);
-const cap = JSON.parse(read('capacitor.config.json')); assert.deepEqual(cap.ios.includePlugins, ['politicando-inmobi-ads'], 'iOS: solo il bridge InMobi.');
-assert.match(read('ios/App/CapApp-SPM/Package.swift'), /PoliticandoInmobiAds/, 'iOS: il pacchetto SPM include il bridge.');
+// iOS 1.0.1 (2): InMobi is PAUSED on iOS: the bridge is NOT in the iOS build (no SDK, no UMP, no SKAdNetwork, no advertising declarations: as in the 1.0 (1) already sent to Apple). Android keeps its bridge.
+const cap = JSON.parse(read('capacitor.config.json')); assert.deepEqual(cap.ios.includePlugins, [], 'iOS: nessun plugin pubblicitario nella release (InMobi in pausa).');
+assert.doesNotMatch(read('ios/App/CapApp-SPM/Package.swift'), /Inmobi|InMobi|UserMessaging/, 'iOS: il pacchetto SPM non include né InMobi né UMP.');
+assert.match(read('android/capacitor.settings.gradle'), /politicando-inmobi-ads/, 'Android: il bridge InMobi resta registrato.');
 const pkg = JSON.parse(read('package.json')); assert.ok(pkg.dependencies['politicando-inmobi-ads'] && !pkg.dependencies['@capacitor-community/admob'] && !pkg.devDependencies?.['@capacitor-community/admob'], 'package.json: bridge InMobi, niente AdMob.');
-const info = read('ios/App/App/Info.plist'); assert.match(info, /<key>SKAdNetworkItems<\/key>[\s\S]*wzmmz9fp6w\.skadnetwork/, 'iOS: SKAdNetwork di InMobi.'); assert.ok(!/NSUserTrackingUsageDescription/.test(info), 'iOS: nessun testo ATT: l’app non chiede il tracciamento (il prompt andrebbe aggiunto solo se lo si attiva).'); assert.match(sw, /forInfoDictionaryKey: "NSUserTrackingUsageDescription"\) != nil/, 'Swift: requestTracking non parte mai senza il testo ATT (eviterebbe un crash).'); assert.ok(!/GADApplicationIdentifier/.test(info));
-const privacy = read('ios/App/App/PrivacyInfo.xcprivacy'); assert.match(privacy, /NSPrivacyCollectedDataTypeAdvertisingData/); assert.match(privacy, /ThirdPartyAdvertising/); assert.match(privacy, /<key>NSPrivacyTracking<\/key>\s*<false\/>/, 'Tracking falso finché l’ATT non è attivato.');
-lines.push('versioni SDK, Gradle/SPM sincronizzati, permessi, SKAdNetwork, privacy manifest, ATT');
+const info = read('ios/App/App/Info.plist'); assert.ok(!/SKAdNetworkItems|NSUserTrackingUsageDescription|GADApplicationIdentifier/.test(info), 'iOS: nessun SKAdNetwork, testo ATT o ID AdMob (nessuna pubblicità nella release).');
+const privacy = read('ios/App/App/PrivacyInfo.xcprivacy'); assert.doesNotMatch(privacy, /ThirdPartyAdvertising|AdvertisingData/, 'iOS: il privacy manifest non dichiara pubblicità di terzi (nessun SDK pubblicitario).'); assert.match(privacy, /<key>NSPrivacyTracking<\/key>\s*<false\/>/, 'Tracking falso.');
+lines.push('versioni SDK, Gradle sincronizzato (Android), iOS senza SDK pubblicitari né dichiarazioni pubblicitarie, permessi');
 
 // ---- C ----
 const pbx = read('ios/App/App.xcodeproj/project.pbxproj');

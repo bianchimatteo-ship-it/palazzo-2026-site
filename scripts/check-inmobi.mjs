@@ -15,21 +15,38 @@ const { createInMobiAdapter } = await load('src/data/repositories/inmobi-adapter
 const { createAdsManager } = await load('src/data/repositories/ads-manager.js');
 const { createRewardedAds } = await load('src/data/repositories/ads-rewarded.js');
 const rules = await load('src/data/simulation/reward-rules.js');
-const ACCOUNT = '60d3e31b9c094bd69283e287bc2d4c42';
+const ACCOUNT = 'abcdef0123456789abcdef0123456789'; // a FIXTURE (well-formed, invented for the tests): the real Account ID is not configured yet
 const lines = [];
 
 // ---------- 1. safe defaults and identifiers ----------
 assert.equal(ADS_PROVIDER, 'inmobi'); assert.equal(ADS_MODE, 'off', 'Modalità predefinita: off (nessuna pubblicità, nessuna richiesta di consenso all’avvio).');
-assert.deepEqual({ ...INMOBI.placements }, { rewarded: '10000884972', banner: '10000884973', interstitial: '10000884974' }, 'I Placement ID sono quelli del proprietario.');
-assert.equal(INMOBI.appKey, '10000256631'); assert.deepEqual({ ...INMOBI.sdk }, { android: '11.5.1', ios: '11.5.0' });
+// one set of identifiers PER PLATFORM, never mixed
+assert.deepEqual({ ...INMOBI.android.placements }, { rewarded: '10000884972', banner: '10000884973', interstitial: '10000884974' }, 'Android: i Placement ID già esistenti sono conservati.');
+assert.equal(INMOBI.android.appKey, '10000256631', 'Android: App Key invariata.');
+assert.deepEqual({ ...INMOBI.ios.placements }, { rewarded: '10000888244', banner: '10000888245', interstitial: '10000888243' }, 'iOS: Placement ID verificati dalla dashboard.');
+assert.ok(!Object.values(INMOBI.ios.placements).some(id => Object.values(INMOBI.android.placements).includes(id)), 'Nessun Placement ID in comune tra Android e iOS.');
+assert.equal(INMOBI.ios.appKey, '10000257482', 'iOS: App Key della dashboard.'); assert.equal(INMOBI.ios.bundleId, 'it.politicando2026.app');
+assert.notEqual(INMOBI.android.appKey, INMOBI.ios.appKey, 'Le due App Key sono diverse.');
+assert.deepEqual({ ...INMOBI.sdk }, { android: '11.5.1', ios: '11.5.0' });
+assert.equal(INMOBI.accountId, '60d3e31b9c094bd69283e287bc2d4c42', 'Account ID InMobi verificato dal titolare: unico, per entrambe le piattaforme.'); assert.ok(!Object.values(INMOBI.android.placements).concat(Object.values(INMOBI.ios.placements), INMOBI.android.appKey, INMOBI.ios.appKey).includes(INMOBI.accountId), 'L’Account ID non coincide con App Key o Placement ID.');
 for (const platform of ['android', 'ios']) {
   const d = defaultAds(platform);
-  assert.equal(d.enabled, false); assert.equal(d.accountId, '60d3e31b9c094bd69283e287bc2d4c42', 'L’Account ID è quello del titolare, ma da solo non accende nulla.');
-  for (const format of ['rewarded', 'banner', 'interstitial']) assert.equal(d[format].enabled, false, `${platform}/${format}: spento di base.`);
+  assert.equal(d.platform, platform); assert.equal(d.enabled, false); assert.equal(d.accountId, INMOBI.accountId, `${platform}: l’Account ID è configurato ma da solo non accende nulla.`);
+  for (const format of ['rewarded', 'banner', 'interstitial']) { assert.equal(d[format].enabled, false, `${platform}/${format}: spento di base.`); assert.equal(d[format].placementId, INMOBI[platform].placements[format], `${platform}/${format}: legge il Placement ID della propria piattaforma.`); }
   assert.equal(d.rewardPoints, 0.15); assert.deepEqual({ ...d.interstitialPolicy }, { ...INTERSTITIAL });
+  // with no valid Account ID nothing turns on, whatever the remote configuration says
+  const noAccount = resolveAds(platform, { enabled: true, [platform]: { accountId: 'non-valido', mode: 'test', rewarded: { enabled: true }, banner: { enabled: true }, interstitial: { enabled: true } } });
+  assert.equal(noAccount.enabled, false, `${platform}: senza un Account ID valido nessun formato si accende.`); assert.equal(noAccount.accountId, null);
+  assert.equal(resolveAds(platform, null).enabled, false, `${platform}: senza configurazione remota tutto resta spento, pur con l’Account ID.`);
+  assert.equal(resolveAds(platform, { enabled: true, [platform]: {} }).enabled, false, `${platform}: con l’Account ID ma nessun formato acceso, tutto spento.`);
 }
-assert.ok(new Set([INMOBI.appKey, INMOBI.accountId, ...Object.values(INMOBI.placements)]).size === 5, 'App Key, Placement ID e Account ID restano distinti.');
-lines.push('predefiniti sicuri (tutto spento, nessun Account ID inventato), id del proprietario');
+// a platform never reads the identifiers of the other one, not even when the remote configuration is only for the other platform
+const only = { enabled: true, all: { accountId: ACCOUNT }, android: { rewarded: { enabled: true, placementId: '10000111111' } }, ios: { rewarded: { enabled: true, placementId: '10000222222' } } };
+assert.equal(resolveAds('android', only).rewarded.placementId, '10000111111'); assert.equal(resolveAds('ios', only).rewarded.placementId, '10000222222', 'iOS legge solo i propri Placement ID.');
+assert.equal(resolveAds('ios', { enabled: true, all: { accountId: ACCOUNT }, android: { rewarded: { enabled: true, placementId: '10000111111' } } }).rewarded.enabled, false, 'iOS non eredita la configurazione Android (anche con un Account ID valido).');
+assert.equal(resolveAds('ios', { all: { accountId: ACCOUNT }, ios: { rewarded: { enabled: true, placementId: 'x' } } }).rewarded.placementId, INMOBI.ios.placements.rewarded, 'iOS: un Placement ID non valido torna a quello di iOS.');
+assert.ok(new Set([INMOBI.android.appKey, INMOBI.ios.appKey, ...Object.values(INMOBI.android.placements), ...Object.values(INMOBI.ios.placements)]).size === 8, 'App Key e Placement ID restano distinti dagli Account ID.');
+lines.push('predefiniti sicuri (tutto spento, Account ID configurato ma nulla acceso), id separati per Android e iOS');
 
 // ---------- 2. the remote configuration: validated, clamped, per platform ----------
 const remote = { enabled: true, android: { accountId: ACCOUNT, mode: 'test', rewarded: { enabled: true }, banner: { enabled: true, placementId: '10000884973' }, interstitial: { enabled: false }, interstitialPolicy: { everyWeeks: 5, perDay: 2, minGapMs: 120000 }, rewardPoints: 0.2 }, ios: { accountId: ACCOUNT, rewarded: { enabled: true } } };
@@ -38,14 +55,14 @@ assert.equal(a.enabled, true); assert.equal(a.rewarded.enabled, true); assert.eq
 assert.equal(a.testing, true, 'In modalità test.'); assert.equal(a.rewardPoints, 0.2); assert.deepEqual({ ...a.interstitialPolicy }, { everyWeeks: 5, minGapMs: 120000, perDay: 2 });
 assert.equal(i.rewarded.enabled, true); assert.equal(i.banner.enabled, false, 'Ogni piattaforma ha le sue impostazioni.');
 assert.equal(resolveAds('android', { ...remote, android: { ...remote.android, accountId: 'non-valido' } }).enabled, false, 'Account ID malformato: nessun formato si accende.');
-assert.equal(resolveAds('android', { android: { rewarded: { enabled: true } } }).accountId, '60d3e31b9c094bd69283e287bc2d4c42', 'Senza accountId remoto vale quello del titolare.'); assert.equal(resolveAds('android', { android: {} }).enabled, false, 'Con l’Account ID ma nessun formato acceso: tutto spento.');
+assert.equal(resolveAds('android', { android: { rewarded: { enabled: true } } }).accountId, INMOBI.accountId, 'Senza accountId remoto vale quello del titolare.'); assert.equal(resolveAds('android', { android: {} }).enabled, false, 'Con l’Account ID ma nessun formato acceso: tutto spento.');
 assert.equal(resolveAds('android', { ...remote, android: { ...remote.android, accountId: '10000256631' } }).enabled, false, 'L’App Key non è un Account ID.');
 assert.equal(resolveAds('android', { ...remote, enabled: false }).enabled, false, 'Interruttore generale.');
 assert.equal(resolveAds('android', { ...remote, android: { ...remote.android, mode: 'off' } }).enabled, false, 'Modalità off.');
 assert.equal(resolveAds('android', { ...remote, android: { ...remote.android, mode: 'live' } }).testing, false, 'Reale solo se la configurazione lo dice.');
 assert.equal(resolveAds('android', { android: { accountId: ACCOUNT, mode: 'qualcosa' , rewarded: { enabled: true } } }).testing, true, 'Un valore sconosciuto torna a «test».');
 assert.equal(resolveAds('android', { android: { accountId: ACCOUNT, rewarded: { enabled: 'sì' } } }).rewarded.enabled, false, 'Solo true accende.');
-assert.equal(resolveAds('android', { android: { accountId: ACCOUNT, rewarded: { enabled: true, placementId: 'abc;drop' } } }).rewarded.placementId, INMOBI.placements.rewarded, 'Placement ID malformato: torna il predefinito.');
+assert.equal(resolveAds('android', { android: { accountId: ACCOUNT, rewarded: { enabled: true, placementId: 'abc;drop' } } }).rewarded.placementId, INMOBI.android.placements.rewarded, 'Placement ID malformato: torna il predefinito.');
 assert.equal(resolveAds('android', { android: { accountId: ACCOUNT, rewarded: { enabled: true, placementId: '10000999999' } } }).rewarded.placementId, '10000999999', 'Placement ID modificabile dalla configurazione.');
 for (const bad of [-1, 5, 'x', null, NaN]) assert.equal(resolveAds('android', { android: { accountId: ACCOUNT, rewardPoints: bad } }).rewardPoints, 0.15, `Punti fuori limite (${bad}): torna 0,15.`);
 assert.equal(resolveAds('android', { android: { accountId: ACCOUNT, interstitialPolicy: { everyWeeks: 0, perDay: 99, minGapMs: 5 } } }).interstitialPolicy.everyWeeks, INTERSTITIAL.everyWeeks, 'Frequenza fuori limite: predefinita.');
@@ -78,6 +95,11 @@ const on = (formats = {}) => resolveAds('android', { android: { accountId: ACCOU
   const q = fakePlugin(); const ok = createInMobiAdapter({ plugin: q, config: on() });
   assert.equal(await ok.rewardedProvider.isReady(), true);
   assert.deepEqual(q.calls, ['consent', 'init:' + ACCOUNT, 'load:rewarded:10000884972'], 'Prima il consenso, poi l’SDK con l’Account ID, poi il caricamento.');
+  // the same on iOS: the adapter of that platform loads ONLY the iOS placement
+  const qi = fakePlugin(); const iosAdapter = createInMobiAdapter({ plugin: qi, config: resolveAds('ios', { enabled: true, ios: { accountId: ACCOUNT, rewarded: { enabled: true }, banner: { enabled: true } } }), platform: 'ios' });
+  assert.equal(await iosAdapter.rewardedProvider.isReady(), true);
+  assert.deepEqual(qi.calls, ['consent', 'init:' + ACCOUNT, 'load:rewarded:10000888244'], 'iOS: carica il Placement ID iOS del rewarded, non quello Android.');
+  assert.ok(!qi.calls.some(call => /1000088497[234]/.test(call)), 'iOS non usa nessun Placement ID Android.');
   // SDK missing / network absent / init failure / load failure / throwing plugin: never an exception, never a reward
   for (const [name, plugin] of [['plugin assente', null], ['init fallita', fakePlugin({ init: { ok: false, code: 'init-failed' } })], ['nessuna rete (caricamento fallito)', fakePlugin({ load: { ready: false, code: 'NETWORK_UNREACHABLE' } })], ['plugin che solleva errori', { requestConsent: async () => { throw new Error('boom'); }, initialize: async () => { throw new Error('boom'); }, loadAd: async () => { throw new Error('boom'); }, showAd: async () => { throw new Error('boom'); }, showBanner: async () => { throw new Error('boom'); }, hideBanner: async () => { throw new Error('boom'); } }]]) {
     const adapter = createInMobiAdapter({ plugin, config: on() });

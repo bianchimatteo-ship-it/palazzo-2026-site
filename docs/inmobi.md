@@ -5,11 +5,12 @@ Stato: codice completo nel branch `feature/inmobi-integrazione`, **spento di bas
 ## Identificativi
 | Voce | Valore | Dove si usa |
 |---|---|---|
-| App Key | `10000256631` | solo dashboard InMobi (l'SDK **non** la usa) |
-| Rewarded (Placement ID) | `10000884972` | `src/data/ads-config.js`, sovrascrivibile dalla configurazione remota |
-| Banner (Placement ID) | `10000884973` | idem |
-| Interstitial (Placement ID) | `10000884974` | idem |
-| **Account ID** | `60d3e31b9c094bd69283e287bc2d4c42` (fornito dal titolare) | `INMOBI.accountId` in `src/data/ads-config.js`; sovrascrivibile da `accountId` remoto |
+| App Key **Android** | `10000256631` | solo dashboard InMobi (l'SDK **non** la usa) |
+| App Key **iOS** (`it.politicando2026.app`) | `10000257482` | idem; dashboard del 19/11/2026 |
+| Rewarded / Banner / Interstitial (Placement ID) **Android** | `10000884972` / `10000884973` / `10000884974` | `INMOBI.android` in `src/data/ads-config.js`, sovrascrivibili dalla configurazione remota |
+| Rewarded / Banner / Interstitial (Placement ID) **iOS** | `10000888244` / `10000888245` / `10000888243` (verificati dalla dashboard) | `INMOBI.ios`, sovrascrivibili dalla configurazione remota; diversi da quelli Android, mai mescolati |
+| **Account ID** | `60d3e31b9c094bd69283e287bc2d4c42` (verificato dal titolare dalla dashboard, 19/11/2026; non è l'ID utente del profilo né il Publisher Payment ID) | `INMOBI.accountId` in `src/data/ads-config.js`, sovrascrivibile da `accountId` nella configurazione remota; l'SDK lo riceve in `initialize` (Kotlin `InMobiSdk.init`, Swift `IMSdk.initWithAccountID`). Da solo non accende nessun formato |
+| Dashboard iOS | Test Mode OFF · Audience Bidding OFF · Global eCPM floor 0,01 | solo dashboard, non letti dal codice |
 
 **L'Account ID non è l'App Key né un Placement ID.** Verifica con la documentazione ufficiale: la guida Android InMobi usa `InMobiSdk.init(context, "<InMobi Account ID>", consent, listener)` e il changelog ne descrive il formato come stringa di 32–36 caratteri; quello del titolare è di 32 caratteri esadecimali, **coerente nel formato**. Non ho potuto verificare, con le sole fonti raggiungibili (la documentazione InMobi non è accessibile dall'ambiente; una guida di terzi indica Finance › Payment Settings), che sia proprio il *Publisher Account ID* della dashboard: va confermato dal titolare. È un identificativo pubblico, non un segreto. Averlo nel codice **non accende nessun formato**: tutti restano spenti finché `ADS_CONFIG` non li abilita. Un `accountId` remoto presente ma malformato spegne tutto.
 
@@ -32,7 +33,10 @@ Il Worker serve `GET /api/account/ads/config` (pubblico, cache 5 minuti) dalla v
                "interstitial": { "enabled": false, "placementId": "10000884974" },
                "interstitialPolicy": { "everyWeeks": 3, "perDay": 4, "minGapMs": 240000 },
                "rewardPoints": 0.15 },
-  "ios":     { "accountId": "<Account ID>", "rewarded": { "enabled": false } }
+  "ios":     { "accountId": "<Account ID>",
+               "rewarded":     { "enabled": false, "placementId": "10000888244" },
+               "banner":       { "enabled": false, "placementId": "10000888245" },
+               "interstitial": { "enabled": false, "placementId": "10000888243" } }
 }
 ```
 | Chiave | Effetto | Limiti / fallback |
@@ -94,3 +98,7 @@ La 1.0 (1) è in revisione, **senza pubblicità**, e non è toccata come archivi
 ## Test eseguiti su questo branch (PASS/FAIL/SKIPPED)
 PASS: `check-inmobi`, `check-inmobi-native` (compilazione Kotlin inclusa), `check-ads-states`, `check-rewards`, `check-rewards-page`, `check-rewards-sync`, `check-capacitor` (anche `--www`), `check-android`, `check-legal`, `check-publication`, `check-service-worker`, `check-account-deletion`, `check-security`, `check-merger-identity-browser`, `check-i18n-offline`, `check-i18n-pages`, `check-guide`.
 Non rieseguita la suite completa (richiesto): l'ultima corsa parziale sul branch `feature/miglioramento-completo` (198 comandi su 278, 3 in parallelo) aveva avuto FAIL su `check-campaign-ui`, `check-presidency`, `check-long-run`, `check-calendar-years`, `check-territory-legibility`, `check-e2e-futuro-nazionale`, `check-regional-ranking`, `check-news-voice`, `check-security` (corretto ora), `check-load`, `check-button-contrast`, `check-account-deletion` e `check-account-isolation` (passa da solo), `check-published-local`, `check-news-popup-setting`, `check-calendar-scheduling`, `check-poll-election-consistency`, `check-i18n` e SKIPPED `check-boot`, `check-panels-stay-put`: in parte preesistenti (presidency, button-contrast, campaign-ui, load) e in parte dovuti alla concorrenza; **non ancora riesaminati in serie**.
+
+
+## Pausa su iOS (release 1.0.1 build 2, 19/11/2026)
+InMobi è **in pausa**: l'obiettivo è pubblicare l'app su App Store. Nella build iOS il bridge **non è incluso** (`capacitor.config.json` → `ios.includePlugins: []`; `ios/App/CapApp-SPM/Package.swift` senza InMobi né UMP; `Info.plist` senza `SKAdNetworkItems`; `PrivacyInfo.xcprivacy` senza pubblicità di terzi: come la 1.0 (1)). Il codice Swift e le configurazioni per piattaforma restano nel repository. Android non cambia. **Per riprendere:** rimettere `"politicando-inmobi-ads"` in `ios.includePlugins`, `npm run cap:sync:ios`, ripristinare `SKAdNetworkItems` (elenco completo dalla documentazione InMobi), le dichiarazioni `ThirdPartyAdvertising`/`AdvertisingData` nel manifest e riscrivere i test di `check-inmobi-native.mjs` (sezione iOS).

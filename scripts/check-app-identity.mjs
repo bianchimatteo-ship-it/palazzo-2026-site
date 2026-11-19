@@ -49,7 +49,10 @@ lines.push(`Android ${identity.android.applicationId} · versionCode 3 / 1.0.2 i
 
 // ---------- never mixed in the shared code or the ads ----------
 const ads = await read('src/data/ads-config.js');
-assert.ok(!ads.includes(identity.ios.bundleId) && !/ca-app-pub/.test(ads), 'Gli annunci non portano né il Bundle ID iOS né ID AdMob.');
+assert.ok(!/ca-app-pub/.test(ads) && !ads.includes(identity.android.applicationId.replace('it.', 'it.')), 'Gli annunci non portano ID AdMob né l’applicationId Android; il Bundle ID iOS compare solo nel blocco iOS.');
+assert.equal(ads.split(identity.ios.bundleId).length - 1, 2, 'Il Bundle ID iOS compare solo nel blocco iOS di InMobi (commento e dato).');
+const { INMOBI } = await import(`../src/data/ads-config.js?v=${(await read('index.html')).match(/main\.js\?v=([^"']+)/)?.[1]}`);
+assert.equal(INMOBI.ios.bundleId, identity.ios.bundleId, 'InMobi iOS: Bundle ID dell’app iOS.'); assert.notEqual(INMOBI.ios.appKey, INMOBI.android.appKey, 'InMobi: App Key diverse per piattaforma.'); assert.equal(INMOBI.accountId, '60d3e31b9c094bd69283e287bc2d4c42', 'InMobi: Account ID verificato dal titolare.');
 const plistText = await read('ios/App/App/Info.plist');
 assert.ok(!/ca-app-pub|GADApplicationIdentifier/.test(plistText), 'iOS: nessun ID AdMob Android riutilizzato (l’App ID AdMob iOS non è stato fornito).');
 const manifest = await read('android/app/src/main/AndroidManifest.xml');
