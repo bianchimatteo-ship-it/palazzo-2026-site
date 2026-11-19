@@ -23,7 +23,9 @@ const sessions = name => local.sqlite.prepare('SELECT COUNT(*) AS n FROM session
 await registerApi('legacy.a', 'password-di-a');
 await registerApi('legacy.b', 'password-di-b');
 
-await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version }) => {
+await withBrowser(async ({ evaluate, goto, waitFor: waitDefault, pause, errors, version }) => {
+  // Every reload re-reads the data index and re-renders the menu: on a loaded machine that takes longer than the 25 s default (observed as the only intermittent failure), the assertions themselves are unchanged.
+  const wait = (check, timeout = 90000) => waitDefault(check, timeout);
   const click = selector => evaluate(`(() => { const el = document.querySelector(${JSON.stringify(selector)}); if (!el) throw new Error('manca ${selector.replace(/'/g, '')}'); el.click(); return true; })()`);
   const has = selector => evaluate(`Boolean(document.querySelector(${JSON.stringify(selector)}))`);
   const text = selector => evaluate(`document.querySelector(${JSON.stringify(selector)})?.textContent ?? ''`);

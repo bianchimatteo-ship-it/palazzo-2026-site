@@ -35,3 +35,23 @@ Fonte: `docs/legale-requisiti.json` (stato «non fornito»). Nulla qui è stato 
 | 13 | `admob-futuro` (InMobi) | Prima di una build che contiene l’SDK InMobi: aggiornare privacy/termini/schede store (dati pubblicitari, consenso UMP/IAB TCF, ruolo di InMobi), confermare l’Account ID dal pannello InMobi e creare i placement. Finché manca, gli annunci restano spenti. | Titolare + professionista; l’Account ID dal pannello InMobi (non lo invento). |
 
 Dopo le tue risposte: aggiorno `docs/legale-requisiti.json` (campo `provided`), le pagine `privacy.html`/`termini.html` e le schede in `docs/google-play.md`, poi `npm run check:legal -- --release` deve passare.
+
+
+## Aggiornamento 19/11/2026 — elenco unico di domande aperte
+
+Fatti ora confermati (non da richiedere di nuovo): Ramona Bianchi è titolare del trattamento e offerente del servizio; Apple Developer (individuale) e Google Play Console sono a suo nome; account Cloudflare di Matteo gestito con Ramona; Gmail `politicando2026simulazione@gmail.com` di Matteo sotto la supervisione di Ramona (email ufficiale, privacy, test); marchio, icona e grafiche create da Matteo; nessuna cancellazione automatica degli account inattivi.
+
+### Bloccanti per la revisione iOS
+1. Hash del commit (o IPA) da cui è stato creato l'archivio iOS 1.0 (1): senza non si può dichiarare cosa contiene.
+2. Indirizzo da pubblicare: Ramona intende pubblicare un indirizzo postale o una PEC? (come venditore individuale Apple mostrerà i suoi dati.)
+3. Trader DSA: Ramona dichiara lo stato di «trader» (servizio gratuito, nessuna monetizzazione nella 1.0)?
+4. Età e Paesi: classificazione di età (IARC/Apple) e Paesi di distribuzione.
+5. Cloudflare: quali condizioni/DPA sono state accettate e da chi (prove); regione di D1/KV/R2; esistenza di backup e per quanto tempo.
+6. Ratifica da parte di Ramona dei contratti conclusi da Matteo (Cloudflare, Google/Gmail).
+7. Google: le condizioni dell'account Gmail permettono l'uso come gateway e l'età del titolare dell'account?
+8. Licenze di terzi: loghi, illustrazioni, dati reali, testata «LA POLITICA 24».
+
+### Bloccanti Android / pubblicità futura
+9. Android SDK e upload keystore (la stessa chiave già associata a Google Play) per generare l'AAB: sempre da fornire fuori dal repository.
+10. InMobi: conferma dell'Account ID e del testo di consenso; AdMob App ID già nel manifest solo per UMP.
+11. Dichiarazioni Data safety / pubblico di destinazione compilate da Ramona.

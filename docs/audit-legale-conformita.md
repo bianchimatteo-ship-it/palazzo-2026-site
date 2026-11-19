@@ -21,7 +21,7 @@ Ogni punto sotto è marcato **[V]** se poggia su una fonte ufficiale letta oggi 
 | Aspetto | Chi | Base |
 |---|---|---|
 | Ideazione, sviluppo, gestione operativa | Matteo Bianchi (**minorenne**, confermato il 14/11/2026), sotto la supervisione dei genitori; è lui a decidere in concreto finalità e modalità del trattamento | dato fornito dal progetto |
-| Account Google Play Console e accordo con Google | Un genitore (intestatario e contraente). **Matteo non è titolare** dell'account | dato fornito dal progetto; nome del genitore **non fornito** |
+| Account Google Play Console e accordo con Google | Ramona Bianchi (madre; intestataria e contraente). **Matteo non è titolare** dell'account | confermato dal titolare il 19/11/2026 |
 | Account Apple Developer | Non esiste ancora | — |
 | Titolare del trattamento GDPR | **Non determinato** (segnaposto `titolare-trattamento`) | vedi sotto |
 | Diritti di proprietà intellettuale su codice, testi, grafica | Da documentare (`diritti-asset`); in generale spettano a chi crea l'opera, non a chi ha l'account dello store [NV] | — |
@@ -114,23 +114,28 @@ Quanto già documentato resta valido come inventario tecnico (`docs/google-play.
 
 ## 10. Prima della pubblicazione
 
-**Android:** requisiti legali indispensabili chiusi (`npm run check:legal -- --release` oggi **fallisce con 9 requisiti aperti**, come deve); account Play verificato; scheda e dichiarazioni compilate dal genitore; `.aab` firmato (non generato qui); prove su dispositivo; versionCode > ultimo caricato.
+**Android:** requisiti legali indispensabili chiusi (`npm run check:legal -- --release` oggi **fallisce con i requisiti ancora aperti** (vedi l'aggiornamento 19/11/2026 in fondo), come deve); account Play verificato; scheda e dichiarazioni compilate dal genitore; `.aab` firmato (non generato qui); prove su dispositivo; versionCode > ultimo caricato.
 **iOS:** iscrizione Apple decisa e conclusa dal genitore; `ios/` con firma e Xcode 26+ su Mac (non provato qui); privacy label e age rating compilate sui fatti; trader DSA; privacy manifest (**non verificato**: pagina non leggibile); test su dispositivo/TestFlight; checklist `docs/app-store-apple.md`.
 
 ## Aggiornamento del 14/11/2026
-Confermato: Matteo è minorenne e decide in concreto finalità e modalità. Le pagine pubbliche (IT/EN) descrivono i ruoli operativi, non attribuiscono la titolarità formale né l'offerta del servizio (segnaposto `titolare-trattamento`, da decidere con un professionista tenendo conto di capacità giuridica e rappresentanza dei genitori), non qualificano Cloudflare e Google, e non rivelano l'età di Matteo (scelta dei genitori). `email-fornitore` diventa requisito indispensabile (10 aperti).
+Confermato: Matteo è minorenne e decide in concreto finalità e modalità. Le pagine pubbliche (IT/EN) descrivono i ruoli operativi, non attribuiscono la titolarità formale né l'offerta del servizio (superato: dal 19/11/2026 il titolare è Ramona Bianchi), non qualificano Cloudflare e Google, e non rivelano l'età di Matteo (scelta dei genitori). `email-fornitore` diventa requisito indispensabile (10 aperti).
 
 ## Aggiornamento del 14/11/2026 (2)
-Fatti comunicati: i genitori supervisionano; un genitore, intestatario dell'account Play, è disponibile a valutare di assumere formalmente il ruolo di **offerente del servizio** (proposto, **non** formalizzato: nessuna accettazione documentata); gli account **Cloudflare e Gmail sono intestati a Matteo** e il genitore era presente alle accettazioni, ma **non risulta rappresentanza formale documentata**; pubblico **14+** con verifica per Paese; nome, marchio e grafiche opera di Matteo; **AdMob** unica monetizzazione futura, non presente nella versione attuale (1.0.1 secondo i genitori; nel repository `versionName` è ancora 1.0).
+Fatti comunicati: i genitori supervisionano; un genitore, intestatario dell'account Play, ha poi accettato formalmente (19/11/2026) i ruoli di titolare e offerente del servizio; gli account **Cloudflare e Gmail sono intestati a Matteo** e il genitore era presente alle accettazioni, ma **non risulta rappresentanza formale documentata**; pubblico **14+** con verifica per Paese; nome, marchio e grafiche opera di Matteo; **AdMob** unica monetizzazione futura, non presente nella versione attuale (1.0.1 secondo i genitori; nel repository `versionName` è ancora 1.0).
 
 | Ruolo | Stato |
 |---|---|
 | Sviluppatore e gestore operativo | Matteo Bianchi (minorenne); decide in concreto finalità e modalità |
-| Intestatario account Google Play | un genitore (nome non fornito) |
+| Intestatario account Google Play | Ramona Bianchi (confermato 19/11/2026) |
 | Intestatario account Cloudflare e Gmail | Matteo; nessuna rappresentanza formale documentata |
-| Offerente del servizio | proposto: il genitore; **non formalizzato** (`offerente-servizio`) |
-| Titolare del trattamento | **non attribuito**; da validare con un professionista (`titolare-trattamento`) |
+| Offerente del servizio | Ramona Bianchi (accettato formalmente, 19/11/2026) |
+| Titolare del trattamento | Ramona Bianchi (accettato formalmente, 19/11/2026; resta consigliata una validazione professionale) |
 | Responsabili del trattamento | nessuno qualificato finché non esistono prove degli accordi (`cloudflare-dpa`, `email-fornitore`) |
 | Autore di nome, marchio e grafiche | Matteo; asset/licenze di terzi da verificare (`diritti-asset`) |
 
 Requisiti aperti indispensabili: indirizzo-titolare, cloudflare-dpa, minori, diritti-asset, email-fornitore, account-sviluppatore-play, titolare-trattamento, account-apple-developer, trader-dsa, eta-pubblico-store, **offerente-servizio**, **rappresentanza-capacita**. Facoltativi: ricompense-social-policy, **admob-futuro** (solo prima della versione con annunci), conservazione-inattivi, verifica-identita-richieste, legge-foro. Le pagine pubbliche non menzionano gli account di Cloudflare e Gmail né l'età di Matteo.
+
+
+## Aggiornamento 19/11/2026
+
+Confermato dal titolare: Ramona Bianchi (madre) è titolare del trattamento e offerente del servizio; Apple Developer (individuale) e Google Play Console sono a suo nome; l'account Cloudflare è di Matteo, gestito con Ramona; Gmail `politicando2026simulazione@gmail.com` è di Matteo, sotto la supervisione di Ramona, ed è email ufficiale, contatto privacy e destinatario dei test; marchio, icona e grafiche sono originali di Matteo; nessuna cancellazione automatica degli account inattivi (`RETENTION_ENABLED=0`). Restano aperti: DPA/backup/trasferimenti Cloudflare, condizioni Google per l'account Gmail, ratifica dei contratti conclusi da un minore, indirizzo/PEC, trader DSA, età/IARC e Paesi, licenze di terzi.

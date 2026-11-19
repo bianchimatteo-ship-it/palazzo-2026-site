@@ -65,3 +65,8 @@ Il gateway simulato dei test automatici (`check:email-gateway`, `check:account-r
 - Home: nessuna schermata «Caricamento…» fissa; se un file non si carica compare il messaggio con «Riprova» (guardia di avvio).
 - «Carica partita» di una carriera salvata prima del 18/11 con un voto politico/europeo concluso: il resoconto storico mostra «Altri» coerente (migrazione versionata, copia di sicurezza `prima-correzione-voti` nel browser).
 - Sondaggi → Alleanze: invitare un partito che è già in un altro accordo mostra la scelta «Invita soltanto questo partito» / «Proponi la fusione delle intere alleanze» con l’anteprima.
+
+
+## Test e-mail reale (script)
+
+`TEST_BASE_URL=https://<sito-test> [CF_ACCESS_CLIENT_ID=… CF_ACCESS_CLIENT_SECRET=…] node scripts/email-real-test.mjs --yes` registra un account di prova e chiede la verifica verso `politicando2026simulazione@gmail.com`. Rifiuta host senza «test», richiede `--yes`, non salva né stampa segreti e non fa parte di `check:all`. Esito reale (arrivo del messaggio) da confermare a mano nella casella. Non eseguito in questo ambiente: mancano URL e credenziali del TEST.

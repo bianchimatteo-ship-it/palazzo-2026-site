@@ -108,7 +108,7 @@ Nelle schermate non devono comparire loghi di partiti di terzi che chi pubblica 
 
 ## 7. Cosa resta da fare (in ordine) — ruoli aggiornati il 13/11/2026
 
-**Ruoli.** L'account Play Console è intestato a **un genitore**, che ha accettato l'accordo con Google e firma scheda e dichiarazioni; Matteo Bianchi sviluppa e gestisce operativamente il progetto sotto la loro supervisione ma **non è titolare dell'account**. Chi sia il titolare del trattamento GDPR non è presunto (`docs/audit-legale-conformita.md` §2). Le verifiche su Google Play di questo documento (22/10/2026) non sono state riconfermate da fonti ufficiali il 13/11/2026 (host non raggiungibile).
+**Ruoli.** L'account Play Console è intestato a **Ramona Bianchi** (madre di Matteo, confermato il 19/11/2026), che ha accettato l'accordo con Google e firma scheda e dichiarazioni; è anche titolare del trattamento e offerente del servizio. Matteo Bianchi sviluppa e gestisce operativamente il progetto sotto la sua supervisione ma **non è titolare dell'account**. Le verifiche su Google Play di questo documento (22/10/2026) non sono state riconfermate da fonti ufficiali il 13/11/2026 (host non raggiungibile).
 
 1. Chiudere i requisiti legali bloccanti di `docs/legale-requisiti.json` (indirizzo, DPA Cloudflare, minori, diritti sugli asset, account sviluppatore Play).
 2. Il genitore titolare dell'account completa la verifica di Google (identità/indirizzo) e conferma nome sviluppatore e contatti pubblici, coerenti con l'informativa; dichiarazione «trader» DSA da valutare con un professionista.
