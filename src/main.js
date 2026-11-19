@@ -122,6 +122,7 @@ try {
     // The creator of a career and the first game need the institutions and the documents: they are asked for at once and waited for.
     needBackground: () => loadBackground()
   });
+  window.__politicandoBooted = true;   // the start-up guard (boot-guard.js) stops watching: the screen is mounted
 } catch (error) { bootError(error); throw error; }
 
 let touched = false;

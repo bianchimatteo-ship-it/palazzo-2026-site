@@ -51,6 +51,7 @@ import { actTypeOf } from '../data/simulation/local-acts.js?v=20261118-36';
 import { SECTOR_GAINS, competenceIn, gainSector, sectorFloors, standingFactors } from './standing-engine.js?v=20261118-36';
 import { AREA_BY_ID, areasOfPortfolio, BILLION_PER_POINT, BUDGET_SESSION, GOVERNMENT_LINES, POLICY_AREAS, SOCIAL_TABLE, SPENDING_REVIEW, areaOf } from '../data/simulation/policy-rules.js?v=20261118-36';
 import { negotiateCompromise as negotiateCompromiseOn, registerCoalition as registerCoalitionOn, programAnalysis as programAnalysisOf, proposeTerm as proposeTermOn, termOptions as termOptionsOf, requestsView as requestsViewOf, refusedUntil } from './world-engine.js?v=20261118-36';
+import { migrateElectionVotes } from './result-migration.js?v=20261118-36';
 import { positionOf as programPositionOf, THEMES as PROGRAM_THEMES, coalitionBlock, coalitionDeadline } from './alliance-rules.js?v=20261118-36';
 import { addAdTransfer, opinionEffect, recordAccordOutcome, settleElectoralTerms, allianceBlock, allianceOf, inviteBlock, inviteImpact, inviteOdds, inviteToAlliance, playerAlliance, electionRoster, forceProfiles, mergeCandidates, mergeIntoPlayerForce, renamePlayerForce, setPlayerAgenda, splitPlayerForce, localShares, regionalShares, withRegionalLeans, withLocalCalendar, joinCoalition, acceptAlliance, addWorldEffects, advanceWorld, alignWorldToVote, allianceOdds, applyWorldSignals, axisOf, breakAlliance, campaignPollBonus, createWorld, isLegacyWorld, normalizeWorld, proposeAlliance, setGoverningForces, setPlayerParty, withCanonicalForces, withLatentForces, withPartyIdentities, withPositions } from './world-engine.js?v=20261118-36';
 import { candidacyQuotas, FORMATION_PHASES, LEGISLATURE_RULES, NATIONAL_LINES, acceptMandate, crisisFormation, seatResult, startFormation, buildCoalitions, campaignWeekEffects, coalitionOptions, compactResult, contestedDistricts, createNationalState, europeanListSeats, formationStep, groupOfParty, homeDistricts, legislatureGroups, legislatureTerm, nationalCalendar, nationalHistory, nationalProjection, normalizeNationalState, openLegislature, politicheOutcome, regionalBreakdown, runEuropeanVote, runNationalVote, seatPlayer, voteForces } from './legislature-engine.js?v=20261118-36';
@@ -434,7 +435,11 @@ function prepareState(input) {
   // The President of the Republic: the term in office and the next election (older saves find the current term).
   const presidency = normalizePresidency(raw.presidency, { date: base.clock.currentDate, seed: seedOf({ ...base, game }) });
   const prepared = { ...base, game, world, society, national, presidency, parliament: withCapital(parliament, game), local: migrateLocal(raw.local, society), races: { version: 2, items: Array.isArray(raw.races?.items) ? raw.races.items : [], archive: Array.isArray(raw.races?.archive) ? raw.races.archive : [] } };
-  return { ...prepared, dataset: { ...prepared.dataset, politicians: (prepared.dataset.politicians ?? []).map(person => withPlayerLook(normalizeSeatPerson(person), prepared.career?.playerId)) } };
+  const looked = { ...prepared, dataset: { ...prepared.dataset, politicians: (prepared.dataset.politicians ?? []).map(person => withPlayerLook(normalizeSeatPerson(person), prepared.career?.playerId)) } };
+  // Saves written before the fix of the double count of «Altri» (result-migration.js): repaired only when the old rule is proved, with the original votes kept and a copy of the whole save set aside first.
+  const votes = migrateElectionVotes(looked);
+  if (votes.changed) { try { storage.backup(input, 'prima-correzione-voti'); } catch { /* the backup is a safety net, never a reason to stop */ } return { ...votes.state, saveMeta: { ...(votes.state.saveMeta ?? {}), votesMigration: { version: 1, notes: votes.notes } } }; }
+  return votes.notes.length && !looked.saveMeta?.votesMigration ? { ...looked, saveMeta: { ...(looked.saveMeta ?? {}), votesMigration: { version: 1, notes: votes.notes } } } : looked;
 }
 
 const hydratedState = saveLock ? storedState : hydrateState(storedState);

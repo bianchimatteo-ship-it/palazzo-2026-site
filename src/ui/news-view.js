@@ -35,7 +35,20 @@ export const newsCoverScene = article => {
 };
 const categoryOf = id => ARTICLE_CATEGORIES.find(item => item.id === id);
 const shortDate = date => { try { return formatDate(date, { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return String(date ?? ''); } };
-const summaryOf = article => String(article.deck || article.body?.[0] || '').slice(0, 220);
+// The preview of an article: its deck, else the start of the first paragraph, clipped at the end of a sentence (or of a clause) and never in the middle of a phrase: a cut at a fixed number of characters left
+// half-clauses («… il margine nella Camera più stretta è di +») that no sentence of the phrase-book can translate, so the English page showed Italian. A clipped text ends with an ellipsis.
+export function clipAtBoundary(text, limit = 220) {
+  const value = String(text ?? '').trim();
+  if (value.length <= limit) return value;
+  const head = value.slice(0, limit);
+  const sentence = Math.max(head.lastIndexOf('. '), head.lastIndexOf('! '), head.lastIndexOf('? '));
+  if (sentence >= limit * 0.35) return head.slice(0, sentence + 1);
+  const clause = Math.max(head.lastIndexOf('; '), head.lastIndexOf(': '), head.lastIndexOf(' · '));
+  if (clause >= limit * 0.35) return `${head.slice(0, clause).replace(/[\s,;:·]+$/, '')}…`;
+  const space = head.lastIndexOf(' ');
+  return `${head.slice(0, space > 0 ? space : limit).replace(/[\s,;:·]+$/, '')}…`;
+}
+const summaryOf = article => clipAtBoundary(article.deck || article.body?.[0] || '', 220);
 
 // A card of the paper: the scene of its category, category, date, outlet, headline, summary and the way to the whole story. BREAKING NEWS only for the articles that carry the flag.
 export function articleHtml(article, media, { lead = false } = {}) {
