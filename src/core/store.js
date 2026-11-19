@@ -5764,7 +5764,7 @@ export const store = {
     if (!state.world || !state.game?.party) return null;
     return inviteOdds(state.world, forceId, allianceContext(state, forceId));
   },
-  inviteBlock(forceId) { return state.world ? inviteBlock(state.world, forceId) : 'Il mondo politico non è disponibile.'; },
+  inviteBlock(forceId, mode = 'individual') { return state.world ? inviteBlock(state.world, forceId, mode) : 'Il mondo politico non è disponibile.'; },
   allianceBlock(forceId) { return state.world ? allianceBlock(state.world, forceId) : null; },
   // Who would follow (and who would stay in the accord it leaves) if this force is invited: by default only the force moves.
   inviteImpact(forceId) { return state.world ? inviteImpact(state.world, forceId) : null; },
@@ -5773,7 +5773,7 @@ export const store = {
     requireSecretary();
     const closed = allianceWindow(state);
     if (!closed.open) throw new Error(closed.reason);
-    const blocked = inviteBlock(state.world, forceId);
+    const blocked = inviteBlock(state.world, forceId, mode === 'merge' ? 'merge' : 'individual');
     if (blocked) throw new Error(blocked);
     const game = spendTime(state.game, 1);
     if (game.resources.politicalCapital < 4) throw new Error('Servono 4 punti di capitale politico per invitare un partito nella coalizione.');

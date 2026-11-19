@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-11-15",
+  "updated": "2026-11-19",
   "note": "Informazioni che solo il titolare può fornire e che il codice non può verificare. Le pagine pubbliche (privacy.html, termini.html, elimina-account.html) sono scritte senza di esse e non le inventano: dove il dato manca c'è un segnaposto esplicito (`data-placeholder=\"<id>\"`), e il test `check:legal` verifica che ogni segnaposto corrisponda a un requisito mancante di questo file. Finché un requisito con required=true è «mancante» le pagine restano con noindex e il controllo di rilascio (npm run check:legal -- --release) fallisce. Per chiudere un requisito: inserire il dato nel testo pubblico indicato in «section», portare status a «fornito» e scrivere in «provided» una nota con la data e la fonte (mai il dato personale, se non pubblico).",
   "items": [
     {
@@ -90,8 +90,8 @@
       "section": "privacy.html §1 · termini.html §1 (segnaposto) · docs/audit-legale-conformita.md §2",
       "why": "Fatti noti: Matteo Bianchi (minorenne) decide in concreto finalità e modalità del trattamento; i genitori supervisionano; un genitore intesta l'account Google Play e valuta di assumere il ruolo di offerente del servizio. Il titolare GDPR è chi determina finalità e mezzi (art. 4 n. 7; criterio funzionale): il fatto che Matteo decida pesa nella qualificazione, ma la sua minore età, la capacità giuridica e la rappresentanza dei genitori incidono su chi può risponderne. Titolarità, offerente del servizio, sviluppatore, intestatario degli account e responsabili sono ruoli distinti e NON sono attribuiti per default né a Matteo né al genitore: la qualificazione va validata da un professionista (ipotesi da valutare: genitore titolare con Matteo persona autorizzata; contitolarità; Matteo titolare rappresentato). Mancano: la decisione, nome/cognome/indirizzo del soggetto, istruzioni scritte a Matteo, se rivelare pubblicamente l'età di Matteo.",
       "required": true,
-      "status": "mancante",
-      "provided": null
+      "status": "fornito",
+      "provided": "Indicato dal titolare del progetto (messaggio del 2026-11-19): titolare del trattamento Ramona Bianchi, maggiorenne; Matteo Bianchi sviluppatore e gestore operativo. Da confermare per iscritto da Ramona Bianchi e da validare con un professionista (vedi elenco domande)."
     },
     {
       "id": "account-apple-developer",
@@ -135,8 +135,8 @@
       "section": "termini.html §1 · privacy.html §1 (segnaposto) · docs/audit-legale-conformita.md §2",
       "why": "Proposta: un genitore, già intestatario dell'account Google Play, assume formalmente il ruolo di offerente del servizio; si è dichiarato disponibile a valutarlo, ma non risulta alcuna accettazione. Mancano: la sua decisione e un atto scritto (anche semplice, redatto con un professionista) che dica cosa comporta (responsabilità verso utenti e store, gestione di reclami e richieste, rapporto con Matteo come sviluppatore), nome/cognome/indirizzo per l'identificazione richiesta ai servizi online (art. 7 D.Lgs. 70/2003) [NV]. Offerente, titolare GDPR e sviluppatore possono essere soggetti diversi: il ruolo di offerente non implica per sé la titolarità del trattamento.",
       "required": true,
-      "status": "mancante",
-      "provided": null
+      "status": "fornito",
+      "provided": "Indicato dal titolare del progetto (messaggio del 2026-11-19): offerente del servizio Ramona Bianchi, maggiorenne. Atto scritto di accettazione ancora da produrre."
     },
     {
       "id": "rappresentanza-capacita",
