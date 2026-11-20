@@ -623,7 +623,7 @@
 .alliance-fold > summary:focus-visible { outline: 2px solid var(--gold, #d9b45a); outline-offset: 2px; border-radius: 12px; }
 .alliance-fold-body { padding: 4px 12px 12px; display: grid; gap: 8px; }
 .alliance-weight { display: flex; height: 12px; gap: 2px; border-radius: 6px; overflow: hidden; margin: 6px 0; } .alliance-weight i { display: block; min-width: 6px; }
-.alliance-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin-top: 10px; }
+.alliance-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 12px; margin-top: 10px; }
 .alliance-card { border: 1px solid var(--line, rgba(127,140,134,.35)); border-radius: 14px; padding: 12px; display: grid; gap: 8px; min-width: 0; align-content: start; }
 .alliance-card.is-mine { border-color: rgba(217,180,90,.7); }
 .alliance-card header { display: grid; gap: 2px; } .alliance-card p { margin: 0; }
