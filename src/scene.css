@@ -166,7 +166,7 @@ html[data-scene-motion="full"] .cm-protest .cm-arm { animation: st-arms .45s eas
 .floor-kind { color: var(--ink-2); font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .floor-window h2 { margin: 0; }
 .floor-summary, .floor-proposer { margin: 0; color: var(--ink); line-height: 1.5; }
-.floor-content { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 6px 14px; }
+.floor-content { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 6px 14px; }
 .floor-content div { display: grid; gap: 1px; min-width: 0; }
 .floor-content dt { color: var(--ink-2); font-size: 11.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
 .floor-content dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }

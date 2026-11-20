@@ -1,15 +1,15 @@
-import { bandDescription, bandOfMunicipality, MUNICIPAL_LEGAL_REFERENCES } from '../core/municipal-rules.js?v=20261119-12';
-import { CAMPAIGN_OBJECTIVES, CAMPAIGN_PHASES, CAMPAIGN_STRATEGIES, DEBATE_TOPICS, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261119-12';
-import { affiliationOf, markForPerson } from './person-marks.js?v=20261119-12';
-import { campaignActivities, campaignMetrics, campaignOpeningNotes, campaignScope, campaignSummary, listStanding, strategyAvailable, strategyFit, strategyOf, strategyStages } from '../core/campaign-engine.js?v=20261119-12';
-import { resultDescription } from '../core/election-engine.js?v=20261119-12';
-import { formatDate } from '../core/time.js?v=20261119-12';
-import { careerLevelLabel } from '../data/regions.js?v=20261119-12';
-import { upcomingElections } from '../core/career-engine.js?v=20261119-12';
-import { candidacyBlock, candidacyLapses, personalCandidacies } from '../core/office-engine.js?v=20261119-12';
-import { candidacyFacts, heldOfficesOf } from '../core/roles.js?v=20261119-12';
-import { mandatePlace, renderElectionReport } from './election-report.js?v=20261119-12';
-import { glyph } from './visuals.js?v=20261119-12';
+import { bandDescription, bandOfMunicipality, MUNICIPAL_LEGAL_REFERENCES } from '../core/municipal-rules.js?v=20261120-1';
+import { CAMPAIGN_OBJECTIVES, CAMPAIGN_PHASES, CAMPAIGN_STRATEGIES, DEBATE_TOPICS, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261120-1';
+import { affiliationOf, markForPerson } from './person-marks.js?v=20261120-1';
+import { campaignActivities, campaignMetrics, campaignOpeningNotes, campaignScope, campaignSummary, listStanding, strategyAvailable, strategyFit, strategyOf, strategyStages } from '../core/campaign-engine.js?v=20261120-1';
+import { resultDescription } from '../core/election-engine.js?v=20261120-1';
+import { formatDate } from '../core/time.js?v=20261120-1';
+import { careerLevelLabel } from '../data/regions.js?v=20261120-1';
+import { upcomingElections } from '../core/career-engine.js?v=20261120-1';
+import { candidacyBlock, candidacyLapses, personalCandidacies } from '../core/office-engine.js?v=20261120-1';
+import { candidacyFacts, heldOfficesOf } from '../core/roles.js?v=20261120-1';
+import { mandatePlace, renderElectionReport } from './election-report.js?v=20261120-1';
+import { glyph } from './visuals.js?v=20261120-1';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const roleLabels={sindaco:'Candidatura a sindaco',consigliere:'Candidato in lista per il consiglio',presidente:'Candidato alla presidenza (Regione o Provincia)',deputato:'Candidato alla Camera',senatore:'Candidato al Senato',uninominale:'Collegio uninominale simulato',eurodeputato:'Candidato al Parlamento europeo'};
@@ -94,11 +94,13 @@ function renderSetup(state,parties,logoFor,picks={}) {
   const challenge=nextChallenge(state);
   const type=picked(picks['setup.electionType'],Object.keys(ROLE_OPTIONS),challenge.next?.type??open[0]?.type??challenge.chain[0]?.type??'comunale');
   const roles=ROLE_OPTIONS[type]??ROLE_OPTIONS.comunale;
+  // The vote the player chose with «Candidati» (its exact id), when it is still in the calendar and of the chosen type: it, and not the first vote of that type, is the one the setup is about.
+  const chosen=state.game&&picks['setup.electionId']?upcomingElections(state.game).find(item=>item.id===picks['setup.electionId']&&item.type===type)??null:null;
   // The offices held decide which candidacies are possible (a provincial seat needs a seat in a comune; the Government does not run for a territorial office).
   const held=heldOfficesOf(state);
-  const electionDate=open.find(item=>item.type===type)?.electionDate??upcomingElections(state.game??{elections:[]}).find(item=>item.type===type)?.electionDate??null;
+  const electionDate=chosen?.electionDate??open.find(item=>item.type===type)?.electionDate??upcomingElections(state.game??{elections:[]}).find(item=>item.type===type)?.electionDate??null;
   const municipalVote=upcomingElections(state.game??{elections:[]}).find(item=>item.type==='comunale')?.electionDate??null;
-  const openEntry=open.find(item=>item.type===type)??null;
+  const openEntry=chosen?(chosen.status==='open'?chosen:null):open.find(item=>item.type===type)??null;
   const candidacies=personalCandidacies(state.game,state.races?.items??[]);
   const blockOf=id=>candidacyBlock({held,facts:candidacyFacts(state,{electionType:type}),electionType:type,role:id,electionDate,windowOpensAt:openEntry?.windowOpensAt??null,municipalVote,candidacies,candidacyId:openEntry?.id??null,early:Boolean(openEntry?.early)});
   const available=roles.filter(([id])=>!blockOf(id)).map(([id])=>id);
@@ -107,22 +109,24 @@ function renderSetup(state,parties,logoFor,picks={}) {
   const choice={objective:picked(picks['setup.objective'],Object.keys(CAMPAIGN_OBJECTIVES),'build'),role:picked(picks['setup.role'],available.length?available:roles.map(([id])=>id),(available.length?available:roles.map(([id])=>id))[0]),topicId:picked(picks['setup.topicId'],DEBATE_TOPICS.map(topic=>topic.id),DEBATE_TOPICS[0].id),strategy:picked(picks['setup.strategy'],strategiesOf('campagna').map(([id])=>id),'consolidare')};
   const openList=open.length?`<div class="campaign-open-list">${open.map(item=>`<div class="campaign-open"><strong>${esc(item.label)}</strong><small>Candidature fino al ${esc(formatDate(item.windowClosesAt))} · voto il ${esc(formatDate(item.electionDate))}</small></div>`).join('')}</div>`:'';   // (the card above already says when the window opens)
   // Which vote the choice refers to: the one of the calendar, named with its place (“Regionali · Lombardia”), with its dates; or none yet.
-  const target=openEntry??upcomingElections(state.game??{elections:[]}).find(item=>item.type===type)??null;
+  const target=chosen??openEntry??upcomingElections(state.game??{elections:[]}).find(item=>item.type===type)??null;
   const targetLine=target?`<p class="campaign-target" data-campaign-target="${esc(target.id)}"><strong>${esc(target.label)}</strong> · voto il ${esc(formatDate(target.electionDate))} · candidature ${esc(formatDate(target.windowOpensAt))} – ${esc(formatDate(target.windowClosesAt))}${target.early?' · anticipate':''}</p>`:`<p class="campaign-target" data-campaign-target="">Nessun voto di questo tipo in calendario.</p>`;
   // The action to run for office is at the top of the page, with the dates it depends on: voting day, the window of the candidacies, what is open now.
   const daysTo=date=>date?Math.round((Date.parse(`${date}T12:00:00`)-Date.parse(`${state.clock.currentDate}T12:00:00`))/86400000):null;
   const canStart=Boolean(openEntry)&&available.length>0&&!rhythmReason;
   // The card is about ONE vote: the next one the player can face (nextChallenge), with its own dates, countdown and action; the form below may be set on another type without changing it.
-  const shown=challenge.next??null;
+  const shown=chosen??challenge.next??null;
   const shownOpen=shown?.status==='open';
   const closesIn=shownOpen?daysTo(shown.windowClosesAt):null, opensIn=shown&&!shownOpen?daysTo(shown.windowOpensAt):null;
   const windowChip=!shown?`<span class="cta-chip is-none">${glyph('alert',14)} Nessun voto a cui puoi candidarti in calendario</span>`:shownOpen?`<span class="cta-chip is-open">${glyph('target',14)} Candidature aperte${closesIn!==null?` · chiudono tra ${closesIn} ${closesIn===1?'giorno':'giorni'}`:''}</span>`:`<span class="cta-chip is-wait">${glyph('clock',14)} Candidature tra ${opensIn} ${opensIn===1?'giorno':'giorni'}</span>`;
   const formOnOther=shown&&shown.type!==type;
-  const costHint=rhythmReason?rhythmReason:formOnOther?`Il modulo qui sotto è impostato su «${ELECTION_MODELS[type].label}», non su questa sfida: la campagna parte per ciò che scegli nel modulo.`:shownOpen&&canStart?'Scegli ruolo, obiettivo e strategia qui sotto, poi parti: nessun costo per candidarsi, le attività della campagna costano giorni, fondi o capitale.':'La finestra non è ancora aperta: puoi preparare ruolo e strategia e partire quando si apre.';
+  const costHint=rhythmReason?rhythmReason:chosen&&!shownOpen?`Le candidature per «${chosen.label}» si aprono il ${formatDate(chosen.windowOpensAt)}: fino ad allora non puoi candidarti (puoi già scegliere ruolo e strategia).`:formOnOther?`Il modulo qui sotto è impostato su «${ELECTION_MODELS[type].label}», non su questa sfida: la campagna parte per ciò che scegli nel modulo.`:shownOpen&&canStart?'Scegli ruolo, obiettivo e strategia qui sotto, poi parti: nessun costo per candidarsi, le attività della campagna costano giorni, fondi o capitale.':'La finestra non è ancora aperta: puoi preparare ruolo e strategia e partire quando si apre.';
   // The votes before the next one the player cannot stand in: said with the reason, and the next valid chance is the one the card shows.
   const skippedNote=challenge.skipped.length?`<ul class="cta-skipped" data-cta-skipped>${challenge.skipped.map(item=>`<li>${glyph('alert',13)}<span><b>${esc(item.entry.label)}</b> (${esc(formatDate(item.entry.electionDate))}): non puoi candidarti. ${esc(item.reason)}</span></li>`).join('')}</ul>`:'';
   const emptyNote=!shown?`<p class="cta-none" data-cta-none>${challenge.chain.length?'Nessuna elezione in calendario ammette una tua candidatura ora: ogni voto ha un motivo che lo impedisce (sopra).':'Nessuna elezione in calendario: il calendario reale dei voti si carica con la pagina.'}</p>`:'';
-  const ctaDisabled=!shown||rhythmReason;
+  // a vote the player chose that is not open yet cannot be started: the button is off and the line above says when it opens (never a button that looks live and then refuses)
+  const notYetOpen=Boolean(chosen)&&!shownOpen;
+  const ctaDisabled=!shown||rhythmReason||notYetOpen;
   // The split of the political capital said before the start: 60% goes to the campaign, the rest stays with the career (the funds are a separate resource).
   const capitalNow=Math.max(0,Math.round(state.game?.resources?.politicalCapital??0)),capitalToCampaign=Math.round(capitalNow*0.6);
   const capitalNote=shown&&state.game?`<p class="cta-capital" data-cta-capital>${glyph('shield',13)} Capitale politico: ${capitalToCampaign} su ${capitalNow} (il 60%) passano alla campagna, ${capitalNow-capitalToCampaign} restano a te. I fondi sono un’altra risorsa.</p>`:'';

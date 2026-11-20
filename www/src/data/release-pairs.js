@@ -1,11 +1,11 @@
 // English phrase-book pairs of the last release pass (data/i18n/en-ui-8.js reads `ALL_PAIRS`): the guided programme editor, the days of the Quirinale and the rule on the parties, the government room, the live
 // votes of the assemblies, the party headquarters, the TV name plates and the tutorial. Format as in the phrase-book: [Italian as shown, English]; `#` a number, `{}` a free part.
-import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261119-12';
-import { DEBATE_PAIRS } from './debate-choices.js?v=20261119-12';
-import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261119-12';
-import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261119-12';
-import { ALL_PAIRS as TOPIC_PAIRS } from './activity-scene-topics.js?v=20261119-12';
-import { LAW_TERM_PAIRS } from './law-terms.js?v=20261119-12';
+import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261120-1';
+import { DEBATE_PAIRS } from './debate-choices.js?v=20261120-1';
+import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261120-1';
+import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261120-1';
+import { ALL_PAIRS as TOPIC_PAIRS } from './activity-scene-topics.js?v=20261120-1';
+import { LAW_TERM_PAIRS } from './law-terms.js?v=20261120-1';
 export const ALL_PAIRS = [
   ...GUEST_PAIRS,
   ...DEBATE_PAIRS,
@@ -176,6 +176,10 @@ export const ALL_PAIRS = [
   ['CONSIGLIO COMUNALE · {}', 'CITY COUNCIL · {1}'], ['CONSIGLIO PROVINCIALE · {}', 'PROVINCIAL COUNCIL · {1}'], ['CONSIGLIO REGIONALE · {}', 'REGIONAL COUNCIL · {1}'], ['PARLAMENTO EUROPEO · {}', 'EUROPEAN PARLIAMENT · {1}'],
   ['CONSIGLIO COMUNALE', 'CITY COUNCIL'], ['CONSIGLIO REGIONALE', 'REGIONAL COUNCIL'], ['PARLAMENTO EUROPEO', 'EUROPEAN PARLIAMENT'],
   ['Momento # di #', 'Moment # of #'], ['Umore del pubblico # su #', 'Audience mood # out of #'], ['Le tue scelte', 'Your choices'],
+  // exact election chosen with «Candidati»
+  ["Questa elezione non è più in calendario: scegline un’altra dalla Centrale elettorale.", "This election is no longer on the calendar: choose another one from the Election Centre."],
+  ["Questa elezione non corrisponde al tipo scelto ({}): rifai la scelta dalla Centrale elettorale.", "This election does not match the chosen type ({}): choose again from the Election Centre."],
+  ["Le candidature per «{}» si aprono il {}: fino ad allora non puoi candidarti (puoi già scegliere ruolo e strategia).", "Candidacies for “{}” open on {}: until then you cannot run (you can already choose role and strategy)."],
   // ---- guide and tutorial ----
   // thirteen-step tutorial (goals, exercises)
   ["Chi sei e che cosa puoi ottenere", "Who you are and what you can achieve"],

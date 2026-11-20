@@ -1,6 +1,6 @@
 // English phrase book, part 8 of 8: the administrative area, the account and sign-out screens, the personal logo catalogue, the tutorial invitation and the engine's law-effect and government lines. Same format as part 6: [Italian as shown, English]; `#` stands for a number, `{}` for a free part; in the English a free part is named by its position (`{2}` for the second one).
-import { ALL_PAIRS } from '../studio-lines.js?v=20261119-12';
-import { ALL_PAIRS as ACTIVITY_SCENE_PAIRS } from '../activity-scene-lines.js?v=20261119-12';
+import { ALL_PAIRS } from '../studio-lines.js?v=20261120-1';
+import { ALL_PAIRS as ACTIVITY_SCENE_PAIRS } from '../activity-scene-lines.js?v=20261120-1';
 
 // The explanations of the opening of a general or European campaign (campaign-engine.js campaignOpeningNotes): signed numbers come in both signs.
 function campaignNotePairs() {
@@ -7758,6 +7758,9 @@ export const PHRASES = [
   ["Momento # di #", "Moment # of #"],
   ["Umore del pubblico # su #", "Audience mood # out of #"],
   ["Le tue scelte", "Your choices"],
+  ["Questa elezione non è più in calendario: scegline un’altra dalla Centrale elettorale.", "This election is no longer on the calendar: choose another one from the Election Centre."],
+  ["Questa elezione non corrisponde al tipo scelto ({}): rifai la scelta dalla Centrale elettorale.", "This election does not match the chosen type ({}): choose again from the Election Centre."],
+  ["Le candidature per «{}» si aprono il {}: fino ad allora non puoi candidarti (puoi già scegliere ruolo e strategia).", "Candidacies for “{}” open on {}: until then you cannot run (you can already choose role and strategy)."],
   ["Chi sei e che cosa puoi ottenere", "Who you are and what you can achieve"],
   ["Capire dove leggere il tuo ruolo e i traguardi della carriera.", "Understand where to read your role and the milestones of your career."],
   ["La Home è il tuo punto di partenza: dice chi sei, che incarico hai e che cosa conviene fare adesso. Gli obiettivi non sono uno solo: salire di incarico, vincere elezioni, guidare un partito o il Governo.", "The Home is your starting point: it says who you are, what office you hold and what is worth doing now. There is no single goal: climb to a higher office, win elections, lead a party or the Government."],
