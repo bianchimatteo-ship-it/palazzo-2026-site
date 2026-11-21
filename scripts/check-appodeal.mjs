@@ -104,7 +104,20 @@ assert.ok(!/admob|gms\.ads|facebook|inmobi/i.test(code), 'Il bridge non usa AdMo
 const gradle = await read('plugins/appodeal-ads/android/build.gradle'); assert.match(gradle, /appodealVersion = '4\.4\.0'/); assert.match(gradle, /artifactory\.appodeal\.com\/appodeal/);
 const deps = [...gradle.matchAll(/^\s*api "([^"]+)"/gm)].map(m => m[1]); assert.ok(deps.some(d => d.startsWith('com.appodeal.ads.sdk:core:')), 'SDK core.');
 for (const d of deps) assert.ok(!/admob|meta|facebook|inmobi|bidmachine|gam|google/i.test(d.replace('com.appodeal.ads.sdk.adapters:', 'adapter:')), `Nessun adapter AdMob/Meta/InMobi/BidMachine (che porta Google Ad Manager): ${d}`);
-const settings = await read('android/capacitor.settings.gradle'); assert.match(settings, /politicando-appodeal-ads/); assert.doesNotMatch(settings, /inmobi/i, 'Nessun InMobi standalone nel build Android.');
+// Registration of the plugin in Capacitor 8, link by link (a broken link gives a precise message, not just a missing string in a generated file):
+//  1. package.json depends on the local plugin; 2. the plugin declares itself as an Android Capacitor plugin; 3. `npm install` linked it in node_modules (without the link Capacitor finds NO plugin and the generated
+//  Gradle files only contain `:capacitor-android`); 4. capacitor.config.json lets Android include it; 5. Capacitor's own discovery (`cap ls android`) lists it; 6. the generated Gradle files register it (and no standalone InMobi).
+const pkgJson = JSON.parse(await read('package.json')); assert.equal(pkgJson.dependencies['politicando-appodeal-ads'], 'file:plugins/appodeal-ads', 'package.json: dipendenza dal plugin locale.');
+const pluginPkg = JSON.parse(await read('plugins/appodeal-ads/package.json')); assert.equal(pluginPkg.name, 'politicando-appodeal-ads'); assert.equal(pluginPkg.capacitor?.android?.src, 'android', 'Il plugin si dichiara plugin Android di Capacitor.');
+const { realpathSync, existsSync } = await import('node:fs'); const root = new URL('../', import.meta.url).pathname;
+assert.ok(existsSync(`${root}node_modules/politicando-appodeal-ads`), 'node_modules/politicando-appodeal-ads manca: esegui «npm install» (senza il link Capacitor non trova il plugin e Gradle non lo include).');
+assert.equal(realpathSync(`${root}node_modules/politicando-appodeal-ads`), realpathSync(`${root}plugins/appodeal-ads`), 'Il link in node_modules punta a plugins/appodeal-ads.');
+const capCfg = JSON.parse(await read('capacitor.config.json')); assert.deepEqual(capCfg.android?.includePlugins, ['politicando-appodeal-ads'], 'capacitor.config.json: Android include solo il plugin Appodeal.');
+const { execFileSync } = await import('node:child_process'); const listing = execFileSync(`${root}node_modules/.bin/cap`, ['ls', 'android'], { cwd: root, encoding: 'utf8', env: { ...process.env, CI: '1' } });
+assert.match(listing, /politicando-appodeal-ads/, 'Capacitor (cap ls android) elenca il plugin Appodeal.'); assert.doesNotMatch(listing, /politicando-inmobi-ads/, 'Capacitor non elenca InMobi per Android.');
+const settings = await read('android/capacitor.settings.gradle');
+assert.match(settings, /include ':politicando-appodeal-ads'/, 'android/capacitor.settings.gradle non registra il plugin: esegui «npm install» e poi «npx cap sync android».'); assert.match(settings, /plugins\/appodeal-ads\/android/); assert.doesNotMatch(settings, /inmobi/i, 'Nessun InMobi standalone nel build Android.');
+assert.match(await read('android/app/capacitor.build.gradle'), /project\(':politicando-appodeal-ads'\)/, 'android/app/capacitor.build.gradle: l’app dipende dal plugin (esegui «npx cap sync android»).');
 assert.match(await read('android/build.gradle'), /artifactory\.appodeal\.com\/appodeal/);
 const manifest = await read('plugins/appodeal-ads/android/src/main/AndroidManifest.xml'); assert.match(manifest, /ACCESS_FINE_LOCATION" tools:node="remove"/); assert.match(manifest, /ACCESS_COARSE_LOCATION" tools:node="remove"/);
 const cap = JSON.parse(await read('capacitor.config.json')); assert.deepEqual(cap.android.includePlugins, ['politicando-appodeal-ads']); assert.deepEqual(cap.ios.includePlugins, [], 'iOS invariato.');

@@ -1,7 +1,7 @@
 // The native side of InMobi, checked without a device, Xcode or an Android SDK:
 //  A. consistency: the same eight methods in the TypeScript definitions, the Kotlin plugin and the Swift plugin; no AdMob anywhere; no personal data to the SDK; the rewards only from the SDK's confirmation callbacks;
 //  B. configuration: SDK versions (Android 11.5.1 Kotlin, iOS 11.5.0 Swift), Capacitor sync (Android plugin registered, iOS plugin in the SPM package), SKAdNetwork, privacy manifest, ATT text, permissions;
-//  C. protected release: bundle id, iOS version 1.0 (1), Android versionCode 3 / versionName 1.0.2, no signing / team in the repository;
+//  C. protected release: bundle id, iOS version 1.0 (1), Android versionCode 4 / versionName 1.0.3, no signing / team in the repository;
 //  D. COMPILATION of the Kotlin plugin against the real InMobi SDK 11.5.1 (Maven Central + the Kotlin compiler shipped with Gradle). SKIPPED (said aloud) when the network, Java or Gradle are missing.
 // NOT done here, and said in docs/inmobi.md: the Gradle build with the Android SDK (not available), the Swift compilation (no Xcode), any run on a device.
 import assert from 'node:assert/strict';
@@ -68,9 +68,9 @@ assert.ok([...pbx.matchAll(/MARKETING_VERSION = ([^;]+);/g)].every(m => m[1] ===
 assert.ok(!/DEVELOPMENT_TEAM|CODE_SIGN_IDENTITY = "?(iPhone|Apple) Distribution/.test(pbx), 'iOS: nessun Team né identità di firma nel repository.');
 assert.match(sw, /func showPrivacyOptions[\s\S]{0,500}call\.resolve\(InMobiAdsPlugin\.consentResult\(\)\)[\s\S]{0,60}\}\s*\}/, 'Swift: le opzioni privacy restituiscono lo stato dopo il modulo, come su Android 1.0.2.');
 assert.ok(!/DEVELOPMENT_TEAM = [A-Z0-9]{10}/.test(pbx), 'iOS: nessun Team nel repository.'); assert.ok(!/ca-app-pub|GADApplication/.test(pbx));
-const app = read('android/app/build.gradle'); assert.match(app, /applicationId "it\.matteobianchi\.politicando2026"/); assert.match(app, /versionCode 3\b/); assert.match(app, /versionName "1\.0\.2"/);
+const app = read('android/app/build.gradle'); assert.match(app, /applicationId "it\.matteobianchi\.politicando2026"/); assert.match(app, /versionCode 4\b/); assert.match(app, /versionName "1\.0\.3"/);
 assert.equal(JSON.parse(read('capacitor.config.json')).appId, 'it.matteobianchi.politicando2026', 'capacitor.config.json porta l’appId Android.');
-lines.push('Bundle ID iOS it.politicando2026.app e versione iOS 1.0.1 (2); applicationId Android e versionCode 3 (1.0.2): separati; firma e Team: invariati');
+lines.push('Bundle ID iOS it.politicando2026.app e versione iOS 1.0.1 (2); applicationId Android e versionCode 4 (1.0.3): separati; firma e Team: invariati');
 
 // ---- D ----
 function compileKotlin() {

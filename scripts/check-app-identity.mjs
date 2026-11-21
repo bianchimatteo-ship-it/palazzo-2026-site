@@ -42,10 +42,10 @@ assert.equal(/namespace\s*=?\s*"([^"]+)"/.exec(gradle)?.[1], identity.android.ap
 assert.equal(JSON.parse(await read('capacitor.config.json')).appId, identity.android.applicationId, 'Android: capacitor.config.json (configurazione comune) porta l’appId Android.');
 assert.equal(JSON.parse(await read('android/app/src/main/assets/capacitor.config.json')).appId, identity.android.applicationId, 'Android: la copia nel progetto Android.');
 assert.ok(!gradle.includes(identity.ios.bundleId) && !(await read('android/app/src/main/AndroidManifest.xml')).includes(identity.ios.bundleId), 'Android: nessun identificativo iOS.');
-assert.match(gradle, /versionCode 3\b/); assert.match(gradle, /versionName "1\.0\.2"/);
+assert.match(gradle, /versionCode 4\b/); assert.match(gradle, /versionName "1\.0\.3"/);
 const androidInfo = JSON.parse(await read('android/app/src/main/assets/public/build-info.json'));
 assert.deepEqual(androidInfo.appIds, { android: identity.android.applicationId, ios: identity.ios.bundleId }, 'Android: build-info del pacchetto con i due identificativi, separati.');
-lines.push(`Android ${identity.android.applicationId} · versionCode 3 / 1.0.2 invariati`);
+lines.push(`Android ${identity.android.applicationId} · versionCode 4 / 1.0.3 (iOS 1.0.1 build 2 invariato)`);
 
 // ---------- never mixed in the shared code or the ads ----------
 const ads = await read('src/data/ads-config.js');
