@@ -1079,8 +1079,8 @@ html.platform-ios body select:not([multiple]), html.platform-ios body input:not(
 .setting-row.has-hint .segmented button { min-height: 44px; min-width: 96px; }
 
 /* Lingua / Language: a small switch next to the logo of the opening screen */
-.menu-lang { display: flex; gap: 6px; width: 100%; margin: 0 0 14px; padding: 5px; border: 1px solid var(--line-strong); border-radius: 14px; background: var(--panel); }
-.menu-lang button { flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 12px; border: 1px solid transparent; border-radius: 10px; background: none; color: var(--ink-2); font: 700 14px/1 Manrope, sans-serif; cursor: pointer; transition: background .15s ease, color .15s ease; }
+.menu-lang { display: flex; gap: 8px; width: 100%; margin: 0 0 14px; padding: 5px; border: 1px solid var(--line-strong); border-radius: 14px; background: var(--panel); }
+.menu-lang button { flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: var(--touch-min, 44px); padding: 0 12px; border: 1px solid transparent; border-radius: 10px; background: none; color: var(--ink-2); font: 700 14px/1 Manrope, sans-serif; cursor: pointer; transition: background .15s ease, color .15s ease; }
 .menu-lang button:hover { color: var(--ink-hi); background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .menu-lang button.active { background: var(--accent); color: var(--accent-ink); border-color: color-mix(in srgb, var(--accent-ink) 25%, transparent); box-shadow: 0 1px 0 rgba(0, 0, 0, .25); }
 .menu-lang button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
@@ -1213,7 +1213,7 @@ html.platform-ios body select:not([multiple]), html.platform-ios body input:not(
 .news-tags { margin: 2px 0 6px; color: var(--ink-3, #aab3a3); font-size: 13px; font-weight: 700; letter-spacing: .02em; }
 
 /* ---------- the first screen of a first installation: the language (both languages shown, dark and gold) ---------- */
-.language-gate { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom)); overflow-y: auto;
+.language-gate { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: max(20px, var(--safe-top)) 16px max(20px, var(--safe-bottom)); overflow-y: auto;
   background: radial-gradient(90% 70% at 50% 0%, rgba(240,207,133,.16), rgba(240,207,133,0) 60%), radial-gradient(120% 80% at 50% 100%, rgba(26,90,64,.32), rgba(26,90,64,0) 62%), linear-gradient(180deg, #0b1511 0%, #070d0a 100%); color: #f8f5ec; }
 .language-gate-card { width: min(520px, 100%); display: grid; justify-items: center; gap: 18px; padding: 34px 26px 28px; text-align: center; border: 1.5px solid rgba(240,207,133,.5); border-radius: 22px;
   background: linear-gradient(160deg, rgba(26,90,64,.38), rgba(10,34,25,.78) 60%) #0a2219; box-shadow: 0 24px 60px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.07); }
@@ -1405,7 +1405,7 @@ html[data-ui-motion="off"] .language-gate-button { transition: none; }
 .weekly-foot .primary-button { min-height: 44px; min-width: 140px; }
 @media (max-width: 640px) {
   .weekly-report { max-height: 100dvh; height: 100dvh; }
-  .weekly-head { padding: calc(12px + env(safe-area-inset-top)) 16px 8px; }
+  .weekly-head { padding: calc(12px + var(--safe-top)) 16px 8px; }
   .weekly-head h2 { font-size: 19px; }
   .weekly-body { padding: 12px 14px 8px; gap: 12px; }
   .report-backdrop:has(.weekly-report) { padding: 0; }
@@ -1415,10 +1415,20 @@ html[data-ui-motion="off"] .language-gate-button { transition: none; }
 }
 @media (max-height: 520px) and (orientation: landscape) { .weekly-head { padding-top: 8px; } .weekly-foot { padding-top: 8px; padding-bottom: calc(8px + env(safe-area-inset-bottom)); display: flex; } .weekly-foot .primary-button { width: auto; } }
 
-/* iOS (iPhone, iPad): viewport-fit=cover puts the page under the status bar / Dynamic Island, so the top safe area is added here; the bottom one is already handled by the rules above. No effect elsewhere. */
-html.platform-ios body { padding-top: env(safe-area-inset-top, 0px); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
-html.platform-ios .sx-tabs, html.platform-ios .gov-nav { top: env(safe-area-inset-top, 0px); }
-html.platform-ios .mobile-sheet-panel, html.platform-ios .wizard-backdrop, html.platform-ios .report-backdrop { padding-top: max(20px, env(safe-area-inset-top, 0px)); }
+/* ---------- safe areas (notch, Dynamic Island, status bar, home indicator), ONE place for every platform ----------
+   index.html has viewport-fit=cover: the page is drawn under the status bar on iOS (WKWebView, Safari) AND on Android 15+ (targetSdk 36 is edge-to-edge; Capacitor 8 passes the insets to the WebView as env(safe-area-inset-*)
+   from WebView 140; an older WebView is shifted by Capacitor natively and reports 0 here, so nothing is added twice). The top inset is added INSIDE the topbar (its background runs under the status bar: one continuous
+   surface) and never to the body, and it is divided by the interface scale: .app-shell has zoom: var(--ui-scale), which would multiply an inset that is already in real CSS pixels. */
+:root { --safe-top: env(safe-area-inset-top, 0px); --safe-bottom: env(safe-area-inset-bottom, 0px); --safe-left: env(safe-area-inset-left, 0px); --safe-right: env(safe-area-inset-right, 0px); --touch-min: 44px; }
+html.platform-android { --touch-min: 48px; }
+.app-shell { --safe-top: calc(env(safe-area-inset-top, 0px) / var(--ui-scale, 1)); --safe-bottom: calc(env(safe-area-inset-bottom, 0px) / var(--ui-scale, 1)); }
+body { padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+.sx-tabs, .gov-nav { top: var(--safe-top); }
+.wizard-backdrop { padding-top: max(22px, var(--safe-top)); }
+.report-backdrop { padding-top: max(20px, var(--safe-top)); }
+@media (max-width: 700px) { .menu-popup-backdrop { padding-top: 0; } .menu-popup { padding-top: var(--safe-top); } }
+@media (max-width: 600px) { .wizard-backdrop { padding-top: var(--safe-top); } }
+.menu-shell { padding-top: calc(32px + var(--safe-top)); }
 .weekly-advance-note { flex: none; margin: 0; padding: 10px 22px; border-top: 1px solid var(--line-strong, var(--line)); background: rgba(240, 207, 133, .08); font-size: .92rem; line-height: 1.4; }
 @media (max-width: 600px) { .weekly-advance-note { padding: 10px 16px; } }
 

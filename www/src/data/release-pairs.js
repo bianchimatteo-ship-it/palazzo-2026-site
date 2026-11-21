@@ -2943,4 +2943,6 @@ export const ALL_PAIRS = [
   ["Invito respinto: potrai ripeterlo dal {}.", "Invitation refused: you can repeat it from {1}."],
   ["devono acconsentire uno per uno; chi rifiuta resta nell’accordo originale.", "must each agree; whoever refuses stays in the original accord."],
   ["deve acconsentire; se rifiuta resta nell’accordo originale.", "must agree; if it refuses it stays in the original accord."],
+  ["Simulazione in corso", "Simulation in progress"],
+  ["Prossimo voto · ", "Next vote · "],
 ];

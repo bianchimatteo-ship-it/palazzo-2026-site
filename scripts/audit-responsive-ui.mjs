@@ -7,7 +7,7 @@ import { chromeAvailable, createCareerInPage, openCareer, withBrowser } from './
 if (!chromeAvailable) { console.log('Audit responsive: SKIPPED (Chrome non trovato, imposta CHROME_PATH).'); process.exit(0); }
 const arg = name => process.argv.find(item => item.startsWith(`--${name}=`))?.split('=')[1];
 const SHOTS = arg('shots'), QUICK = process.argv.includes('--quick'), JSON_OUT = process.argv.includes('--json');
-const VIEWPORTS = [[320, 700, 2], [360, 800, 3], [375, 812, 3], [390, 844, 3], [414, 896, 2], [430, 932, 3], [768, 1024, 2], [1024, 768, 2], [1280, 800, 1], [1440, 900, 1]];
+const VIEWPORTS = [[375, 667, 2], [320, 700, 2], [360, 800, 3], [375, 812, 3], [390, 844, 3], [414, 896, 2], [430, 932, 3], [768, 1024, 2], [1024, 768, 2], [1280, 800, 1], [1440, 900, 1]];
 const ORIENT = (w, h) => [[w, h, 'portrait'], [h, w, 'landscape']];
 const PAGES = ['panoramica', 'carriera', 'calendario', 'finanze', 'partito', 'elezioni', 'sondaggi', 'parlamento', 'governo', 'quirinale', 'leggi', 'referendum', 'notizie', 'impostazioni', 'territori', 'politici', 'ricompense'];
 const sizes = [];

@@ -456,3 +456,26 @@ html[data-ui-motion="reduced"] .hqc-drawer-toggle, html[data-ui-motion="reduced"
   .hqc-who { padding-bottom: 8px; }
   .hqc-action { margin: 10px 10px 10px 0; padding: 12px 14px; }
 }
+
+
+/* ---------- touch targets of the top bar: at least 44 pt on iOS, 48 dp on Android (--touch-min, theme.css), on phones and on every touch screen; the icons stay small, the hit area is the button ---------- */
+@media (max-width: 600px), (pointer: coarse) {
+  .topbar .icon-button { display: inline-flex; align-items: center; justify-content: center; padding: 0; width: var(--touch-min); min-width: var(--touch-min); height: var(--touch-min); min-height: var(--touch-min); }
+  .topbar .advance-button { min-height: var(--touch-min); height: var(--touch-min); padding-inline: 14px; }
+  .topbar .top-tools { gap: 8px; }
+  .topbar .top-time { align-items: center; }
+  .topbar .date-chip { min-height: var(--touch-min); height: var(--touch-min); }
+}
+
+
+/* ---------- the editorial band above the top bar: it owns the safe area (status bar, notch) and turns it into a discreet line of context. Same dark surface as the bar (one continuous top), a fine gold hairline, serif italic text, one slow pulsing dot. ---------- */
+.top-band { z-index: 2; display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; box-sizing: border-box; height: calc(var(--safe-top, 0px) + 28px); padding: var(--safe-top, 0px) 46px 0; background: rgba(12, 18, 16, .86); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: var(--muted, #9aa3b2); font: italic 400 12.5px/1 var(--font-display, Georgia, serif); letter-spacing: .02em; border-bottom: 0; position: relative; }
+.top-band::after { content: ""; position: absolute; left: 46px; right: 46px; bottom: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(214, 178, 94, .45) 18%, rgba(214, 178, 94, .45) 82%, transparent); }
+.top-band span { display: inline-flex; align-items: center; gap: 8px; min-width: 0; height: 28px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.top-band-left { color: var(--ink-hi, #e9edf5); opacity: .8; flex: 1 1 auto; display: block !important; line-height: 28px; }
+.top-band-right { flex: 0 0 auto; }
+.top-band-dot { width: 5px; height: 5px; border-radius: 50%; background: #d6b25e; box-shadow: 0 0 0 0 rgba(214, 178, 94, .5); animation: top-band-pulse 3.2s ease-out infinite; }
+@keyframes top-band-pulse { 0% { box-shadow: 0 0 0 0 rgba(214, 178, 94, .45); } 70%, 100% { box-shadow: 0 0 0 6px rgba(214, 178, 94, 0); } }
+@media (prefers-reduced-motion: reduce) { .top-band-dot { animation: none; } }
+@media (max-width: 1023px) and (min-width: 601px) { .top-band { padding-left: 27px; padding-right: 27px; } .top-band::after { left: 27px; right: 27px; } }
+@media (max-width: 600px) { .top-band { padding-left: 14px; padding-right: 14px; height: calc(var(--safe-top, 0px) + 26px); font-size: 11.5px; } .top-band::after { left: 14px; right: 14px; } .top-band span { height: 26px; } .top-band-left { line-height: 26px; } }

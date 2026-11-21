@@ -117,7 +117,9 @@ try {
   const webIndex = await readFile(join(ROOT, 'index.html'), 'utf8');
   assert.ok(/name="viewport"[^>]*viewport-fit=cover/.test(webIndex), 'viewport-fit=cover (area sicura su iPhone con notch e Dynamic Island).');
   const themeCss = await readFile(join(ROOT, 'src/theme.css'), 'utf8');
-  assert.ok(/html\.platform-ios body \{[^}]*env\(safe-area-inset-top/.test(themeCss), 'Area sicura superiore solo su iOS (classe platform-ios).');
+  const homeCss = await readFile(join(ROOT, 'src/home.css'), 'utf8');
+  assert.ok(/:root \{[^}]*--safe-top: env\(safe-area-inset-top/.test(themeCss) && /\.top-band \{[^}]*var\(--safe-top/.test(homeCss), 'Area sicura superiore su tutte le piattaforme (iOS e Android edge-to-edge): --safe-top assorbito dalla fascia sopra la barra.');
+  assert.ok(!/html\.platform-ios body \{[^}]*padding-top/.test(themeCss), 'Nessun padding-top solo-iOS sul body (sarebbe doppio con la fascia).');
   const pkg = JSON.parse(await readFile(join(ROOT, 'package.json'), 'utf8'));
   const hasAndroid = Boolean(pkg.dependencies?.['@capacitor/android']);
   console.log(`Stato piattaforme: iOS ${pbx.length ? 'presente' : 'assente'} (target ${[...new Set([...pbx.matchAll(/IPHONEOS_DEPLOYMENT_TARGET = ([\d.]+);/g)].map(match => match[1]))].join(', ')}, versione ${[...new Set([...pbx.matchAll(/MARKETING_VERSION = ([\d.]+);/g)].map(match => match[1]))].join(', ')}, build ${[...new Set([...pbx.matchAll(/CURRENT_PROJECT_VERSION = (\d+);/g)].map(match => match[1]))].join(', ')}); Android ${hasAndroid ? 'presente' : 'NON PRESENTE'}.`);
