@@ -30,8 +30,8 @@ await withBrowser(async ({ evaluate, send, goto, waitFor: wait, pause, errors, v
   await click('[data-nav="ricompense"]'); await must(() => has('[data-rewards-page]'), 'la pagina Ricompense');
   const page = await text('[data-rewards-page]');
   for (const part of ['Ricompensa giornaliera', '+500 €', 'Tempo di gioco', 'Ricompense pubblicitarie', 'Che cosa hai ricevuto', 'Guarda il video', 'Prossimo capitale politico', 'Prossima preparazione elettorale']) assert.ok(page.includes(part), `La pagina mostra «${part}».`);
-  assert.equal(await evaluate(`document.querySelector('[data-reward-video]').disabled`), true, 'Il pulsante del video è disabilitato finché AdMob non è disponibile.');
-  assert.match(await text('[data-reward-video-note]'), /AdMob/, 'E dice perché.');
+  assert.equal(await evaluate(`document.querySelector('[data-reward-video]').disabled`), true, 'Il pulsante del video è disabilitato finché InMobi non è attivo.');
+  assert.match(await text('[data-reward-video-note]'), /non sono attivi/, 'E dice perché.');
   assert.ok(!/donator|scadenza|scade|durata|settimane/i.test(page.replace(/Il giorno cambia[^\n]*/, '')), 'Nessuna indicazione di durata o donatori.');
   await click('[data-reward-video]'); await pause(200);
   assert.equal(await inPage(`return (store.getState().world?.adTransfers ?? []).length;`), 0, 'Un clic sul pulsante spento non dà nulla.');

@@ -7,7 +7,11 @@ import { COLLECT } from './lib/i18n-tour.mjs';
 import { createIndependentDetector } from './lib/i18n-independent.mjs';
 
 if (!chromeAvailable) { console.log('Notte elettorale in inglese saltata: Chrome non trovato.'); process.exit(0); }
-const detector = createIndependentDetector();
+// The invented surnames of the simulated candidates (campaign-engine.js: «Bosco», «Conti», «Ferri» are also Italian words) are names, not Italian left in the English text.
+import { readFileSync } from 'node:fs';
+const surnames = [...(readFileSync(new URL('../src/core/campaign-engine.js', import.meta.url), 'utf8').match(/const SURNAMES = Object\.freeze\(\[([^\]]*)\]/)?.[1] ?? '').matchAll(/'([^']+)'/g)].map(match => match[1]);
+assert.ok(surnames.length > 20, 'cognomi dei candidati simulati letti dal motore');
+const detector = createIndependentDetector(surnames);
 const problems = []; let texts = 0, screens = 0;
 for (const [label, level, extra] of [['politiche', 'deputato', `store.fastForwardToElection('politiche'); store.startCampaign({ electionType: 'politiche', role: 'deputato', objective: 'seat' }, real.parties ?? []);`], ['comunale', 'comunale', `store.fastForwardToElection('comunale'); store.startCampaign({ electionType: 'comunale', role: 'sindaco', objective: 'win', municipalityBand: 'fino-15000' }, real.parties ?? []);`]]) {
   await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, version }) => {
@@ -16,6 +20,8 @@ for (const [label, level, extra] of [['politiche', 'deputato', `store.fastForwar
     await goto(); await wait(() => evaluate('Boolean(document.querySelector("[data-menu=continua]"))')); await evaluate('document.querySelector("[data-menu=continua]").click(), true'); await wait(() => evaluate('Boolean(document.querySelector(".page-wrap"))'));
     const S = body => evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); ${body} })()`);
     for (let i = 0; i < 90 && !(await S('return Boolean(store.getState().night);')); i++) await S('store.advance(7);');
+    // the player's own vote (a scene at the polling station) comes before the night: it decides nothing and is skipped, as the test of the night itself does
+    if ((await S(`return store.getState().scene?.kind ?? null;`)) === 'voto') { await S(`store.sceneSkip(); return true;`); await pause(300); }
     await wait(() => evaluate('Boolean(document.querySelector(".night"))'));
     const click = async selector => { await evaluate(`document.querySelector(${JSON.stringify(selector)})?.click(), true`); await pause(150); };
     const lang = async next => { await evaluate(`import('/src/core/i18n.js?v=${version}').then(m => m.setLanguage(${JSON.stringify(next)})).then(() => true)`); await pause(400); };

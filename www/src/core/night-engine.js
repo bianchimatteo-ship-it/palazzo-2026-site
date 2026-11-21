@@ -8,8 +8,9 @@
 //   - the exit poll, the projections and the seat estimates are estimates and are never built from the units not yet counted (they use the exit poll as the prior of what is still to count);
 //   - the news of the night are derived from those figures, stored once when the hour is reached (so a reload or a save does not write them twice) and never touch the career.
 // The career is touched once, when the night is concluded (store.concludeElectionNight → the same closeCampaign as before).
-import { SEAT_RULES, EUROPEAN_THRESHOLD, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261117-3';
-import { allocateDHondt, allocateWithBonus } from './election-engine.js?v=20261117-3';
+import { SEAT_RULES, EUROPEAN_THRESHOLD, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261120-1';
+import { allocateDHondt, allocateWithBonus } from './election-engine.js?v=20261120-1';
+import { distributeVotes } from './electorate.js?v=20261120-1';
 
 export const NIGHT_HOURS = 12;
 export const NIGHT_STAGES = Object.freeze({ finale: 'Esito della consultazione', 'primo-turno': 'Primo turno' });
@@ -84,9 +85,19 @@ export function nightSnapshot(campaign, stage) {
   // In a vote for lists the percentages of the engine are on all the valid votes, "Altri" included, while the votes of the rows add up to the listed lists only: the rest is told as «Altri»,
   // with the votes that make the percentages of the engine come out (so the partial and the final percentages are the engine's, not a different base).
   const sumPercent = groups.reduce((sum, group) => sum + group.percent, 0);
+  const valid = Math.round(Number(result.electorate?.ballots ?? result.totalBallots) || 0);
   if (sumPercent > 0 && 100 - sumPercent > 0.05 && sumPercent < 99.95) {
-    const listed = groups.reduce((sum, group) => sum + group.votes, 0);
-    groups.push({ id: 'altri', label: 'Altri', percent: Math.round((100 - sumPercent) * 100) / 100, votes: Math.max(0, Math.round(listed * 100 / sumPercent) - listed), seats: 0, coalitionId: null, partyIds: [], isPlayer: false, others: true });
+    const rest = Math.round((100 - sumPercent) * 100) / 100;
+    if (valid > 0) {
+      // The valid ballots of the canonical result are the base: the lists get percent × valid and «Altri» the remainder (never a base rebuilt from the rows). A result saved by an older version has the rows stretched to
+      // all the ballots: it is split again from its percentages, the same way the engine does now, so that the night and the result agree.
+      const split = distributeVotes([...groups.map(group => group.percent), rest], valid);
+      groups.forEach((group, index) => { group.votes = split[index]; });
+      groups.push({ id: 'altri', label: 'Altri', percent: rest, votes: split[groups.length], seats: 0, coalitionId: null, partyIds: [], isPlayer: false, others: true });
+    } else {
+      const listed = groups.reduce((sum, group) => sum + group.votes, 0);
+      groups.push({ id: 'altri', label: 'Altri', percent: rest, votes: Math.max(0, Math.round(listed * 100 / sumPercent) - listed), seats: 0, coalitionId: null, partyIds: [], isPlayer: false, others: true });
+    }
   }
   const areas = (result.territories ?? []).map(area => ({
     id: area.territoryId, name: area.name, weight: Math.max(0, Number(area.weight) || 0), pct: Object.fromEntries((area.groups ?? []).map(row => [row.id, Number(row.percent) || 0]))

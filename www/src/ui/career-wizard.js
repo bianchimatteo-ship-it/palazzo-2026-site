@@ -1,18 +1,19 @@
-import { residentsText } from '../core/municipal-rules.js?v=20261117-3';
-import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261117-3';
-import { DEFAULT_LOGO_SECONDARY, LOGO_SECONDARY_PALETTE, LOGO_SHAPES, LOGO_SYMBOLS, isLogoColor, partyLogoDataUrl } from './party-logo.js?v=20261117-3';
-import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261117-3';
-import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261117-3';
-import { AVATAR_GROUPS, AVATAR_LABELS, AVATAR_OPTIONS, DEFAULT_AVATAR, SHAPE_FIELDS, SHAPE_LABELS, SHAPE_LIMIT, normalizeAvatar } from '../core/avatar.js?v=20261117-3';
-import { avatarSvg } from './avatar-svg.js?v=20261117-3';
-import { DATA_SOURCES, isPendingReal, isSelectableParty } from '../data/schema.js?v=20261117-3';
-import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261117-3';
-import { POLL_SCENARIOS, SCENARIO_LIMITS } from '../core/poll-scenario.js?v=20261117-3';
-import { startStep, startSummary } from './start-wizard.js?v=20261117-3';
-import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261117-3';
-import { normalizeStart } from '../core/start-engine.js?v=20261117-3';
-import { legacyBanner } from './hall-view.js?v=20261117-3';
-import { formatDate } from '../core/time.js?v=20261117-3';
+import { residentsText } from '../core/municipal-rules.js?v=20261120-1';
+import { MONTHS, parseBirth, splitBirth } from '../core/birth-date.js?v=20261120-1';
+import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261120-1';
+import { DEFAULT_LOGO_SECONDARY, LOGO_SECONDARY_PALETTE, LOGO_SHAPES, LOGO_SYMBOLS, isLogoColor, partyLogoDataUrl } from './party-logo.js?v=20261120-1';
+import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261120-1';
+import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261120-1';
+import { AVATAR_GROUPS, AVATAR_LABELS, AVATAR_OPTIONS, DEFAULT_AVATAR, SHAPE_FIELDS, SHAPE_LABELS, SHAPE_LIMIT, normalizeAvatar } from '../core/avatar.js?v=20261120-1';
+import { avatarSvg } from './avatar-svg.js?v=20261120-1';
+import { DATA_SOURCES, isPendingReal, isSelectableParty } from '../data/schema.js?v=20261120-1';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261120-1';
+import { POLL_SCENARIOS, SCENARIO_LIMITS } from '../core/poll-scenario.js?v=20261120-1';
+import { startStep, startSummary } from './start-wizard.js?v=20261120-1';
+import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261120-1';
+import { normalizeStart } from '../core/start-engine.js?v=20261120-1';
+import { legacyBanner } from './hall-view.js?v=20261120-1';
+import { formatDate } from '../core/time.js?v=20261120-1';
 
 const POSITIONS = ['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra'];
 
@@ -65,6 +66,20 @@ function renderModeGate(draft) {
       <footer class="wizard-footer"><button type="button" class="wizard-cancel" data-wizard-action="cancel">Annulla</button><span class="wizard-footer-note">Non potrai cambiare la modalità di una carriera già iniziata.</span></footer>
     </div>
   </section></div>`;
+}
+// The date of birth as three simple fields (day, month, year) for a phone, with the same «YYYY-MM-DD» in a hidden field: what the game saves is unchanged.
+export function birthField(d, today) {
+  const split = d.birthDate ? splitBirth(d.birthDate) : { day: d.birthDay ?? '', month: d.birthMonth ?? '', year: d.birthYear ?? '' };
+  const parsed = parseBirth(split, today);
+  const hint = parsed.error ?? (parsed.iso ? `Hai ${parsed.age} anni.` : 'Scrivi il giorno, scegli il mese e scrivi l’anno di quattro cifre.');
+  return `<fieldset class="birth-field" data-birth data-birth-today="${esc(today)}"><legend>Data di nascita</legend>
+    <div class="birth-row">
+      <label>Giorno<input name="birthDay" value="${esc(split.day)}" inputmode="numeric" pattern="[0-9]*" maxlength="12" placeholder="GG" autocomplete="bday-day" enterkeyhint="next" aria-describedby="birth-hint" /></label>
+      <label>Mese<select name="birthMonth" autocomplete="bday-month" aria-describedby="birth-hint"><option value="">Mese</option>${MONTHS.map((month, index) => `<option value="${index + 1}"${String(index + 1) === String(split.month) ? ' selected' : ''}>${month[0].toUpperCase()}${month.slice(1)}</option>`).join('')}</select></label>
+      <label>Anno<input name="birthYear" value="${esc(split.year)}" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="AAAA" autocomplete="bday-year" aria-describedby="birth-hint" /></label>
+    </div>
+    <input type="hidden" name="birthDate" value="${esc(parsed.iso ?? '')}" />
+    <small id="birth-hint" class="birth-hint${parsed.error ? ' is-error' : ''}" data-birth-hint role="status" aria-live="polite">${esc(hint)}</small></fieldset>`;
 }
 export function renderCareerWizard(state, draft, realParties = [], logoFor = () => null, parliamentaryGroups = [], partyLeaderships = [], politicalFigures = [], realPoliticians = [], territory = null, data = null, pollView = null) {
   if (!draft.gameMode) return renderModeGate(draft);
@@ -203,7 +218,7 @@ function profileStep(state, d) {
   return `<section class="summary-section wizard-profile"><div class="summary-section-heading"><div><span>CHI SEI</span><strong>Il tuo politico</strong></div></div><div class="wizard-form-grid">
     <label>Nome<input name="firstName" value="${val(d, 'firstName')}" autocomplete="given-name" maxlength="40" placeholder="Il tuo nome" /></label>
     <label>Cognome<input name="lastName" value="${val(d, 'lastName')}" autocomplete="family-name" maxlength="50" placeholder="Il tuo cognome" /></label>
-    <label>Data di nascita<input type="date" name="birthDate" value="${val(d, 'birthDate')}" max="${esc(d.currentDate ?? state.clock.currentDate)}" /></label>
+    ${birthField(d, d.currentDate ?? state.clock.currentDate)}
     <label>Genere<select name="gender"><option value="uomo" ${d.gender === 'uomo' ? 'selected' : ''}>Uomo</option><option value="donna" ${d.gender === 'donna' ? 'selected' : ''}>Donna</option></select></label>
     ${professionField(d)}
   </div><small class="wizard-hint">Sono i dati del tuo personaggio, non i tuoi: puoi inventarli. Servono solo a questa carriera. La data di nascita è quella del personaggio.</small></section>${avatarEditor(d)}`;

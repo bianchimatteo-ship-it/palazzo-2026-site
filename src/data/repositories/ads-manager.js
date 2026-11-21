@@ -1,9 +1,9 @@
-// The advertising policy of the game, apart from the SDK (admob-adapter.js) and from the rewards (ads-rewarded.js): WHEN a banner or an interstitial may be shown. Nothing here touches accounts, polls or saves.
+// The advertising policy of the game, apart from the SDK (inmobi-adapter.js) and from the rewards (ads-rewarded.js): WHEN a banner or an interstitial may be shown. Nothing here touches accounts, polls or saves.
 //   · Banner: only on the secondary pages of BANNER_PAGES, never during a scene, the vote, the election night, the weekly report, a menu or the first start; hidden everywhere else.
 //   · Interstitial: only when the player closes a week (a natural pause), at most one every INTERSTITIAL.everyWeeks closed weeks, never within minGapMs of another interstitial or of a rewarded video, at most perDay a day,
 //     and never while an election, a campaign, the night, a scene or a vote is going on.
 //   · Rewarded video: always the player's choice (the button of the rewards page); this module only records the time it ended, to keep the interstitials away from it.
-import { BANNER_PAGES, INTERSTITIAL } from '../ads-config.js?v=20261117-3';
+import { BANNER_PAGES, INTERSTITIAL } from '../ads-config.js?v=20261120-1';
 
 const KEY = 'politicando.ads.v1';
 const dayOf = ms => new Date(ms).toISOString().slice(0, 10);
@@ -19,24 +19,26 @@ export function createAdsManager({ adapter, storage = globalThis.localStorage, n
   const save = data => { try { storage?.setItem(KEY, JSON.stringify(data)); } catch { /* no storage: the limits then hold only while the page is open */ } };
   let memory = load();
   const write = patch => { memory = { ...memory, ...patch }; save(memory); };
-  const adsOn = () => Boolean(adapter?.ids?.enabled);
+  const policyNow = () => (typeof policy === 'function' ? policy() : policy) ?? INTERSTITIAL;   // the remote configuration may change the frequency without a new version of the app
+  const formatOn = format => Boolean(adapter?.ids?.[format]?.enabled);
   return {
     // The banner follows the page: shown on a secondary page when nothing else is going on, hidden otherwise. Safe to call at every change of page.
     async syncBanner({ page, blocked = false, margin = 0 } = {}) {
-      if (!adsOn()) return false;
+      if (!formatOn('banner')) { await adapter?.hideBanner?.(); return false; }
       const wanted = Boolean(page && pages.includes(page) && !blocked);
       if (wanted) return adapter.showBanner({ margin });
       await adapter.hideBanner(); return false;
     },
     // Called when the player closes a week. Returns true if an interstitial was shown.
     async onWeekClosed(state) {
-      if (!adsOn() || interruptible(state)) return false;
+      if (!formatOn('interstitial') || interruptible(state)) return false;
+      const rules = policyNow();
       const t = now(), today = dayOf(t);
       const weeks = (memory.weeks ?? 0) + 1;
       const shownToday = memory.day === today ? (memory.today ?? 0) : 0;
       write({ weeks });
-      if (weeks < policy.everyWeeks || shownToday >= policy.perDay) return false;
-      if (t - Math.max(memory.lastInterstitial ?? 0, memory.lastRewarded ?? 0) < policy.minGapMs) return false;
+      if (weeks < rules.everyWeeks || shownToday >= rules.perDay) return false;
+      if (t - Math.max(memory.lastInterstitial ?? 0, memory.lastRewarded ?? 0) < rules.minGapMs) return false;
       const shown = await adapter.showInterstitial();
       if (shown) write({ weeks: 0, lastInterstitial: t, day: today, today: shownToday + 1 });
       return shown;

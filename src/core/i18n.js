@@ -5,7 +5,7 @@
 //     the phrase book (src/data/i18n/en-*.js): exact phrases, phrases with numbers (`#`) or free parts (`{}`), and the numbers, currency and dates in English form.
 //     Proper names (people, parties, places, official denominations) are never in the phrase book: they stay as they are. A phrase that is not in the book stays Italian, never wrong.
 // Nothing here touches a career: the language is a view of the same data.
-import { saveSetting } from './settings.js?v=20261117-3';
+import { saveSetting } from './settings.js?v=20261120-1';
 
 export const LANGUAGES = Object.freeze([['it', 'Italiano', 'it-IT'], ['en', 'English', 'en-GB']]);
 const SETTINGS_KEY = 'politicando.settings.v1';
@@ -347,6 +347,11 @@ export function translateText(text) {
   let out = cache.get(core);
   if (out === undefined) {
     let translated = written.get(core) ?? translatePiece(core);
+    // A paragraph made of several sentences, some in the phrase book and one with an unusual combination of numbers: the sentences are translated one by one (each one is a phrase of the book), then joined again.
+    if (translated !== undefined && residualItalian(englishDates(englishNumbers(translated))) !== null && /[.!?]\s+[A-ZÀ-Ù“«]/.test(core)) {
+      const parts = core.split(/(?<=[.!?])\s+(?=[A-ZÀ-Ù“«])/);
+      if (parts.length > 1) { const each = parts.map(part => written.get(part) ?? translatePiece(part)); if (residualItalian(englishDates(englishNumbers(each.join(' ')))) === null) translated = each.join(' '); }
+    }
     // Not in the phrase book, or only in part («Programma: fino a quattro priorità» → «PROGRAMME: fino a quattro priorità»): the automatic translator (server provider, persistent cache) is asked for the
     // WHOLE text as an anonymous template; until it answers the text stays as it is (retranslate() clears this memory when answers arrive).
     if (auto && (translated === core || residualItalian(englishDates(englishNumbers(translated))) !== null)) {
@@ -478,7 +483,7 @@ export function watchTree(root) {
 let loading = null;
 export function loadBook() {
   if (book?.loaded) return Promise.resolve(book);
-  loading ??= import('../data/i18n/index.js?v=20261117-3').then(module => { module.install(installBook); book.loaded = true; return book; });
+  loading ??= import('../data/i18n/index.js?v=20261120-1').then(module => { module.install(installBook); book.loaded = true; return book; });
   return loading;
 }
 // The title of the page (the tab) is read by people and by assistive technology: it follows the language like the rest (the Italian one is kept to go back to).

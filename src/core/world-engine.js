@@ -1,11 +1,11 @@
-import { uniqueId } from './ids.js?v=20261117-3';
-import { HARD_GAP, THEMES, THEME_BY_ID, compare as compareProgram, compromise as compromiseOn, positionOf as programPositionOf, refusalBlock, refusalKey, recordRefusal, coalitionBlock, registrationsOf, pairKey as programPairKey } from './alliance-rules.js?v=20261117-3';
-import { AD_REWARD } from '../data/simulation/reward-rules.js?v=20261117-3';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261117-3';
-import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261117-3';
-import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261117-3';
-import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261117-3';
-import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261117-3';
+import { uniqueId } from './ids.js?v=20261120-1';
+import { HARD_GAP, THEMES, THEME_BY_ID, compare as compareProgram, compromise as compromiseOn, positionOf as programPositionOf, refusalBlock, refusalKey, recordRefusal, coalitionBlock, registrationsOf, pairKey as programPairKey } from './alliance-rules.js?v=20261120-1';
+import { AD_REWARD } from '../data/simulation/reward-rules.js?v=20261120-1';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261120-1';
+import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261120-1';
+import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261120-1';
+import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261120-1';
+import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261120-1';
 export { houseEffect };
 
 // The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.
@@ -985,7 +985,9 @@ function negotiate(world, party, camp) {
 }
 // Whether a force can come into a camp with its own partners: close enough to the leader and not at odds with the members (the same rule when a camp is joined and when a force is invited).
 const campCompatible = (world, party, camp) => campFit(world, party, camp) > -0.4 && distance(party, leaderOf(camp.members)) <= 2;
-function joinCamp(world, camp, party, date, reason, { terms = null, due = null } = {}) {
+// `mode`: 'merge' (the default: a force bound to another accord brings its compatible partners along) or 'individual' (only that force moves; every partner stays in the accord they were in, which keeps its terms,
+// leader and registrations). `joined` collects who moved, so that nobody changes accord without the caller and the chronicle knowing it.
+function joinCamp(world, camp, party, date, reason, { terms = null, due = null, mode = 'merge', consent = null } = {}) {
   const alliance = camp.alliance;
   // A force already bound to another accord brings its partners along when they are all compatible (the accords merge, the conditions go with them). When some partner is not, the accord stays
   // with the ones that stay: it loses members only through a recorded decision (chronicle and history), and ends only when fewer than two remain.
@@ -994,7 +996,7 @@ function joinCamp(world, camp, party, date, reason, { terms = null, due = null }
   let stays = [];
   if (previous) {
     const partners = previous.partyIds.filter(item => item !== party.id && !alliance.partyIds.includes(item)).map(id => world.parties.find(item => item.id === id && item.active)).filter(Boolean);
-    const coming = partners.filter(partner => campCompatible(world, partner, camp));
+    const coming = mode === 'individual' ? [] : partners.filter(partner => campCompatible(world, partner, camp) && (!consent || consent(partner)));
     stays = partners.filter(partner => !coming.includes(partner));
     newcomers.push(...coming.map(item => item.id));
     if (!stays.length) {
@@ -1002,6 +1004,17 @@ function joinCamp(world, camp, party, date, reason, { terms = null, due = null }
       // The accords of the alliance that merges are not lost: its conditions still stand (and are checked at the vote) and its cohesion weighs on the new one.
       alliance.terms = [...(alliance.terms ?? []), ...(previous.terms ?? [])].slice(-8);
       alliance.cohesion = clamp(Math.round((alliance.cohesion + (previous.cohesion ?? alliance.cohesion)) / 2), 0, 100);
+      // The electoral registrations of the accord that merges are not lost either: each one (the approved, the rejected, the legacy ones) passes to the new accord, unless it already has one for the same election and type.
+      // A registration is never rewritten: the ones of concluded elections stay exactly as they were; the composition (`members`) of the accord that made it travels with it, so that an approval is checked
+      // again for an open election when the members are no longer the ones it was granted to (see coalitionApproval).
+      if (Array.isArray(previous.coalitions) && previous.coalitions.length) {
+        const own = Array.isArray(alliance.coalitions) ? alliance.coalitions : (alliance.coalitions = []);
+        for (const record of previous.coalitions) {
+          if (own.some(item => item.electionId === record.electionId && item.type === record.type)) continue;
+          own.push({ ...record, mergedFrom: previous.id, members: record.members ?? [...previous.partyIds] });
+        }
+        alliance.history = [...(alliance.history ?? []), { date, text: `Le registrazioni elettorali di «${previous.label}» passano all’accordo (${previous.coalitions.length})` }].slice(-12);
+      }
     } else {
       previous.partyIds = previous.partyIds.filter(id => !newcomers.includes(id));
       settleLeader(world, previous);
@@ -1877,8 +1890,9 @@ export function allianceOdds(world, forceId, { partySupport = 50, influence = 50
   add('La tua influenza', (influence - 50) / 250);
   if (allianceOf(world, force.id)) add(`${force.label} è già in un’altra intesa`, -0.25);
   if (force.crisis) add(`${force.label} è in crisi e cerca sponde`, 0.1);
-  if (difficulty) add('Difficoltà della partita', difficulty);
-  const chance = clamp(0.22 + reasons.reduce((sum, item) => sum + item.delta, 0), 0.03, 0.9);
+  // The difficulty of the career is not a reason a party gives for accepting or refusing: the decision rests on the programmes, the relations, the consensus, the interests, the strategy, the precedents and the convenience above (the `difficulty` option only shifts the odds below, silently).
+  // the level of the career still sets how exacting the allies are, as a plain shift of the odds: it is never given as the reason of an acceptance or of a refusal
+  const chance = clamp(0.22 + reasons.reduce((sum, item) => sum + item.delta, 0) + (difficulty || 0), 0.03, 0.9);
   // Very distant forces only agree as a motivated exception: two small forces, or a force in crisis.
   const exception = gap >= 4 && !(own < 3 && theirs < 3) && !force.crisis;
   const blocked = program.hard.length ? `Programmi incompatibili su ${program.hard.map(row => row.label.toLowerCase()).join(', ')}: senza un compromesso negoziato sul tema l’alleanza non è possibile.` : null;
@@ -1929,8 +1943,20 @@ function inviteMerge(world, force, camp) {
   const partners = other.partyIds.filter(id => id !== force.id).map(id => world.parties.find(item => item.id === id && item.active)).filter(Boolean);
   return { alliance: other, partners, incompatible: partners.filter(partner => !campCompatible(world, partner, camp)) };
 }
+// What inviting this force would do to the accord it already belongs to: who could follow it (compatible partners), who would stay, and that by default only the force itself moves. Null when it is in no accord.
+export function inviteImpact(world, forceId) {
+  const player = playerParty(world), force = world.parties.find(item => item.id === forceId);
+  const own = player && allianceOf(world, player.id);
+  if (!force || !own) return null;
+  const merge = inviteMerge(world, force, inviteCamp(world, own));
+  if (!merge) return null;
+  const label = id => world.parties.find(item => item.id === id)?.label ?? id;
+  const regs = Array.isArray(merge.alliance.coalitions) ? merge.alliance.coalitions : [];
+  const mergeBlock = inviteBlock(world, forceId, 'merge');
+  return { alliance: merge.alliance.label, individual: true, partners: merge.partners.map(p => ({ id: p.id, label: p.label, compatible: !merge.incompatible.includes(p) })), terms: (merge.alliance.terms ?? []).length, registrations: { approved: regs.filter(r => r.status === 'approvata').length, total: regs.length }, mergeBlock, leader: merge.alliance.leaderId ? (label(merge.alliance.leaderId)) : null, followers: merge.partners.filter(p => !merge.incompatible.includes(p)).map(p => ({ id: p.id, label: p.label })), staying: merge.incompatible.map(p => ({ id: p.id, label: p.label })), note: merge.partners.length ? `Per impostazione predefinita passa solo ${force.label}: ${merge.partners.map(p => p.label).join(', ')} restano nell’accordo «${merge.alliance.label}» con le sue condizioni e registrazioni.` : `Per impostazione predefinita passa solo ${force.label}: nessun altro partner.`, label };
+}
 // Why a force cannot be invited now, or null.
-export function inviteBlock(world, forceId) {
+export function inviteBlock(world, forceId, mode = 'individual') {
   const player = playerParty(world);
   if (!player) return 'Serve un partito per stringere un’alleanza.';
   const own = allianceOf(world, player.id);
@@ -1940,7 +1966,9 @@ export function inviteBlock(world, forceId) {
   if (own.partyIds.includes(force.id)) return `${force.label} è già nella tua coalizione.`;
   const camp = inviteCamp(world, own);
   const merge = inviteMerge(world, force, camp);
-  if (merge?.incompatible.length) return `${force.label} fa già parte dell’accordo «${merge.alliance.label}»: ${merge.incompatible.map(item => item.label).join(' e ')} ${merge.incompatible.length > 1 ? 'non sono compatibili' : 'non è compatibile'} con la tua coalizione, e un accordo preesistente non si spezza né si svuota in silenzio: l’invito è bloccato.`;
+  // An individual invitation moves ONLY the invited force: what the partners it leaves behind are like is not the invited force's problem (its own fit with the coalition is judged by inviteOdds). Only the
+  // merge of the whole accords needs every partner to fit.
+  if (mode === 'merge' && merge?.incompatible.length) return `${force.label} fa già parte dell’accordo «${merge.alliance.label}»: ${merge.incompatible.map(item => item.label).join(' e ')} ${merge.incompatible.length > 1 ? 'non sono compatibili' : 'non è compatibile'} con la tua coalizione, e un accordo preesistente non si spezza né si svuota in silenzio: l’invito è bloccato.`;
   return null;
 }
 // Odds of an invitation and why: the reasons of an intesa with the player's party (collocazione, relations, strategy, programmes, memory, rancour) without the penalty for an existing accord (it is
@@ -1971,9 +1999,10 @@ export function inviteOdds(world, forceId, context = {}) {
 }
 // The player's party invites a force into its accord. Returns { world, success, stage, chance, reasons, term, joined, merged }.
 //   stage: 'rifiuto' (the force says no), 'trattativa' (it would join, the talks on its conditions fail), 'adesione'.
-function inviteToAllianceCore(input, forceId, { partySupport = 50, influence = 50, date, memory, difficulty = 0, programOverlap = null } = {}) {
+function inviteToAllianceCore(input, forceId, { partySupport = 50, influence = 50, date, memory, difficulty = 0, programOverlap = null, mode: askedMode = 'individual' } = {}) {
   const world = copy(input);
-  const blocked = inviteBlock(world, forceId);
+  const askedMode0 = askedMode === 'merge' ? 'merge' : 'individual';
+  const blocked = inviteBlock(world, forceId, askedMode0);
   if (blocked) throw new Error(blocked);
   const player = playerParty(world);
   const alliance = playerAlliance(world);
@@ -2003,7 +2032,14 @@ function inviteToAllianceCore(input, forceId, { partySupport = 50, influence = 5
     return { world, success: false, stage: 'trattativa', chance: odds.chance, reasons: odds.reasons, term: talks.term };
   }
   const merge = inviteMerge(world, force, camp);
-  joinCamp(world, camp, force, date, 'invito', { terms: talks?.term ?? null });
+  // One force invited, not its accord: by default ONLY that force moves ('individual'); its partners stay where they were with the original accord intact. The caller asks for 'merge' to bring the compatible
+  // partners along (inviteImpact tells beforehand who would follow and who would stay).
+  const mode = askedMode === 'merge' ? 'merge' : 'individual';
+  const before = [...alliance.partyIds];
+  // In a merge every partner of the invited force has to agree to follow it (the relations with the coalition decide; a partner that says no stays in the original accord, which stays intact for it).
+  const declined = [];
+  const consent = partner => { const ties = camp.members.reduce((sum, member) => sum + (world.ties[tieKey(partner.id, member.id)] ?? 0), 0) / Math.max(1, camp.members.length); const yes = draw(world) < clamp(0.62 + ties / 250, 0.15, 0.92); if (!yes) declined.push(partner.label); return yes; };
+  joinCamp(world, camp, force, date, 'invito', { terms: talks?.term ?? null, mode, consent: mode === 'merge' ? consent : null });
   if (talks?.term.kind === 'guida') {
     alliance.leaderId = force.id;
     if (alliance.partyIds.length >= 3) alliance.label = ledName(alliance, force.label);
@@ -2012,7 +2048,13 @@ function inviteToAllianceCore(input, forceId, { partySupport = 50, influence = 5
   addEffect(world, { partyId: player.id, delta: 0.3, remaining: 4, cause: 'alleanza' });
   addEffect(world, { partyId: force.id, delta: 0.2, remaining: 4, cause: 'alleanza' });
   force.playerRelation = round1(clamp(force.playerRelation + 10, -100, 100));
-  return { world, success: true, stage: 'adesione', chance: odds.chance, reasons: odds.reasons, term: talks?.term ?? null, joined: [force.id, ...(merge?.partners.map(item => item.id) ?? [])], merged: merge ? merge.alliance.label : null, allianceId: alliance.id };
+  // who really moved (not who might have): the force and the partners that are now in this accord; the others stayed
+  const joined = alliance.partyIds.filter(id => !before.includes(id));
+  const stayed = (merge?.partners ?? []).filter(item => !joined.includes(item.id)).map(item => item.id);
+  // The composition changed: the approvals for an OPEN election are verified again (coalitionApproval compares the members); the registrations of concluded elections are never rewritten.
+  const open = (alliance.coalitions ?? []).filter(item => item.status === 'approvata' && item.electionId);
+  if (open.length) alliance.history = [...(alliance.history ?? []), { date, text: open.length === 1 ? 'Cambia la composizione: la registrazione per un’elezione aperta va riapprovata' : `Cambia la composizione: le ${open.length} registrazioni per elezioni aperte vanno riapprovate` }].slice(-12);
+  return { world, success: true, stage: 'adesione', chance: odds.chance, reasons: odds.reasons, term: talks?.term ?? null, joined, stayed, declined, mode, merged: merge && joined.length > 1 ? merge.alliance.label : null, impact: merge ? { alliance: merge.alliance.label, followers: merge.partners.filter(p => !merge.incompatible.includes(p)).map(p => p.id), staying: merge.incompatible.map(p => p.id) } : null, reapprovals: open.map(item => item.electionId), allianceId: alliance.id };
 }
 // What kind of agreement an alliance of the world is: an intesa of two forces or a coalition of several, and whether it joins the forces of the government.
 export function allianceKind(world, alliance) {
@@ -2081,7 +2123,10 @@ export function registerCoalition(input, allianceId, election, date) {
   const closed = coalitionBlock(election, date);
   if (closed) throw new Error(closed);
   if (!Array.isArray(alliance.coalitions)) alliance.coalitions = alliance.partyIds.length >= 3 || alliance.kind === 'coalizione' ? [{ electionId: null, type: 'politiche', label: 'elezioni politiche', status: 'approvata', approvedAt: alliance.since ?? date, legacy: true }] : [];
-  if (alliance.coalitions.some(item => item.electionId === election.id && item.status === 'approvata')) return { world: input, approved: true, already: true, reasons: [] };
+  // an approval stands only for the composition it was granted to: when the members changed (a merger, a force that came or left) it is verified again for an open election; one that was granted to the same
+  // members, or a legacy one without the composition, stands as it was
+  const sameMembers = item => !Array.isArray(item.members) || (item.members.length === alliance.partyIds.length && item.members.every(id => alliance.partyIds.includes(id)));
+  if (alliance.coalitions.some(item => item.electionId === election.id && item.status === 'approvata' && sameMembers(item))) return { world: input, approved: true, already: true, reasons: [] };
   const members = alliance.partyIds.map(id => world.parties.find(item => item.id === id)).filter(Boolean);
   const reasons = [];
   for (let i = 0; i < members.length; i++) for (let j = i + 1; j < members.length; j++) {
@@ -2089,7 +2134,7 @@ export function registerCoalition(input, allianceId, election, date) {
     if (clash.length) reasons.push(`${members[i].label} e ${members[j].label} sono incompatibili su ${clash.map(row => row.label.toLowerCase()).join(', ')}`);
   }
   if ((alliance.cohesion ?? 60) < 35) reasons.push('la coesione dell’alleanza è troppo bassa per presentarsi insieme');
-  const record = { electionId: election.id, type: election.type, label: election.label, status: reasons.length ? 'respinta' : 'approvata', approvedAt: date, reasons };
+  const record = { electionId: election.id, type: election.type, label: election.label, status: reasons.length ? 'respinta' : 'approvata', approvedAt: date, reasons, members: [...alliance.partyIds] };
   alliance.coalitions.push(record);
   alliance.history = [...(alliance.history ?? []), { date, text: reasons.length ? `Coalizione per ${election.label} non approvata: ${reasons.join('; ')}` : `Approvata la coalizione per ${election.label}: le forze si presentano insieme` }].slice(-12);
   const player = playerParty(world);
@@ -2146,8 +2191,9 @@ export function termOptions(input, allianceId, election = null) {
 export function commonProgramOf(world, alliance) {
   const members = talkMembers(world, alliance);
   return THEMES.map(theme => {
-    const values = members.map(member => ({ id: member.id, label: member.label, value: round1(programPositionOf(world, member, theme.id)) }));
-    const gap = values.length ? Math.max(...values.map(item => item.value)) - Math.min(...values.map(item => item.value)) : 0;
+    const values = members.map(member => { const at = programPositionOf(world, member, theme.id); return { id: member.id, label: member.label, value: Number.isFinite(at) ? round1(at) : null }; });
+    const known = values.filter(item => item.value !== null);
+    const gap = known.length ? Math.max(...known.map(item => item.value)) - Math.min(...known.map(item => item.value)) : 0;
     const agreed = Boolean(world.compromises?.[`${[...alliance.partyIds].sort().join('+')}|${theme.id}`]) || (alliance.terms ?? []).some(item => item.kind === 'punto-comune' && item.theme === theme.id && item.status === 'aperto');
     const state = agreed ? 'concordato' : gap >= HARD_GAP && theme.veto ? 'in conflitto' : gap >= 2 ? 'da negoziare' : 'condiviso';
     return { id: theme.id, label: theme.label, gap: round1(gap), state, values };
@@ -2213,7 +2259,7 @@ export function proposeTerm(input, allianceId, proposal, date, { election = null
     alliance.terms.push({ ...term, id: `${alliance.id}|${kind}|${alliance.terms.length + 1}|${date}`, date, status: 'aperto', evidence: null, due: election?.electionDate ?? null });
     if (kind === 'guida') { alliance.leaderId = beneficiary.id; if (alliance.partyIds.length >= 3) alliance.label = ledName(alliance, beneficiary.label); }
     if (kind === 'punto-comune') {
-      for (const a of members) for (const b of members) if (a.id < b.id) { const gap = Math.abs(programPositionOf(world, a, term.theme) - programPositionOf(world, b, term.theme)); if (gap >= 2) world.compromises = { ...(world.compromises ?? {}), [`${programPairKey(a.id, b.id)}|${term.theme}`]: { date, theme: term.theme } }; }
+      for (const a of members) for (const b of members) if (a.id < b.id) { const gap = Math.abs((programPositionOf(world, a, term.theme) ?? NaN) - (programPositionOf(world, b, term.theme) ?? NaN)); if (gap >= 2) world.compromises = { ...(world.compromises ?? {}), [`${programPairKey(a.id, b.id)}|${term.theme}`]: { date, theme: term.theme } }; }
       world.compromises = { ...(world.compromises ?? {}), [`${[...alliance.partyIds].sort().join('+')}|${term.theme}`]: { date, theme: term.theme } };
     }
     cohesionGain = kind === 'punto-comune' ? 3 : -1;
@@ -2394,7 +2440,7 @@ export function splitPlayerForce(input, { id, label, abbreviation = null, fracti
   return world;
 }
 // Another force joins the player's party (the same fusion the world makes between simulated forces).
-export function mergeIntoPlayerForce(input, { forceId, label = null, date }) {
+export function mergeIntoPlayerForce(input, { forceId, label = null, abbreviation = null, color = null, date }) {
   const world = copy(input);
   const absorber = world.parties.find(item => item.id === world.playerPartyId) ?? world.parties.find(item => item.isPlayer);
   const absorbed = world.parties.find(item => item.id === forceId && item.active && item !== absorber);
@@ -2402,6 +2448,8 @@ export function mergeIntoPlayerForce(input, { forceId, label = null, date }) {
   merge(world, absorber, absorbed, date);
   absorber.cohesion = clamp((absorber.cohesion ?? 60) - 6, 0, 100);
   if (label) absorber.label = label;
+  if (abbreviation) absorber.abbreviation = abbreviation;
+  if (color && /^#[\da-f]{6}$/i.test(color)) { absorber.brandColor = color; absorber.color = readableOnDark(color); }
   addEffect(world, { partyId: absorber.id, delta: round2(Math.min(1.2, absorbed.baseline * 0.12)), remaining: 12, cause: 'fusione', label: 'Fusione tra partiti', unscaled: true });
   return world;
 }

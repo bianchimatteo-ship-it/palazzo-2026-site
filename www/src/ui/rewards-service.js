@@ -1,17 +1,18 @@
 // Wires the rewards to the page: the play clock (visibility, foreground, one tab at a time, the career that is open), the journal of the device, the time of an account (kept by the Worker, merged across devices),
 // the daily reward and the one-off community reward (the Worker decides for an account, the device for a guest), the notices the player is shown and the rewarded videos. The rules are in core/rewards-engine.js and the store;
 // this file only decides WHEN time is counted, what is sent to the Worker and who may claim what.
-import { createPlayClock, createStorageLease } from '../core/play-clock.js?v=20261117-3';
-import { normalizeRewards, playProgress, romeDay, rewardHistory } from '../core/rewards-engine.js?v=20261117-3';
-import { COMMUNITY_REWARD, DAILY_REWARD, PLAY_CLOCK, PLAY_REWARDS } from '../data/simulation/reward-rules.js?v=20261117-3';
-import { rewardsJournal } from '../data/repositories/rewards-journal.js?v=20261117-3';
-import { createRewardedAds } from '../data/repositories/ads-rewarded.js?v=20261117-3';
+import { createPlayClock, createStorageLease } from '../core/play-clock.js?v=20261120-1';
+import { normalizeRewards, playProgress, romeDay, rewardHistory } from '../core/rewards-engine.js?v=20261120-1';
+import { COMMUNITY_REWARD, DAILY_REWARD, PLAY_CLOCK, PLAY_REWARDS } from '../data/simulation/reward-rules.js?v=20261120-1';
+import { rewardsJournal } from '../data/repositories/rewards-journal.js?v=20261120-1';
+import { setAdRewardPoints } from '../data/simulation/reward-rules.js?v=20261120-1';
+import { createRewardedAds } from '../data/repositories/ads-rewarded.js?v=20261120-1';
 
 const RETRY_MS = 30000;
 const BLOCK_KINDS = { capitale: PLAY_REWARDS.capital.everyMinutes, preparazione: PLAY_REWARDS.preparation.everyMinutes };
 const NOTICE_KINDS = new Set(['giornaliera', 'capitale', 'preparazione', 'community']);
 
-export function createRewardsService({ store, journal = rewardsJournal, username = () => null, claimDaily = null, syncTime = null, claimBlocks = null, claimCommunity = null, claimAd = null, onAdCompleted = () => {}, community = {}, ads = {}, env = {} } = {}) {
+export function createRewardsService({ store, journal = rewardsJournal, username = () => null, claimDaily = null, syncTime = null, claimBlocks = null, claimCommunity = null, claimAd = null, claimGuestAd = null, onAdCompleted = () => {}, community = {}, ads = {}, env = {} } = {}) {
   const wall = env.wall ?? (() => Date.now());
   const storage = env.storage ?? globalThis.localStorage;
   const lease = env.lease ?? createStorageLease(storage, { wall });
@@ -22,11 +23,15 @@ export function createRewardsService({ store, journal = rewardsJournal, username
   // A completed video is credited (in the career of the player, once for each id) only after the Worker has booked it for the account: a repeated or concurrent claim, or one over the daily limit, is refused there.
   // Without an account (a guest) the record of the device is the only one. If the Worker cannot be reached the reward is NOT given (the video must be watched again): a credit never goes unbooked.
   const grantAd = async id => {
-    if (username() && claimAd) {
+    // The server always validates: an account claims with its session, a guest with the id of its device (the Worker books both once for each completion id, applies the daily limit and answers with the points
+    // in force). Without an answer (offline, refused) nothing is credited. `claimGuestAd` is absent only in tests of the engine without a server.
+    const claim = username() && claimAd ? claimAd : claimGuestAd;
+    if (claim) {
       let answer;
-      try { answer = await claimAd(id, store.getState().career?.id ?? null, journal.deviceId()); } catch (error) { return { ok: false, reason: error?.data?.code === 'limit' ? 'limite' : 'rete' }; }
+      try { answer = await claim(id, store.getState().career?.id ?? null, journal.deviceId()); } catch (error) { return { ok: false, reason: error?.data?.code === 'limit' || error?.status === 429 ? 'limite' : 'rete' }; }
       if (answer?.duplicate) return { ok: false, reason: 'duplicato' };
       if (!answer?.ok) return { ok: false, reason: 'rifiutato' };
+      if (answer.points !== undefined) setAdRewardPoints(answer.points);
     }
     const out = store.claimAdReward(id);
     if (out?.ok) onAdCompleted();

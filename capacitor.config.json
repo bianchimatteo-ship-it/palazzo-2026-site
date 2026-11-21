@@ -4,5 +4,17 @@
   "webDir": "www",
   "ios": {
     "includePlugins": []
+  },
+  "plugins": {
+    "SystemBars": {
+      "style": "DARK",
+      "initialViewportFitValueHint": "cover",
+      "insetsHandling": "css"
+    }
+  },
+  "android": {
+    "includePlugins": [
+      "politicando-appodeal-ads"
+    ]
   }
 }

@@ -6,7 +6,7 @@ import { mkdirSync, readFileSync } from 'node:fs';
 import { GUIDE_FUNCTIONS, GUIDE_SCENARIOS } from '../src/data/guide-manual.js';
 import { chromeAvailable, createCareerInPage, openCareer, withBrowser } from './lib/browser.mjs';
 
-const PAGES = new Set(['panoramica', 'carriera', 'calendario', 'eventi', 'ricompense', 'partito', 'finanze', 'partiti-lista', 'elezioni', 'sondaggi', 'parlamento', 'governo', 'diplomazia', 'quirinale', 'leggi', 'iniziative', 'territori', 'notizie', 'archivio', 'politici', 'profilo', 'impostazioni']);
+const PAGES = new Set(['panoramica', 'carriera', 'calendario', 'eventi', 'ricompense', 'partito', 'finanze', 'partiti-lista', 'elezioni', 'sondaggi', 'parlamento', 'governo', 'diplomazia', 'quirinale', 'leggi', 'iniziative', 'referendum', 'risultati', 'territori', 'notizie', 'archivio', 'politici', 'profilo', 'impostazioni']);
 const PARTS = ['how', 'use', 'needs', 'costs', 'effects', 'example'];
 // ---------- 1. the data ----------
 const ids = GUIDE_FUNCTIONS.map(item => item.id);
@@ -15,7 +15,7 @@ for (const item of GUIDE_FUNCTIONS) {
   assert.ok(item.title && item.icon && PAGES.has(item.page), `${item.id}: titolo, icona e pagina esistente.`);
   for (const part of PARTS) assert.ok(typeof item[part] === 'string' && item[part].length >= 6, `${item.id}: «${part}» scritto.`);
 }
-for (const needed of ['carriera', 'partito', 'risorse', 'tempo', 'sondaggi', 'candidature', 'voto', 'alleanze', 'assemblee', 'leggi', 'iniziative', 'governo', 'quirinale', 'richieste', 'attivita', 'campagna', 'dimissioni', 'salvataggi', 'territori', 'notizie']) assert.ok(ids.includes(needed), `Il manuale tratta: ${needed}.`);
+for (const needed of ['carriera', 'partito', 'risorse', 'tempo', 'sondaggi', 'candidature', 'voto', 'alleanze', 'assemblee', 'leggi', 'iniziative', 'referendum', 'risultati', 'governo', 'quirinale', 'richieste', 'attivita', 'campagna', 'dimissioni', 'salvataggi', 'territori', 'notizie']) assert.ok(ids.includes(needed), `Il manuale tratta: ${needed}.`);
 assert.ok(GUIDE_SCENARIOS.length >= 6, 'Almeno sei scenari guidati.');
 for (const needed of ['fondare', 'sindaco', 'parlamento', 'coalizione', 'ministro', 'premier']) assert.ok(GUIDE_SCENARIOS.some(item => item.id === needed), `Scenario: ${needed}.`);
 for (const scenario of GUIDE_SCENARIOS) { assert.ok(scenario.title && scenario.goal && scenario.steps.length >= 4, `${scenario.id}: obiettivo e passi.`); for (const [text, page] of scenario.steps) assert.ok(text.length > 10 && PAGES.has(page), `${scenario.id}: «${text}» porta a una pagina esistente.`); }

@@ -1,8 +1,11 @@
 {
   "app": "POLITICANDO 2026",
-  "appId": "it.matteobianchi.politicando2026",
-  "buildStamp": "20261117-3",
-  "files": 314,
-  "bytes": 19263441,
-  "contentHash": "659b3a5a3efc00ac3935a47ddea9234e0af6aac1da88051e9fe706ead063a5d6"
+  "appIds": {
+    "android": "it.matteobianchi.politicando2026",
+    "ios": "it.politicando2026.app"
+  },
+  "buildStamp": "20261120-1",
+  "files": 330,
+  "bytes": 20127268,
+  "contentHash": "2b69a56fdd794225fc52549e9b5498b0958b4aa7d0a1db0562f02fb4d95f98d5"
 }

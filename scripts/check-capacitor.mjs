@@ -23,7 +23,9 @@ try {
   assert.equal(result.status, 0, `La build riesce.\n${result.stderr}`);
   assert.match(result.stdout, /costruita: \d+ file/);
   const info = JSON.parse(await readFile(join(out, 'build-info.json'), 'utf8'));
-  assert.equal(info.appId, JSON.parse(await readFile(join(ROOT, 'capacitor.config.json'), 'utf8')).appId, 'build-info porta l’identificativo dell’app.');
+  const identity = JSON.parse(await readFile(join(ROOT, 'app-identity.json'), 'utf8'));
+  assert.deepEqual(info.appIds, { android: identity.android.applicationId, ios: identity.ios.bundleId }, 'build-info porta i due identificativi, separati (Android e iOS).');
+  assert.equal(info.appIds.android, JSON.parse(await readFile(join(ROOT, 'capacitor.config.json'), 'utf8')).appId, 'L’appId di capacitor.config.json è quello Android.');
   assert.match(info.buildStamp, /^\d{8}-\d+$/);
   assert.ok(info.files > 150 && info.bytes < 40e6, `Dimensione plausibile (${info.files} file, ${info.bytes} byte).`);
   assert.equal(JSON.stringify(info).includes('builtAt'), false, 'Nessuna data nella build: è ripetibile.');
@@ -53,7 +55,8 @@ try {
       'sw.js': '//', 'favicon.ico': 'x', 'favicon.svg': '<svg/>', 'site.webmanifest': '{"icons":[{"src":"./icons/i.png"}]}', 'privacy.html': '<p/>', 'termini.html': '<p/>', 'elimina-account.html': '<p/>', 'privacy-en.html': '<p/>', 'terms-en.html': '<p/>', 'delete-account-en.html': '<p/>',
       'icons/i.png': 'x', 'src/a.css': 'body{}', 'src/main.js': "import './b.js?v=20260101-1';\n", 'src/b.js': 'export const b = 1;\n', 'src/legal.css': '', 'src/legal/delete-account.js': '', 'src/fonts/LICENSES.txt': 'OFL',
       'capacitor.config.json': JSON.stringify({ appId: 'it.prova.app', appName: 'Prova', webDir: 'www' }),
-      'ios/App/App.xcodeproj/project.pbxproj': 'PRODUCT_BUNDLE_IDENTIFIER = it.prova.app;'
+      'app-identity.json': JSON.stringify({ android: { applicationId: 'it.prova.app' }, ios: { bundleId: 'it.prova.ios' } }),
+      'ios/App/App.xcodeproj/project.pbxproj': 'PRODUCT_BUNDLE_IDENTIFIER = it.prova.ios;'
     };
     await tweak(files);
     for (const [path, data] of Object.entries(files)) { if (data === null) continue; await mkdir(join(dir, path, '..'), { recursive: true }); await writeFile(join(dir, path), data); }
@@ -89,7 +92,7 @@ try {
   const config = JSON.parse(await readFile(join(ROOT, 'capacitor.config.json'), 'utf8'));
   assert.equal(config.webDir, 'www');
   const pbx = await readFile(join(ROOT, 'ios/App/App.xcodeproj/project.pbxproj'), 'utf8');
-  assert.ok([...pbx.matchAll(/PRODUCT_BUNDLE_IDENTIFIER = ([^;]+);/g)].every(match => match[1].trim() === config.appId), 'Stesso identificativo in Capacitor e nel progetto iOS.');
+  assert.ok([...pbx.matchAll(/PRODUCT_BUNDLE_IDENTIFIER = ([^;]+);/g)].every(match => match[1].trim() === identity.ios.bundleId) && config.appId === identity.android.applicationId && config.appId !== identity.ios.bundleId, 'Il progetto iOS ha il Bundle ID iOS, Capacitor (comune) l’appId Android: sono diversi.');
   const plist = await readFile(join(ROOT, 'ios/App/App/Info.plist'), 'utf8');
   assert.equal(/UsageDescription/.test(plist), false, 'Nessun permesso richiesto sull’iPhone (nessuna descrizione d’uso: il gioco non usa fotocamera, microfono, posizione, contatti).');
   assert.equal(/UIBackgroundModes/.test(plist), false, 'Nessuna modalità in background.');
@@ -114,7 +117,9 @@ try {
   const webIndex = await readFile(join(ROOT, 'index.html'), 'utf8');
   assert.ok(/name="viewport"[^>]*viewport-fit=cover/.test(webIndex), 'viewport-fit=cover (area sicura su iPhone con notch e Dynamic Island).');
   const themeCss = await readFile(join(ROOT, 'src/theme.css'), 'utf8');
-  assert.ok(/html\.platform-ios body \{[^}]*env\(safe-area-inset-top/.test(themeCss), 'Area sicura superiore solo su iOS (classe platform-ios).');
+  const homeCss = await readFile(join(ROOT, 'src/home.css'), 'utf8');
+  assert.ok(/:root \{[^}]*--safe-top: env\(safe-area-inset-top/.test(themeCss) && /\.top-band \{[^}]*var\(--safe-top/.test(homeCss), 'Area sicura superiore su tutte le piattaforme (iOS e Android edge-to-edge): --safe-top assorbito dalla fascia sopra la barra.');
+  assert.ok(!/html\.platform-ios body \{[^}]*padding-top/.test(themeCss), 'Nessun padding-top solo-iOS sul body (sarebbe doppio con la fascia).');
   const pkg = JSON.parse(await readFile(join(ROOT, 'package.json'), 'utf8'));
   const hasAndroid = Boolean(pkg.dependencies?.['@capacitor/android']);
   console.log(`Stato piattaforme: iOS ${pbx.length ? 'presente' : 'assente'} (target ${[...new Set([...pbx.matchAll(/IPHONEOS_DEPLOYMENT_TARGET = ([\d.]+);/g)].map(match => match[1]))].join(', ')}, versione ${[...new Set([...pbx.matchAll(/MARKETING_VERSION = ([\d.]+);/g)].map(match => match[1]))].join(', ')}, build ${[...new Set([...pbx.matchAll(/CURRENT_PROJECT_VERSION = (\d+);/g)].map(match => match[1]))].join(', ')}); Android ${hasAndroid ? 'presente' : 'NON PRESENTE'}.`);

@@ -1,8 +1,8 @@
-import { ADMIN_FIELDS, POSITIONS, adminArchiveSummary, loadSharedArchive, overrideFor } from '../data/repositories/admin-store.js?v=20261117-3';
-import { affiliationOf, markForPerson } from './person-marks.js?v=20261117-3';
-import { hasSharedSession, sharedApiUrl, sharedLogoUrl, sharedSyncStatus } from '../data/repositories/admin-sync.js?v=20261117-3';
-import { emblem, glyph } from './visuals.js?v=20261117-3';
-import { BASIS_LABELS, electionListOf, groupAffiliation, groupLabel, politicianAffiliation } from '../data/repositories/party-links.js?v=20261117-3';
+import { ADMIN_FIELDS, POSITIONS, adminArchiveSummary, loadSharedArchive, overrideFor } from '../data/repositories/admin-store.js?v=20261120-1';
+import { affiliationOf, markForPerson } from './person-marks.js?v=20261120-1';
+import { hasSharedSession, sharedApiUrl, sharedLogoUrl, sharedSyncStatus } from '../data/repositories/admin-sync.js?v=20261120-1';
+import { emblem, glyph } from './visuals.js?v=20261120-1';
+import { BASIS_LABELS, electionListOf, groupAffiliation, groupLabel, politicianAffiliation } from '../data/repositories/party-links.js?v=20261120-1';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const norm = value => String(value ?? '').toLocaleLowerCase('it-IT').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -164,7 +164,11 @@ function statsTab(admin) {
   const joined = `<section class="admin-stat-block"><h4>Nuovi account al giorno</h4>${sparkline(d.accounts.series, 'newAccounts', 'Nuovi account al giorno')}</section>`;
   const today = new Date().toISOString().slice(0, 10);
   const installs = `<section class="admin-stat-block"><h4>Installazioni dagli store</h4><p class="admin-note">${esc(d.installs.note)}</p><div class="admin-stat-tiles">${Object.entries(d.installs.totals).map(([store, total]) => `<div class="admin-stat"><span>${store === 'google-play' ? 'Google Play' : 'App Store'} (${d.days} giorni, inserite)</span><strong>${fmt(total)}</strong></div>`).join('')}</div><form class="admin-installs-form" data-admin-installs-form><label>Giorno<input name="day" type="date" max="${today}" required /></label><label>Store<select name="store"><option value="google-play">Google Play</option><option value="app-store">App Store</option></select></label><label>Installazioni<input name="installs" type="number" min="0" step="1" required /></label><label>Fonte<input name="source" maxlength="120" placeholder="Play Console, report del giorno" required /></label><button type="submit" class="primary-button">Salva la cifra</button></form>${d.installs.rows.length ? `<details><summary>Cifre inserite</summary><ul>${d.installs.rows.slice(0, 40).map(row => `<li>${esc(row.day)} · ${row.store === 'google-play' ? 'Google Play' : 'App Store'}: ${fmt(row.installs)} <small>(${esc(row.source)})</small></li>`).join('')}</ul></details>` : '<p class="admin-note">Nessuna cifra inserita: non se ne inventano.</p>'}</section>`;
-  return `${head}${tiles}${activity}${joined}${installs}`;
+  const c = d.careers;
+  const dist = object => Object.entries(object ?? {}).map(([label, n]) => `${esc(label)}: <strong>${fmt(n)}</strong>`).join(' · ') || '—';
+  const careers = c ? `<section class="admin-stat-block" data-stats-careers><h4>Carriere salvate online</h4><p class="admin-note">${esc(c.note)}</p><div class="admin-stat-tiles">${[['Carriere online', fmt(c.online)], ['In corso', fmt(c.active)], ['Concluse', fmt(c.ended)], ['Salvate negli ultimi 7 giorni', fmt(c.savedLast7Days)], ['Salvate negli ultimi 30 giorni', fmt(c.savedLast30Days)]].map(([label, value]) => `<div class="admin-stat"><span>${esc(label)}</span><strong>${value}</strong></div>`).join('')}</div><p class="admin-note">Difficoltà: ${dist(c.byDifficulty)}</p><p class="admin-note">Modalità di gioco: ${dist(c.byGameMode)}</p></section>` : '';
+  const coverage = (d.coverage ?? []).length ? `<section class="admin-stat-block" data-stats-coverage><h4>Cosa si sa e cosa no</h4><div class="sx-table-wrap"><table class="sx-table"><thead><tr><th scope="col">Dato</th><th scope="col">Stato</th><th scope="col">Fonte o motivo</th></tr></thead><tbody>${d.coverage.map(item => `<tr data-stats-metric="${esc(item.id)}"><th scope="row">${esc(item.label)}</th><td>${item.available ? 'disponibile' : 'non disponibile'}</td><td>${esc([item.source, item.note].filter(Boolean).join(' · '))}</td></tr>`).join('')}</tbody></table></div></section>` : '';
+  return `${head}${tiles}${activity}${joined}${careers}${installs}${coverage}`;
 }
 export function renderAdminPanel(admin, context) {
   const tabs = [['partiti', 'Partiti', 'flag'], ['politici', 'Politici', 'users'], ['statistiche', 'Statistiche', 'chart'], ['archivio', 'Archivio', 'book']];

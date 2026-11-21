@@ -206,6 +206,15 @@ let president;
   for (let week = 0; week < 90 && !opened; week++) { game.advance(7); s = game.getState(); if (s.presidency.election) opened = s.clock.currentDate; }
   assert.ok(opened, 'Le trattative si aprono');
   s = game.getState();
+  // The seat given above belongs to the XX legislature: while the weeks run to the Quirinale election the Chambers are dissolved and renewed, and a player who did not stand is no longer a member
+  // (the engine is right: a secretary without a seat leads his bloc but is not a grande elettore and cannot cast the secret vote). The test gives him a seat in the Chambers now in office, as the premise says.
+  if (!s.parliament.player?.groupId) {
+    const chamber = s.parliament.chambers.camera;
+    const own = chamber.groups.find(item => item.partyId === s.world.playerPartyId) ?? [...chamber.groups].sort((a, b) => b.simulatedSeats - a.simulatedSeats)[0];
+    s.parliament = enterParliament(s.parliament, { politicianId: player.id, chamber: 'camera', groupId: own.groupId, territoryName: player.region, currentDate: s.clock.currentDate });
+    s.career.parliamentContext = { mode: 'real-context', chamber: 'camera', groupId: own.groupId, territoryName: player.region, via: 'campaign', since: s.clock.currentDate, source: 'simulation' };
+    assert.ok(s.parliament.player?.groupId, 'Il giocatore siede nelle Camere in carica');
+  }
   const election = s.presidency.election;
   assert.equal(election.assembly.lifeSenators, 5, 'Camere della partita: cinque senatori a vita');
   assert.equal(election.player.role, 'leader', 'Il segretario con un seggio guida i suoi grandi elettori');

@@ -164,7 +164,7 @@ await withBrowser(async browser => {
   await evaluate(`document.querySelector('[data-nav="sondaggi"]')?.click()`); await pause(800);
   const polls = await evaluate(`(() => ({ text: document.querySelector('.polls-page')?.textContent ?? '', player: Boolean(document.querySelector('.is-player, .obs-bar-row.is-player'))}))()`);
   check(/Futuro Nazionale/.test(polls.text), 'Nei sondaggi c’è Futuro Nazionale.');
-  await evaluate(`document.querySelector('[data-obs-area="territori"]')?.click()`); await pause(700);
+  await evaluate(`document.querySelector('[data-section-tab="osservatorio"][data-section-tab-value="territori"]')?.click()`); await pause(700);
   await evaluate(`document.querySelector('[data-view-filter="obsForce"][data-view-filter-value="${FN}"]')?.click()`); await pause(500);
   const territori = await evaluate(`(() => ({ tiles: document.querySelectorAll('.itmap-tile').length, real: document.querySelector('[data-view-filter-value=reale]')?.disabled, source: document.querySelector('.obs-source')?.textContent ?? '' }))()`);
   check(territori.tiles === 20 && territori.real === true && /simulata/i.test(territori.source), `Territori: venti regioni, «Voto reale 2022» non offerto a un partito nato dopo, stima dichiarata simulata (${JSON.stringify(territori)}).`);

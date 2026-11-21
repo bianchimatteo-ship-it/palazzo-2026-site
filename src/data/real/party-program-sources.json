@@ -1,0 +1,97 @@
+{
+ "party-progetto-civico-italia": {
+  "partyName": "Progetto Civico Italia",
+  "retrievedAt": "2026-11-18",
+  "sources": [
+   "https://progettocivicoitalia.it/programma/",
+   "https://progettocivicoitalia.it/carta-dei-valori/",
+   "https://progettocivicoitalia.it/documenti/PROGETTOCIVICOITALIA-carta-dei-valori.pdf"
+  ],
+  "note": "La pagina «Programma» elenca 20 Laboratori Civici Nazionali che «approfondiscono» aree di studio e obiettivi, non posizioni numeriche: il gioco le traduce sulla scala dei dieci temi solo dove il testo indica una direzione. Il partito non ha una collocazione sinistra–destra documentata.",
+  "themes": {
+   "immigrazione": {
+    "evidence": "Immigrazione «fondata su regole chiare, ingressi regolari, percorsi civici, formazione linguistica, contrasto allo sfruttamento e ruolo dei Comuni»; «legalità e inclusione». Regolata e inclusiva, senza accoglienza illimitata né chiusura.",
+    "labs": [
+     "Diritti, pari opportunità e immigrazione",
+     "Europa, politica estera e italiani all’estero"
+    ]
+   },
+   "sicurezza": {
+    "evidence": "Sostegno alle forze dell’ordine, presidio e decoro, polizia locale, contrasto alla criminalità organizzata e tutela delle vittime, ma «non sulle ronde» e «non soltanto repressione»: prevenzione, politiche sociali, dipendenze. Equilibrio dichiarato tra le due polarità.",
+    "labs": [
+     "Sicurezza urbana",
+     "Giustizia"
+    ]
+   },
+   "economia": {
+    "evidence": "«Riduzione del peso fiscale su lavoro e piccole imprese», semplificazione, certezza delle regole, competitività, accesso al credito, rilancio del Mezzogiorno; qualità dei servizi pubblici. Nessun mandato di riduzione generale dello Stato.",
+    "labs": [
+     "Produttività e lavoro",
+     "Fisco",
+     "Crescita del Mezzogiorno"
+    ]
+   },
+   "sanita": {
+    "evidence": "Cura di prossimità: Case della Comunità, telemedicina, infermieri di famiglia, medici di base integrati, rapporto Comuni–ASL–Regioni, aree interne. Il ruolo del privato non è trattato nelle fonti.",
+    "labs": [
+     "Sanità"
+    ]
+   },
+   "lavoro": {
+    "evidence": "«Dignità, reddito reale e stabilità», salari, formazione continua, contrasto al lavoro irregolare, lavoro giovanile e femminile, autonomi. Salario minimo e regole di flessibilità non sono trattati: la direzione è solo parziale.",
+    "labs": [
+     "Produttività e lavoro"
+    ]
+   },
+   "ambiente": {
+    "evidence": "Transizione ecologica «concreta, territoriale e accessibile»: comunità energetiche, rinnovabili, efficienza, acqua, dissesto, mobilità pulita; da accompagnare con sostegno a famiglie, lavoratori e imprese.",
+    "labs": [
+     "Energia e ambiente",
+     "Trasporti e mobilità",
+     "Agricoltura"
+    ]
+   },
+   "europa": {
+    "evidence": "Valore «Europa fino in fondo»: «integrazione europea più compiuta», «progressiva integrazione delle politiche economiche e fiscali», cooperazione strutturata su sicurezza e difesa, più ruolo di enti locali e regionali.",
+    "labs": [
+     "Europa, politica estera e italiani all’estero",
+     "Innovazione, digitale e space economy"
+    ]
+   },
+   "diritti": {
+    "evidence": "Uguaglianza e inclusione, pari opportunità, contrasto alle discriminazioni, accessibilità, disabilità, famiglie e conciliazione, garanzie individuali e presunzione di innocenza. Le questioni etiche specifiche (aborto, fine vita, unioni) non sono affrontate nelle fonti.",
+    "labs": [
+     "Diritti, pari opportunità e immigrazione",
+     "Welfare e Terzo Settore"
+    ]
+   },
+   "istituzioni": {
+    "evidence": "Le fonti trattano partecipazione, bilanci partecipativi, trasparenza di bilanci e appalti, anticorruzione, conflitti di interesse, PA digitale, tempi certi e valutazione dei risultati; difendono l’indipendenza della magistratura e l’equilibrio dei poteri. Non indicano una posizione sul premierato o sulla centralità del Parlamento, che è ciò che misura la scala del tema: non rilevata.",
+    "labs": [
+     "Pubblica amministrazione"
+    ]
+   },
+   "esteri": {
+    "evidence": "Difesa comune europea, cooperazione internazionale e multilaterale, sicurezza delle infrastrutture strategiche, cybersicurezza, Mediterraneo, italiani all’estero. Nessuna posizione su NATO, alleanze o neutralità: solo una lieve inclinazione verso la capacità di difesa in cornice europea.",
+    "labs": [
+     "Difesa",
+     "Europa, politica estera e italiani all’estero"
+    ]
+   }
+  },
+  "areaLabs": {
+   "scuola": "Scuola, università e ricerca",
+   "giovani": "Giovani",
+   "welfare": "Welfare e Terzo Settore",
+   "agricoltura": "Agricoltura",
+   "turismo": "Turismo",
+   "cultura": "Cultura",
+   "sport": "Sport",
+   "trasporti": "Trasporti e mobilità",
+   "innovazione": "Innovazione, digitale e space economy",
+   "giustizia": "Giustizia",
+   "mezzogiorno": "Crescita del Mezzogiorno",
+   "difesa-sicurezza-urbana": "Difesa · Sicurezza urbana"
+  }
+ }
+}

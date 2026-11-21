@@ -1,0 +1,18 @@
+# Rapporto — lavoro precedente (branch `feature/miglioramento-completo`, fino al commit `407046c`)
+
+**Partenza:** `main` (merge-base `e302c45`); branch `feature/miglioramento-completo`, push eseguito fino a `407046c` (`main` mai toccato). Ultimo commit: «Guida: i Percorsi non sono schede della guida (classe propria), test della guida di nuovo verde» (2 file: `src/sections.css`, `src/ui/menu.js`). Rispetto a `main`: 714 file, +44 769/−3 508 righe (include `www/`, asset Android, dizionari generati).
+
+## Modifiche (per sezione della richiesta)
+S3 wizard identità (data di nascita/genere) · S4 referendum riorganizzato (due percorsi, quesiti e bozze guidati) · S5 sondaggi dei partiti separati da alleanze/coalizioni · S6 iniziative guidate (nuova raccolta in cima, libreria di 24 temi, conferma esplicita) · S7 fusione di partiti con identità (nome, sigla, colori, logo, anteprima, storico) · S8 risultati per territorio (filtri Regione/Provincia/Comune, ricerca, partito primo nei comuni) · S9 avvertenze di simulazione in fondo · S10 audit staff (corretto il doppio pagamento nella stessa settimana) · S11 pro/contro/effetto/costo su tutte le scene · S12 varietà delle attività (argomento come tendenza, test su 4 carriere × 30 settimane) · S13 proteste solo con causa verificabile · S14 tutorial pratico (prove verificate sullo stato reale, nessun costo) e «Percorsi» nella guida · S15 documenti ads/iOS · S16–S17 traduzioni (censimento: 0 mancanti/incomplete), build, sync Android.
+Test nuovi: `check-scene-odds`, `-wizard-identity-visual`, `-referendum-guided`, `-polls-sections`, `-initiatives-guided`, `-merger-identity(+browser)`, `-territory-browse`, `-staff-audit`, `-protests`, `-activity-repetition`, `-tutorial-tasks`, `check:birth-date`.
+
+## Test: corsa parziale 198/278
+Dettaglio comando per comando in `docs/qa/suite-parziale-198.md` (generato dal log reale `/tmp/suite/results.json`). **177 PASS · 19 FAIL · 2 SKIPPED**; 80 comandi mai eseguiti (corsa interrotta).
+- **SKIPPED:** `check-boot` (uscita 0, controllo dichiarato non eseguito), `check-panels-stay-put`.
+- **FAIL e cosa so:**
+  - Corretti dopo la corsa e **rieseguiti PASS**: `check-guide` (i Percorsi contavano come schede), `check-security` (un `onsubmit` inline nel modulo di fusione, difetto mio, fallito anche sul branch precedente; corretto nel branch InMobi), `check-account-deletion` (passa da solo).
+  - Timeout a 900 s sotto carico (non diagnosticati, non rieseguiti): `check-long-run`, `check-calendar-years`, `check-calendar-scheduling`, `check-poll-election-consistency`.
+  - Preesistenti già noti (falliscono anche su `main`): `check-presidency`, `check-button-contrast` (contrasto hover `.primary-button` 1,86:1), `check-campaign-ui` (Chrome si chiude), `check-load` (sensibile al carico).
+  - **Non diagnosticati, non rieseguiti in serie:** `check-territory-legibility` («nessuna larghezza ha mostrato lc-wide»), `check-e2e-futuro-nazionale` e `check-regional-ranking` (misura «scarto» non disponibile per Futuro Nazionale: possibile regressione del lavoro sui territori), `check-news-voice`, `check-account-isolation`, `check-published-local`, `check-news-popup-setting`, `check-i18n` (una corsa singola precedente aveva dato 0 testi italiani; dopo le ultime frasi non rieseguita).
+- Prima della corsa, passati singolarmente: audit i18n sul gioco generato (2 residui poi corretti con frasi), `check-i18n-offline`, `-pages`, `-wizard`, census (0 mancanti/incomplete), `check-tutorial(+tasks)`, `check-guide`, test mirati di ogni sezione.
+- **Da fare:** riesaminare in serie i FAIL non diagnosticati (soprattutto territorio/Futuro Nazionale), eseguire gli 80 comandi non lanciati, una suite finale a bassa concorrenza.

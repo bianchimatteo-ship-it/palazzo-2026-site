@@ -308,7 +308,7 @@
 
 /* Progressive real-data archives and local logo administration. */
 .catalog-body { min-width:0; }
-.catalog-toolbar { grid-template-columns:minmax(230px,1.3fr) repeat(3,minmax(145px,1fr)); }
+.catalog-toolbar { grid-template-columns:minmax(0,1.3fr) repeat(3,minmax(0,1fr)); }
 .catalog-search input:focus,.catalog-filter select:focus,.logo-admin-field input:focus { outline:2px solid rgba(59,90,64,0.22); outline-offset:1px; border-color:#595e51; }
 .catalog-state { min-height:160px; display:grid; justify-items:center; align-content:center; gap:10px; padding:28px; border:1px solid var(--line-strong); background:var(--panel-2); color:var(--ink-3); text-align:center; }
 .catalog-state strong { color:var(--ink-2); font:700 15px Manrope,sans-serif; }

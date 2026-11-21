@@ -66,6 +66,7 @@ const shortLabels = new Map();
 const literals = new Map(); // key (numbers as #, {…} as {}) → { text, files }
 for (const file of files) {
   if (file === 'src/core/invariants.js' || file === 'src/core/i18n-auto.js' || file === 'src/core/i18n.js') continue; // developer diagnostics (never rendered) and the status text of the translator (not shown in any screen)
+  if (file === 'src/boot-guard.js') continue; // the start-up guard runs BEFORE the game and its phrase-book: it carries its own Italian/English table (checked by check-boot-failure in Chrome)
   if (file === 'src/data/release-pairs.js') continue; // the phrase book itself: its Italian side is the key of an entry, not a text of a screen
   if (file === 'src/core/avatar.js') continue; // the role/first-name tables are lookup keys for the gender of a character, never shown (the labels themselves are shown, and translated, by the scene data that owns them)
   for (const whole of literalsOf(readFileSync(join(root, file), 'utf8'))) {

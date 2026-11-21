@@ -1,13 +1,13 @@
 // The newsroom as the player reads it: full articles (with the facts behind them), the stories that last (timeline, reactions, heat) and the
 // outlets with their identity. Everything shown here was written by the engine from a fact of the game; nothing is attributed to real people.
-import { ARTICLE_CATEGORIES, LP24, NEWSROOM_OUTLETS, RADIO_PROGRAMMES, STORY_KINDS } from '../data/simulation/news-rules.js?v=20261117-3';
-import { formatDate } from '../core/time.js?v=20261117-3';
-import { coverIllustration, illustration, lp24Logo, pickByHash } from './illustrations.js?v=20261117-3';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261117-3';
-import { normalizeMedia } from '../core/news-engine.js?v=20261117-3';
-import { esc, meter } from './charts.js?v=20261117-3';
-import { glyph } from './visuals.js?v=20261117-3';
-import { bulletinScript, voiceAvailable, voiceError, voiceLine, voiceStatus, voiceTarget } from './radio-voice.js?v=20261117-3';
+import { ARTICLE_CATEGORIES, LP24, NEWSROOM_OUTLETS, RADIO_PROGRAMMES, STORY_KINDS } from '../data/simulation/news-rules.js?v=20261120-1';
+import { formatDate } from '../core/time.js?v=20261120-1';
+import { coverIllustration, illustration, lp24Logo, pickByHash } from './illustrations.js?v=20261120-1';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261120-1';
+import { normalizeMedia } from '../core/news-engine.js?v=20261120-1';
+import { esc, meter } from './charts.js?v=20261120-1';
+import { glyph } from './visuals.js?v=20261120-1';
+import { bulletinScript, voiceAvailable, voiceError, voiceLine, voiceStatus, voiceTarget } from './radio-voice.js?v=20261120-1';
 // What went wrong with the reading aloud (blocked, no usable voice, silent): said on the page, where the text stays readable.
 const voiceProblem = () => voiceStatus() === 'error' && voiceError() ? `<p class="voice-note" role="alert" data-voice-error="${esc(voiceError().code)}">${esc(voiceError().message)}</p>` : '';
 
@@ -35,7 +35,20 @@ export const newsCoverScene = article => {
 };
 const categoryOf = id => ARTICLE_CATEGORIES.find(item => item.id === id);
 const shortDate = date => { try { return formatDate(date, { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return String(date ?? ''); } };
-const summaryOf = article => String(article.deck || article.body?.[0] || '').slice(0, 220);
+// The preview of an article: its deck, else the start of the first paragraph, clipped at the end of a sentence (or of a clause) and never in the middle of a phrase: a cut at a fixed number of characters left
+// half-clauses («… il margine nella Camera più stretta è di +») that no sentence of the phrase-book can translate, so the English page showed Italian. A clipped text ends with an ellipsis.
+export function clipAtBoundary(text, limit = 220) {
+  const value = String(text ?? '').trim();
+  if (value.length <= limit) return value;
+  const head = value.slice(0, limit);
+  const sentence = Math.max(head.lastIndexOf('. '), head.lastIndexOf('! '), head.lastIndexOf('? '));
+  if (sentence >= limit * 0.35) return head.slice(0, sentence + 1);
+  const clause = Math.max(head.lastIndexOf('; '), head.lastIndexOf(': '), head.lastIndexOf(' · '));
+  if (clause >= limit * 0.35) return `${head.slice(0, clause).replace(/[\s,;:·]+$/, '')}…`;
+  const space = head.lastIndexOf(' ');
+  return `${head.slice(0, space > 0 ? space : limit).replace(/[\s,;:·]+$/, '')}…`;
+}
+const summaryOf = article => clipAtBoundary(article.deck || article.body?.[0] || '', 220);
 
 // A card of the paper: the scene of its category, category, date, outlet, headline, summary and the way to the whole story. BREAKING NEWS only for the articles that carry the flag.
 export function articleHtml(article, media, { lead = false } = {}) {

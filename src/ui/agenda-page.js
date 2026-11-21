@@ -1,11 +1,11 @@
 // AGENDA — the time of the career: this week's decisions and days, the calendar of every dated commitment
 // (votes, candidacies, congresses, promises, decrees, consequences), the weekly activities and the register.
-import { AGENDA_KINDS, agendaByMonth, agendaCalendar } from '../core/agenda-engine.js?v=20261117-3';
-import { ADVANCE_RULES, STAT_LABELS } from '../data/simulation/career-rules.js?v=20261117-3';
-import { advanceDays, formatDate } from '../core/time.js?v=20261117-3';
-import { glyph } from './visuals.js?v=20261117-3';
-import { renderInbox, renderPlanner } from './game-mode.js?v=20261117-3';
-import { arrow, badge, card, esc, euro, num, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20261117-3';
+import { AGENDA_KINDS, agendaByMonth, agendaCalendar } from '../core/agenda-engine.js?v=20261120-1';
+import { ADVANCE_RULES, STAT_LABELS } from '../data/simulation/career-rules.js?v=20261120-1';
+import { advanceDays, formatDate } from '../core/time.js?v=20261120-1';
+import { glyph } from './visuals.js?v=20261120-1';
+import { renderInbox, renderPlanner } from './game-mode.js?v=20261120-1';
+import { arrow, badge, card, esc, euro, num, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20261120-1';
 
 export const AGENDA_TABS = Object.freeze([['settimana', 'Questa settimana'], ['calendario', 'Calendario'], ['attivita', 'Attività'], ['registro', 'Registro']]);
 // Filters of the calendar: groups of kinds, kept across redraws by the caller.
@@ -19,7 +19,7 @@ export const AGENDA_FILTERS = Object.freeze([
   ['risorse', 'Risorse', ['investimento']]
 ]);
 // The family of a dated commitment, for its colour and its icon (the label is always written): elections, candidacies, party, institutions, decisions, promises and deadlines, resources.
-const CATEGORY_OF = { elezione: 'elezioni', candidature: 'candidature', campagna: 'candidature', selezione: 'partito', congresso: 'partito', decreto: 'istituzioni', alleato: 'istituzioni', legislatura: 'istituzioni', quirinale: 'istituzioni', decisione: 'decisioni', promessa: 'impegni', conseguenza: 'impegni', investimento: 'risorse' };
+const CATEGORY_OF = { elezione: 'elezioni', candidature: 'candidature', campagna: 'candidature', selezione: 'partito', congresso: 'partito', decreto: 'istituzioni', alleato: 'istituzioni', legislatura: 'istituzioni', referendum: 'istituzioni', quirinale: 'istituzioni', decisione: 'decisioni', promessa: 'impegni', conseguenza: 'impegni', investimento: 'risorse' };
 export const agendaCategory = kind => CATEGORY_OF[kind] ?? 'impegni';
 const WEEKDAYS = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
 const toneBadge = tone => tone === 'bad' ? 'bad' : tone === 'warn' ? 'warn' : tone === 'good' ? 'good' : 'neutral';

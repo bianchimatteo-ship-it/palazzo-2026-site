@@ -291,6 +291,7 @@ if (chromeAvailable) {
       assert.match(await text('.poll-scenario-total'), /Totale 100,0%/, `${width}px: con un valore scritto Altri si ricalcola e il totale resta 100,0%.`);
       assert.ok(!(await evaluate(`Boolean(document.querySelector('.poll-problems'))`)), `${width}px: e non c’è nessun rifiuto.`);
       for (let i = 1; i < 6; i++) { const name = await evaluate(`document.querySelectorAll('.poll-scenario input[name^="poll_"]')[${i}].name`); await setValue(`[name="${name}"]`, '25'); await pause(120); }
+      await pause(500); // the wizard redraws 220 ms after the last keystroke (typing is never interrupted)
       assert.ok(await evaluate(`Boolean(document.querySelector('.poll-problems'))`), `${width}px: oltre 100 il blocco dice perché.`);
       assert.match(await text('.poll-problems'), /sommano|Altri/, `${width}px: con il motivo.`);
       await click('.wizard-footer [data-wizard-action="next"]'); await pause(500);

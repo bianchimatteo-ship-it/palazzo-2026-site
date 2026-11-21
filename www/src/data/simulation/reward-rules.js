@@ -11,7 +11,12 @@ export const PLAY_REWARDS = Object.freeze({
 });
 // A completed rewarded video moves the polls of the player's party by exactly this many points for this many weekly polls, taking them from another component of the survey (never from the player's party,
 // never below the least a force has in the survey or the least "Altri" keeps). The effect never touches the base consensus of the parties.
-export const AD_REWARD = Object.freeze({ points: 0.15, polls: 3, minShare: 0.2, minOthers: 0.5, keep: 120 });
+// The points of a video are the game's rule (0.15) unless the Worker's remote configuration (src/data/ads-config.js, `rewardPoints`) says otherwise: the value is clamped to [0, 0.5] and applies to the videos
+// completed from then on (the ones already credited keep what they were credited: the history stores the amount). `points` is read at the moment of the credit.
+export const AD_REWARD_DEFAULT_POINTS = 0.15, AD_REWARD_MAX_POINTS = 0.5;
+let adPoints = AD_REWARD_DEFAULT_POINTS;
+export const setAdRewardPoints = value => { const n = Number(value); adPoints = Number.isFinite(n) && n >= 0 && n <= AD_REWARD_MAX_POINTS ? Math.round(n * 100) / 100 : AD_REWARD_DEFAULT_POINTS; return adPoints; };
+export const AD_REWARD = Object.freeze({ get points() { return adPoints; }, polls: 3, minShare: 0.2, minOthers: 0.5, keep: 120 });
 // The clock: a tick is counted in full only when it is no longer than this (a longer gap means the page was frozen or the machine asleep), and a tab holds the lease for a few seconds at a time; an account sends the time counted to the Worker every syncEveryMs.
 export const PLAY_CLOCK = Object.freeze({ tickMs: 1000, maxGapMs: 3000, leaseMs: 8000, syncEveryMs: 15000 });
 export const REWARD_HISTORY_SIZE = 60;

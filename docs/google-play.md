@@ -10,7 +10,7 @@
 | `minSdk` / `compileSdk` / `targetSdk` | 24 / 36 / 36 | già conforme al requisito di target API 36 di Play (vedi `docs/app-stato.md`), invariato |
 | `versionCode` / `versionName` | 1 / "1.0" | corretti per un primo caricamento; **aumentare `versionCode` a ogni nuovo caricamento** |
 | Permessi | solo `INTERNET` | nessun permesso sensibile |
-| Dipendenze native | Capacitor 8.5.x, AndroidX appcompat/coordinatorlayout/core-splashscreen; nessun SDK di pubblicità, analisi, pagamenti o notifiche push (il plugin google-services si applica solo se esiste `google-services.json`, che non c'è) | nessun SDK di terzi |
+| Dipendenze native | Capacitor 8.5.x, AndroidX appcompat/coordinatorlayout/core-splashscreen; il bridge Capacitor **InMobi** (`plugins/inmobi-ads`: InMobi SDK 11.5.1 Kotlin + consenso Google UMP) è presente nel progetto Android ma SPENTO di base (ogni formato è disattivato finché la configurazione remota del Worker non lo accende e non c'è un Account ID: nessuna richiesta di annunci, nessun annuncio); nessun AdMob; nessun SDK di analisi, pagamenti o notifiche push (il plugin google-services si applica solo se esiste `google-services.json`, che non c'è) | SDK pubblicitario presente ma spento: vedi la dichiarazione «Annunci» qui sotto |
 | Rete | solo HTTPS (origine `https://localhost` dell'app, Worker pubblicato in HTTPS); nessun `usesCleartextTraffic`, nessun `server.url` in `capacitor.config.json` | ok |
 | Backup | `allowBackup="true"` (predefinito di Capacitor): Android può includere i dati dell'app nel backup Google dell'utente | dichiarato nell'informativa (§7); il titolare può scegliere di disattivarlo |
 | Firma di rilascio | **aggiunta** in `android/app/build.gradle`: legge `android/keystore.properties` (ignorato da git) o le variabili `POLITICANDO_KEYSTORE_FILE`, `_KEYSTORE_PASSWORD`, `_KEY_ALIAS`, `_KEY_PASSWORD`; senza una chiave valida `bundleRelease`/`assembleRelease` **falliscono** con un messaggio che elenca cosa manca (mai i valori); le build debug non sono toccate | nessun segreto nel repository; `.gitignore` esclude `*.jks`, `*.keystore` e `keystore.properties` |
@@ -81,7 +81,7 @@ Le dichiarazioni le compila e le firma il titolare. Qui ci sono solo i **fatti v
 
 | Dichiarazione | Fatto / stato |
 |---|---|
-| Annunci | **L'app non contiene annunci** (nessun SDK pubblicitario). |
+| Annunci | **Oggi l'app non mostra annunci** (formati spenti di base, modalità test), ma l'AAB costruito da questo ramo **contiene** l'SDK InMobi (spento) e, nel manifest unito, il permesso AD_ID. La risposta alla domanda della Play Console «L'app contiene annunci?» e la scheda Sicurezza dei dati sono una decisione del titolare (eventualmente con un professionista): va presa prima del caricamento e riletta se si attiva la pubblicità. Non è stata decisa né simulata qui. |
 | Acquisti in-app / app a pagamento | Nessuno. |
 | Accesso all'app | Tutte le funzioni sono disponibili senza account; l'account è facoltativo. Nessuna credenziale di prova è fornita nel repository: il revisore può giocare subito o creare un proprio account di prova (basta nome utente e password; l'e-mail è facoltativa). Per provare il recupero password serve un indirizzo e-mail reale. |
 | Pubblico di destinazione e Famiglie | **DA DECIDERE dal titolare** (vedi `docs/minori-e-privacy.md` §3). Non scegliere le fasce per superare i controlli. Fatto: l'account è riservato a chi dichiara almeno 14 anni; si gioca senza account a qualunque età. |
@@ -108,7 +108,7 @@ Nelle schermate non devono comparire loghi di partiti di terzi che chi pubblica 
 
 ## 7. Cosa resta da fare (in ordine) — ruoli aggiornati il 13/11/2026
 
-**Ruoli.** L'account Play Console è intestato a **un genitore**, che ha accettato l'accordo con Google e firma scheda e dichiarazioni; Matteo Bianchi sviluppa e gestisce operativamente il progetto sotto la loro supervisione ma **non è titolare dell'account**. Chi sia il titolare del trattamento GDPR non è presunto (`docs/audit-legale-conformita.md` §2). Le verifiche su Google Play di questo documento (22/10/2026) non sono state riconfermate da fonti ufficiali il 13/11/2026 (host non raggiungibile).
+**Ruoli.** L'account Play Console è intestato a **Ramona Bianchi** (madre di Matteo, confermato il 19/11/2026), che ha accettato l'accordo con Google e firma scheda e dichiarazioni; è anche titolare del trattamento e offerente del servizio. Matteo Bianchi sviluppa e gestisce operativamente il progetto sotto la sua supervisione ma **non è titolare dell'account**. Le verifiche su Google Play di questo documento (22/10/2026) non sono state riconfermate da fonti ufficiali il 13/11/2026 (host non raggiungibile).
 
 1. Chiudere i requisiti legali bloccanti di `docs/legale-requisiti.json` (indirizzo, DPA Cloudflare, minori, diritti sugli asset, account sviluppatore Play).
 2. Il genitore titolare dell'account completa la verifica di Google (identità/indirizzo) e conferma nome sviluppatore e contatti pubblici, coerenti con l'informativa; dichiarazione «trader» DSA da valutare con un professionista.

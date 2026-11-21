@@ -31,8 +31,8 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   const openForces = async () => {
     if (!(await has('[data-nav="sondaggi"]'))) { await goto(''); await must(() => has('[data-menu="continua"]'), 'il menu con «Continua»'); await click('[data-menu="continua"]'); await must(() => has('.page-wrap'), 'la partita'); }
     await click('[data-nav="sondaggi"]'); await pause(400);
-    await must(() => has('[data-obs-area="forze"]'), 'la pagina dei sondaggi');
-    await click('[data-obs-area="forze"]'); await pause(300);
+    await must(() => has('[data-obs-area="alleanze"]'), 'la pagina dei sondaggi');
+    await click('[data-obs-area="alleanze"]'); await pause(300);
     await must(() => has('[data-my-coalition]'), 'il pannello «La mia coalizione»');
   };
   await openForces();

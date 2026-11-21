@@ -15,7 +15,8 @@ const statement = (sql, params = []) => ({
 const d1 = { prepare: sql => statement(sql), batch: async list => Promise.all(list.map(item => item.run())), exec: async sql => sqlite.exec(sql) };
 for (const file of (await readdir(new URL('../migrations/', import.meta.url))).sort()) sqlite.exec(await readFile(new URL(`../migrations/${file}`, import.meta.url), 'utf8'));
 const worker = await import('../worker.js?retention=1');
-const { RETENTION, retentionState, planRetention, runRetention } = worker;
+const { retentionState, planRetention, runRetention } = worker;
+const { RETENTION } = await import('../worker-constants.js');
 const count = (sql, ...params) => sqlite.prepare(sql).get(...params).n;
 
 const DAY = 86_400_000;

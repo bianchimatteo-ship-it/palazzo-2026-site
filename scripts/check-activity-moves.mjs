@@ -212,7 +212,7 @@ for (const key of KEYS) {
   assert.equal(outcomeKindOf({ history: [{ fn: 'verify', band: 'mid' }], tally: { tension: 0 } }, 'mid'), 'rinvio');
   assert.equal(outcomeKindOf({ history: [{ fn: 'listen', band: 'bad' }], tally: { tension: 0 } }, 'bad'), 'irrisolto');
   // the verdict scales what the activity gives, all of it: party, organisation, preparation, the institution
-  assert.ok(sceneFactor(6) > 1 && sceneFactor(-6) < 1 && sceneFactor(6) <= 1.8 && sceneFactor(-6) >= 0.2);
+  assert.ok(sceneFactor(6) > 1 && sceneFactor(6) <= 1.8 && sceneFactor(0) > 0 && sceneFactor(0) < 1 && sceneFactor(-3) === 0 && sceneFactor(-6) < 0 && sceneFactor(-6) >= -0.8 && sceneFactor(-1) < sceneFactor(1), 'Verdetto: buono premia, intermedio proporzionale, cattivo toglie.');
 }
 
 // ---------- 5. the three paths ----------

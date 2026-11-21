@@ -27,7 +27,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   await click('[data-scene-activity="associazioni"]');
   await wait(() => evaluate('Boolean(document.querySelector(".scene[data-scene-kind=attivita] .st-svg"))'), 15000);
   assert.deepEqual(await snap(), { ...before, scene: 'attivita' }, 'Aprire la scena non costa nulla e non avanza la settimana.');
-  assert.equal(await evaluate('document.querySelectorAll(".st-actor").length'), 3, 'Tre persone nella stanza.');
+  assert.equal(await evaluate('document.querySelectorAll(".st-actor").length'), 4, 'Tre persone che parlano e una nella stanza che ascolta.');
   assert.equal(await evaluate('Boolean(document.querySelector(".page-wrap, .sidebar, .mobile-tabbar"))'), false, 'La carriera è ferma dietro la scena.');
   const straps = await evaluate(`[...document.querySelectorAll('.st-straps .st-strap text')].map(t => t.textContent)`);
   assert.ok(straps.length >= 6 && straps.every(text => text.trim().length > 2) && !straps.some(text => /^(Partecipa|Simula|Non partecipare)$/i.test(text.trim())), 'Nome e ruolo di ognuno, mai il testo di un pulsante.');
@@ -61,7 +61,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
       const box = await evaluate(`(() => { const r = document.querySelector('.scene-stage').getBoundingClientRect(); return { w: r.width, h: r.height, left: r.left, right: r.right, scroll: document.documentElement.scrollWidth - document.documentElement.clientWidth }; })()`);
       assert.ok(box.left >= -1 && box.right <= width + 1 && box.h > 120, `${key} a ${width}px: il palco è intero (${JSON.stringify(box)}).`);
       assert.ok(box.scroll <= 1, `${key} a ${width}px: nessuno scorrimento laterale.`);
-      assert.equal(await evaluate('document.querySelectorAll(".st-actor").length'), 3, `${key}: tre persone.`);
+      assert.equal(await evaluate('document.querySelectorAll(".st-actor").length'), 4, `${key}: tre persone che parlano e una che ascolta.`);
       assert.equal(await evaluate(`document.querySelectorAll('.scene-choice').length >= 1`), true);
       const heights = await evaluate(`[...document.querySelectorAll('.scene-choice, [data-scene-abandon], [data-stage-skip], [data-stage-pause]')].map(b => Math.round(b.getBoundingClientRect().height))`);
       assert.ok(heights.length >= 3 && heights.every(h => h >= (mobile ? 44 : 36)), `${key} a ${width}px: i pulsanti si toccano (altezze ${heights.join(', ')}).`);

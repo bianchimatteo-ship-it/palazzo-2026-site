@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-11-15",
+  "updated": "2026-11-19",
   "note": "Informazioni che solo il titolare può fornire e che il codice non può verificare. Le pagine pubbliche (privacy.html, termini.html, elimina-account.html) sono scritte senza di esse e non le inventano: dove il dato manca c'è un segnaposto esplicito (`data-placeholder=\"<id>\"`), e il test `check:legal` verifica che ogni segnaposto corrisponda a un requisito mancante di questo file. Finché un requisito con required=true è «mancante» le pagine restano con noindex e il controllo di rilascio (npm run check:legal -- --release) fallisce. Per chiudere un requisito: inserire il dato nel testo pubblico indicato in «section», portare status a «fornito» e scrivere in «provided» una nota con la data e la fonte (mai il dato personale, se non pubblico).",
   "items": [
     {
@@ -81,8 +81,8 @@
       "section": "scheda Play Console (sviluppatore, indirizzo, contatti) · docs/audit-legale-conformita.md §2 e §4",
       "why": "Fatto: l'account Play Console è intestato a un genitore, che ha accettato l'accordo con Google; Matteo non ne è titolare. L'intestazione non determina il titolare GDPR né l'autore dell'opera. Mancano: nome/cognome del genitore, tipo di account, dati che Google mostrerà e coerenza con le pagine legali, ed eventuale accordo familiare scritto su chi decide su pubblicazione, aggiornamenti e rimozione. Non vanno inventati.",
       "required": true,
-      "status": "mancante",
-      "provided": null
+      "status": "fornito",
+      "provided": "Dichiarato dal titolare il 19/11/2026: la Google Play Console è intestata a Ramona Bianchi, che ha accettato l'accordo con Google. Resta fuori da questo requisito l'eventuale accordo familiare scritto."
     },
     {
       "id": "titolare-trattamento",
@@ -90,8 +90,8 @@
       "section": "privacy.html §1 · termini.html §1 (segnaposto) · docs/audit-legale-conformita.md §2",
       "why": "Fatti noti: Matteo Bianchi (minorenne) decide in concreto finalità e modalità del trattamento; i genitori supervisionano; un genitore intesta l'account Google Play e valuta di assumere il ruolo di offerente del servizio. Il titolare GDPR è chi determina finalità e mezzi (art. 4 n. 7; criterio funzionale): il fatto che Matteo decida pesa nella qualificazione, ma la sua minore età, la capacità giuridica e la rappresentanza dei genitori incidono su chi può risponderne. Titolarità, offerente del servizio, sviluppatore, intestatario degli account e responsabili sono ruoli distinti e NON sono attribuiti per default né a Matteo né al genitore: la qualificazione va validata da un professionista (ipotesi da valutare: genitore titolare con Matteo persona autorizzata; contitolarità; Matteo titolare rappresentato). Mancano: la decisione, nome/cognome/indirizzo del soggetto, istruzioni scritte a Matteo, se rivelare pubblicamente l'età di Matteo.",
       "required": true,
-      "status": "mancante",
-      "provided": null
+      "status": "fornito",
+      "provided": "Indicato dal titolare del progetto (messaggio del 2026-11-19): titolare del trattamento Ramona Bianchi, maggiorenne; Matteo Bianchi sviluppatore e gestore operativo. Da confermare per iscritto da Ramona Bianchi e da validare con un professionista (vedi elenco domande)."
     },
     {
       "id": "account-apple-developer",
@@ -99,8 +99,8 @@
       "section": "scheda App Store Connect (venditore, contatti, trader status) · docs/audit-legale-conformita.md §3",
       "why": "Apple richiede la maggiore età nella propria area per iscriversi; un minorenne può usare l'account di un genitore (fonte: developer.apple.com/programs/enroll). Con l'iscrizione individuale il nome legale della persona figura come venditore sull'App Store; come organizzazione serve un'entità giuridica riconosciuta, D-U-N-S e sito/email di dominio (non si accettano nomi commerciali o ditte fittizie). Mancano: quale genitore si iscrive, se come individuo (e quindi con il suo nome come venditore e il suo contratto con Apple) o tramite un'entità giuridica (non esistente oggi), conferma delle conseguenze su titolarità dell'app, dichiarazione di «trader» ai sensi del DSA e pubblicazione di indirizzo e contatti.",
       "required": true,
-      "status": "mancante",
-      "provided": null
+      "status": "fornito",
+      "provided": "Dichiarato dal titolare il 19/11/2026: l'iscrizione individuale all'Apple Developer Program è a nome di Ramona Bianchi, maggiorenne; è lei il venditore sull'App Store. Trader DSA e dati pubblici restano nel requisito trader-dsa."
     },
     {
       "id": "trader-dsa",
@@ -135,8 +135,8 @@
       "section": "termini.html §1 · privacy.html §1 (segnaposto) · docs/audit-legale-conformita.md §2",
       "why": "Proposta: un genitore, già intestatario dell'account Google Play, assume formalmente il ruolo di offerente del servizio; si è dichiarato disponibile a valutarlo, ma non risulta alcuna accettazione. Mancano: la sua decisione e un atto scritto (anche semplice, redatto con un professionista) che dica cosa comporta (responsabilità verso utenti e store, gestione di reclami e richieste, rapporto con Matteo come sviluppatore), nome/cognome/indirizzo per l'identificazione richiesta ai servizi online (art. 7 D.Lgs. 70/2003) [NV]. Offerente, titolare GDPR e sviluppatore possono essere soggetti diversi: il ruolo di offerente non implica per sé la titolarità del trattamento.",
       "required": true,
-      "status": "mancante",
-      "provided": null
+      "status": "fornito",
+      "provided": "Indicato dal titolare del progetto (messaggio del 2026-11-19): offerente del servizio Ramona Bianchi, maggiorenne. Atto scritto di accettazione ancora da produrre."
     },
     {
       "id": "rappresentanza-capacita",
@@ -149,9 +149,9 @@
     },
     {
       "id": "admob-futuro",
-      "title": "AdMob: la build con l'SDK non può uscire con i documenti attuali",
+      "title": "InMobi (unico provider): la build con l'SDK non può uscire con i documenti attuali",
       "section": "privacy.html §5 · termini.html §9 · schede store",
-      "why": "Il codice di AdMob (Google Mobile Ads SDK + UMP) è nel ramo feature/ios-admob-android, SPENTO (ADS_MODE 'off') e solo su Android. Ma un AAB costruito da questo ramo contiene comunque l'SDK, anche con gli annunci spenti: l'informativa dice che la versione attuale non ha annunci né SDK pubblicitari, il manifest unito aggiunge il permesso AD_ID, e Play Console richiede le dichiarazioni «contiene annunci» e ID pubblicitario e la Sicurezza dei dati aggiornata. La versione 1.0.1 (senza annunci) va costruita dal ramo senza questo codice. Prima di pubblicare la versione con AdMob servono: offerente e titolare definiti, account AdMob intestato a un adulto (pagamenti e dati fiscali) [non verificato], informativa e termini aggiornati (AdMob come servizio presente, dati e identificativi, consenso), Data safety e dichiarazione ID pubblicitario, verifica dell'account AdMob (app-ads.txt, sito e store collegati, pagamenti), verifica del pubblico 14+ e dei Paesi, test con gli ID di prova su dispositivo e passaggio a 'live' solo dopo.",
+      "why": "Il codice di InMobi (SDK 11.5.1 Android, 11.5.0 iOS, con consenso Google UMP/IAB TCF) è nel ramo feature/inmobi-integrazione, SPENTO di base (ogni formato disattivato finché la configurazione remota del Worker non lo accende; nessun Account ID nel repository). Una build che contiene l'SDK, anche con gli annunci spenti, richiede: informativa e termini aggiornati (InMobi come servizio presente, dati e identificativi, consenso), Play Console «contiene annunci» e ID pubblicitario (il manifest unito aggiunge AD_ID), Sicurezza dei dati e scheda privacy dell'App Store aggiornate, messaggio di consenso configurato in AdMob > Privacy e messaggistica (la CMP è Google UMP), account InMobi intestato a un adulto (pagamenti e dati fiscali) [non verificato], app-ads.txt, elenco completo SKAdNetwork di InMobi. La versione iOS 1.0 (1) in revisione è senza pubblicità e non va toccata. Dettagli in docs/inmobi.md.",
       "required": true,
       "status": "mancante",
       "provided": null

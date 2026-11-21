@@ -1,16 +1,18 @@
-import { mountApp } from './ui/app.js?v=20261117-3';
-import { refreshSharedArchive } from './data/repositories/admin-sync.js?v=20261117-3';
-import { isNativeApp } from './data/repositories/account-sync.js?v=20261117-3';
-import { store } from './core/store.js?v=20261117-3';
-import { isRealCollectionLoaded, loadRealCollectionsSettled, loadRealDatabase, loadOptionalRealDocument, loadRealDocument, realDatabase, realDataUrls, refreshAdminOverrides } from './data/repositories/real-data.js?v=20261117-3';
-import { PARTY_LINK_COLLECTIONS, governingEntityIds } from './data/repositories/party-links.js?v=20261117-3';
-import { referenceGovernmentSpec } from './data/repositories/government-reference.js?v=20261117-3';
+import { mountApp } from './ui/app.js?v=20261120-1';
+import { refreshSharedArchive } from './data/repositories/admin-sync.js?v=20261120-1';
+import { isNativeApp } from './data/repositories/account-sync.js?v=20261120-1';
+import { store } from './core/store.js?v=20261120-1';
+import { isRealCollectionLoaded, loadRealCollectionsSettled, loadRealDatabase, loadOptionalRealDocument, loadRealDocument, realDatabase, realDataUrls, refreshAdminOverrides } from './data/repositories/real-data.js?v=20261120-1';
+import { PARTY_LINK_COLLECTIONS, governingEntityIds } from './data/repositories/party-links.js?v=20261120-1';
+import { referenceGovernmentSpec } from './data/repositories/government-reference.js?v=20261120-1';
 
 const BUILD = new URL(import.meta.url).searchParams.get('v');
 // iPhone and iPad (WKWebView, viewport-fit=cover): the content may run under the notch, the Dynamic Island and the home indicator, so the iOS-only rules of theme.css (class platform-ios) keep it inside the safe area.
 // Android and the web keep their layout untouched. iPadOS reports itself as a Mac with a touch screen.
 try { if (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) document.documentElement.classList.add('platform-ios'); } catch { /* no navigator: nothing to mark */ }
 // The installed app (Capacitor) carries its own copy of the game: the site cannot update it, so it never asks the site for a newer build and keeps no browser cache of its own.
+// Android (WebView of the app, Chrome): the touch targets are 48 dp, on iOS 44 pt (--touch-min in theme.css).
+try { if (/Android/i.test(navigator.userAgent)) document.documentElement.classList.add('platform-android'); } catch { /* no navigator: nothing to mark */ }
 const NATIVE = isNativeApp();
 
 // GitHub Pages lets browsers reuse index.html for a few minutes after a deploy. The check runs AFTER the screen is up (it never holds the first screen back, and has a time limit): if the
@@ -122,6 +124,7 @@ try {
     // The creator of a career and the first game need the institutions and the documents: they are asked for at once and waited for.
     needBackground: () => loadBackground()
   });
+  window.__politicandoBooted = true;   // the start-up guard (boot-guard.js) stops watching: the screen is mounted
 } catch (error) { bootError(error); throw error; }
 
 let touched = false;

@@ -1,0 +1,3 @@
+Minimal Java stubs of the Capacitor and Google UMP classes used by `plugins/inmobi-ads/android/.../InMobiAdsPlugin.kt`, so that `scripts/check-inmobi-native.mjs` can COMPILE the Kotlin plugin against the REAL InMobi SDK 11.5.1
+(downloaded from Maven Central) without an Android SDK. They only declare signatures (copied from the real libraries' public API as used by the AdMob plugin and the Capacitor sources in node_modules); they run nothing.
+The compilation proves the InMobi API calls (init, InMobiInterstitial, InMobiBanner, listeners, consent keys) exist with these signatures; it does not prove the Gradle build, the UMP calls against the real UMP jar, or the runtime.

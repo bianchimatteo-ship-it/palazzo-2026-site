@@ -610,3 +610,21 @@
 .coalition-elections { list-style: none; margin: 8px 0 12px; padding: 0; display: grid; gap: 8px; }
 .coalition-elections li { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
 @media (max-width: 600px) { .program-table thead { display: none; } .program-table tr { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; padding: 8px 10px; border-top: 1px solid var(--line); } .program-table th { grid-column: 1 / -1; border: 0; padding: 0; } .program-table td { border: 0; padding: 0; } .program-table td:last-child { grid-column: 1 / -1; } }
+
+/* Alliances: accordions and cards of the alliances page (only here) */
+.alliance-folds { display: grid; gap: 8px; margin-top: 10px; }
+.alliance-fold { border: 1px solid var(--line, rgba(127,140,134,.35)); border-radius: 12px; background: rgba(127,140,134,.06); }
+.alliance-fold > summary { list-style: none; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; min-height: 48px; cursor: pointer; }
+.alliance-fold > summary::-webkit-details-marker { display: none; }
+.alliance-fold-title { display: grid; min-width: 0; } .alliance-fold-title small { opacity: .85; overflow-wrap: anywhere; }
+.alliance-fold .fold-icon { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: rgba(217,180,90,.16); color: var(--gold-soft, #e8c875); }
+.alliance-fold .fold-chevron { width: 10px; height: 10px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); transition: transform .15s; margin-right: 4px; }
+.alliance-fold[open] > summary .fold-chevron { transform: rotate(-135deg); }
+.alliance-fold > summary:focus-visible { outline: 2px solid var(--gold, #d9b45a); outline-offset: 2px; border-radius: 12px; }
+.alliance-fold-body { padding: 4px 12px 12px; display: grid; gap: 8px; }
+.alliance-weight { display: flex; height: 12px; gap: 2px; border-radius: 6px; overflow: hidden; margin: 6px 0; } .alliance-weight i { display: block; min-width: 6px; }
+.alliance-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 12px; margin-top: 10px; }
+.alliance-card { border: 1px solid var(--line, rgba(127,140,134,.35)); border-radius: 14px; padding: 12px; display: grid; gap: 8px; min-width: 0; align-content: start; }
+.alliance-card.is-mine { border-color: rgba(217,180,90,.7); }
+.alliance-card header { display: grid; gap: 2px; } .alliance-card p { margin: 0; }
+.alliance-cohesion { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }

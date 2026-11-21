@@ -1,19 +1,19 @@
 // Rewarded videos, apart from the engine of the rewards. This file knows nothing about polls, resources or saves: it only decides whether a video can be offered and whether one was REALLY completed, and then
 // hands the completion (with its unique id) to `grant`. The reward is given only for an authentic completion, once for each id; a video that fails, cannot be shown or is closed early gives nothing.
 //
-// A provider is the adapter of an advertising SDK (to be written when AdMob is installed and configured; none exists in the game today):
-//   { kind: 'admob', isReady(): boolean | Promise<boolean>, show(): Promise<{ completed: boolean, verified: boolean, completionId: string }> }
+// A provider is the adapter of the advertising SDK (data/repositories/inmobi-adapter.js: InMobi, the only provider):
+//   { kind: 'inmobi', isReady(): boolean | Promise<boolean>, show(): Promise<{ completed: boolean, verified: boolean, completionId: string }> }
 // `completed` is the SDK's own confirmation that the user earned the reward, `verified` that it comes from the SDK / the ad network (and not from the page), `completionId` an id that is unique for each completion
 // (the transaction id of the network). A `demo` provider (kind: 'demo') is for tests only and is refused unless the caller passes `allowDemo: true`; production never does.
-import { ADS_CONFIG } from '../ads-config.js?v=20261117-3';
+import { ADS_CONFIG } from '../ads-config.js?v=20261120-1';
 
-export const REWARDED_ADS_OFF = 'Gli annunci premiati non sono ancora attivi: serve l’integrazione di AdMob, non ancora configurata.';
+export const REWARDED_ADS_OFF = 'Gli annunci premiati non sono attivi in questo momento.';
 const validId = id => typeof id === 'string' && /^[\w.:|~-]{8,160}$/.test(id);
 
 export function createRewardedAds({ config = ADS_CONFIG, provider = null, allowDemo = false, grant = () => ({ ok: false, reason: 'nessun-destinatario' }) } = {}) {
   let busy = false;
-  const configured = () => Boolean(config?.enabled && config.appId && config.rewardedUnitId);
-  const providerOk = () => Boolean(provider && (provider.kind === 'admob' || (provider.kind === 'demo' && allowDemo === true)));
+  const configured = () => Boolean(typeof config === 'function' ? config()?.rewarded?.enabled : config?.rewarded?.enabled);
+  const providerOk = () => Boolean(provider && (['inmobi', 'appodeal'].includes(provider.kind) || (provider.kind === 'demo' && allowDemo === true)));
   return {
     // Whether a video can be offered now, and why not.
     async availability() {

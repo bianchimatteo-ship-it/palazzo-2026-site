@@ -6,10 +6,10 @@
 // made, the answers are judged on competence, charisma, preparation and political coherence (the credibility of the programme), the rivals attack where the player is weak and answer as their
 // personality and their programme say. Nothing is drawn from the random sequence of the campaign: the little variation of a beat comes from a hash of the scene's seed, so a scene resumed or
 // replayed from the same choices is the same scene. The player's avatar is always the one chosen at the start of the career: the scene may change the face for a moment (expression), never the person.
-import { defaultAvatarFor, genderOf, normalizeAvatar } from './avatar.js?v=20261117-3';
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261117-3';
-import { line, formatOf } from './studio-lines.js?v=20261117-3';
-import { createRallyScene, createVoteScene, rallyChoose, rallyEffects, rallyNode, rallyProgress, voteChoose, voteNode, voteProgress } from './rally-scene.js?v=20261117-3';
+import { defaultAvatarFor, genderOf, normalizeAvatar } from './avatar.js?v=20261120-1';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261120-1';
+import { line, formatOf } from './studio-lines.js?v=20261120-1';
+import { createRallyScene, createVoteScene, rallyChoose, rallyOdds, rallyEffects, rallyNode, rallyProgress, voteChoose, voteNode, voteProgress } from './rally-scene.js?v=20261120-1';
 export { createRallyScene, createVoteScene, formatOf };
 
 // Scenes of other kinds (the optional scenes of the weekly activities, core/activity-scenes.js) are loaded on demand and register here: { node, choose, effects, progress }. Nothing of them is in the first screen.
@@ -178,10 +178,58 @@ export function proCon(scene, style, topicId = scene.topic?.id) {
   else { (ctx.rivalReadiness < 50 ? pro : contro).push(ctx.rivalReadiness < 50 ? 'l’avversario è impreparato' : 'l’avversario è preparato'); if (ctx.crisis) contro.push('in una crisi attaccare costa (−10)'); contro.push('punisce se non sei preparato'); }
   return { pro, contro };
 }
+// The other decisions of the debate (the preparation, the question to the rival, the reply to the attack, the closing): the same terms the engine uses in `chooseDebate`, each told as an advantage or a risk.
+const NOTE = { risposta: 'pesa molto nel giudizio finale (peso 1,3)', domanda: 'pesa poco nel giudizio finale (peso 0,7)', replica: 'pesa come la media (peso 1)', chiusura: 'pesa poco nel giudizio finale (peso 0,7)' };
+export function debateOdds(scene, nodeId, id) {
+  const ctx = scene.context, st = stats(scene), pro = [], contro = [], effect = [], cost = [];
+  const side = (ok, good, bad) => (ok ? pro : contro).push(ok ? good : bad);
+  if (nodeId === 'preparazione') {
+    const ready = { programma: 'ripassi le promesse: lo stile «Dal programma» parte avvantaggiato', dati: 'studi le cifre: lo stile «Con i dati» e la replica con i fatti parte avvantaggiato', empatia: 'prepari storie e volti: lo stile «Con empatia» parte avvantaggiato', attacco: 'studi i punti deboli: lo stile «All’attacco» parte avvantaggiato' }[id];
+    if (ready) pro.push(ready);
+    contro.push('prepari una sola direzione: sugli altri stili non hai vantaggio');
+    effect.push('nessun effetto immediato sul pubblico: conta nelle risposte che seguono');
+    return { pro, contro, effect, cost };
+  }
+  if (nodeId === 'domanda') {
+    if (id === 'salta') { pro.push('nessun rischio di brutta figura'); contro.push('rinunci a mettere in difficoltà l’avversario'); effect.push('il giudizio resta neutro (50)'); return { pro, contro, effect, cost }; }
+    const weak = ctx.rivalReadiness < 50;
+    side(weak, 'l’avversario è in difficoltà', 'l’avversario è preparato');
+    if (id === 'conti') side(ctx.rivalProgram.length >= 3, 'il suo programma ha abbastanza punti da mettere alla prova', 'il suo programma è scarno: poco su cui incalzarlo');
+    if (id === 'passato') contro.push('rischioso: se ricordi male, si ritorce');
+    if (id === 'coerenza') pro.push('colpisce se ha cambiato idea');
+    side(st.competence >= 55, `competenza ${Math.round(st.competence)}/100`, `competenza ${Math.round(st.competence)}/100`);
+    effect.push(`umore del pubblico in base all’esito; ${NOTE.domanda}`);
+    return { pro, contro, effect, cost };
+  }
+  if (nodeId === 'attacco') {
+    const facts = ctx.prep >= 8 || scene.prepFocus === 'dati';
+    if (id === 'fatti') side(facts, 'sei preparato sui fatti', 'poca preparazione sui fatti: la replica suona vuota');
+    else if (id === 'calma') { side(ctx.credibility >= 50, `credibilità ${Math.round(ctx.credibility)}/100`, `credibilità ${Math.round(ctx.credibility)}/100`); contro.push('sembri sulla difensiva'); }
+    else if (id === 'contrattacco') { side(ctx.rivalReadiness < 50, 'l’avversario è impreparato', 'l’avversario è preparato: il contrattacco costa caro'); contro.push('il pubblico si accende: può girarsi contro di te'); }
+    else { contro.push('non rispondi: l’accusa resta senza replica'); pro.push('eviti di sbagliare risposta'); }
+    effect.push(`umore del pubblico in base all’esito; ${NOTE.replica}`);
+    return { pro, contro, effect, cost };
+  }
+  if (nodeId === 'chiusura') {
+    if (id === 'appello') side(st.charisma >= 50, `carisma ${Math.round(st.charisma)}/100`, `carisma ${Math.round(st.charisma)}/100`);
+    else if (id === 'sfida') { side(scene.audience.mood >= 50, 'il pubblico è con te', 'il pubblico è freddo'); side(ctx.rivalReadiness < 50, 'l’avversario è impreparato', 'l’avversario è preparato'); contro.push('è una mossa divisiva'); }
+    else { side(ctx.credibility >= 50, `credibilità ${Math.round(ctx.credibility)}/100`, `credibilità ${Math.round(ctx.credibility)}/100`); contro.push('scalda poco la platea'); }
+    effect.push(`chiude il dibattito; ${NOTE.chiusura}`);
+    return { pro, contro, effect, cost };
+  }
+  return null;
+}
 export function sceneNode(scene) {
   const node = sceneNodeBase(scene);
-  if (!node?.choices || scene.kind === 'comizio' || scene.kind === 'voto' || KINDS[scene.kind]) return node;
-  return { ...node, choices: node.choices.map(choice => STYLES[choice[0]] ? [choice[0], choice[1], choice[2], choice[3], proCon(scene, choice[0])] : choice) };
+  if (!node?.choices) return node;
+  if (KINDS[scene.kind]) { const odds = KINDS[scene.kind].odds; return odds ? { ...node, choices: node.choices.map(choice => { const o = odds(scene, node.id, choice[0]); return o ? [choice[0], choice[1], choice[2], choice[3], o] : choice; }) } : node; }
+  if (scene.kind === 'comizio') return { ...node, choices: node.choices.map(choice => { const o = rallyOdds(scene, node.id, choice[0]); return o ? [choice[0], choice[1], choice[2], choice[3], o] : choice; }) };
+  if (scene.kind === 'voto') return node; // the polling booth has no decision that changes a result: only «continue»
+  return { ...node, choices: node.choices.map(choice => {
+    if (node.id === 'q1' || node.id === 'q2') { if (!STYLES[choice[0]]) return choice; const o = proCon(scene, choice[0], node.id === 'q2' ? (scene.secondTopic ?? scene.topic)?.id : scene.topic?.id); o.effect = [`umore del pubblico secondo l’esito; ${NOTE.risposta}`]; o.cost = []; return [choice[0], choice[1], choice[2], choice[3], o]; }
+    const o = debateOdds(scene, node.id, choice[0]);
+    return o ? [choice[0], choice[1], choice[2], choice[3], o] : choice;
+  }) };
 }
 
 export function chooseInScene(input, choiceId) {

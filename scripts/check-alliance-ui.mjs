@@ -20,12 +20,26 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, send, screensho
   assert.ok(info.allied, 'Il giocatore ha stretto un’alleanza.'); assert.ok(info.election, 'C’è un’elezione politica per cui registrare la coalizione.');
   const open = async () => { await evaluate(`location.hash = '#sondaggi'; true`); await pause(1200); await evaluate(`(() => { const tab = [...document.querySelectorAll('[data-section-tab]')].find(el => /alleanze/i.test(el.textContent)); tab?.click(); return true; })()`); await pause(1500); };
   await open();
-  const text = () => evaluate(`document.querySelector('[data-my-coalition]')?.innerText ?? ''`);
+  // the sections of the panel are accordions: the test opens them all before reading the text (what the player reads when opening them)
+  const text = () => evaluate(`(() => { document.querySelectorAll('[data-my-coalition] details').forEach(d => { d.open = true; }); return document.querySelector('[data-my-coalition]')?.innerText ?? ''; })()`);
   let panel = await text();
   assert.match(panel, /La mia alleanza/, 'Il pannello dice «alleanza», non «coalizione», finché non è registrata.');
   assert.match(panel, /Alleanza politica/); assert.match(panel, /Diventa una coalizione solo se tutti la approvano/);
   assert.equal(await evaluate(`document.querySelector('[data-coalition-kind]')?.dataset.coalitionKind`), 'alleanza');
   assert.ok(await evaluate(`[...document.querySelectorAll('[data-world-alliance]')].every(b => /Crea alleanza/.test(b.textContent)) && !/Proponi un’intesa/.test(document.body.innerText)`), 'I pulsanti dicono «Crea alleanza», mai «intesa».');
+  // the activities with the allies: five kinds with cost, duration and odds; «Avvia» really starts one (cost paid, in the list, a second one of the same kind refused)
+  assert.equal(await evaluate(`document.querySelectorAll('[data-ally-activities] [data-ally-kind]').length`), 5, 'Cinque attività con gli alleati.');
+  await evaluate(`document.querySelector('[data-ally-activities]').open = true; true`);
+  const kindText = await evaluate(`document.querySelector('[data-ally-kind="mobilitazione"]').textContent`);
+  assert.match(kindText, /1\.?500 €/); assert.match(kindText, /dura 4 settimane/); assert.match(kindText, /probabilità di riuscita circa \d+%/, 'Costo, durata e probabilità sono scritti.');
+  await S(`store.getState().game.resources.funds = 20000; store.getState().game.resources.politicalCapital = 30; return true;`);
+  await open();
+  await evaluate(`document.querySelector('[data-ally-activities]').open = true; true`);
+  await evaluate(`document.querySelector('[data-ally-start="conferenza"]').click(); true`); await pause(900);
+  assert.equal(await S(`return store.allyActivities().filter(item => item.status === 'in-corso').length;`), 1, 'Il clic avvia l’attività.');
+  await open(); await evaluate(`document.querySelector('[data-ally-activities]').open = true; true`);
+  assert.equal(await evaluate(`document.querySelector('[data-ally-start="conferenza"]').disabled`), true, 'La stessa attività non si può avviare due volte.');
+  assert.ok(await evaluate(`/In corso/.test(document.querySelector('[data-ally-activities]').textContent)`), 'La lista mostra l’attività in corso.');
   // the programme theme by theme
   assert.ok(await evaluate(`document.querySelectorAll('[data-coalition-program] tr[data-program-theme]').length === 10`), 'Il programma ha dieci temi.');
   assert.match(panel, /Programma comune/);

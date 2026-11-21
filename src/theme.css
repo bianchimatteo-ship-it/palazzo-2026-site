@@ -21,8 +21,14 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .date-chip, .icon-button { border-color: var(--line-strong); color: var(--ink-2); background: var(--panel); }
 .icon-button:hover { border-color: var(--accent); color: var(--accent); }
 .advance-button, .primary-button { background: var(--accent); color: var(--accent-ink); font-weight: 750; border: 0; }
-.advance-button:hover, .primary-button:hover { background: var(--gold-soft); color: var(--accent-ink); }
-.advance-button:disabled, .primary-button:disabled { background: var(--line); color: #8c907b; transform: none; cursor: not-allowed; }
+.advance-button:hover:not(:disabled), .primary-button:hover:not(:disabled) { background: var(--gold-soft); color: var(--accent-ink); }   /* more specific than the generic button hover (white text): dark ink on gold-soft keeps WCAG AA */
+/* Disabled gold stays gold (dimmed, with dark text), never grey: the palette of the game is the gold of the main actions and the dark of the secondary ones. */
+.advance-button:disabled, .primary-button:disabled { background: #8a7648; color: #1a1507; transform: none; cursor: not-allowed; }   /* dimmed gold, dark ink: about 4.4:1 (it was a translucent gold that vanished into the dark panel: 1.29:1) */
+/* Every button of the game has one of the two looks. A button that no rule of its own styles (a bare «button», a local class) gets the dark one, never the browser's grey: the selector has no weight, so every
+   specific rule of the game wins over it. */
+:where(button, input[type="button"], input[type="submit"], input[type="reset"]) { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line-strong); border-radius: var(--radius, 6px); font-family: var(--font-ui, inherit); font-weight: 700; }
+:where(button, input[type="button"], input[type="submit"], input[type="reset"]):hover:not(:disabled) { border-color: var(--accent); color: #fff; }
+:where(button, input[type="button"], input[type="submit"], input[type="reset"]):disabled { opacity: .5; cursor: not-allowed; }
 .secondary-button { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line-strong); }
 .secondary-button:hover:not(:disabled) { border-color: var(--accent); color: #fff; }
 .secondary-button:disabled { opacity: .5; cursor: not-allowed; }
@@ -85,10 +91,11 @@ h1, h2, h3, h4 { color: var(--ink); }
 
 /* ---------- phone navigation: Home, Elezioni, Sondaggi, Istituzioni and “Altro” (everything else in a sheet) ---------- */
 .mobile-tabbar, .mobile-sheet { display: none; }
-@media (max-width: 600px) {
+/* phones: the bottom bar and the sheet menu (also on a phone held sideways, 667–932 px wide but only 320–430 px tall: the side menu would show three items) */
+@media (max-width: 600px), (orientation: landscape) and (max-height: 500px) and (max-width: 1000px) {
   .app-shell > .sidebar { display: none; }
   .main-area { margin: 0; padding-bottom: calc(82px + env(safe-area-inset-bottom)); }
-  .mobile-tabbar { position: fixed; inset: auto 0 0; z-index: 30; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); height: calc(64px + env(safe-area-inset-bottom)); padding: 0 4px env(safe-area-inset-bottom); background: rgba(10, 20, 16, .97); border-top: 1px solid var(--line-strong); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  .mobile-tabbar { position: fixed; inset: auto 0 0; z-index: 30; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); height: calc(64px + env(safe-area-inset-bottom)); padding: 0 max(4px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom) max(4px, env(safe-area-inset-left, 0px)); background: rgba(10, 20, 16, .97); border-top: 1px solid var(--line-strong); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
   .mobile-tabbar::before { content: ""; position: absolute; inset: -1px 0 auto 0; height: 2px; background: linear-gradient(90deg, var(--tri-green) 0 33.34%, var(--tri-white) 33.34% 66.67%, var(--tri-red) 66.67% 100%); opacity: .75; }
   .mobile-tab { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-width: 0; min-height: 58px; border: 0; border-radius: var(--radius); background: none; color: var(--muted); font: 600 12px var(--font-ui); touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   .mobile-tabbar .mobile-tab span { max-width: none; white-space: nowrap; overflow-wrap: normal; word-break: keep-all; font-size: 11.5px; letter-spacing: -.02em; }
@@ -322,7 +329,7 @@ h1, h2, h3, h4 { color: var(--ink); }
 .report-backdrop { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 20px; }
 .report-modal { width: min(720px, 100%); max-height: calc(100vh - 40px); overflow: auto; padding: 24px 26px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line-strong); box-shadow: 0 30px 90px rgba(0,0,0,.65); animation: rise .28s ease-out; }
 .report-modal h2 { margin: 4px 0 14px; font: 800 24px/1.2 Manrope, sans-serif; }
-.report-metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.report-metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(190px, 100%), 1fr)); gap: 8px; }
 .report-metric { padding: 12px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); border-left: 3px solid var(--line-strong); }
 .report-metric.up { border-left-color: var(--good); }
 .report-metric.down { border-left-color: var(--critical); }
@@ -375,7 +382,7 @@ b.down { color: var(--critical-ink); }
 .secretary-block > small { color: var(--ink-2); font-size: 12px; line-height: 1.5; }
 .secretary-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .secretary-row select { flex: 1 1 160px; min-height: 40px; border-radius: 8px; padding: 0 10px; border: 1px solid var(--line-strong); }
-.line-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
+.line-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: 8px; }
 .line-option { text-align: left; padding: 12px; border-radius: 9px; border: 1px solid var(--line-strong); background: var(--panel); color: var(--ink); display: grid; gap: 4px; }
 .line-option strong { font: 700 14px/1.2 Manrope, sans-serif; }
 .line-option small { color: var(--muted); font-size: 12px; line-height: 1.4; }
@@ -502,7 +509,7 @@ html[data-density="compact"] .hq-grid, html[data-density="compact"] .dash-grid {
 .policy-fields { display: grid; gap: 10px; }
 .policy-fields label { display: grid; gap: 5px; font-size: 12px; color: var(--ink-2); }
 .policy-fields select, .policy-form input[name="title"], .reshuffle-form select { min-height: 40px; border-radius: 8px; padding: 0 10px; border: 1px solid var(--line-strong); }
-.policy-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.policy-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr)); gap: 10px; }
 .policy-instruments, .policy-lines { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 8px; border: 0; padding: 0; margin: 0; }
 .policy-instruments legend { font-size: 12px; color: var(--ink-2); margin-bottom: 6px; }
 .policy-choice { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 9px; border: 1px solid var(--line-strong); background: var(--panel); cursor: pointer; }
@@ -692,6 +699,8 @@ html body select:not([multiple]):focus-visible { outline: 3px solid var(--accent
 html body select:disabled { opacity: .55; cursor: not-allowed; }
 select option, select optgroup { background: var(--panel); color: var(--ink); font-size: 14px; }
 .real-law-tools select, .law-form-grid select, .law-negotiation select, .policy-fields select, .catalog-filter select { width: 100%; }
+/* iPhone / iPad (also in landscape, wider than 600 px): a field below 16 px makes Safari zoom the page on focus */
+html.platform-ios body select:not([multiple]), html.platform-ios body input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), html.platform-ios body textarea { font-size: 16px; }
 @media (max-width: 600px) { html body select:not([multiple]), html body input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), html body textarea { font-size: 16px; } }
 
 /* ---------- no horizontal overflow: long names wrap, grids shrink ---------- */
@@ -801,7 +810,7 @@ select option, select optgroup { background: var(--panel); color: var(--ink); fo
 .badge-bad { background: rgba(227, 73, 72, .16); color: #e2beb1; }
 
 /* Admin: party, group/component and election list side by side */
-.admin-affiliation { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:8px; margin:0 0 12px; }
+.admin-affiliation { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(170px, 100%),1fr)); gap:8px; margin:0 0 12px; }
 .admin-affiliation span { display:grid; gap:3px; padding:9px 11px; border:1px solid var(--line); border-radius:6px; background:var(--panel); }
 .admin-affiliation small { color:var(--ink-3); font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
 .admin-affiliation strong { color:var(--ink); font-size:13px; line-height:1.35; }
@@ -946,7 +955,7 @@ select option, select optgroup { background: var(--panel); color: var(--ink); fo
 .badge-warn { background: color-mix(in srgb, var(--serious) 18%, transparent); color: var(--serious); }
 
 /* Observatory: approval and laws, regional trend, coalition scenarios. */
-.obs-three { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.obs-three { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr)); gap: 10px; }
 .obs-three > div { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; }
 .obs-three small { color: var(--accent); letter-spacing: .06em; font-size: 12px; }
 .obs-three p { margin: 4px 0 0; font-size: 13px; color: var(--ink-2); }
@@ -1070,8 +1079,8 @@ select option, select optgroup { background: var(--panel); color: var(--ink); fo
 .setting-row.has-hint .segmented button { min-height: 44px; min-width: 96px; }
 
 /* Lingua / Language: a small switch next to the logo of the opening screen */
-.menu-lang { display: flex; gap: 6px; width: 100%; margin: 0 0 14px; padding: 5px; border: 1px solid var(--line-strong); border-radius: 14px; background: var(--panel); }
-.menu-lang button { flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 12px; border: 1px solid transparent; border-radius: 10px; background: none; color: var(--ink-2); font: 700 14px/1 Manrope, sans-serif; cursor: pointer; transition: background .15s ease, color .15s ease; }
+.menu-lang { display: flex; gap: 8px; width: 100%; margin: 0 0 14px; padding: 5px; border: 1px solid var(--line-strong); border-radius: 14px; background: var(--panel); }
+.menu-lang button { flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: var(--touch-min, 44px); padding: 0 12px; border: 1px solid transparent; border-radius: 10px; background: none; color: var(--ink-2); font: 700 14px/1 Manrope, sans-serif; cursor: pointer; transition: background .15s ease, color .15s ease; }
 .menu-lang button:hover { color: var(--ink-hi); background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .menu-lang button.active { background: var(--accent); color: var(--accent-ink); border-color: color-mix(in srgb, var(--accent-ink) 25%, transparent); box-shadow: 0 1px 0 rgba(0, 0, 0, .25); }
 .menu-lang button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
@@ -1204,7 +1213,7 @@ select option, select optgroup { background: var(--panel); color: var(--ink); fo
 .news-tags { margin: 2px 0 6px; color: var(--ink-3, #aab3a3); font-size: 13px; font-weight: 700; letter-spacing: .02em; }
 
 /* ---------- the first screen of a first installation: the language (both languages shown, dark and gold) ---------- */
-.language-gate { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom)); overflow-y: auto;
+.language-gate { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: max(20px, var(--safe-top)) 16px max(20px, var(--safe-bottom)); overflow-y: auto;
   background: radial-gradient(90% 70% at 50% 0%, rgba(240,207,133,.16), rgba(240,207,133,0) 60%), radial-gradient(120% 80% at 50% 100%, rgba(26,90,64,.32), rgba(26,90,64,0) 62%), linear-gradient(180deg, #0b1511 0%, #070d0a 100%); color: #f8f5ec; }
 .language-gate-card { width: min(520px, 100%); display: grid; justify-items: center; gap: 18px; padding: 34px 26px 28px; text-align: center; border: 1.5px solid rgba(240,207,133,.5); border-radius: 22px;
   background: linear-gradient(160deg, rgba(26,90,64,.38), rgba(10,34,25,.78) 60%) #0a2219; box-shadow: 0 24px 60px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.07); }
@@ -1396,7 +1405,7 @@ html[data-ui-motion="off"] .language-gate-button { transition: none; }
 .weekly-foot .primary-button { min-height: 44px; min-width: 140px; }
 @media (max-width: 640px) {
   .weekly-report { max-height: 100dvh; height: 100dvh; }
-  .weekly-head { padding: calc(12px + env(safe-area-inset-top)) 16px 8px; }
+  .weekly-head { padding: calc(12px + var(--safe-top)) 16px 8px; }
   .weekly-head h2 { font-size: 19px; }
   .weekly-body { padding: 12px 14px 8px; gap: 12px; }
   .report-backdrop:has(.weekly-report) { padding: 0; }
@@ -1406,10 +1415,20 @@ html[data-ui-motion="off"] .language-gate-button { transition: none; }
 }
 @media (max-height: 520px) and (orientation: landscape) { .weekly-head { padding-top: 8px; } .weekly-foot { padding-top: 8px; padding-bottom: calc(8px + env(safe-area-inset-bottom)); display: flex; } .weekly-foot .primary-button { width: auto; } }
 
-/* iOS (iPhone, iPad): viewport-fit=cover puts the page under the status bar / Dynamic Island, so the top safe area is added here; the bottom one is already handled by the rules above. No effect elsewhere. */
-html.platform-ios body { padding-top: env(safe-area-inset-top, 0px); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
-html.platform-ios .sx-tabs, html.platform-ios .gov-nav { top: env(safe-area-inset-top, 0px); }
-html.platform-ios .mobile-sheet-panel, html.platform-ios .wizard-backdrop, html.platform-ios .report-backdrop { padding-top: max(20px, env(safe-area-inset-top, 0px)); }
+/* ---------- safe areas (notch, Dynamic Island, status bar, home indicator), ONE place for every platform ----------
+   index.html has viewport-fit=cover: the page is drawn under the status bar on iOS (WKWebView, Safari) AND on Android 15+ (targetSdk 36 is edge-to-edge; Capacitor 8 passes the insets to the WebView as env(safe-area-inset-*)
+   from WebView 140; an older WebView is shifted by Capacitor natively and reports 0 here, so nothing is added twice). The top inset is added INSIDE the topbar (its background runs under the status bar: one continuous
+   surface) and never to the body, and it is divided by the interface scale: .app-shell has zoom: var(--ui-scale), which would multiply an inset that is already in real CSS pixels. */
+:root { --safe-top: env(safe-area-inset-top, 0px); --safe-bottom: env(safe-area-inset-bottom, 0px); --safe-left: env(safe-area-inset-left, 0px); --safe-right: env(safe-area-inset-right, 0px); --touch-min: 44px; }
+html.platform-android { --touch-min: 48px; }
+.app-shell { --safe-top: calc(env(safe-area-inset-top, 0px) / var(--ui-scale, 1)); --safe-bottom: calc(env(safe-area-inset-bottom, 0px) / var(--ui-scale, 1)); }
+body { padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+.sx-tabs, .gov-nav { top: var(--safe-top); }
+.wizard-backdrop { padding-top: max(22px, var(--safe-top)); }
+.report-backdrop { padding-top: max(20px, var(--safe-top)); }
+@media (max-width: 700px) { .menu-popup-backdrop { padding-top: 0; } .menu-popup { padding-top: var(--safe-top); } }
+@media (max-width: 600px) { .wizard-backdrop { padding-top: var(--safe-top); } }
+.menu-shell { padding-top: calc(32px + var(--safe-top)); }
 .weekly-advance-note { flex: none; margin: 0; padding: 10px 22px; border-top: 1px solid var(--line-strong, var(--line)); background: rgba(240, 207, 133, .08); font-size: .92rem; line-height: 1.4; }
 @media (max-width: 600px) { .weekly-advance-note { padding: 10px 16px; } }
 
@@ -1493,3 +1512,106 @@ button:not(:disabled):active, a.primary-button:active, a.secondary-button:active
 .guide-steps .go-button { margin-left: 8px; min-height: 36px; vertical-align: middle; }
 .tutorial-actions .go-button { min-height: 44px; }
 @media (prefers-reduced-motion: reduce) { .go-button { transition: none; } .go-button:active { transform: none; } }
+
+/* The path of a citizens' request: received → taken in charge → started → outcome (green satisfied, red failed or ignored, neutral rejected). */
+.req-path { display: flex; flex-wrap: wrap; gap: 4px; list-style: none; margin: 8px 0; padding: 0; counter-reset: req; }
+.req-path li { counter-increment: req; padding: 4px 10px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--panel-2); color: var(--ink-3); font-size: 12px; font-weight: 650; }
+.req-path li.is-done { border-color: rgba(95,181,138,.55); color: #8fd1ae; }
+.req-path li.is-now { border-color: var(--accent); background: var(--accent-soft); color: var(--gold-light); }
+.req-path li.is-now.is-realizzata { border-color: rgba(95,181,138,.7); background: rgba(95,181,138,.16); color: #9fe0bd; }
+.req-path li.is-now.is-fallita, .req-path li.is-now.is-ignorata { border-color: rgba(214,106,94,.7); background: rgba(214,106,94,.14); color: #f0a79d; }
+
+/* Semantic colours of the institutional sections (alliances, coalitions, initiatives, signatures, referendums, statutes): green = success/agreements, red = conflicts/crises, blue = institutions, violet = diplomacy, orange = activities and campaigns, gold = the main action. Only the new sections use them. */
+:root { --sem-good: #4cae7a; --sem-bad: #d9625b; --sem-institution: #5a8fd8; --sem-diplomacy: #9a7ad6; --sem-campaign: #e0944a; --sem-main: #d9b24c; }
+.ref-page .ref-card { display: block; }
+.ref-tone-abrogativo { border-left: 4px solid var(--sem-campaign); }
+.ref-tone-costituzionale { border-left: 4px solid var(--sem-institution); }
+.ref-compare { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); }
+.ref-col { padding: 12px; border-radius: 12px; border: 1px solid rgba(127, 140, 134, .3); }
+.ref-col h4 { margin: 0 0 6px; }
+.ref-col ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.ref-question { font-weight: 700; margin: 8px 0; overflow-wrap: anywhere; }
+.ref-path { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; margin: 4px 0 10px; }
+.ref-path li { padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(127, 140, 134, .4); font-size: .85rem; opacity: .75; }
+.ref-path li.is-done { border-color: var(--sem-good); opacity: 1; }
+.ref-path li.is-now { border-color: var(--sem-main); background: rgba(217, 178, 76, .16); opacity: 1; font-weight: 700; }
+.ref-bars { display: grid; grid-template-columns: auto 1fr auto; gap: 6px 10px; align-items: center; margin: 8px 0; }
+.ref-bars .ini-bar { margin: 0; }
+.ref-bar.is-yes i { background: var(--sem-good); }
+.ref-bar.is-no i { background: var(--sem-bad); }
+.ref-sides, .ref-actions, .ref-routes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; }
+.ref-actions button small { display: block; opacity: .8; font-weight: 400; }
+.ref-events { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px; }
+.ref-events li.good { color: var(--sem-good); } .ref-events li.bad { color: var(--sem-bad); }
+.ref-figures { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px; }
+.ref-councils fieldset, .ref-scope { border: 1px solid rgba(127, 140, 134, .3); border-radius: 12px; padding: 10px; display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.ref-scope { grid-template-columns: 1fr; }
+.ref-region.is-used { opacity: .6; }
+.ref-outcome { font-weight: 600; margin: 8px 0; }
+.statute-board .statute-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 8px; }
+.statute-row { display: grid; gap: 6px; padding: 10px; border: 1px solid rgba(127, 140, 134, .3); border-left: 4px solid var(--sem-institution); border-radius: 12px; }
+.statute-row.is-abrogata { border-left-color: var(--sem-bad); opacity: .85; }
+.statute-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 520px) { .ref-bars { grid-template-columns: auto 1fr; } .ref-bars b { grid-column: 2; } .ref-actions button, .ref-routes button { width: 100%; } }
+.ally-activities { margin: 10px 0; border: 1px solid rgba(127, 140, 134, .3); border-left: 4px solid var(--sem-campaign); border-radius: 12px; padding: 8px 12px; }
+.ally-activities > summary { cursor: pointer; font-weight: 700; }
+.ally-activity-list, .ally-run-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 8px; }
+.ally-activity { display: flex; flex-wrap: wrap; gap: 8px 12px; justify-content: space-between; align-items: center; padding: 10px; border: 1px solid rgba(127, 140, 134, .25); border-radius: 10px; }
+.ally-activity small { display: block; opacity: .85; }
+.ally-activity-do { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ally-run.tone-good { border-left: 3px solid var(--sem-good); padding-left: 8px; } .ally-run.tone-bad { border-left: 3px solid var(--sem-bad); padding-left: 8px; }
+@media (max-width: 520px) { .ally-activity { flex-direction: column; align-items: stretch; } .ally-activity-do select, .ally-activity-do button { width: 100%; } }
+.territory-page { display: grid; gap: 14px; }
+.tp-controls { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr)); align-items: end; }
+.tp-controls label { display: grid; gap: 4px; }
+.tp-controls .tp-search { grid-column: 1 / -1; }
+.tp-controls input, .tp-controls select { width: 100%; box-sizing: border-box; min-height: 44px; }
+.tp-hits ul { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 6px; }
+.tp-hits li small { opacity: .8; display: block; }
+.tp-status { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.tp-leads { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 6px; }
+.tp-leads li { display: grid; grid-template-columns: minmax(110px, 1.2fr) 2fr auto; gap: 8px; align-items: center; }
+.tp-bar { display: block; height: 10px; border-radius: 999px; background: rgba(127, 140, 134, .25); overflow: hidden; }
+.tp-bar i { display: block; height: 100%; border-radius: inherit; }
+.tp-pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 10px 0; }
+.tp-compare { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 10px; }
+.tp-compare label { display: grid; gap: 4px; }
+.tp-table td.num, .tp-table th.num { white-space: nowrap; }
+@media (max-width: 520px) { .tp-leads li { grid-template-columns: 1fr auto; } .tp-leads li > b { grid-column: 2; grid-row: 1; } .tp-leads .tp-bar { grid-column: 1 / -1; grid-row: 2; } .tp-pager { justify-content: center; } }
+/* The identity block of the wizard: the date of birth takes the whole row (three fields side by side, never squeezed in half a column), the gender and the profession follow, aligned and of the same height. */
+.wizard-profile .wizard-form-grid { align-items: start; }
+.wizard-profile .birth-field { grid-column: 1 / -1; }
+.birth-field { border: 1px solid var(--line, rgba(127, 140, 134, .35)); border-radius: 12px; padding: 10px 12px 12px; margin: 0; min-width: 0; display: grid; gap: 8px; }
+.birth-field legend { padding: 0 6px; font: 700 12.5px/1.2 Manrope, sans-serif; letter-spacing: .04em; color: var(--ink-2); }
+.birth-row { display: grid; grid-template-columns: minmax(52px, .8fr) minmax(100px, 2fr) minmax(64px, 1fr); gap: 10px; }
+.birth-row label { display: grid; gap: 4px; min-width: 0; }
+.career-wizard .birth-row input, .career-wizard .birth-row select, .career-wizard .wizard-profile select[name="gender"], .career-wizard .wizard-profile select[name="previousProfession"] { width: 100%; box-sizing: border-box; min-height: 48px; font-size: 1rem; }
+.birth-row input { text-align: center; }
+.career-wizard .birth-row select { text-overflow: ellipsis; }
+.birth-hint { margin: 0; font-size: .86rem; line-height: 1.35; opacity: .9; } .birth-hint.is-error { color: var(--sem-bad, #d9625b); font-weight: 600; opacity: 1; }
+@media (max-width: 360px) { .birth-row { gap: 6px; } .birth-field { padding-inline: 8px; } }
+@media (max-width: 560px) { .wizard-profile .wizard-form-grid > label:has(select[name="gender"]) { grid-column: 1 / -1; } }
+.guide-card:has(.guide-fold):not([hidden]) { display: block; padding: 0; }
+.guide-fold { display: block; }
+.guide-fold > summary { list-style: none; display: flex; gap: 12px; align-items: flex-start; padding: 14px; cursor: pointer; min-height: 44px; }
+.guide-fold > summary::-webkit-details-marker { display: none; }
+.guide-fold > summary::after { content: ''; margin-left: auto; align-self: center; width: 8px; height: 8px; border-right: 2px solid var(--accent); border-bottom: 2px solid var(--accent); transform: rotate(45deg); transition: transform .15s; flex: none; }
+.guide-fold[open] > summary::after { transform: rotate(-135deg); }
+.guide-sum { display: grid; gap: 2px; min-width: 0; }
+.guide-sum small { color: var(--ink-2); font-size: 12.5px; line-height: 1.4; }
+.guide-body { padding: 0 14px 14px 46px; }
+@media (max-width: 520px) { .guide-body { padding-left: 14px; } }
+
+.guide-sum small { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.guide-fold[open] > summary .guide-sum small { display: none; }
+/* the semantic colour of the new sections, in one place: alliances and coalitions violet (diplomacy), initiatives and signature drives orange (campaigns), referendums blue (institutions), agreements green, crises red */
+.my-coalition { border-left: 4px solid var(--sem-diplomacy); padding-left: 12px; }
+.my-coalition [data-coalition-state], .coalition-terms li.is-kept { color: var(--sem-good); }
+.my-coalition [data-coalition-crisis] { border-left: 3px solid var(--sem-bad); }
+.ini-page .ini-head + .ini-progress .ini-bar i { background: var(--sem-campaign); }
+.ini-bar.is-full i { background: var(--sem-good); }
+.ini-ready { color: var(--sem-good); } .ini-warning { color: var(--sem-bad); }
+.statute-row { border-left-color: var(--sem-institution); }
+.ref-card .sx-card { border-left-width: 4px; }
+/* results by territory on a phone: the list names are long («Partito democratico»), so the label takes what it needs and the value stays on its right instead of running over it */
+@container (max-width: 520px) { .sx-table.tp-table td { grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; } .sx-table.tp-table td::before { overflow-wrap: anywhere; text-align: left; } .sx-table.tp-table td.num { text-align: right; } }

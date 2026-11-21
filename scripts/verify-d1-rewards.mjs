@@ -3,7 +3,7 @@
 //   node scripts/verify-d1-rewards.mjs --remote   the PRODUCTION database «politicando-accounts» through wrangler (needs `wrangler` and CLOUDFLARE_API_TOKEN / a login): read-only, it only runs PRAGMA and SELECT
 // Without credentials the remote check says so and exits with 2: nothing is reported as verified that was not.
 import { spawnSync } from 'node:child_process';
-import { REWARD_COLUMNS, REWARD_MIGRATION } from '../worker.js';
+import { REWARD_COLUMNS, REWARD_MIGRATION } from '../worker-constants.js';
 
 const TABLES = { ...REWARD_COLUMNS, reward_devices: [['ranges']], reward_blocks: [['block']], reward_community: [['reward']], schema_migrations: [['name']] };
 const mode = process.argv.includes('--remote') ? 'remote' : 'local';

@@ -33,6 +33,7 @@ globalThis.location = new URL('http://127.0.0.1:8794/');
 const client = await module('src/data/repositories/account-sync.js');
 const { startLocalWorker } = await import('./lib/local-worker.mjs');
 const local = await startLocalWorker({ port: 8794 });
+local.env.ADS_CONFIG = JSON.stringify({ android: { accountId: 'abcdef0123456789abcdef0123456789', enabled: true, rewarded: { enabled: true } } });   // the rewarded format is on (remote configuration): the Worker books a video only then (docs/inmobi.md)
 
 // ----- the virtual clock: the Worker reads Date.now() too -----
 const realNow = Date.now.bind(Date);
