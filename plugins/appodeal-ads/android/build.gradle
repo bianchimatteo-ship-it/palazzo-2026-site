@@ -1,0 +1,63 @@
+// Library of the Capacitor plugin `AppodealAds` (Kotlin, Android only). Appodeal SDK 4.4.0 (stable) from Appodeal's own Maven repository (added in android/build.gradle).
+// The ad networks are ONLY the adapters listed below, connected through Appodeal's mediation: no AdMob adapter, no Meta adapter, no InMobi adapter and no standalone InMobi SDK in the app.
+// The BidMachine adapter is NOT used: it depends on the Google Mobile Ads / Ad Manager SDK (io.bidmachine:ads.networks.gam), which the project must not carry (AdMob is not connected).
+ext {
+    androidxAppCompatVersion = project.hasProperty('androidxAppCompatVersion') ? rootProject.ext.androidxAppCompatVersion : '1.7.1'
+    appodealVersion = '4.4.0'
+}
+
+buildscript {
+    ext.kotlin_version = project.hasProperty("kotlin_version") ? rootProject.ext.kotlin_version : '2.2.20'
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+
+android {
+    namespace = "it.matteobianchi.politicando.appodeal"
+    compileSdk = project.hasProperty('compileSdkVersion') ? rootProject.ext.compileSdkVersion : 36
+    defaultConfig {
+        minSdkVersion project.hasProperty('minSdkVersion') ? rootProject.ext.minSdkVersion : 24
+        targetSdkVersion project.hasProperty('targetSdkVersion') ? rootProject.ext.targetSdkVersion : 36
+        versionCode 1
+        versionName "1.0"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+    lintOptions {
+        abortOnError = false
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_21
+    }
+}
+
+repositories {
+    google()
+    mavenCentral()
+    maven { url = uri("https://artifactory.appodeal.com/appodeal") }
+}
+
+dependencies {
+    implementation project(':capacitor-android')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    // Appodeal SDK (core: ads + consent manager) and the adapters of the networks connected by Appodeal's automatic connection
+    api "com.appodeal.ads.sdk:core:$appodealVersion"
+    api "com.appodeal.ads.sdk.adapters:applovin:13.6.3.0"
+    api "com.appodeal.ads.sdk.adapters:unity_ads:4.17.0.0"
+}

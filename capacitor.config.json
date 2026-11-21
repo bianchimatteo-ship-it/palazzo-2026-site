@@ -11,5 +11,10 @@
       "initialViewportFitValueHint": "cover",
       "insetsHandling": "css"
     }
+  },
+  "android": {
+    "includePlugins": [
+      "politicando-appodeal-ads"
+    ]
   }
 }

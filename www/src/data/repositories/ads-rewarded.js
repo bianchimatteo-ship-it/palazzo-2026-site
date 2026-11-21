@@ -13,7 +13,7 @@ const validId = id => typeof id === 'string' && /^[\w.:|~-]{8,160}$/.test(id);
 export function createRewardedAds({ config = ADS_CONFIG, provider = null, allowDemo = false, grant = () => ({ ok: false, reason: 'nessun-destinatario' }) } = {}) {
   let busy = false;
   const configured = () => Boolean(typeof config === 'function' ? config()?.rewarded?.enabled : config?.rewarded?.enabled);
-  const providerOk = () => Boolean(provider && (provider.kind === 'inmobi' || (provider.kind === 'demo' && allowDemo === true)));
+  const providerOk = () => Boolean(provider && (['inmobi', 'appodeal'].includes(provider.kind) || (provider.kind === 'demo' && allowDemo === true)));
   return {
     // Whether a video can be offered now, and why not.
     async availability() {

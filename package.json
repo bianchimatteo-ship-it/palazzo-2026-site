@@ -366,13 +366,15 @@
     "check:runoff-eliminated": "node scripts/check-runoff-eliminated.mjs",
     "check:runoff-rule": "node scripts/check-runoff-rule.mjs",
     "check:challenges-ui": "node scripts/check-challenges-ui.mjs",
-    "check:load-careers": "node scripts/check-load-careers.mjs"
+    "check:load-careers": "node scripts/check-load-careers.mjs",
+    "check:appodeal": "node scripts/check-appodeal.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",
     "@capacitor/cli": "^8.5.3",
     "@capacitor/core": "^8.5.3",
     "@capacitor/ios": "^8.5.3",
+    "politicando-appodeal-ads": "file:plugins/appodeal-ads",
     "politicando-inmobi-ads": "file:plugins/inmobi-ads"
   }
 }

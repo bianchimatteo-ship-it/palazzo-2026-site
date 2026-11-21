@@ -72,7 +72,8 @@ import { playSound } from './sound.js?v=20261120-1';
 import { resolveInstitution } from './lazy-views.js?v=20261120-1';
 import { createRewardsService } from './rewards-service.js?v=20261120-1';
 import { createInMobiAdapter } from '../data/repositories/inmobi-adapter.js?v=20261120-1';
-import { resolveAds, defaultAds } from '../data/ads-config.js?v=20261120-1';
+import { createAppodealAdapter } from '../data/repositories/appodeal-adapter.js?v=20261120-1';
+import { resolveAds, defaultAds, resolveAppodeal, APPODEAL_MODE, APPODEAL_BANNER_PAGES } from '../data/ads-config.js?v=20261120-1';
 import { setAdRewardPoints } from '../data/simulation/reward-rules.js?v=20261120-1';
 import { createAdsManager, interruptible } from '../data/repositories/ads-manager.js?v=20261120-1';
 import { createReviewPrompt } from '../data/repositories/review-prompt.js?v=20261120-1';
@@ -3262,12 +3263,14 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   };
   globalThis.__offerReminder = offerReminder;
   const nativePlatform = isNativeApp() ? (/Android/i.test(globalThis.navigator?.userAgent ?? '') ? 'android' : /iPhone|iPad|iPod/i.test(globalThis.navigator?.userAgent ?? '') || globalThis.Capacitor?.getPlatform?.() === 'ios' ? 'ios' : null) : null;
-  const adMob = createInMobiAdapter({ platform: nativePlatform ?? 'android', config: nativePlatform ? defaultAds(nativePlatform) : defaultAds('android') });
-  const adsManager = createAdsManager({ adapter: adMob, policy: () => adMob.ids.interstitialPolicy });
+  // Android app: Appodeal (TEST by default: test creatives only, see data/ads-config.js); iOS app: InMobi (unchanged); the website: nothing (no plugin, every call answers «not available»).
+  const androidApp = nativePlatform === 'android';
+  const adMob = androidApp ? createAppodealAdapter({ config: resolveAppodeal(null, APPODEAL_MODE) }) : createInMobiAdapter({ platform: nativePlatform ?? 'android', config: nativePlatform ? defaultAds(nativePlatform) : defaultAds('android') });
+  const adsManager = createAdsManager({ adapter: adMob, policy: () => adMob.ids.interstitialPolicy, ...(androidApp ? { pages: APPODEAL_BANNER_PAGES } : {}) });
   // The remote configuration: read at start and every 30 minutes; a failure keeps what is in force (the safe defaults at first). The points of the video follow it, held to [0, 0.5].
   const loadAdsConfig = async () => {
     if (!nativePlatform) return;
-    try { const remote = await accountApi.fetchAdsConfig(); const next = resolveAds(nativePlatform, remote); adMob.setConfig(next); setAdRewardPoints(next.rewardPoints); rewardsApi?.refreshAds?.(); syncBanner(); } catch { /* offline: the defaults stay (all formats off) */ }
+    try { const remote = await accountApi.fetchAdsConfig(); const next = androidApp ? resolveAppodeal(remote, APPODEAL_MODE) : resolveAds(nativePlatform, remote); adMob.setConfig(next); setAdRewardPoints(next.rewardPoints); rewardsApi?.refreshAds?.(); syncBanner(); } catch { /* offline: the defaults stay (all formats off) */ }
   };
   const rewards = createRewardsService({ store, ads: { config: () => adMob.ids, provider: adMob.rewardedProvider }, claimAd: (id, careerId, device) => accountApi.claimAdRewardOnServer(id, careerId, device, nativePlatform), claimGuestAd: nativePlatform ? (id, careerId, device) => accountApi.claimAdRewardForDevice(id, careerId, device, nativePlatform) : null, onAdCompleted: () => adsManager.noteRewarded(), username: () => account.user?.username ?? null, claimDaily: (careerId, device) => accountApi.claimDailyReward(careerId, device), syncTime: body => accountApi.syncRewardTime(body), claimBlocks: body => accountApi.claimRewardBlocks(body), claimCommunity: (reward, careerId, device) => accountApi.claimCommunityReward(reward, careerId, device), env: { playing: () => !menu.open && !wizard } });
   rewardsApi = rewards;

@@ -1,0 +1,13 @@
+{
+  "name": "politicando-appodeal-ads",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Capacitor bridge (Android only, Kotlin) to the Appodeal SDK 4.4.0 for Politicando 2026: banner, interstitial and rewarded video, with the consent managed by Appodeal (GDPR).",
+  "main": "dist/esm/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/esm/index.d.ts",
+  "scripts": { "build": "tsc -p tsconfig.json" },
+  "files": ["android/src/main/", "android/build.gradle", "dist/"],
+  "peerDependencies": { "@capacitor/core": "^8.0.0" },
+  "capacitor": { "android": { "src": "android" } }
+}

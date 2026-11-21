@@ -67,5 +67,40 @@ export function resolveAds(platform, remote = null) {
   out.enabled = FORMATS.some(format => out[format].enabled);
   return deepFreeze(out);
 }
+// ---------------------------------------------------------------- ANDROID: Appodeal (Android only; iOS keeps its own provider, above)
+// Appodeal SDK 4.4.0 (stable) through the Capacitor plugin `AppodealAds` (plugins/appodeal-ads). Appodeal's automatic network connection is kept (the app gives ONLY its app key, never a network id); no AdMob, Meta or
+// standalone InMobi SDK is in the Android app. The key below is the Android App Key of the Appodeal dashboard (app id 790468, the Android package of the app): a public client identifier, not a secret.
+//   Modes: 'test' (the DEFAULT: `Appodeal.setTesting(true)`, test creatives only, no real ad and no earnings), 'off' (nothing is asked, nothing is shown) and 'production' (real ads): production is REFUSED by the code
+//   until APPODEAL_PRODUCTION_AUTHORIZED is set to true by a deliberate change (commercial authorisation of the owner); a remote value can never turn it on, only switch the formats OFF (kill switch).
+export const APPODEAL = Object.freeze({
+  dashboardId: '790468',
+  android: Object.freeze({ appKey: '8d31e2dc0428104dbfcf36959833bc1020f210c3914df496', placement: 'default' }),
+  sdk: Object.freeze({ android: '4.4.0' })
+});
+export const APPODEAL_MODE = 'test';
+export const APPODEAL_PRODUCTION_AUTHORIZED = false;
+// The pages (hash) that may carry a banner on Android: the home and the static screens, never a scene, the vote, the night, the weekly report, a menu or the first start (the manager also blocks those).
+export const APPODEAL_BANNER_PAGES = Object.freeze(['panoramica', 'ricompense', 'notizie', 'archivio', 'impostazioni', 'storico']);
+// At most one interstitial every 180 seconds, only at a natural pause (a week closed, every 2nd), never during a game moment, a vote or an important action.
+export const APPODEAL_INTERSTITIAL = Object.freeze({ everyWeeks: 2, minGapMs: 180_000, perDay: 12 });
+const APPKEY = /^[0-9a-f]{48}$/;
+export const providerFor = platform => (platform === 'ios' ? ADS_PROVIDER : 'appodeal');
+// The configuration of Android: TEST by default and complete without any remote answer. `remote` ({ appodeal: { mode, enabled, rewarded: {enabled}, banner: {enabled}, interstitial: {enabled}, rewardPoints } } or null) may only
+// SWITCH THINGS OFF (mode 'off', enabled false) or lower the reward; anything else is ignored. A malformed app key or mode 'off' switches everything off.
+export function resolveAppodeal(remote = null, mode = APPODEAL_MODE) {
+  const wanted = mode === 'off' ? 'off' : mode === 'production' && APPODEAL_PRODUCTION_AUTHORIZED === true ? 'production' : 'test';
+  const r = remote && typeof remote === 'object' && remote.appodeal && typeof remote.appodeal === 'object' ? remote.appodeal : {};
+  const killed = r.mode === 'off' || r.enabled === false;
+  const appKey = APPKEY.test(APPODEAL.android.appKey) ? APPODEAL.android.appKey : null;
+  const master = wanted !== 'off' && !killed && Boolean(appKey);
+  const fmt = key => ({ enabled: master && !(r[key] && typeof r[key] === 'object' && r[key].enabled === false), placement: APPODEAL.android.placement });
+  const out = {
+    platform: 'android', provider: 'appodeal', mode: master ? wanted : 'off', testing: wanted !== 'production', appKey: master ? appKey : null, accountId: master ? appKey : null, placement: APPODEAL.android.placement,
+    source: remote ? 'remote' : 'default', rewarded: fmt('rewarded'), banner: fmt('banner'), interstitial: fmt('interstitial'), interstitialPolicy: { ...APPODEAL_INTERSTITIAL },
+    rewardPoints: Math.round(clamp(r.rewardPoints, LIMITS.rewardPoints, DEFAULT_POINTS) * 100) / 100
+  };
+  out.enabled = FORMATS.some(format => out[format].enabled);
+  return deepFreeze(out);
+}
 // Kept for the code that still reads the old shape (the rewarded button): enabled only when the rewarded format is on.
 export const ADS_CONFIG = Object.freeze({ enabled: false, appId: null, rewardedUnitId: null });
