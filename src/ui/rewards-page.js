@@ -1,9 +1,9 @@
 // «Ricompense»: the daily reward, the time played, the rewarded videos and what was received. It shows only what the player is meant to know: nothing about how long the effect of a video lasts or where it
 // comes from (that is not told anywhere in the game).
-import { AD_REWARD, COMMUNITY_PLATFORM, DAILY_REWARD, PLAY_REWARDS } from '../data/simulation/reward-rules.js?v=20261120-1';
-import { t } from '../core/i18n.js?v=20261120-1';
-import { glyph } from './visuals.js?v=20261120-1';
-import { esc } from './charts.js?v=20261120-1';
+import { AD_REWARD, COMMUNITY_PLATFORM, DAILY_REWARD, PLAY_REWARDS } from '../data/simulation/reward-rules.js?v=20261123-13';
+import { t } from '../core/i18n.js?v=20261123-13';
+import { glyph } from './visuals.js?v=20261123-13';
+import { esc } from './charts.js?v=20261123-13';
 // euros with the thousands point also for four digits (toLocaleString('it-IT') writes 1500): the amounts here are 500 and 1.500
 const euro = value => `${String(Math.round(Number(value) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} €`;
 
@@ -83,7 +83,7 @@ export function renderRewardsPage(state, snapshot = null) {
       ${card('gold', 'OGNI GIORNO', 'Ricompensa giornaliera', `<div class="reward-daily" data-reward-daily="${esc(daily.state)}"><div class="reward-amount"><strong>+${euro(DAILY_REWARD.amount)}</strong><small>ai tuoi fondi personali (non alla tesoreria del partito)</small></div><div class="reward-state"><span class="badge badge-${dailyTone}" data-reward-state>${esc(dailyLabel)}</span>${bar(dailyFraction, 'daily', 'Avanzamento della ricompensa giornaliera')}<span class="reward-meta"><b data-reward-text="daily">${taken ? 'Già riscossa nella giornata' : `${clockText(daily.ms)} di ${daily.minutes}:00`}</b><small>${daily.guest ? 'Senza accesso vale per questo dispositivo.' : 'Una sola volta al giorno per account, su qualunque carriera e dispositivo.'} Il giorno cambia a mezzanotte, ora di Roma.</small></span></div></div>`)}
       ${card('blue', 'LA TUA CARRIERA', 'Tempo di gioco', `${block(PLAY_REWARDS.capital, play.capital, 'capital', 'Prossimo capitale politico')}${block(PLAY_REWARDS.preparation, play.preparation, 'preparation', 'Prossima preparazione elettorale')}<p class="quiet-copy">Il tempo si somma tra una sessione e l’altra e non si perde. Capitale e preparazione non superano mai 100: se sei già al massimo il premio si ferma lì e lo storico lo dice.</p>${lost?.ms > 0 ? `<p class="quiet-copy" data-reward-lost>${esc(durationText(lost.ms))} di gioco non è stato possibile registrare sul tuo account: il premio locale resta.</p>` : ''}`)}
       ${communities}
-      ${card('violet', 'VIDEO PREMIATI', 'Ricompense pubblicitarie', `<p>Guarda un video fino alla fine: il tuo partito guadagna +${points(AD_REWARD.points)} punti nei sondaggi nazionali. I vantaggi di più video si sommano.</p><button type="button" class="primary-button" data-reward-video data-ads-state="${esc(ads.available ? 'ready' : ads.code ?? 'not-configured')}" ${ads.available ? '' : 'disabled aria-disabled="true"'}>Guarda il video</button>${ads.available ? '' : `<p class="quiet-copy" data-reward-video-note data-ads-state="${esc(ads.code ?? 'not-configured')}">${esc(ads.reason ?? 'Nessun video disponibile in questo momento.')}</p>`}`)}
+      ${ads.code === 'not-configured' ? '' : card('violet', 'VIDEO PREMIATI', 'Ricompense pubblicitarie', `<p>Guarda un video fino alla fine: il tuo partito guadagna +${points(AD_REWARD.points)} punti nei sondaggi nazionali. I vantaggi di più video si sommano.</p><button type="button" class="primary-button" data-reward-video data-ads-state="${esc(ads.available ? 'ready' : ads.code ?? 'not-configured')}" ${ads.available ? '' : 'disabled aria-disabled="true"'}>Guarda il video</button>${ads.available ? '' : `<p class="quiet-copy" data-reward-video-note data-ads-state="${esc(ads.code ?? 'not-configured')}">${esc(ads.reason ?? 'Nessun video disponibile in questo momento.')}</p>`}`)}
     </div>
     <section class="reward-card is-neutral reward-history-card"><header class="reward-card-head"><span class="section-kicker">STORICO</span><h2>Che cosa hai ricevuto</h2></header>${rows}</section>
   </div>`;

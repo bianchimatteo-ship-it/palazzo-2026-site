@@ -6,7 +6,7 @@ const P = (it, en) => [it, en];
 
 export const DOCUMENTED_PROGRAMS = Object.freeze({
   'party-progetto-civico-italia': Object.freeze({
-    retrievedAt: '2026-11-18',
+    retrievedAt: '2026-11-23',
     sources: ["https://progettocivicoitalia.it/programma/", "https://progettocivicoitalia.it/carta-dei-valori/", "https://progettocivicoitalia.it/documenti/PROGETTOCIVICOITALIA-carta-dei-valori.pdf"],
     themes: {
       immigrazione: { value: -0.5, confidence: 'media' },
@@ -22,6 +22,9 @@ export const DOCUMENTED_PROGRAMS = Object.freeze({
     },
     // the topics the sources cover beyond the ten themes: shown on the programme, they do not move the compatibility score ([Italian, English])
     areas: [
+      { id: 'autonomia-locale', text: P("Autonomia locale (Carta dei valori): Comuni, città metropolitane, Province e Regioni partecipano alla programmazione dello sviluppo con risorse e capacità amministrative adeguate; l'autonomia non deve aumentare le disuguaglianze e i servizi essenziali restano garantiti in tutto il Paese.", "Local autonomy (Charter of values): municipalities, metropolitan cities, provinces and regions help plan development with adequate resources and administrative capacity; autonomy must not widen inequalities and essential services stay guaranteed across the country.") },
+      { id: 'partecipazione', text: P("Partecipazione e trasparenza: bilanci partecipativi, assemblee pubbliche, consultazioni, trasparenza di bilanci e appalti, anticorruzione, conflitti di interesse.", "Participation and transparency: participatory budgets, public assemblies, consultations, transparency of budgets and procurement, anti-corruption, conflicts of interest.") },
+      { id: 'pubblica-amministrazione', text: P("Pubblica amministrazione: capacità amministrativa, sportelli unici, tempi certi, valutazione dei risultati, PA digitale. Difesa dell'indipendenza della magistratura e dell'equilibrio dei poteri.", "Public administration: administrative capacity, one-stop shops, certain deadlines, results evaluation, digital administration. Defence of judicial independence and the balance of powers.") },
       { id: 'scuola', text: P("Scuola, università e ricerca: scuola aperta, competenze digitali, orientamento, dispersione scolastica, legame università–ricerca–imprese–territori.", "School, university and research: open schools, digital skills, guidance, school dropout, links between universities, research, firms and territories.") },
       { id: 'giovani', text: P("Giovani: lavoro qualificato, casa, formazione, mobilità, cultura, sport, impresa giovanile, partecipazione civica.", "Young people: skilled jobs, housing, training, mobility, culture, sport, youth enterprise, civic participation.") },
       { id: 'welfare', text: P("Welfare e Terzo Settore: nidi, anziani, non autosufficienza, disabilità, minori, famiglie, povertà; collaborazione tra Comuni e Terzo Settore.", "Welfare and the third sector: nurseries, older people, long-term care, disability, minors, families, poverty; cooperation between municipalities and the third sector.") },

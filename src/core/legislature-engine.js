@@ -3,16 +3,16 @@
 // Chambers and their groups, the formation of the Government. Everything that happens is simulation: the real data are
 // the geography, the seats and the 2022 results the vote starts from; parties, coalitions, votes and seats of the game
 // are estimates of the game and never presented as real results.
-import { isElectoral } from './alliance-rules.js?v=20261120-1';
-import { populationReferenceDate, residentsOfItaly } from './municipal-rules.js?v=20261120-1';
-import { actualTurnout } from './electorate.js?v=20261120-1';
-import { uniqueId } from './ids.js?v=20261120-1';
-import { advanceDays, formatDate } from './time.js?v=20261120-1';
-import { axisOf, nationalShares } from './world-engine.js?v=20261120-1';
-import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20261120-1';
-import { archiveGovernment, confidenceBallotMissing, voteGovernmentConfidence } from './parliament-engine.js?v=20261120-1';
-import { seededRandom } from './vote-engine.js?v=20261120-1';
-import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20261120-1';
+import { isElectoral } from './alliance-rules.js?v=20261123-13';
+import { populationReferenceDate, residentsOfItaly } from './municipal-rules.js?v=20261123-13';
+import { actualTurnout } from './electorate.js?v=20261123-13';
+import { uniqueId } from './ids.js?v=20261123-13';
+import { advanceDays, formatDate } from './time.js?v=20261123-13';
+import { axisOf, nationalShares } from './world-engine.js?v=20261123-13';
+import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20261123-13';
+import { archiveGovernment, confidenceBallotMissing, voteGovernmentConfidence } from './parliament-engine.js?v=20261123-13';
+import { seededRandom } from './vote-engine.js?v=20261123-13';
+import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20261123-13';
 
 const SIM = 'simulation';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -545,7 +545,7 @@ export function runNationalVote({ geography = null, world, coalitions = [], date
     id: `politiche-${date}`, type: 'politiche', date, model: geography ? 'geografia-2022' : 'semplificato', turnout, electorate: nationalElectorate(geography, turnout),
     national: forces.map(force => ({ id: force.id, label: force.label, share: chambers.camera.shares[force.id] ?? force.share, coalitionId: coalitionIdOf.get(force.id) ?? null, isPlayer: force.isPlayer, color: force.color })).sort((a, b) => b.share - a.share),
     others: round2(chambers.camera.shares.altri ?? others),
-    coalitions: coalitions.map(coalition => ({ id: coalition.id, label: coalition.label, leaderId: coalition.leaderId, camp: coalition.camp, partyIds: coalition.partyIds.filter(id => labels.has(id)), share: chambers.camera.coalitions.find(row => row.id === coalition.id)?.share ?? 0 })),
+    coalitions: coalitions.map(coalition => ({ id: coalition.id, label: coalition.label, leaderId: coalition.leaderId, camp: coalition.camp, partyIds: [...coalition.partyIds], ranIds: coalition.partyIds.filter(id => labels.has(id)), share: chambers.camera.coalitions.find(row => row.id === coalition.id)?.share ?? 0 })),
     camera: chambers.camera, senato: chambers.senato, winner, largest, hung: !winner, source: SIM
   };
 }

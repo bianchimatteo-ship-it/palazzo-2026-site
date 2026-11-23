@@ -1,12 +1,12 @@
-import { advanceDays } from './time.js?v=20261120-1';
-import { genderOf } from './avatar.js?v=20261120-1';
-import { difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261120-1';
-import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261120-1';
-import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261120-1';
-import { aggregateShares, listVote, mateForce, runFinalElection, runFirstRound, voteScale } from './election-engine.js?v=20261120-1';
-import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261120-1';
-import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261120-1';
-import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261120-1';
+import { advanceDays } from './time.js?v=20261123-13';
+import { genderOf } from './avatar.js?v=20261123-13';
+import { difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261123-13';
+import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261123-13';
+import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261123-13';
+import { aggregateShares, listVote, mateForce, runFinalElection, runFirstRound, voteScale } from './election-engine.js?v=20261123-13';
+import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261123-13';
+import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261123-13';
+import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261123-13';
 
 const SOURCE = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));
@@ -1730,6 +1730,18 @@ function ensurePolls(campaign) {
   box.source = SOURCE;
   return box;
 }
+// The poll of the day is made again when something moved the lists AFTER it was taken (the political world following the weeks, followWorld): the institutes ask about the same day, so the poll
+// the player reads is the poll of the lists as they are, not of the lists as they were a moment before. Same seed, same day, same institutes: only the true shares changed.
+export function repollToday(campaign) {
+  const box = campaign?.pollObservatory;
+  const wave = box?.waves?.at(-1);
+  if (!wave || wave.day !== campaign.day || wave.stage !== campaign.stage || !wave.errorsIn) return campaign;
+  box.errors = JSON.parse(JSON.stringify(wave.errorsIn));
+  box.waves.pop();
+  if (Array.isArray(campaign.polls) && campaign.polls.at(-1)?.day === campaign.day && campaign.polls.at(-1)?.stage === campaign.stage) campaign.polls.pop();
+  recordCampaignPoll(campaign, wave.label ?? null);
+  return campaign;
+}
 export function pollWave(campaign, label = null) {
   if (!campaign || campaign.status !== 'active') return null;
   // In the runoff the polls ask the head-to-head: the finalists, as the projection of the two weeks gives them (the voters of the others in play).
@@ -1743,6 +1755,9 @@ export function pollWave(campaign, label = null) {
   // (the runoff is another question – the two finalists head to head – so its first reading does not start from the readings of the first round)
   const last = box.waves.at(-1)?.stage === campaign.stage ? box.waves.at(-1) : null;
   const wave = { id: ids('onda', campaign.seed, campaign.day + (campaign.stage === 'ballottaggio' ? 1000 : 0)), day: campaign.day, date: campaign.currentDate, stage: campaign.stage, label, institutes: {}, source: SOURCE };
+  // the readings' own error state before this wave: kept on the last wave only, so that the poll of the day can be made again when the world moves the lists after it (repollToday)
+  for (const earlier of box.waves) delete earlier.errorsIn;
+  wave.errorsIn = JSON.parse(JSON.stringify(box.errors));
   // How far the real support of each group went since the previous wave: the polls follow it (the weekly cap limits only the noise of a reading, poll-observatory.js: weeklyCap).
   // (only for a group that is the same group: when its members changed — an ally joined or left — the quantity measured is another one and the reading keeps the old cap)
   const signature = members => [...(members ?? [])].sort().join('|');
@@ -2370,6 +2385,7 @@ export function followWorld(input, forces = []) {
     for (const id of Object.keys(area.supportByCandidate)) area.supportByCandidate[id] = round(Number(area.supportByCandidate[id]) * 100 / sum);
   }
   campaign.worldShares = { ...seen, ...now };
+  repollToday(campaign);
   return campaign;
 }
 // What a campaign's percentages are about, said once: a vote for lists is measured on the whole vote and on the same lists as the national polls; a local race is measured on its own

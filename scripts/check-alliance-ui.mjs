@@ -23,7 +23,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, send, screensho
   // the sections of the panel are accordions: the test opens them all before reading the text (what the player reads when opening them)
   const text = () => evaluate(`(() => { document.querySelectorAll('[data-my-coalition] details').forEach(d => { d.open = true; }); return document.querySelector('[data-my-coalition]')?.innerText ?? ''; })()`);
   let panel = await text();
-  assert.match(panel, /La mia alleanza/, 'Il pannello dice «alleanza», non «coalizione», finché non è registrata.');
+  assert.match(panel, /La mia alleanza/i, 'Il pannello dice «alleanza», non «coalizione», finché non è registrata.');
   assert.match(panel, /Alleanza politica/); assert.match(panel, /Diventa una coalizione solo se tutti la approvano/);
   assert.equal(await evaluate(`document.querySelector('[data-coalition-kind]')?.dataset.coalitionKind`), 'alleanza');
   assert.ok(await evaluate(`[...document.querySelectorAll('[data-world-alliance]')].every(b => /Crea alleanza/.test(b.textContent)) && !/Proponi un’intesa/.test(document.body.innerText)`), 'I pulsanti dicono «Crea alleanza», mai «intesa».');
@@ -69,7 +69,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, send, screensho
   await open(); panel = await text();
   const state = await S(`return store.coalitionElections().find(e => e.id === '${info.election}').registered?.status ?? null;`);
   assert.ok(['approvata', 'respinta'].includes(state), 'La richiesta di coalizione è stata registrata (approvata o respinta con il motivo).');
-  if (state === 'approvata') { assert.match(panel, /La mia coalizione/); assert.equal(await evaluate(`document.querySelector('[data-coalition-kind]')?.dataset.coalitionKind`), 'coalizione'); assert.ok(await evaluate(`Boolean(document.querySelector('[data-coalition-state="registrata"]'))`), 'Registrata per l’elezione.'); }
+  if (state === 'approvata') { assert.match(panel, /La mia coalizione/i); assert.equal(await evaluate(`document.querySelector('[data-coalition-kind]')?.dataset.coalitionKind`), 'coalizione'); assert.ok(await evaluate(`Boolean(document.querySelector('[data-coalition-state="registrata"]'))`), 'Registrata per l’elezione.'); }
   else assert.match(panel, /Non approvata/);
   // phone and tablet: no horizontal scroll, the programme readable
   for (const [w, h] of [[390, 844], [820, 1180]]) {
@@ -82,7 +82,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, send, screensho
   await evaluate(`import('/src/core/i18n.js?v=${version}').then(m => m.setLanguage('en')).then(() => true)`); await pause(1000);
   await evaluate(`document.querySelectorAll('[data-my-coalition] details').forEach(item => { item.open = true; }); true`); await pause(300);
   panel = await text();
-  assert.match(panel, /My (alliance|coalition)/); assert.match(panel, /Common programme/); assert.ok(!/Programma comune|Crea alleanza|adesioni fino|Trattative|Capolista|Incarico|Candidature|Ricevute|Inviate|Concordato|Proponi|punti del programma|trattative fino/.test(panel), 'Nessuna riga italiana nel pannello inglese.');
+  assert.match(panel, /My (alliance|coalition)/i); assert.match(panel, /Common programme/); assert.ok(!/Programma comune|Crea alleanza|adesioni fino|Trattative|Capolista|Incarico|Candidature|Ricevute|Inviate|Concordato|Proponi|punti del programma|trattative fino/.test(panel), 'Nessuna riga italiana nel pannello inglese.');
   if (process.env.QA_SHOT_DIR) { await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true }); await pause(400); await evaluate(`document.querySelector('[data-my-coalition]')?.scrollIntoView({ block: 'start' }); true`); await pause(400); await screenshot(`${process.env.QA_SHOT_DIR}/alleanze-en-390x844.png`); }
   assert.deepEqual(errors, [], 'Nessun errore JavaScript.');
 }, { voter: true });

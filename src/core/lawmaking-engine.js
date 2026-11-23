@@ -5,12 +5,12 @@
 // it needs or puts the question of confidence; the bills of the opposition often never reach the floor. The player sits
 // in one Chamber: speaks, amends and casts a personal vote on every bill there — and the vote has consequences.
 // Everything here is simulation (source: simulation); the groups of the real XIX legislature keep their real reference.
-import { DATA_SOURCES } from '../data/schema.js?v=20261120-1';
-import { AREA_BY_ID, DECREE_RULES, FINANCING, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261120-1';
-import { statuteBlock, statutesOf, amendLawPolicy, campOfAxis, cohesiveShare, confidenceBallotMissing, directiveOf, governingGroupIds, groupDirectiveEffect, groupProfile, parliamentInternals, playerSeatedOn } from './parliament-engine.js?v=20261120-1';
-import { projectMeasure } from './society-engine.js?v=20261120-1';
-import { openLocalFloors, playerVotesIn } from './local-engine.js?v=20261120-1';
-import { absentOf, groupLine, seededRandom, spreadAbsent, splitGroupVote } from './vote-engine.js?v=20261120-1';
+import { DATA_SOURCES } from '../data/schema.js?v=20261123-13';
+import { AREA_BY_ID, DECREE_RULES, FINANCING, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261123-13';
+import { statuteBlock, statutesOf, amendLawPolicy, campOfAxis, cohesiveShare, confidenceBallotMissing, directiveOf, governingGroupIds, groupDirectiveEffect, groupProfile, parliamentInternals, playerSeatedOn } from './parliament-engine.js?v=20261123-13';
+import { projectMeasure } from './society-engine.js?v=20261123-13';
+import { openLocalFloors, playerVotesIn } from './local-engine.js?v=20261123-13';
+import { absentOf, groupLine, seededRandom, spreadAbsent, splitGroupVote } from './vote-engine.js?v=20261123-13';
 
 const { getGroup, allGroups, record, replaceLaw, demandFor, contentAffinity, setRelation } = parliamentInternals;
 const SIM = DATA_SOURCES.SIMULATION;
@@ -504,6 +504,8 @@ export function compactLegislature(parliament) {
 // The same law cannot be approved again for the same effects: a bill on the same area with the same instrument (or the same title) is blocked while the statute is in force, until the end of the
 // legislature or at least two years; it stays possible to AMEND or REPEAL it with a new procedure of its own (`policy.amends` / `policy.repeals`), which is another bill with another content.
 export { statuteBlock, statutesOf };
+// What a law in force says and would change, for the register of the laws in force (the same rows as the sitting: nothing invented, the projection is the Government desk's).
+export const statuteContent = (statute, society = null) => lawContent({ policy: statute.policy ?? {}, amendments: statute.amendments ?? [], kind: statute.kind }, society);
 export function registerStatutes(input, date) {
   const fresh = (input.laws ?? []).filter(law => law.stage === 'approved' && !law.registered);
   if (!fresh.length) return input;

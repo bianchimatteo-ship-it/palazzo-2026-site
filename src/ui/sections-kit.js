@@ -1,6 +1,6 @@
 // Shared building blocks of the main sections (Elezioni, Carriera, Partito, Agenda): hero, internal tabs,
 // indicators, cards and tables with the same visual language as the rest of POLITICANDO 2026.
-import { glyph } from './visuals.js?v=20261120-1';
+import { glyph } from './visuals.js?v=20261123-13';
 
 export const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const numFormats = new Map();

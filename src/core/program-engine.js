@@ -9,8 +9,8 @@
 //   - the programme of the Government (government.program.priorities, dossier-engine.js settles it) is derived from the promises of the player and the programme of the party, so the
 //     Government does what was promised, not something else.
 // Everything here is pure: the store applies the effects (reputation, popularity, partners, memory, news) once, when a promise is settled.
-import { AREA_BY_ID, INSTRUMENT_KINDS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261120-1';
-import { LAW_PROGRESS } from '../data/simulation/dossier-rules.js?v=20261120-1';
+import { AREA_BY_ID, INSTRUMENT_KINDS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261123-13';
+import { LAW_PROGRESS } from '../data/simulation/dossier-rules.js?v=20261123-13';
 
 export const PROMISE_STATES = Object.freeze({
   'non-avviata': { label: 'Non avviata', tone: 'neutral' },
@@ -218,6 +218,24 @@ const bestBill = (parliament, promise) => {
 // the bills the player presented himself on the subject, after the promise (what a «proposta» promises)
 const ownBill = (parliament, promise) => [...(parliament?.laws ?? []), ...(parliament?.lawArchive ?? [])].find(law => (law.policy?.area ?? law.area) === promise.area && (law.introducedAt ?? '') >= (promise.madeDate ?? '') && law.sponsor?.kind === 'giocatore') ?? null;
 const stuckBill = (parliament, promise) => (parliament?.laws ?? []).find(law => (law.policy?.area ?? law.area) === promise.area && (law.introducedAt ?? '') >= (promise.madeDate ?? '') && ['rejected', 'lapsed'].includes(law.stage)) ?? null;
+
+// The agenda of a promise: what is left, how late it is, why it does not move and the next thing to do, from the role the player really has (power) — never invented: it reads the promise and the evaluation.
+// Returns null for a settled promise. { weeksLeft, late, blocked, next: { text, nav, tab } }.
+export function promiseAgenda(promise, { week = promise.currentWeek ?? 0, power = null } = {}) {
+  if (!promise || PROMISE_SETTLED.includes(promise.status)) return null;
+  const weeksLeft = promise.dueWeek - week, late = Math.max(0, week - promise.dueWeek);
+  const commitment = promise.commitment ?? 'realizzazione';
+  const blocked = promise.impediments?.[0] ?? null;
+  let next;
+  if (commitment === 'proposta') next = power?.seat ? { text: 'Presenta una tua proposta di legge sul tema.', nav: 'leggi' } : { text: 'Serve un seggio per presentare una proposta: l’impegno si può modificare in «sostegno» o riprendere dopo le elezioni.', nav: 'elezioni', tab: 'programma' };
+  else if (commitment === 'sostegno') next = power?.seat ? { text: 'Sostieni il provvedimento sul tema e votalo quando arriva in Aula.', nav: 'leggi' } : { text: 'Sostienilo con il tuo partito e con i gruppi che lo condividono.', nav: 'partito' };
+  else if (power?.executive) next = { text: 'Porta l’intervento nell’azione di governo: scegli costo, tempi e copertura.', nav: 'governo' };
+  else if (power?.seat && power?.majority) next = { text: 'Presenta o sostieni il disegno di legge che la realizza.', nav: 'leggi' };
+  else next = { text: 'Da solo non puoi realizzarla: trasformala in proposta o sostegno (Modifica) oppure cerca un alleato (trattativa).', nav: 'elezioni', tab: 'programma' };
+  if (blocked && /bilancio/i.test(blocked)) next = { text: 'Il bilancio non regge: riduci l’ambizione o trova la copertura prima di procedere.', nav: 'elezioni', tab: 'programma' };
+  if (late > 0) next = { ...next, text: `Scaduta da ${late} ${late === 1 ? 'settimana' : 'settimane'}: ${next.text.charAt(0).toLowerCase()}${next.text.slice(1)}` };
+  return { weeksLeft, late, blocked, next };
+}
 
 export function evaluatePromise(promise, { week, date, society = null, parliament = null, inMajority = false, instability = false, power = null }) {
   // A promise is kept by the measure it promised, not by any law of the same subject: the area must match AND, when the law says which instrument it used, so must the instrument (a reform does not keep a promise of an investment).

@@ -1,12 +1,12 @@
 // The page «Iniziative»: popular initiatives (50,000 signatures, art. 71) and signatures for a referendum (500,000, art. 75), kept apart from the bills of the members of Parliament («Leggi»).
 // Every button calls the store (startInitiative, organizeInitiative, depositInitiative, withdrawInitiative): nothing is decorative.
-import { INITIATIVE_KINDS, CHANNELS, PARLIAMENTARY_NOTE, SETUP_COST, ESTIMATED_VALID_SHARE, PARLIAMENT_STAGES, overview } from '../core/initiative-engine.js?v=20261120-1';
-import { phaseOf } from '../core/citizen-requests-engine.js?v=20261120-1';
-import { POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261120-1';
-import { badge, card, empty, esc, foldPanel, kpi } from './sections-kit.js?v=20261120-1';
-import { glyph } from './visuals.js?v=20261120-1';
-import { topicsFor, topicById, draftOf } from '../data/initiative-drafts.js?v=20261120-1';
-import { formatDate } from '../core/time.js?v=20261120-1';
+import { INITIATIVE_KINDS, CHANNELS, PARLIAMENTARY_NOTE, SETUP_COST, ESTIMATED_VALID_SHARE, PARLIAMENT_STAGES, overview } from '../core/initiative-engine.js?v=20261123-13';
+import { phaseOf } from '../core/citizen-requests-engine.js?v=20261123-13';
+import { POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261123-13';
+import { badge, card, empty, esc, foldPanel, kpi } from './sections-kit.js?v=20261123-13';
+import { glyph } from './visuals.js?v=20261123-13';
+import { topicsFor, topicById, draftOf } from '../data/initiative-drafts.js?v=20261123-13';
+import { formatDate } from '../core/time.js?v=20261123-13';
 
 const number = value => Math.round(Number(value) || 0).toLocaleString('it-IT');
 const STATUS = {
@@ -47,6 +47,8 @@ function cardOf(initiative, state, view) {
     const stage = PARLIAMENT_STAGES.find(item => item.id === initiative.parliament?.stage);
     body += `<p class="ini-parliament" data-ini-parliament>Presentata ${initiative.parliament.chamber === 'camera' ? 'alla Camera' : 'al Senato'}: ${esc(stage?.label ?? '')} (settimana ${initiative.parliament.weeks}). Fase parlamentare simulata: la maggior parte delle iniziative popolari non viene calendarizzata.</p>`;
   }
+  // a collection for a referendum needs a law to repeal: until a referendum owns it, the player is told where to go (the Referendum page links it to a law and carries it to the vote)
+  if (initiative.kind === 'referendum' && ['raccolta', 'verifica', 'depositata'].includes(initiative.status) && !(state.game?.referendums ?? []).some(ref => ref.initiativeId === initiative.id)) body += `<p class="ini-next" data-ini-referendum-link>Per questa raccolta serve ancora la legge da abrogare: collegala a un referendum nella pagina Referendum, da dove prosegue fino al voto. <button type="button" class="text-link" data-nav="referendum">Apri Referendum</button></p>`;
   if (initiative.outcome) body += `<p class="ini-outcome" data-ini-outcome>${esc(initiative.outcome)}</p>`;
   body += `<details class="ini-territory"><summary>Firme per Regione e per canale</summary>${regionsOf(initiative)}${Object.keys(initiative.signatures?.byChannel ?? {}).length ? `<p class="ini-channels">${Object.entries(initiative.signatures.byChannel).filter(([, value]) => value > 0).map(([id, value]) => `${esc(id === 'organica' ? 'Passaparola e notorietà' : CHANNELS[id]?.label ?? id)}: ${number(value)}`).join(' · ')}</p>` : ''}</details>`;
   if (initiative.articles?.length) body += `<details class="ini-text"><summary>Testo in ${initiative.articles.length} ${initiative.articles.length === 1 ? 'articolo' : 'articoli'}</summary><ol>${initiative.articles.map(item => `<li>${esc(item.text)}</li>`).join('')}</ol></details>`;

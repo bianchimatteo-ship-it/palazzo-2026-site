@@ -8,6 +8,25 @@ const build = (await readFile(new URL('../index.html', import.meta.url), 'utf8')
 const { createReviewPrompt, REVIEW_URL, REVIEW_RULES, REVIEW_KEY } = await import(`../src/data/repositories/review-prompt.js?v=${build}&r=1`);
 assert.equal(REVIEW_URL, 'https://play.google.com/store/apps/details?id=it.matteobianchi.politicando2026', 'L’indirizzo della scheda su Google Play.');
 const memory = () => { const data = new Map(); return { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, String(value)), has: key => data.has(key) }; };
+
+// iOS: the same rules, the App Store page of the app (reviews of the iPhone listing); never on the web or on a platform with no store
+{
+  const { APP_STORE_REVIEW_URL, REVIEW_URLS } = await import(`../src/data/repositories/review-prompt.js?v=${build}&r=1`);
+  const { reviewCardHtml } = await import(`../src/ui/review-card.js?v=${build}&r=1`);
+  assert.equal(APP_STORE_REVIEW_URL, 'https://apps.apple.com/it/app/politicando-2026/id6835582269?see-all=reviews&platform=iphone', 'L’indirizzo delle recensioni sull’App Store.');
+  assert.equal(REVIEW_URLS.android, REVIEW_URL);
+  const storage = { data: new Map(), getItem(k) { return this.data.get(k) ?? null; }, setItem(k, v) { this.data.set(k, String(v)); } };
+  for (const launches of [1, 2, 3]) { const next = createReviewPrompt({ storage, platform: () => 'ios' }); assert.equal(next.noteLaunch(), launches); }
+  const ios = createReviewPrompt({ storage, platform: () => 'ios' });
+  assert.equal(ios.url, APP_STORE_REVIEW_URL, 'Su iOS il collegamento è l’App Store.'); assert.equal(ios.platform(), 'ios');
+  assert.equal(ios.due({ quiet: true, weeks: REVIEW_RULES.minWeeks - 1 }), false); assert.equal(ios.due({ quiet: false, weeks: 50 }), false);
+  assert.equal(ios.due({ quiet: true, weeks: REVIEW_RULES.minWeeks }), true, 'Su iOS compare con le stesse regole.');
+  assert.equal(createReviewPrompt({ storage, platform: () => null }).due({ quiet: true, weeks: 50 }), false, 'Sul sito mai.');
+  assert.equal(ios.markShown(), true); assert.equal(ios.due({ quiet: true, weeks: 99 }), false, 'Una sola volta anche su iOS.');
+  const html = reviewCardHtml(APP_STORE_REVIEW_URL, 'ios');
+  assert.ok(html.includes('sull’App Store') && !html.includes('Google Play') && html.includes(APP_STORE_REVIEW_URL.replace(/&/g, '&amp;').replace('&amp;', '&amp;')) || html.includes('apps.apple.com'), 'La scheda dice App Store e punta alla pagina dell’app.');
+  assert.ok(reviewCardHtml(REVIEW_URL, 'android').includes('su Google Play'));
+}
 {
   const storage = memory(); const prompt = createReviewPrompt({ storage, isPlayStoreApp: () => true });
   assert.equal(prompt.due({ quiet: true, weeks: 50 }), false, 'Al primo avvio mai.');

@@ -391,9 +391,9 @@ const total = poll => Math.round((poll.results.reduce((sum, row) => sum + row.sh
   const service = fake({});
   await service.service.refreshAds(); const snapshot = service.service.snapshot();
   const html = renderRewardsPage(store.getState(), { ...snapshot, history: R.rewardHistory(game()) });
-  assert.ok(/Ricompensa giornaliera/.test(html) && /\+500 €/.test(html) && /Tempo di gioco/.test(html) && /Ricompense pubblicitarie/.test(html) && /Storico/.test(html), 'Le quattro sezioni.');
+  assert.ok(/Ricompensa giornaliera/.test(html) && /\+500 €/.test(html) && /Tempo di gioco/.test(html) && /Storico/.test(html) && !/Ricompense pubblicitarie/.test(html), 'Le sezioni (senza provider pubblicitario non c’è la scheda dei video).');
   assert.ok(/data-reward-bar="daily"/.test(html) && /data-reward-bar="capital"/.test(html) && /data-reward-bar="preparation"/.test(html), 'Gli avanzamenti.');
-  assert.ok(/data-reward-video[^>]*disabled/.test(html) && /non sono attivi/.test(html), 'Il pulsante del video è spento finché i video non sono attivi, con il motivo.');
+  assert.ok(!/data-reward-video/.test(html), 'Senza provider pubblicitario non c’è nessun pulsante del video.');
   assert.ok(!/donator|cede|ceduto|scadenza|scade|durata|settimane|redistribu/i.test(html.replace(/Il giorno cambia[^<]*/, '')), 'Nessuna indicazione di durata o donatori.');
   assert.ok(/Fondi personali/.test(html) && /Ricompensa giornaliera/.test(html), 'Lo storico dice tipo, importo e risorsa.');
   assert.ok(/non alla tesoreria del partito/.test(html));

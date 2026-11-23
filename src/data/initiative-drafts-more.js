@@ -44,4 +44,6 @@ const REFERENDUM = [
 const all = [...POPULAR, ...REFERENDUM];
 export const MORE_TOPICS = Object.freeze(all.map(item => Object.freeze({ id: item.id, kind: item.kind, area: item.area, ...item.it })));
 // English pairs of the phrase book (read by data/release-pairs.js)
-export const MORE_PAIRS = all.flatMap(item => Object.keys(item.it).flatMap(key => Array.isArray(item.it[key]) ? item.it[key].map((text, index) => [text, item.en[key][index]]) : [[item.it[key], item.en[key]]]));
+const RAW_PAIRS = all.flatMap(item => Object.keys(item.it).flatMap(key => Array.isArray(item.it[key]) ? item.it[key].map((text, index) => [text, item.en[key][index]]) : [[item.it[key], item.en[key]]]));
+// a text with numbers («Art. 3 — …») is also listed with its numbers abstracted (#), as the phrase book looks it up
+export const MORE_PAIRS = RAW_PAIRS.flatMap(([it, en]) => { const a = it.replace(/\d+/g, '#'), b = en.replace(/\d+/g, '#'); return a !== it && (a.match(/#/g) ?? []).length === (b.match(/#/g) ?? []).length ? [[it, en], [a, b]] : [[it, en]]; });

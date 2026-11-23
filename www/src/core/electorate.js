@@ -7,7 +7,7 @@
 // The votes of the lists are the valid ballots shared among the lists, in whole numbers that add up to them exactly (largest remainder). Without demographic data (the file is not
 // loaded, or the territory is not in it) the count falls back to a declared scale of 100,000 ballots: percentages only, never presented as voters. A second-level vote (the province:
 // the mayors and the councillors vote, with weights) is also a scale, never the population.
-import { residentsOfItaly, residentsOfMunicipality, residentsOfRegion, populationReferenceDate } from './municipal-rules.js?v=20261120-1';
+import { residentsOfItaly, residentsOfMunicipality, residentsOfRegion, populationReferenceDate } from './municipal-rules.js?v=20261123-13';
 
 export const ELIGIBLE_SHARE = 0.82;
 export const SCALE = 100000;
@@ -85,7 +85,13 @@ export function countProblems(count, rows = [], { label = 'elezione' } = {}) {
   if (!count) return [`${label}: conteggio assente`];
   const whole = value => Number.isInteger(value) && value >= 0;
   if (count.normalized) {
-    if (rows.length && rows.some(row => row.votes !== undefined) && rows.reduce((acc, row) => acc + (row.votes ?? 0), 0) !== count.ballots) problems.push(`${label}: la somma dei voti di lista non coincide con i voti sulla scala`);
+    if (rows.length && rows.some(row => row.votes !== undefined)) {
+      // the same rule as for a counted vote: a race that does not show every list leaves the share of the unshown ones («Altri») out of the rows, so the rows add up to the votes on the scale minus that share (±1 for the rounding)
+      const total = rows.reduce((acc, row) => acc + (row.votes ?? 0), 0);
+      const rest = Math.round((100 - rows.reduce((acc, row) => acc + (Number(row.percent) || 0), 0)) * 100) / 100;
+      const expectedOthers = rest >= 0.05 ? Math.round(count.ballots * rest / 100) : 0;
+      if (Math.abs((count.ballots - total) - expectedOthers) > 1) problems.push(`${label}: la somma dei voti di lista non coincide con i voti sulla scala`);
+    }
     return problems;
   }
   for (const key of ['electors', 'voters', 'ballots']) if (!whole(count[key])) problems.push(`${label}: ${key} non è un intero non negativo (${count[key]})`);

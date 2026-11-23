@@ -25,6 +25,7 @@ migrations
 www
 ios
 android
+plugins
 docs
 capacitor.config.json
 worker-translate.js

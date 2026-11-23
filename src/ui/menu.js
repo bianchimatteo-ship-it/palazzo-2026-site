@@ -1,18 +1,22 @@
 // Main menu, how-to-play, settings, save slots and the end-of-week report.
-import { NOT_KNOWN } from '../core/ask-game.js?v=20261120-1';
-import { renderTutorialInvite } from './tutorial.js?v=20261120-1';
-import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261120-1';
-import { GUIDE_FUNCTIONS, GUIDE_SCENARIOS } from '../data/guide-manual.js?v=20261120-1';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261120-1';
-import { formatDate } from '../core/time.js?v=20261120-1';
-import { illustration } from './illustrations.js?v=20261120-1';
-import { glyph } from './visuals.js?v=20261120-1';
-import { identityMark, identityVars } from './party-identity.js?v=20261120-1';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261120-1';
-import { hallView } from './hall-view.js?v=20261120-1';
-import { renderLogoCatalog } from './logo-catalog.js?v=20261120-1';
-import { esc, signed } from './charts.js?v=20261120-1';
-import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261120-1';
+// the three notices of the assistant (the same texts as core/ask-game.js, which is loaded only when a question is asked)
+const NOT_KNOWN = 'Non lo so: nel gioco non trovo una funzione che risponda a questa domanda. Prova con altre parole (candidatura, alleanza, promessa, staff, sondaggi, leggi, referendum…) oppure apri il manuale qui sotto.';
+const NOT_KNOWN_EN = 'I do not know: I cannot find a feature in the game that answers this. Try other words (candidacy, alliance, promise, staff, polls, laws, referendum…) or open the manual below.';
+const CLARIFY = 'Non ho capito bene: intendevi una di queste funzioni?', CLARIFY_EN = 'I did not quite get that: did you mean one of these?';
+const AMBIGUOUS = 'La domanda può riguardare due funzioni: ecco entrambe.', AMBIGUOUS_EN = 'The question can be about two features: here are both.';
+import { renderTutorialInvite } from './tutorial.js?v=20261123-13';
+import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261123-13';
+import { GUIDE_FUNCTIONS, GUIDE_SCENARIOS } from '../data/guide-manual.js?v=20261123-13';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261123-13';
+import { formatDate } from '../core/time.js?v=20261123-13';
+import { illustration } from './illustrations.js?v=20261123-13';
+import { glyph } from './visuals.js?v=20261123-13';
+import { identityMark, identityVars } from './party-identity.js?v=20261123-13';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261123-13';
+import { hallView } from './hall-view.js?v=20261123-13';
+import { renderLogoCatalog } from './logo-catalog.js?v=20261123-13';
+import { esc, signed } from './charts.js?v=20261123-13';
+import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261123-13';
 
 const when = iso => { try { return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); } catch { return ''; } };
 // The actions of the opening screen, in order of importance: starting a career and resuming one are the two main ones (drawn apart, below); then what concerns the
@@ -238,10 +242,21 @@ function manualCards(offset) {
   return { functions, scenarios };
 }
 // «Chiedi al gioco»: a question in plain words, answered by the local assistant (core/ask-game.js) with steps, requirements, cost and a button that opens the right page. Nothing is sent anywhere.
+const ASK_EXAMPLES = ['Come mi candido?', 'Come aumento i fondi?', 'Come funzionano 4 settimane?', 'Come lascio il partito?'];
 function askBox(ask) {
-  const answer = ask?.result ? (ask.result.answers.length ? ask.result.answers.map(topic => `<article class="ask-answer" data-ask-answer="${esc(topic.id)}"><h4>${esc(topic.title)}</h4><ol>${topic.steps.map(step => `<li>${esc(step)}</li>`).join('')}</ol><p><b>Che cosa serve:</b> ${esc(topic.needs)}</p><p><b>Costo:</b> ${esc(topic.cost)}</p>${topic.nav ? `<button type="button" class="secondary-button" data-ask-open="${esc(topic.nav)}"${topic.tab ? ` data-ask-tab="${esc(topic.tab)}"` : ''}>Apri la schermata</button>` : ''}</article>`).join('') : `<p class="parliament-note" data-ask-unknown>${esc(NOT_KNOWN)}</p>`) : '';
+  const result = ask?.result;
+  const en = result?.lang === 'en';
+  const label = (it, en_) => (en ? en_ : it);
+  const answerCard = topic => `<article class="ask-answer" data-ask-answer="${esc(topic.id)}"><h4>${esc(topic.title)}</h4><ol class="ask-steps">${topic.steps.map(step => `<li>${esc(step)}</li>`).join('')}</ol><div class="ask-facts"><div><small>${label('Che cosa serve', 'What you need')}</small><span>${esc(topic.needs)}</span></div><div><small>${label('Costo', 'Cost')}</small><span>${esc(topic.cost)}</span></div></div>${topic.nav ? `<button type="button" class="primary-button ask-open" data-ask-open="${esc(topic.nav)}"${topic.tab ? ` data-ask-tab="${esc(topic.tab)}"` : ''}>${label('Apri la schermata', 'Open the screen')}</button>` : ''}</article>`;
+  let answer = '';
+  if (result) {
+    if (result.known) answer = `${result.ambiguous ? `<p class="parliament-note" data-ask-ambiguous>${esc(en ? AMBIGUOUS_EN : AMBIGUOUS)}</p>` : ''}${result.answers.map(answerCard).join('')}`;
+    else if (result.clarify?.length) answer = `<p class="parliament-note" data-ask-clarify>${esc(en ? CLARIFY_EN : CLARIFY)}</p><div class="ask-suggest">${result.clarify.map(topic => `<button type="button" class="secondary-button" data-ask-pick="${esc(topic.id)}">${esc(topic.title)}</button>`).join('')}</div>`;
+    else answer = `<p class="parliament-note" data-ask-unknown>${esc(en ? NOT_KNOWN_EN : NOT_KNOWN)}</p>`;
+  }
   const note = ask?.note ? `<p class="parliament-note" role="status" data-ask-note>${esc(ask.note)}</p>` : '';
-  return `<section class="ask-game" data-ask-game><h3 class="guide-section-title">Chiedi al gioco</h3><form class="ask-form" data-ask-form><label class="visually-hidden" for="ask-input">La tua domanda</label><input id="ask-input" name="question" type="search" autocomplete="off" maxlength="160" placeholder="Per esempio: come mi candido? come invito un partito?" value="${esc(ask?.result?.question ?? '')}" /><button type="submit" class="primary-button">Chiedi</button></form><p class="quiet-copy">Risponde con le regole del gioco, senza collegarsi a nulla: non modifica la tua partita.</p>${note}${answer}</section>`;
+  const chips = result ? '' : `<div class="ask-chips" data-ask-chips>${ASK_EXAMPLES.map(text => `<button type="button" class="ask-chip" data-ask-example="${esc(text)}">${esc(text)}</button>`).join('')}</div>`;
+  return `<section class="ask-game" data-ask-game><header class="ask-head"><span class="ask-mark" aria-hidden="true">${glyph('book', 20)}</span><div><h3 class="guide-section-title">Chiedi al gioco</h3><p class="quiet-copy">Risponde con le regole del gioco, senza collegarsi a nulla: non modifica la tua partita.</p></div></header><form class="ask-form" data-ask-form><label class="visually-hidden" for="ask-input">La tua domanda</label><input id="ask-input" name="question" type="search" autocomplete="off" maxlength="160" placeholder="Per esempio: come mi candido? come invito un partito?" value="${esc(result?.question ?? '')}" /><button type="submit" class="primary-button">Chiedi</button></form>${chips}${note}${answer}</section>`;
 }
 function guideView(menu = {}) {
   const manual = manualCards(HOW_TO.length);

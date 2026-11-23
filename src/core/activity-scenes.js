@@ -6,17 +6,17 @@
 // activity is applied ONCE, by the store, when the scene ends.
 // Deterministic: the family of topics, the names and the small variations come from the seed of the scene (and from what the player met lately: the same family is not drawn again in a row).
 // Loaded on demand (it is not in the first screen): it registers itself in scene-engine.js and stage-script.js when imported.
-import { AVATAR_OPTIONS, EXTRA_NAMES, F, M, defaultAvatarFor, genderOf, normalizeAvatar, roleGender } from './avatar.js?v=20261120-1';
-import { personName, registerSceneKind } from './scene-engine.js?v=20261120-1';
-import { SPEAK_GESTURES, LISTEN_GESTURES, pickGesture, registerStageScript, stagePose } from './stage-script.js?v=20261120-1';
-import { ACTIVITY_SCENES, ACTIVITY_SCENE_UI } from '../data/activity-scene-lines.js?v=20261120-1';
-import { ACTIVITY_CONTEXT } from '../data/activity-scene-context.js?v=20261120-1';
-import { STAKES } from '../data/activity-scene-stakes.js?v=20261120-1';
-import { BODIES, CITIZEN_GUESTS, CITIZENS, GUESTS, HEADINGS, REFS } from '../data/activity-scene-guests.js?v=20261120-1';
-import { ATMOSPHERE, BYSTANDERS, LEADIN } from '../data/activity-scene-variety.js?v=20261120-1';
-import { APPROACH_LABELS } from '../data/activity-scene-approaches.js?v=20261120-1';
-import { ONLY, TOPIC_KIND, TOPIC_MOVES, areasOf, newsFits } from '../data/activity-scene-topics.js?v=20261120-1';
-import { APPROACH_FUNCTIONS, COMMITMENTS, COMMITMENT_TEXT, CONSEQUENCE_LINES, EXTRA_Q1, FUNCTIONS, FUND_COST, GUARANTEE_MOVES, MOVES, OUTCOME_KINDS, REACTION_ALT, REACTION_LINES, REACTION_TYPES, STAGE_TEXT, WHY_LINES } from '../data/activity-scene-moves.js?v=20261120-1';
+import { AVATAR_OPTIONS, EXTRA_NAMES, F, M, defaultAvatarFor, genderOf, normalizeAvatar, roleGender } from './avatar.js?v=20261123-13';
+import { personName, registerSceneKind } from './scene-engine.js?v=20261123-13';
+import { SPEAK_GESTURES, LISTEN_GESTURES, pickGesture, registerStageScript, stagePose } from './stage-script.js?v=20261123-13';
+import { ACTIVITY_SCENES, ACTIVITY_SCENE_UI } from '../data/activity-scene-lines.js?v=20261123-13';
+import { ACTIVITY_CONTEXT } from '../data/activity-scene-context.js?v=20261123-13';
+import { STAKES } from '../data/activity-scene-stakes.js?v=20261123-13';
+import { BODIES, CITIZEN_GUESTS, CITIZENS, GUESTS, HEADINGS, REFS } from '../data/activity-scene-guests.js?v=20261123-13';
+import { ATMOSPHERE, BYSTANDERS, LEADIN } from '../data/activity-scene-variety.js?v=20261123-13';
+import { APPROACH_LABELS } from '../data/activity-scene-approaches.js?v=20261123-13';
+import { ONLY, TOPIC_KIND, TOPIC_MOVES, areasOf, newsFits } from '../data/activity-scene-topics.js?v=20261123-13';
+import { APPROACH_FUNCTIONS, COMMITMENTS, COMMITMENT_TEXT, CONSEQUENCE_LINES, EXTRA_Q1, FUNCTIONS, FUND_COST, GUARANTEE_MOVES, MOVES, OUTCOME_KINDS, REACTION_ALT, REACTION_LINES, REACTION_TYPES, STAGE_TEXT, WHY_LINES } from '../data/activity-scene-moves.js?v=20261123-13';
 
 export { ACTIVITY_SCENES, ACTIVITY_SCENE_UI };
 export const SCENE_KIND = 'attivita';
@@ -453,8 +453,14 @@ export function activityStage(scene, node) {
   const nodeId = scene.nodeId;
   const reacting = ['r1', 'r2', 'r3', 'r4'].includes(nodeId);
   const out = {};
+  // Variety of the composition, deterministic from the scene: the guests may swap places, stand a little nearer or farther, and the light of the room changes (day, evening, bright). A scene is the same each time it is shown.
+  const variation = hashOf(`${scene.seed ?? scene.id}|composizione`);
+  const swapped = (variation & 1) === 1;
+  const nudge = { ospite1: ((variation >> 1) % 31) - 15, ospite2: ((variation >> 6) % 31) - 15, giocatore: ((variation >> 11) % 17) - 8 };
   for (const member of scene.cast) {
-    let [x, y, facing] = layout[member.id === 'giocatore' ? 'giocatore' : member.id];
+    const slot = swapped && (member.id === 'ospite1' || member.id === 'ospite2') ? (member.id === 'ospite1' ? 'ospite2' : 'ospite1') : member.id;
+    let [x, y, facing] = layout[member.id === 'giocatore' ? 'giocatore' : slot];
+    x += nudge[member.id] ?? 0;
     const speaking = node?.speaker === member.id;
     let gesture;
     if (nodeId === 'esito') gesture = 'saluta';
@@ -471,7 +477,12 @@ export function activityStage(scene, node) {
     const mood = reacting ? (SIDE_GESTURE[node.reaction] ?? 'ascolta') : node?.speaker ? pickGesture(scene, nodeId, extra.id, ['ascolta', 'appunti', 'ascolta', 'esita', null]) : null;
     out[extra.id] = stagePose(spot[0], spot[1], { facing: spot[2], posture: 'stand', gesture: nodeId === 'esito' ? 'saluta' : mood });
   }
-  const camera = nodeId === 'apertura' || nodeId === 'esito' ? 'wide' : reacting ? (node?.reaction === 'protesta' ? 'protest' : 'stage') : node?.speaker === 'giocatore' ? 'left' : 'right';
-  return { setting: scene.setting, poses: out, camera: ['q1', 'q2', 'q3', 'q4', 'r1', 'r2', 'r3', 'r4'].includes(nodeId) ? camera : 'wide', crowd: 'quiet', props: { room: scene.setting, mood: scene.audience.mood >= 58 ? 'warm' : scene.audience.mood < 45 ? 'cold' : 'mixed' } };
+  // The camera follows the person: the one who speaks is framed where he really stands (the guests are not at the same place in every room), a reaction frames the two who face each other, a protest keeps the wide shot of the room.
+  const spot = id => { const pose = out[id]; return pose && Number.isFinite(pose.x) ? pose : null; };
+  const frame = (ids, closeness) => { const pts = ids.map(spot).filter(Boolean); if (!pts.length) return null; const xs = pts.map(p => p.x); const span = Math.max(...xs) - Math.min(...xs); const s = Math.min(1.8, Math.max(1.15, closeness / (span + 200))); return `at:${Math.round((Math.max(...xs) + Math.min(...xs)) / 2)}:${Math.round(pts.reduce((sum, p) => sum + p.y, 0) / pts.length - 62)}:${s.toFixed(2)}`; };
+  const camera = nodeId === 'apertura' || nodeId === 'esito' ? 'wide'
+    : reacting ? (node?.reaction === 'protesta' ? 'protest' : frame(['giocatore', node?.speaker].filter(Boolean), 620) ?? 'stage')
+      : frame([node?.speaker].filter(Boolean), 330) ?? (node?.speaker === 'giocatore' ? 'left' : 'right');
+  return { setting: scene.setting, poses: out, camera: ['q1', 'q2', 'q3', 'q4', 'r1', 'r2', 'r3', 'r4'].includes(nodeId) ? camera : 'wide', crowd: 'quiet', props: { room: scene.setting, mood: scene.audience.mood >= 58 ? 'warm' : scene.audience.mood < 45 ? 'cold' : 'mixed', light: ['day', 'evening', 'bright'][(variation >> 16) % 3] } };
 }
 for (const setting of ROOM_SETTINGS) registerStageScript(setting, activityStage);

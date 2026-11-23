@@ -1,7 +1,7 @@
 // A library of subjects for a new collection of signatures: each one has its own problem, objective, wording and (for a popular bill) its own articles, written for the subject (not one text with the title
 // changed). Everything is a DRAFT the player edits freely and confirms: nothing is approved by itself, and nothing promises an effect the engine does not apply (the signatures, the deposit, the verification
 // and, for a popular bill, the path in Parliament are the ones of the simulation). The subjects are generic proposals, never a reproduction of a real bill or a real petition.
-import { MORE_TOPICS } from './initiative-drafts-more.js?v=20261120-1';
+import { MORE_TOPICS } from './initiative-drafts-more.js?v=20261123-13';
 const BASE_TOPICS = Object.freeze([
   // ---------- popular bills (art. 71) ----------
   { id: 'p-sanita-attese', kind: 'popolare', area: 'sanita', title: 'Tempi massimi per le visite specialistiche', problem: 'Le liste d’attesa per visite ed esami superano spesso i tempi clinicamente utili.', objective: 'Garantire un tempo massimo e un’alternativa pubblica quando viene superato.', wording: 'Proposta di legge di iniziativa popolare sui tempi massimi di attesa nel servizio sanitario.', articles: ['Art. 1 — Per ogni prestazione specialistica è fissato un tempo massimo di attesa, differenziato per classe di priorità.', 'Art. 2 — Se il tempo massimo è superato, l’azienda sanitaria offre la prestazione presso un’altra struttura pubblica o convenzionata senza costi aggiuntivi per il cittadino.', 'Art. 3 — Le aziende pubblicano ogni trimestre i tempi effettivi di attesa per prestazione.', 'Art. 4 — Le Regioni che non rispettano i tempi per due anni consecutivi presentano un piano di recupero.'] },

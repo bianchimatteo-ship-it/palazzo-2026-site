@@ -39,7 +39,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
 
   // ---------- one panel, read from world.alliances ----------
   assert.equal(await count('[data-my-coalition]'), 1, 'Un solo pannello «La mia coalizione».');
-  assert.match(await text('[data-my-coalition]'), /La mia coalizione/); assert.equal(await count('[data-coalition-kind="coalizione"]'), 1, 'È una «Coalizione politica».');
+  assert.match(await text('[data-my-coalition]'), /La mia coalizione/i); assert.equal(await count('[data-coalition-kind="coalizione"]'), 1, 'È una «Coalizione politica».');
   assert.equal(await count('[data-my-coalition] [data-coalition-member]'), 3, 'Ci sono i tre membri.');
   assert.equal(await count('.force-card [data-coalition-member], .force-card [data-world-break]'), 0, 'Nessuna ripetizione sulle schede dei membri.');
   assert.equal(await count('[data-world-break]'), 1, 'Un solo comando di uscita.');

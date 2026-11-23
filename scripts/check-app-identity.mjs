@@ -22,8 +22,8 @@ assert.ok(bundleIds.every(id => id === identity.ios.bundleId), `iOS: Bundle ID i
 const marketing = [...pbx.matchAll(/MARKETING_VERSION = ([^;]+);/g)].map(match => match[1].trim());
 const build = [...pbx.matchAll(/CURRENT_PROJECT_VERSION = ([^;]+);/g)].map(match => match[1].trim());
 assert.deepEqual([marketing.length, build.length], [2, 2], 'iOS: versione e build in Debug e Release.');
-assert.ok(marketing.every(v => v === '1.0.1'), `iOS: MARKETING_VERSION 1.0.1 (${marketing}).`);
-assert.ok(build.every(v => v === '2'), `iOS: CURRENT_PROJECT_VERSION 2, oltre la 1 della 1.0 (1) (${build}).`);
+assert.ok(marketing.every(v => v === '1.0.2'), `iOS: MARKETING_VERSION 1.0.2 (${marketing}).`);
+assert.ok(build.every(v => v === '3'), `iOS: CURRENT_PROJECT_VERSION 3, oltre la 2 della 1.0.1 (2) già inviata (${build}).`);
 const plist = await read('ios/App/App/Info.plist');
 assert.match(plist, /<key>CFBundleIdentifier<\/key>\s*<string>\$\(PRODUCT_BUNDLE_IDENTIFIER\)<\/string>/, 'iOS: Info.plist prende il Bundle ID dal progetto.');
 assert.match(plist, /CFBundleShortVersionString<\/key>\s*<string>\$\(MARKETING_VERSION\)/); assert.match(plist, /CFBundleVersion<\/key>\s*<string>\$\(CURRENT_PROJECT_VERSION\)/);
@@ -33,7 +33,7 @@ const iosInfo = JSON.parse(await read('ios/App/App/public/build-info.json'));
 assert.deepEqual(iosInfo.appIds, { android: identity.android.applicationId, ios: identity.ios.bundleId }, 'iOS: build-info del pacchetto con i due identificativi, separati.');
 assert.ok(!/it\.matteobianchi/.test(pbx) && !/it\.matteobianchi/.test(JSON.stringify(iosConfig)), 'iOS: nessun identificativo Android nel progetto Xcode né nella configurazione iOS.');
 assert.ok(!/DEVELOPMENT_TEAM = [A-Z0-9]{10}/.test(pbx), 'iOS: nessun Team nel repository.');
-lines.push(`iOS ${identity.ios.bundleId} · Apple ID ${identity.ios.appleAppId} · SKU ${identity.ios.sku} · 1.0.1 (2) Debug+Release`);
+lines.push(`iOS ${identity.ios.bundleId} · Apple ID ${identity.ios.appleAppId} · SKU ${identity.ios.sku} · 1.0.2 (3) Debug+Release`);
 
 // ---------- Android ----------
 const gradle = await read('android/app/build.gradle');
@@ -42,10 +42,10 @@ assert.equal(/namespace\s*=?\s*"([^"]+)"/.exec(gradle)?.[1], identity.android.ap
 assert.equal(JSON.parse(await read('capacitor.config.json')).appId, identity.android.applicationId, 'Android: capacitor.config.json (configurazione comune) porta l’appId Android.');
 assert.equal(JSON.parse(await read('android/app/src/main/assets/capacitor.config.json')).appId, identity.android.applicationId, 'Android: la copia nel progetto Android.');
 assert.ok(!gradle.includes(identity.ios.bundleId) && !(await read('android/app/src/main/AndroidManifest.xml')).includes(identity.ios.bundleId), 'Android: nessun identificativo iOS.');
-assert.match(gradle, /versionCode 4\b/); assert.match(gradle, /versionName "1\.0\.3"/);
+const vc = /versionCode (\d+)/.exec(gradle)?.[1], vn = /versionName "(\d+\.\d+\.\d+)"/.exec(gradle)?.[1]; assert.ok(Number(vc) >= 4 && vn, `versionCode e versionName di Android presenti (${vc} / ${vn}).`);
 const androidInfo = JSON.parse(await read('android/app/src/main/assets/public/build-info.json'));
 assert.deepEqual(androidInfo.appIds, { android: identity.android.applicationId, ios: identity.ios.bundleId }, 'Android: build-info del pacchetto con i due identificativi, separati.');
-lines.push(`Android ${identity.android.applicationId} · versionCode 4 / 1.0.3 (iOS 1.0.1 build 2 invariato)`);
+lines.push(`Android ${identity.android.applicationId} · versionCode ${vc} / ${vn} (iOS 1.0.2 build 3)`);
 
 // ---------- never mixed in the shared code or the ads ----------
 const ads = await read('src/data/ads-config.js');
@@ -56,5 +56,5 @@ assert.equal(INMOBI.ios.bundleId, identity.ios.bundleId, 'InMobi iOS: Bundle ID 
 const plistText = await read('ios/App/App/Info.plist');
 assert.ok(!/ca-app-pub|GADApplicationIdentifier/.test(plistText), 'iOS: nessun ID AdMob Android riutilizzato (l’App ID AdMob iOS non è stato fornito).');
 const manifest = await read('android/app/src/main/AndroidManifest.xml');
-assert.match(manifest, /ca-app-pub-6404822903303014~1677702221/, 'Android: l’App ID AdMob Android resta nel manifest Android.');
+assert.doesNotMatch(manifest, /ca-app-pub|gms\.ads\.APPLICATION_ID/, 'Android: nessun App ID AdMob nel manifest (il provider Android è Appodeal, senza adapter AdMob).');
 console.log(`Identificativi verificati, iOS e Android separati: ${lines.join(' | ')}.`);

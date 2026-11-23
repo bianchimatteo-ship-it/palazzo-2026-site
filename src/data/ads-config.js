@@ -17,6 +17,9 @@ export const INMOBI = Object.freeze({
 });
 // Test Mode OFF and Audience Bidding OFF in the dashboard (both apps); Global eCPM floor 0.01 is a dashboard setting, not read by the code.
 export const ADS_PROVIDER = 'inmobi';
+// iOS 1.0.1+: NO advertising of any kind (no Appodeal, no InMobi, no SDK, no request, no banner, interstitial or rewarded video). The legacy InMobi configuration above stays in the file only as documentation of what was
+// built and paused: with this switch false nothing resolves from it (resolveAds('ios') is all off whatever the remote says) and providerFor('ios') is 'none'. It is turned on only by a deliberate change here AND the plugin in the iOS build.
+export const IOS_ADS_ENABLED = false;
 // 'off' (the DEFAULT: nothing is asked, nothing is shown), 'test' (InMobi test mode, no real ad, no earnings: only the remote configuration can set it) or 'live' (set only by the remote configuration, after the checks of docs/inmobi.md). 'off' disables everything.
 export const ADS_MODE = 'off';
 export const FORMATS = Object.freeze(['rewarded', 'banner', 'interstitial']);
@@ -46,9 +49,9 @@ const flag = value => value === true;
 
 // The configuration in force for a platform: the safe defaults with the remote answer laid over them, field by field and validated. `remote` is the parsed JSON of the Worker ({ android: {...}, ios: {...}, ... }) or
 // null. A format is enabled only when the remote says `enabled: true` AND it has a well-formed placement id AND the SDK has a valid Account ID AND the mode is not 'off'; the mode can be 'live' only if the remote says so.
-export function resolveAds(platform, remote = null) {
+export function resolveAds(platform, remote = null, { legacyIos = false } = {}) {
   const base = off(PLATFORMS.includes(platform) ? platform : 'android');
-  if (!PLATFORMS.includes(platform) || !remote || typeof remote !== 'object') return deepFreeze(base);
+  if (!PLATFORMS.includes(platform) || !remote || typeof remote !== 'object' || (platform === 'ios' && !IOS_ADS_ENABLED && !legacyIos)) return deepFreeze(base);   // `legacyIos` exists only for the tests of the paused InMobi configuration: the app never passes it
   const shared = remote.all && typeof remote.all === 'object' ? remote.all : {}, mine = remote[platform] && typeof remote[platform] === 'object' ? remote[platform] : {};
   const pick = key => ({ ...(shared[key] && typeof shared[key] === 'object' ? shared[key] : {}), ...(mine[key] && typeof mine[key] === 'object' ? mine[key] : {}) });
   const root = { ...shared, ...mine };
@@ -91,7 +94,7 @@ export const APPODEAL_BANNER = Object.freeze({ minGapMs: 120_000, maxSessionMs: 
 // At most one interstitial every 180 seconds, only at a natural pause (a week closed, every 2nd), never during a game moment, a vote or an important action.
 export const APPODEAL_INTERSTITIAL = Object.freeze({ everyWeeks: 2, minGapMs: 180_000, perDay: 12 });
 const APPKEY = /^[0-9a-f]{48}$/;
-export const providerFor = platform => (platform === 'ios' ? ADS_PROVIDER : 'appodeal');
+export const providerFor = platform => (platform === 'ios' ? (IOS_ADS_ENABLED ? ADS_PROVIDER : 'none') : 'appodeal');
 // The configuration of Android: TEST by default and complete without any remote answer. `remote` ({ appodeal: { mode, enabled, rewarded: {enabled}, banner: {enabled}, interstitial: {enabled}, rewardPoints } } or null) may only
 // SWITCH THINGS OFF (mode 'off', enabled false) or lower the reward; anything else is ignored. A malformed app key or mode 'off' switches everything off.
 export function resolveAppodeal(remote = null, mode = APPODEAL_MODE) {

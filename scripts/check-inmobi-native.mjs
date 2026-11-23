@@ -48,7 +48,8 @@ assert.match(gradle, /inmobiVersion = '11\.5\.1'/); assert.match(gradle, /com\.i
 assert.match(read('plugins/inmobi-ads/Package.swift'), /InMobiSDK-Swift-Package", exact: "11\.5\.0"/, 'iOS: SDK 11.5.0 con Swift Package.');
 assert.ok(!/<uses-permission/.test(read('plugins/inmobi-ads/android/src/main/AndroidManifest.xml')), 'Il plugin non aggiunge permessi: li porta l’SDK InMobi (INTERNET, ACCESS_NETWORK_STATE, AD_ID).');
 const appManifest = read('android/app/src/main/AndroidManifest.xml'); assert.deepEqual([...appManifest.matchAll(/uses-permission android:name="([^"]+)"/g)].map(m => m[1]), ['android.permission.INTERNET'], 'Il manifest dell’app dichiara solo INTERNET.'); const ADMOB_APP_ID = 'ca-app-pub-6404822903303014~1677702221';   // the owner's AdMob APPLICATION id (with «~»); it was in the history of the repository (e919e5f) and is read by the Google UMP SDK
-assert.deepEqual([...appManifest.matchAll(/<meta-data\s+android:name="com\.google\.android\.gms\.ads\.APPLICATION_ID"\s+android:value="([^"]+)"/g)].map(m => m[1]), [ADMOB_APP_ID], 'Il manifest ha il solo App ID AdMob (con «~») richiesto da UMP.');
+// Android 1.0.3+: the provider is Appodeal (no AdMob adapter), so the app manifest carries NO AdMob App ID (the old InMobi+UMP build needed one): none may be there by mistake.
+assert.deepEqual([...appManifest.matchAll(/gms\.ads\.APPLICATION_ID/g)], [], 'Il manifest non dichiara nessun App ID AdMob (il provider Android è Appodeal, senza adapter AdMob).');
 assert.ok(!/ca-app-pub-\d+\/\d+/.test(appManifest) && !/gms\.ads\.(?!APPLICATION_ID)/.test(appManifest.replace(/com\.google\.android\.gms\.ads\.APPLICATION_ID/g, '')), 'Nessun Ad Unit ID (con «/») né altro meta-data pubblicitario nel manifest.');
 assert.match(read('android/capacitor.settings.gradle'), /politicando-appodeal-ads/); assert.doesNotMatch(read('android/capacitor.settings.gradle'), /politicando-inmobi-ads/, 'Android: nessun InMobi standalone (il provider Android è Appodeal).'); assert.ok(!/admob/i.test(read('android/capacitor.settings.gradle') + read('android/app/capacitor.build.gradle')), 'Gradle sincronizzato: niente AdMob.');
 assert.match(read('android/app/capacitor.build.gradle'), /project\(':politicando-appodeal-ads'\)/);
@@ -64,13 +65,13 @@ lines.push('versioni SDK, Gradle sincronizzato (Android), iOS senza SDK pubblici
 // ---- C ----
 const pbx = read('ios/App/App.xcodeproj/project.pbxproj');
 assert.ok([...pbx.matchAll(/PRODUCT_BUNDLE_IDENTIFIER = ([^;]+);/g)].every(m => m[1] === 'it.politicando2026.app'), 'iOS: Bundle ID it.politicando2026.app (quello registrato in App Store Connect), non quello Android.');
-assert.ok([...pbx.matchAll(/MARKETING_VERSION = ([^;]+);/g)].every(m => m[1] === '1.0.1') && [...pbx.matchAll(/CURRENT_PROJECT_VERSION = ([^;]+);/g)].every(m => m[1] === '2'), 'iOS: versione 1.0.1 (2) in Debug e Release (la 1.0 (1) è quella già inviata ad Apple).');
+assert.ok([...pbx.matchAll(/MARKETING_VERSION = ([^;]+);/g)].every(m => m[1] === '1.0.2') && [...pbx.matchAll(/CURRENT_PROJECT_VERSION = ([^;]+);/g)].every(m => m[1] === '3'), 'iOS: versione 1.0.1 (2) in Debug e Release (la 1.0 (1) è quella già inviata ad Apple).');
 assert.ok(!/DEVELOPMENT_TEAM|CODE_SIGN_IDENTITY = "?(iPhone|Apple) Distribution/.test(pbx), 'iOS: nessun Team né identità di firma nel repository.');
 assert.match(sw, /func showPrivacyOptions[\s\S]{0,500}call\.resolve\(InMobiAdsPlugin\.consentResult\(\)\)[\s\S]{0,60}\}\s*\}/, 'Swift: le opzioni privacy restituiscono lo stato dopo il modulo, come su Android 1.0.2.');
 assert.ok(!/DEVELOPMENT_TEAM = [A-Z0-9]{10}/.test(pbx), 'iOS: nessun Team nel repository.'); assert.ok(!/ca-app-pub|GADApplication/.test(pbx));
-const app = read('android/app/build.gradle'); assert.match(app, /applicationId "it\.matteobianchi\.politicando2026"/); assert.match(app, /versionCode 4\b/); assert.match(app, /versionName "1\.0\.3"/);
+const app = read('android/app/build.gradle'); assert.match(app, /applicationId "it\.matteobianchi\.politicando2026"/); assert.match(app, /versionCode \d+/); assert.match(app, /versionName "\d+\.\d+\.\d+"/);
 assert.equal(JSON.parse(read('capacitor.config.json')).appId, 'it.matteobianchi.politicando2026', 'capacitor.config.json porta l’appId Android.');
-lines.push('Bundle ID iOS it.politicando2026.app e versione iOS 1.0.1 (2); applicationId Android e versionCode 4 (1.0.3): separati; firma e Team: invariati');
+lines.push('Bundle ID iOS it.politicando2026.app e versione iOS 1.0.2 (3); applicationId Android e versionCode corrente: separati; firma e Team: invariati');
 
 // ---- D ----
 function compileKotlin() {

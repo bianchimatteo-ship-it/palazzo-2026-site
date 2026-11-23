@@ -331,3 +331,23 @@ Solo voci nuove; dettaglio in `docs/qa/rapporto-miglioramento-completo.md` (Aggi
 | 25.6 | check-i18n-pages intermittente: causa alla fonte | Corretto (anteprime tagliate a fine frase) | check-news-preview, check-i18n-pages ×3 | |
 | 25.7 | «Caricamento…»: guardia di avvio, messaggio, Riprova, una sola ripetizione automatica | Completato | check-boot-failure | errore-caricamento-{it,en}.png |
 | 25.8 | Preparazione TEST da VS Code | Documento aggiornato (§7, §8); deploy non eseguito | wrangler dry-run | |
+
+
+## 26. Aggiornamento generale del 23/11/2026
+
+Rapporto con la matrice completa (🟢/🟡/🔴), le cause trovate, i test e i percorsi delle build: [`docs/qa/aggiornamento-generale-finale.md`](aggiornamento-generale-finale.md).
+
+| Punto | Richiesta | Stato | Test | Note |
+|---|---|---|---|---|
+| 26.1 | Staff segue la linea del gruppo; 2/4 settimane nella UI reale | Completato | check-staff-weeks-ui | Prova in Chrome senza elettore di prova |
+| 26.2 | Lasciare/cambiare partito visibile nella Panoramica | Completato | check-party-leave-ui | |
+| 26.3 | Alleanze: scheda di sintesi e azioni in colonna | Completato | check-alliance-* | |
+| 26.4 | Telecamera delle scene sull'attore giusto | Completato | check-scene-camera | |
+| 26.5 | Leggi in vigore: schede chiuse con «Cosa cambierebbe» | Completato | check-statutes, check-parliament-page | |
+| 26.6 | Raccolta firme referendaria collegata alla procedura | Completato | check-referendum-link | Fonti ufficiali non rivalidate |
+| 26.7 | «Chiedi al gioco» v2 (73 domande IT/EN) | Completato | check-ask-game | |
+| 26.8 | iOS senza pubblicità; popup recensione App Store | Completato | check-inmobi*, check-appodeal, check-review-prompt | |
+| 26.9 | Candidature indipendenti / lista civica / movimento | Non iniziato | — | Serve decisione sui requisiti per tipo di elezione |
+| 26.10 | Prestazioni del ridisegno | Non iniziato | — | Limite noto in reattivita.md |
+| 26.11 | Test su Xiaomi/iPad/Safari | Bloccato | — | Nessun dispositivo disponibile |
+| 26.12 | check-load, check-long-run, check-poll-election-consistency | Preesistenti | — | Rossi anche prima (stessi valori) |

@@ -1,11 +1,11 @@
 // The page «Risultati per territorio»: the last simulated general election of the game read by Region, Province and Comune, with search, filters, pages and a comparison between consultations. It never loads
 // all the 7,894 comuni at once: the hierarchy holds only names and inhabitants, and the votes of the comuni are drawn for ONE province at a time (core/territory-results.js), always adding up to the level above.
 // What is shown is SIMULATED and says so; the only official data are the real 2022 results by Region (the map of the national page) and what the sources document.
-import { addsUp, territoryBreakdown } from '../core/territory-results.js?v=20261120-1';
-import { OTHERS, hierarchyFor, territoryInputs } from './territory-results-card.js?v=20261120-1';
-import { badge, card, empty, esc, num, pct } from './sections-kit.js?v=20261120-1';
-import { formatDate } from '../core/time.js?v=20261120-1';
-import { territoryPaint } from './national-view.js?v=20261120-1';
+import { addsUp, territoryBreakdown } from '../core/territory-results.js?v=20261123-13';
+import { OTHERS, hierarchyFor, localFor, territoryInputs } from './territory-results-card.js?v=20261123-13';
+import { badge, card, empty, esc, num, pct } from './sections-kit.js?v=20261123-13';
+import { formatDate } from '../core/time.js?v=20261123-13';
+import { territoryPaint } from './national-view.js?v=20261123-13';
 
 export const PAGE_SIZE = 25;
 const SORTS = [['popolazione', 'più abitanti'], ['nome', 'ordine alfabetico'], ['voti', 'più voti simulati']];
@@ -28,13 +28,13 @@ const topOf = (row, count = 3) => Object.entries(row.votes).sort((a, b) => b[1] 
 // The comuni where one list comes FIRST, read from the votes the simulation really draws for every comune (the same draw as the table below, province by province): a list that is not first
 // anywhere has an empty list, and nothing is invented for a comune the model does not cover. The result of a scope is kept, so paging and sorting do not draw again.
 const WINS_CACHE = new Map();
-export function comuneWins({ totals, hierarchy, seed, lean, regionCode = null, provinceCode = null, partyId }) {
-  const key = `${seed}|${regionCode ?? ''}|${provinceCode ?? ''}|${partyId}`;
+export function comuneWins({ totals, hierarchy, seed, lean, local = null, regionCode = null, provinceCode = null, partyId }) {
+  const key = `${seed}|${regionCode ?? ''}|${provinceCode ?? ''}|${partyId}|${local ? 'l' : ''}`;
   if (WINS_CACHE.has(key)) return WINS_CACHE.get(key);
   const regions = regionCode ? hierarchy.filter(item => item.code === regionCode) : hierarchy;
   const wins = []; let total = 0;
   for (const region of regions) for (const province of provinceCode ? region.provinces.filter(item => item.code === provinceCode) : region.provinces) {
-    const breakdown = territoryBreakdown({ totals, hierarchy, seed, regionLean: lean, regionCode: region.code, provinceCode: province.code });
+    const breakdown = territoryBreakdown({ totals, hierarchy, seed, regionLean: lean, regionCode: region.code, provinceCode: province.code, local });
     for (const row of breakdown.rows) {
       total++;
       const ranked = Object.entries(row.votes).sort((x, y) => y[1] - x[1]);
@@ -192,7 +192,8 @@ export function renderTerritoryPage(state, overview, { geography = null, municip
   const [regionCode = '', provinceCode = ''] = String(filters.terr ?? '').split('|');
   const q = String(filters.terrQ ?? '');
   const sort = SORTS.some(([id]) => id === filters.terrSort) ? filters.terrSort : 'popolazione';
-  const breakdown = territoryBreakdown({ totals, hierarchy, seed: `${last.id ?? last.date}|territorio`, regionLean: lean, regionCode: regionCode || null, provinceCode: provinceCode || null });
+  const local = localFor({ overview, last, state, hierarchy });
+  const breakdown = territoryBreakdown({ totals, hierarchy, seed: `${last.id ?? last.date}|territorio`, regionLean: lean, regionCode: regionCode || null, provinceCode: provinceCode || null, local });
   const ids = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([id]) => id);
   const ctx = { swatch, colorOf, labelOf: id => id === OTHERS ? 'Altri' : labelOf(id), columns: ids };
   const found = searchComuni(hierarchy, q);
@@ -202,10 +203,11 @@ export function renderTerritoryPage(state, overview, { geography = null, municip
   const partyId = parties.some(item => item.id === filters.terrParty) ? filters.terrParty : '';
   const comuneRow = breakdown.level === 'provincia' ? breakdown.rows.find(row => row.code === String(filters.terrComune ?? '')) ?? null : null;
   const seed = `${last.id ?? last.date}|territorio`;
-  const winsHtml = partyId ? winsCard({ partyId, label: labelOf(partyId), result: comuneWins({ totals, hierarchy, seed, lean, regionCode: regionCode || null, provinceCode: provinceCode || null, partyId }), scopeName: breakdown.province?.name ?? breakdown.region?.name ?? 'Italia', page: Math.max(1, Number(filters.terrWinPage) || 1), sort, ctx }) : '';
+  const winsHtml = partyId ? winsCard({ partyId, label: labelOf(partyId), result: comuneWins({ totals, hierarchy, seed, lean, local, regionCode: regionCode || null, provinceCode: provinceCode || null, partyId }), scopeName: breakdown.province?.name ?? breakdown.region?.name ?? 'Italia', page: Math.max(1, Number(filters.terrWinPage) || 1), sort, ctx }) : '';
   return `<div class="territory-page" data-territory-page-root>
     ${card({ kicker: 'CERCA E FILTRA', title: `${num(comuni, 0)} comuni consultabili`, body: `${controls({ hierarchy, regionCode, provinceCode, q, sort, partyId, parties })}${searchResults(found, q)}` })}
     ${crumbs(breakdown, comuneRow)}${comuneCard(comuneRow, breakdown, ctx)}${winsHtml}${summaryCard(breakdown, ctx)}${tableCard(breakdown, ctx, { page: Math.max(1, Number(filters.terrPage) || 1), sort })}${compare}${undocumentedCard(state)}
+    <p class="sx-note" data-territory-model>Contano anche la dimensione del luogo, l’organizzazione del partito e la notorietà del candidato nel suo comune.</p>
     ${status}
     <p class="sx-note" data-territory-source>Dato simulato: i voti di lista del voto nazionale del ${esc(formatDate(last.date))} della partita, ripartiti per abitanti (ISTAT) con lo scarto regionale del modello e una piccola variazione tra territori; ogni livello somma quello superiore.</p></div>`;
 }

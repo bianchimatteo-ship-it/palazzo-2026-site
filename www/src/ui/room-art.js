@@ -2,8 +2,8 @@
 // headquarters, the committee room, the newsroom and the room of the Council of Ministers. Each room is a back layer (walls, windows, furniture), the characters (the same ones the other stages use,
 // made from the avatars of the game), and a front layer (the table in front of whoever sits). Name straps with the full name and the role of everyone are drawn over the camera (never cut: the text is
 // wrapped). Loaded with the scene page; it registers its settings in stage-art.js. Nothing here decides anything: it draws the poses that core/activity-scenes.js gives.
-import { actorSvg, inkOn, registerStageSetting, strap } from './stage-art.js?v=20261120-1';
-import { ambienceOf } from '../data/activity-scene-variety.js?v=20261120-1';
+import { actorSvg, inkOn, registerStageSetting, strap } from './stage-art.js?v=20261123-13';
+import { ambienceOf } from '../data/activity-scene-variety.js?v=20261123-13';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const R = (x, y, w, h, fill, extra = '') => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}"${extra ? ` ${extra}` : ''}/>`;
@@ -56,6 +56,24 @@ const BACK = {
     + `<g transform="translate(320,34)"><path d="M0 0V22" stroke="#8b6f2e" stroke-width="3"/><ellipse cx="0" cy="38" rx="48" ry="14" fill="#e8d28a" stroke="#8b6f2e" stroke-width="2"/>${[-34, -17, 0, 17, 34].map(x => `<circle cx="${x}" cy="26" r="3" fill="#fff6d8"/>`).join('')}</g>`
     + `${R(250, 130, 140, 44, '#f4efe0', 'stroke="#b39e62" stroke-width="3"')}<circle cx="320" cy="152" r="14" fill="none" stroke="#8b6f2e" stroke-width="3"/>`
 };
+// ---------- the decor: three furnishings of every room, chosen by the seed of the scene ----------
+// The same room is not the same picture twice: plants and a poster board, pendant lamps and notice boards, or curtains and a wall clock (the open-air places get bunting, a banner or a tree), and the wall takes a
+// slightly different tint. Deterministic from the scene (the same scene is drawn the same way every time it is shown); nothing here changes what happens in the scene.
+const seedOf = scene => { let h = 2166136261; for (const ch of String(scene?.seed ?? scene?.id ?? 'x')) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return h >>> 0; };
+const OPEN_AIR = new Set(['mercato', 'cantiere']);
+const DECOR = [
+  setting => OPEN_AIR.has(setting)
+    ? `<g class="rm-decor">${[[24, 190], [596, 196]].map(([x, y]) => `<g transform="translate(${x},${y})">${R(-4, 0, 8, 30, '#6b5a40')}<circle cx="0" cy="-6" r="20" fill="#5a8a4c"/><circle cx="-12" cy="4" r="13" fill="#4c7a40"/></g>`).join('')}</g>`
+    : `<g class="rm-decor">${[[30, 168], [604, 172]].map(([x, y]) => `<g transform="translate(${x},${y})">${R(-9, 20, 18, 22, '#8a5a3a')}<path d="M0 20C-14 6-12-8 0-18C12-8 14 6 0 20Z" fill="#4c8a52"/><path d="M0 20C-22 14-26 0-18-10" stroke="#3f7a47" stroke-width="3" fill="none"/></g>`).join('')}${R(268, 48, 104, 8, '#c9bfa6', 'opacity=".35"')}</g>`,
+  setting => OPEN_AIR.has(setting)
+    ? `<g class="rm-decor">${R(0, 20, 640, 5, '#7a6a52', 'opacity=".5"')}${Array.from({ length: 9 }, (_, i) => `<path d="M${30 + i * 72} 24l8 16l8-16z" fill="${['#cd2b35', '#f5f3ec', '#1f8a4c'][i % 3]}" opacity=".85"/>`).join('')}</g>`
+    : `<g class="rm-decor">${[110, 320, 530].map(x => `<g transform="translate(${x},0)">${R(-1, 0, 2, 22, '#554a3a')}<path d="M-16 22H16L10 38H-10Z" fill="#e9d79a"/><ellipse cx="0" cy="40" rx="9" ry="3" fill="#fff6c8" opacity=".7"/></g>`).join('')}${R(560, 70, 60, 44, '#f4efe0', 'stroke="#8f8573" opacity=".9"')}${R(566, 78, 22, 14, '#d9a05b')}${R(592, 78, 22, 14, '#7fb0c8')}</g>`,
+  setting => OPEN_AIR.has(setting)
+    ? `<g class="rm-decor">${R(250, 14, 140, 20, '#2f5d62', 'opacity=".9"')}<path d="M262 34v22M378 34v22" stroke="#554a3a" stroke-width="3"/></g>`
+    : `<g class="rm-decor">${R(0, 0, 40, 214, '#7a2d3a', 'opacity=".55"')}${R(600, 0, 40, 214, '#7a2d3a', 'opacity=".55"')}<g transform="translate(320,36)"><circle r="16" fill="#f4efe0" stroke="#554a3a" stroke-width="3"/><path d="M0 0V-10M0 0L8 4" stroke="#3a2f22" stroke-width="2"/></g></g>`
+];
+const TINT = ['rgba(255,225,170,.10)', 'rgba(150,190,230,.10)', 'rgba(210,150,150,.08)'];
+const decorOf = (setting, scene) => { const h = seedOf(scene); return `${DECOR[h % 3](setting)}${R(-200, -100, 1040, 330, TINT[(h >> 3) % 3], 'class="rm-tint" pointer-events="none"')}`; };
 // ---------- the front layers: the table in front of whoever sits ----------
 const FRONT = {
   sala: () => '',
@@ -112,7 +130,7 @@ function roomSvg(scene, stage, node, uid, identity = null) {
   const [me, one, two] = [scene.cast.find(item => item.role === 'giocatore'), ...scene.cast.filter(item => item.role === 'ospite')];
   const body = scene.bodyLabel ?? '';
   const straps = `${strap(me, 8, 204, 334, speaking(me.id), body)}${strap(one, 218, 204, 334, speaking(one.id), body)}${strap(two, 428, 204, 334, speaking(two.id), body)}`;
-  const back = setting === 'sede' ? partyHeadquarters(identity, { uid }) : BACK[setting](scene);
+  const back = (setting === 'sede' ? partyHeadquarters(identity, { uid }) : BACK[setting](scene)) + decorOf(setting, scene);
   const ambience = (AMBIENCE_ART[ambienceOf(scene.activityId)] ?? AMBIENCE_ART.carte)();
   return { body: `<g class="st-room" data-room="${esc(setting)}">${back}</g>${ambience}<g class="st-actors">${actors}</g><g class="st-room-front">${FRONT[setting]()}</g>`, overlay: `<g class="st-straps">${straps}</g>` };
 }

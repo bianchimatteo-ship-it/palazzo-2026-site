@@ -2,10 +2,10 @@
 // its person (avatar-svg.js: always the avatar saved for the player, a stable one for the others) plus a body drawn here — torso, two arms with an elbow, two legs — in separate groups, so that the
 // player (ui/stage-player.js) can make them walk, sit, gesture. Every group carries the data the player needs (class, data-*); the poses come from core/stage-script.js. No animation is started here:
 // what is drawn is the FINAL pose of the beat, so with the motion off or reduced, or in a scene resumed, the stage is already right.
-import { avatarColors, avatarParts, shade } from './avatar-svg.js?v=20261120-1';
-import { depthScale, STAGE_W, STAGE_H } from '../core/stage-script.js?v=20261120-1';
-import { defaultAvatarFor, genderOf } from '../core/avatar.js?v=20261120-1';
-import { isEnglish, translateText } from '../core/i18n.js?v=20261120-1';
+import { avatarColors, avatarParts, shade } from './avatar-svg.js?v=20261123-13';
+import { depthScale, STAGE_W, STAGE_H } from '../core/stage-script.js?v=20261123-13';
+import { defaultAvatarFor, genderOf } from '../core/avatar.js?v=20261123-13';
+import { isEnglish, translateText } from '../core/i18n.js?v=20261123-13';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const hash = text => { let h = 2166136261 >>> 0; for (const ch of String(text)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return h; };
@@ -295,7 +295,18 @@ export const CAMERAS = Object.freeze({
   wide: { x: 320, y: 180, s: 1 }, panorama: { x: 320, y: 186, s: 1 }, host: { x: 320, y: 232, s: 1.3 }, left: { x: 150, y: 235, s: 1.7 }, right: { x: 490, y: 235, s: 1.7 }, crowd: { x: 320, y: 290, s: 1.5 },
   follow: { x: 260, y: 270, s: 1.3 }, stage: { x: 330, y: 190, s: 1.45 }, protest: { x: 420, y: 205, s: 1.15 }, player: { x: 330, y: 182, s: 1.8 }, 'talk-host': { x: 190, y: 242, s: 1.6 }, 'talk-left': { x: 450, y: 252, s: 1.8 }, 'talk-right': { x: 560, y: 252, s: 1.8 }, 'intervista-host': { x: 215, y: 246, s: 1.6 }, 'intervista-left': { x: 442, y: 252, s: 1.8 }, 'intervista-right': { x: 558, y: 252, s: 1.8 }, booth: { x: 440, y: 222, s: 1.4 }, urn: { x: 220, y: 235, s: 1.35 }
 });
-export const cameraTransform = name => { const c = CAMERAS[name] ?? CAMERAS.wide; return `translate(${(STAGE_W / 2 - c.s * c.x).toFixed(1)}px,${(STAGE_H / 2 - c.s * c.y).toFixed(1)}px) scale(${c.s})`; };
+// A camera is a named shot (CAMERAS) or a frame on the people themselves, «at:x:y:scale» (core/activity-scenes.js frames the one who speaks or reacts where he really stands: the rooms place the guests differently).
+// The frame is kept inside the stage, so it never shows what is outside the picture.
+const shot = name => {
+  const found = CAMERAS[name];
+  if (found) return found;
+  const at = /^at:(-?\d+(?:\.\d+)?):(-?\d+(?:\.\d+)?):(\d+(?:\.\d+)?)$/.exec(String(name));
+  if (!at) return CAMERAS.wide;
+  const s = Math.min(2, Math.max(1, Number(at[3])));
+  const halfW = STAGE_W / (2 * s), halfH = STAGE_H / (2 * s);
+  return { x: Math.min(STAGE_W - halfW, Math.max(halfW, Number(at[1]))), y: Math.min(STAGE_H - halfH, Math.max(halfH, Number(at[2]))), s };
+};
+export const cameraTransform = name => { const c = shot(name); return `translate(${(STAGE_W / 2 - c.s * c.x).toFixed(1)}px,${(STAGE_H / 2 - c.s * c.y).toFixed(1)}px) scale(${c.s})`; };
 export { depthScale, STAGE_W, STAGE_H, defsOf };
 
 // The whole stage of a beat as one SVG. `before` (optional) is JSON the player reads to animate the passage from the previous beat.
@@ -306,5 +317,5 @@ export function renderStageSvg(scene, stage, node, { identity = null, before = n
   const uid = `st${hash(scene.id) % 9973}`;
   const art = SETTINGS[scene.setting] ? SETTINGS[scene.setting](scene, stage, node, uid, identity) : scene.setting === 'piazza' ? squareSvg(scene, stage, node, uid, identity) : scene.setting === 'seggio' ? stationSvg(scene, stage, node, uid) : studioSvg(scene, stage, node, uid);
   const data = esc(JSON.stringify({ node: scene.nodeId, camera: stage.camera, crowd: stage.crowd, props: stage.props ?? {}, before }));
-  return `<svg class="st-svg" viewBox="0 0 ${STAGE_W} ${STAGE_H}" role="img" aria-label="${esc(label)}" data-stage="${data}" data-setting="${esc(scene.setting)}"${scene.format ? ` data-format="${esc(scene.format)}"` : ''} preserveAspectRatio="xMidYMid slice"><g class="st-cam" data-camera="${esc(stage.camera)}" style="transform-origin:0 0;transform:${cameraTransform(stage.camera)}">${art.body}</g>${art.overlay ?? ''}</svg>`;
+  return `<svg class="st-svg" viewBox="0 0 ${STAGE_W} ${STAGE_H}" role="img" aria-label="${esc(label)}" data-stage="${data}" data-setting="${esc(scene.setting)}"${stage.props?.light ? ` data-light="${esc(stage.props.light)}"` : ''}${scene.format ? ` data-format="${esc(scene.format)}"` : ''} preserveAspectRatio="xMidYMid slice"><g class="st-cam" data-camera="${esc(stage.camera)}" style="transform-origin:0 0;transform:${cameraTransform(stage.camera)}">${art.body}</g>${art.overlay ?? ''}</svg>`;
 }

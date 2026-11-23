@@ -1,14 +1,14 @@
 // The programme and the promises (program-engine.js): what the party proposes, what the player promised, how credible it is, how each promise is going against what the game really did,
 // the commitments of the coalition, and what the rivals promise. Every button here calls the store (makePromise, modifyPromise, withdrawPromise, announcePromise): nothing is decorative.
-import { AMBITIONS, COMMITMENT_KINDS, PROMISE_SCOPES, PROMISE_SETTLED, PROMISE_STATES, promiseLine } from '../core/program-engine.js?v=20261120-1';
-import { AREA_BY_ID, INSTRUMENT_KINDS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261120-1';
-import { badge, bar, card, empty, esc, kpi, num } from './sections-kit.js?v=20261120-1';
-import { glyph, inkOn } from './visuals.js?v=20261120-1';
-import { partyIdentity } from './party-identity.js?v=20261120-1';
-import { allianceOf } from '../core/world-engine.js?v=20261120-1';
-import { PRIORITIES, REVISION_REASONS } from '../core/program-engine.js?v=20261120-1';
-import { FINANCING, TERRITORIES, DEADLINES } from '../core/program-proposals.js?v=20261120-1';
-import { guidedFields } from './program-guide.js?v=20261120-1';
+import { AMBITIONS, COMMITMENT_KINDS, PROMISE_SCOPES, PROMISE_SETTLED, PROMISE_STATES, promiseLine } from '../core/program-engine.js?v=20261123-13';
+import { AREA_BY_ID, INSTRUMENT_KINDS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261123-13';
+import { badge, bar, card, empty, esc, kpi, num } from './sections-kit.js?v=20261123-13';
+import { glyph, inkOn } from './visuals.js?v=20261123-13';
+import { partyIdentity } from './party-identity.js?v=20261123-13';
+import { allianceOf } from '../core/world-engine.js?v=20261123-13';
+import { PRIORITIES, REVISION_REASONS } from '../core/program-engine.js?v=20261123-13';
+import { FINANCING, TERRITORIES, DEADLINES } from '../core/program-proposals.js?v=20261123-13';
+import { guidedFields } from './program-guide.js?v=20261123-13';
 
 const TONE = { neutral: 'neutral', info: 'info', good: 'good', warning: 'warning', bad: 'bad' };
 const stateChip = status => { const spec = PROMISE_STATES[status] ?? PROMISE_STATES['non-avviata']; return badge(spec.label, TONE[spec.tone] ?? 'neutral'); };
@@ -69,7 +69,18 @@ function alliesOf(state) {
   const alliance = own ? allianceOf(world, own) : null;
   return (alliance?.partyIds ?? []).filter(id => id !== own).map(id => ({ id, label: world.parties.find(item => item.id === id)?.label ?? id }));
 }
-function promiseCard(promise, { campaign, allies = [] }) {
+// The agenda of one promise: what is asked, by when, why it does not move and what to do next, with the button that opens the screen where it is done.
+function agendaBlock(promise, agenda) {
+  if (!agenda) return '';
+  const area = AREA_BY_ID[promise.area]?.label ?? promise.area, instrument = INSTRUMENT_KINDS[promise.instrument]?.label ?? promise.instrument;
+  const when = agenda.late > 0 ? `<b class="is-late">In ritardo di ${agenda.late} ${agenda.late === 1 ? 'settimana' : 'settimane'}</b>` : `<b>${Math.max(0, agenda.weeksLeft)} ${agenda.weeksLeft === 1 ? 'settimana' : 'settimane'} alla scadenza</b>`;
+  return `<div class="program-agenda" data-promise-agenda="${esc(promise.id)}"><dl>
+    <div><dt>Area e strumento</dt><dd>${esc(area)} · ${esc(instrument)}</dd></div><div><dt>Avanzamento</dt><dd>${num(promise.progress ?? 0, 0)}% · ${when}</dd></div>
+    ${agenda.blocked ? `<div><dt>Perché è ferma</dt><dd>${esc(agenda.blocked)}</dd></div>` : ''}
+    <div><dt>Prossima azione</dt><dd>${esc(agenda.next.text)}</dd></div></dl>
+    <button type="button" class="secondary-button" data-ask-open="${esc(agenda.next.nav)}"${agenda.next.tab ? ` data-ask-tab="${esc(agenda.next.tab)}"` : ''}>Apri la schermata utile</button></div>`;
+}
+function promiseCard(promise, { campaign, allies = [], agenda = null }) {
   const settled = PROMISE_SETTLED.includes(promise.status);
   const weeksLeft = promise.dueWeek - (promise.currentWeek ?? promise.dueWeek);
   const scope = PROMISE_SCOPES[promise.scope]?.label ?? promise.scope;
@@ -95,6 +106,7 @@ function promiseCard(promise, { campaign, allies = [] }) {
     <div class="program-meta"><span>${esc(PRIORITIES[promise.priority]?.label ?? PRIORITIES.media.label)}</span><span>Costo ~${num(promise.cost, 1)} mld</span>${(promise.backedBy ?? []).length ? `<span>Sostenuta da ${esc(promise.backedBy.map(item => item.label).join(', '))}</span>` : ''}<span>${settled ? (promise.outcome ? `Esito: ${esc(promise.outcome)}` : '') : `Scadenza tra ${Math.max(0, weeksLeft)} settimane`}</span>${announced ? `<span>Presentata in campagna</span>` : ''}</div>
     ${bar(promise.progress ?? 0, promise.status === 'non-mantenuta' ? 'bad' : promise.status === 'ritardata' ? 'warning' : 'good')}
     <small class="program-evidence">${esc(promise.evidence ?? 'Nessun atto collegato.')}</small>
+    ${agendaBlock(promise, agenda)}
     ${impediments}${history ? `<details class="program-history"><summary>Storia</summary><ul>${history}</ul></details>` : ''}${actions}</article>`;
 }
 
@@ -190,9 +202,16 @@ export function renderProgram(state, view) {
     ${credibilityCard(view)}
     <div class="sx-grid two">${partyCard(view, premier)}${makeForm(view, { premier, hasAccord })}</div>
     ${editorCard(view)}${previewCard(view, state)}
-    ${card({ kicker: 'IN CORSO', title: `Le tue promesse (${live.length})`, body: live.length ? `<div class="program-list">${live.map(item => promiseCard(item, { campaign: view.campaign, allies: alliesOf(state) })).join('')}</div>` : '<p class="sx-empty">Nessuna promessa aperta. Ogni impegno è una responsabilità: sceglili con cura.</p>' })}
+    ${agendaSummary(view, live)}
+    ${card({ kicker: 'IN CORSO', title: `Le tue promesse (${live.length})`, body: live.length ? `<div class="program-list">${live.map(item => promiseCard(item, { campaign: view.campaign, allies: alliesOf(state), agenda: view.agenda?.[item.id] ?? null })).join('')}</div>` : '<p class="sx-empty">Nessuna promessa aperta. Ogni impegno è una responsabilità: sceglili con cura.</p>' })}
     ${accordCard(view)}${rivalsCard(view)}${knownRivalsCard(view)}${compare}
     ${premier && view.suggestion.length ? card({ kicker: 'GOVERNO', title: 'Il programma di governo parte dalle tue promesse', body: `<p>Priorità suggerite dal tuo programma: ${view.suggestion.map(id => esc(AREA_BY_ID[id]?.label ?? id)).join(' · ')}.</p><p class="sx-note">Quando fissi il programma del Governo (Parlamento › Governo) senza scegliere le priorità, il gioco usa queste; ogni priorità diventa anche una promessa di governo.</p>` }) : ''}
   </div>`;
+}
+// The things to do first: the late promises, then the ones nearest to their deadline (at most four).
+function agendaSummary(view, live) {
+  const rows = live.map(item => ({ item, agenda: view.agenda?.[item.id] })).filter(row => row.agenda).sort((a, b) => (b.agenda.late - a.agenda.late) || (a.agenda.weeksLeft - b.agenda.weeksLeft)).slice(0, 4);
+  if (!rows.length) return '';
+  return card({ kicker: 'AGENDA', title: 'Da fare per le promesse', body: `<ul class="program-agenda-list" data-promise-agenda-list>${rows.map(({ item, agenda }) => `<li><span><b>${esc(item.label)}</b> · ${agenda.late > 0 ? `in ritardo di ${agenda.late} sett.` : `${Math.max(0, agenda.weeksLeft)} sett. alla scadenza`}<small>${esc(agenda.next.text)}</small></span><button type="button" class="secondary-button" data-ask-open="${esc(agenda.next.nav)}"${agenda.next.tab ? ` data-ask-tab="${esc(agenda.next.tab)}"` : ''}>Apri</button></li>`).join('')}</ul>` });
 }
 export { promiseLine };

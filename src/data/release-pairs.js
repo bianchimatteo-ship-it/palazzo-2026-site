@@ -1,12 +1,12 @@
 // English phrase-book pairs of the last release pass (data/i18n/en-ui-8.js reads `ALL_PAIRS`): the guided programme editor, the days of the Quirinale and the rule on the parties, the government room, the live
 // votes of the assemblies, the party headquarters, the TV name plates and the tutorial. Format as in the phrase-book: [Italian as shown, English]; `#` a number, `{}` a free part.
-import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261120-1';
-import { DEBATE_PAIRS } from './debate-choices.js?v=20261120-1';
-import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261120-1';
-import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261120-1';
-import { ALL_PAIRS as TOPIC_PAIRS } from './activity-scene-topics.js?v=20261120-1';
-import { MORE_PAIRS as INITIATIVE_MORE_PAIRS } from './initiative-drafts-more.js?v=20261120-1';
-import { LAW_TERM_PAIRS } from './law-terms.js?v=20261120-1';
+import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261123-13';
+import { DEBATE_PAIRS } from './debate-choices.js?v=20261123-13';
+import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261123-13';
+import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261123-13';
+import { ALL_PAIRS as TOPIC_PAIRS } from './activity-scene-topics.js?v=20261123-13';
+import { MORE_PAIRS as INITIATIVE_MORE_PAIRS } from './initiative-drafts-more.js?v=20261123-13';
+import { LAW_TERM_PAIRS } from './law-terms.js?v=20261123-13';
 export const ALL_PAIRS = [
   ...INITIATIVE_MORE_PAIRS,
   ...GUEST_PAIRS,
@@ -2947,4 +2947,77 @@ export const ALL_PAIRS = [
   ["deve acconsentire; se rifiuta resta nell’accordo originale.", "must agree; if it refuses it stays in the original accord."],
   ["Simulazione in corso", "Simulation in progress"],
   ["Prossimo voto · ", "Next vote · "],
+  // Activity scenes: the odds lines of a move («se la mossa riesce: …», the commitment it takes) — written by activity-scenes.js (activityOdds) for every scene.
+  ["se la mossa riesce: {} (la metà se è a metà strada, nulla se fallisce)", "if the move works: {} (half if it lands halfway, nothing if it fails)"],
+  ["ti impegni a farlo entro # settimane (diventa un impegno verificabile)", "you commit to doing it within # weeks (it becomes a verifiable commitment)"],
+  ["ti impegni a farlo entro # settimana (diventa un impegno verificabile)", "you commit to doing it within # week (it becomes a verifiable commitment)"],
+  ["popolarità +#", "popularity +#"], ["influenza +#", "influence +#"], ["rapporto con questo interlocutore +#", "relationship with this person +#"], ["esperienza +#", "experience +#"],
+  ["reputazione +#", "reputation +#"], ["notorietà +#", "name recognition +#"], ["attenzione al territorio +#", "attention to the territory +#"], ["consenso nel gruppo coinvolto +#", "support in the group involved +#"],
+  ["sostegno nel partito +#", "support in the party +#"], ["rapporto con la stampa +#", "relationship with the press +#"],
+  ["rapporto con questo interlocutore −#", "relationship with this person −#"], ["popolarità −#", "popularity −#"], ["capitale politico −#", "political capital −#"],
+  ["rapporto con questo interlocutore +#", "relationship with this person +#"], ["popolarità +#", "popularity +#"], ["capitale politico +#", "political capital +#"],
+  ["Il tuo parere è importante! Lascia una recensione sincera sull’App Store e aiutaci a migliorare il gioco.", "Your opinion matters! Leave an honest review on the App Store and help us improve the game."],
+  ["Come mi candido?", "How do I run for office?"], ["Come aumento i fondi?", "How do I raise funds?"], ["Come funzionano 4 settimane?", "How do 4 weeks work?"], ["Come lascio il partito?", "How do I leave the party?"],
+  ["Non lo so: nel gioco non trovo una funzione che risponda a questa domanda. Prova con altre parole (candidatura, alleanza, promessa, staff, sondaggi, leggi, referendum…) oppure apri il manuale qui sotto.", "I do not know: I cannot find a feature in the game that answers this. Try other words (candidacy, alliance, promise, staff, polls, laws, referendum…) or open the manual below."],
+  ["Che cosa serve", "What you need"], ["Apri la schermata", "Open the screen"],
+  ["Referendum", "Referendum"],
+  ["Abrogativo (art. 75) o costituzionale (art. 138): si avvia dalla pagina Referendum, dove scegli la legge o la riforma e scrivi il quesito. Da lì la raccolta delle firme arriva fino al voto.", "Repealing (art. 75) or constitutional (art. 138): it starts from the Referendum page, where you choose the law or the reform and write the question. From there the signature collection goes all the way to the vote."],
+  ["Apri la pagina Referendum →", "Open the Referendum page →"],
+  ["Per questa raccolta serve ancora la legge da abrogare: collegala a un referendum nella pagina Referendum, da dove prosegue fino al voto.", "This collection still needs the law to repeal: link it to a referendum on the Referendum page, from where it goes on to the vote."],
+  ["Apri Referendum", "Open Referendum"], ["FIRME SENZA LEGGE", "SIGNATURES WITHOUT A LAW"], ["Raccolte di firme da collegare a un referendum", "Signature collections to link to a referendum"],
+  ["Legge da abrogare", "Law to repeal"], ["Collega al referendum abrogativo", "Link to the repealing referendum"], ["raccolta in corso", "collection in progress"], ["firme in verifica", "signatures being checked"], ["firme depositate", "signatures filed"],
+  ["Non ci sono leggi in vigore che si possano sottoporre a referendum.", "There are no laws in force that can be put to a referendum."],
+  ["APPARTENENZA", "MEMBERSHIP"], ["Sei iscritto a {}", "You are a member of {}"],
+  ["Puoi lasciare il partito quando vuoi e continuare come indipendente, oppure passare subito a un altro: la scelta ha conseguenze, che leggi qui prima di confermare.", "You can leave the party whenever you like and carry on as an independent, or move straight to another one: the choice has consequences, which you read here before confirming."],
+  ["Che cosa succede se lasci {}", "What happens if you leave {}"], ["Cambia partito", "Change party"], ["Lascia e scegli un altro", "Leave and choose another"],
+  ["Lasciare {} per cambiarlo?", "Leave {} to change party?"], ["Lasciare {}?", "Leave {}?"],
+  ["Prima esci dal partito attuale e diventi indipendente; poi scegli il nuovo partito e chiedi l’adesione (1 giorno).", "First you leave your current party and become independent; then you choose the new party and ask to join (1 day)."],
+  ["Diventerai indipendente. Puoi aderire a un altro partito in seguito.", "You will become independent. You can join another party later."],
+  ["Perdi l’incarico interno («{}») e il sostegno interno costruito finora (#).", "You lose your internal office (“{1}”) and the internal support built so far ({2})."],
+  ["Perdi la tessera e il sostegno interno costruito finora.", "You lose your membership card and the internal support built so far."],
+  ["Lasci anche la segreteria: il partito sceglierà un nuovo segretario.", "You also leave the secretariat: the party will choose a new secretary."],
+  ["Il rapporto con la leadership del partito si chiude.", "The relationship with the party leadership ends."],
+  ["Diventi indipendente: nessuna lista di partito, nessuna candidatura interna, nessuna corrente.", "You become independent: no party list, no internal candidacy, no faction."],
+  ["Il tuo partito resta nell’alleanza, ma tu non la rappresenti più: per candidarti con quei partner dovrai riaderire o trattare da indipendente.", "Your party stays in the alliance, but you no longer represent it: to run with those partners you will have to rejoin or negotiate as an independent."],
+  ["Il mandato è tuo, non del partito: i tuoi seggi e incarichi nelle istituzioni restano. Per lasciarli servono le dimissioni da quella carica (Carriera › Incarichi e poteri).", "The mandate is yours, not the party’s: your seats and offices in the institutions stay. To leave them you must resign from that office (Career › Offices and powers)."],
+  ["Costo: +2 notorietà, −1 influenza. Chi cambia partito riparte con meno fiducia nel nuovo (sostegno iniziale 40, meno 5 per ogni partito già lasciato, minimo 20).", "Cost: +2 name recognition, −1 influence. Whoever changes party starts with less trust in the new one (initial support 40, minus 5 for each party already left, minimum 20)."],
+  ["(poi in parte svanisce)", "(then partly fades)"], ["mancante (gli effetti si riducono)", "missing (the effects are reduced)"],
+  ["Costo: +# notorietà, −# influenza. Chi cambia partito riparte con meno fiducia nel nuovo (sostegno iniziale #, meno # per ogni partito già lasciato, minimo #).", "Cost: +# name recognition, −# influence. Whoever changes party starts with less trust in the new one (initial support #, minus # for each party already left, minimum #)."],
+  ["Questa non è una raccolta di firme per un referendum.", "This is not a signature collection for a referendum."], ["Questa raccolta è già collegata a un referendum.", "This collection is already linked to a referendum."],
+  ["La raccolta è conclusa senza esito: non si può più collegare a un referendum.", "The collection ended without a result: it can no longer be linked to a referendum."],
+  ["Raccolta collegata al referendum abrogativo", "Collection linked to the repealing referendum"],
+  ["Come funzionano # settimane?", "How do # weeks work?"],
+  ["le liste sono depositate: le intese riprendono dopo il voto.", "the lists are filed: accords resume after the vote."],
+  ["per cercarne una usa «Crea alleanza» (# giorno, # punti di capitale politico) sulla scheda di un partito: l’altra forza può rifiutare. Dopo la prima alleanza potrai invitare altri partiti e ampliarla.", "to look for one use “Create alliance” (# day, # points of political capital) on a party’s card: the other force may refuse. After the first alliance you will be able to invite other parties and widen it."],
+  ["Peso nei sondaggi", "Weight in the polls"], ["Peso calcolato solo sui partiti rilevati.", "Weight counted only on the parties surveyed."],
+  ["Prima esci dal partito attuale e diventi indipendente; poi scegli il nuovo partito e chiedi l’adesione (# giorno).", "First you leave your current party and become independent; then you choose the new party and ask to join (# day)."],
+  ["Nessun provvedimento su {}, «{}»", "No measure on {1}, «{2}»"],
+  ["Nessuna misura finanziata con {}, «{}»", "No measure financed with {1}, «{2}»"],
+  ["Voti validi", "Valid votes"], ["· bianche e nulle", "· blank and spoiled"],
+  ["Presenta una tua proposta di legge sul tema.", "Table a bill of your own on the subject."],
+  ["Serve un seggio per presentare una proposta: l’impegno si può modificare in «sostegno» o riprendere dopo le elezioni.", "You need a seat to table a bill: the commitment can be changed into “support” or taken up again after the elections."],
+  ["Sostieni il provvedimento sul tema e votalo quando arriva in Aula.", "Support the measure on the subject and vote for it when it reaches the floor."],
+  ["Sostienilo con il tuo partito e con i gruppi che lo condividono.", "Back it with your party and with the groups that share it."],
+  ["Porta l’intervento nell’azione di governo: scegli costo, tempi e copertura.", "Bring the intervention into government action: choose cost, timing and financing."],
+  ["Presenta o sostieni il disegno di legge che la realizza.", "Table or back the bill that delivers it."],
+  ["Da solo non puoi realizzarla: trasformala in proposta o sostegno (Modifica) oppure cerca un alleato (trattativa).", "You cannot deliver it alone: turn it into a proposal or support (Edit) or look for an ally (negotiation)."],
+  ["Il bilancio non regge: riduci l’ambizione o trova la copertura prima di procedere.", "The budget cannot take it: lower the ambition or find the financing before going on."],
+  ["Scaduta da # settimane: {}", "Overdue by # weeks: {}"],
+  ["Scaduta da # settimana: {}", "Overdue by # week: {}"],
+  ["AGENDA", "AGENDA"],
+  ["Da fare per le promesse", "To do for the promises"],
+  ["in ritardo di # sett.", "# wk overdue"],
+  ["# sett. alla scadenza", "# wk to the deadline"],
+  ["Area e strumento", "Area and instrument"],
+  ["Avanzamento", "Progress"],
+  ["Perché è ferma", "Why it is stuck"],
+  ["Prossima azione", "Next action"],
+  ["Apri la schermata utile", "Open the useful screen"],
+  ["In ritardo di # settimana", "# week overdue"],
+  ["In ritardo di # settimane", "# weeks overdue"],
+  ["# settimana alla scadenza", "# week to the deadline"],
+  ["# settimane alla scadenza", "# weeks to the deadline"],
+  ["Contano anche la dimensione del luogo, l’organizzazione del partito e la notorietà del candidato nel suo comune.", "The size of the place, the party’s organisation and the candidate’s name recognition in his own comune also count."],
+  ["Dato simulato: i voti di lista del voto nazionale della partita, ripartiti per abitanti (ISTAT, # gennaio #) con lo scarto regionale del modello e una piccola variazione locale.", "Simulated data: the list votes of the national election of the game, shared by inhabitants (ISTAT, # January #) with the regional lean of the model and a small local variation."],
+  ["; contano anche la dimensione del luogo, l’organizzazione del partito e la notorietà del candidato nel suo comune; ogni livello somma quello superiore.", "; the size of the place, the party’s organisation and the candidate’s name recognition in his own comune also count; every level adds up to the one above."],
 ];

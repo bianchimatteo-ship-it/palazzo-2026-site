@@ -628,3 +628,24 @@
 .alliance-card.is-mine { border-color: rgba(217,180,90,.7); }
 .alliance-card header { display: grid; gap: 2px; } .alliance-card p { margin: 0; }
 .alliance-cohesion { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* Alleanze: scheda di sintesi + azioni in colonna (niente righe strette con select e pulsanti affiancati), tutto il resto in sezioni chiuse */
+.my-coalition { min-width: 0; max-width: 100%; display: grid; gap: 12px; }
+.my-coalition > * { min-width: 0; }
+.alliance-summary { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--line, rgba(127,140,134,.35)); border-radius: 14px; background: linear-gradient(180deg, rgba(217,180,90,.10), rgba(127,140,134,.05)); }
+.alliance-summary-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.alliance-summary-title { min-width: 0; } .alliance-summary-title h3 { margin: 2px 0 0; font-size: 1.15rem; line-height: 1.25; overflow-wrap: anywhere; }
+.alliance-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; }
+.alliance-tile { display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; background: rgba(0,0,0,.18); min-width: 0; }
+.alliance-tile small { font-size: .72rem; letter-spacing: .04em; text-transform: uppercase; opacity: .8; } .alliance-tile strong { font-size: 1.15rem; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.alliance-tile strong small { font-size: .75rem; opacity: .7; text-transform: none; letter-spacing: 0; }
+.alliance-tile.is-good strong { color: var(--sem-good, #4cb782); } .alliance-tile.is-warn strong { color: var(--gold-soft, #e8c875); } .alliance-tile.is-bad strong { color: var(--sem-bad, #e07070); }
+.coalition-can { margin: 0; overflow-wrap: anywhere; }
+.coalition-actions { display: grid; gap: 10px; }
+.coalition-actions > * { min-width: 0; }
+.coalition-invite { display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr); }
+.coalition-invite label { display: grid; gap: 4px; min-width: 0; } .coalition-invite select { width: 100%; max-width: 100%; min-height: 44px; }
+.coalition-invite .secondary-button, .coalition-actions > .secondary-button { width: 100%; min-height: 44px; height: auto; white-space: normal; text-align: center; }
+.invite-choice .setting-actions { display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr); } .invite-choice .setting-actions button { width: 100%; height: auto; min-height: 44px; white-space: normal; }
+@media (min-width: 900px) { .coalition-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } .coalition-invite { grid-column: 1; } }
+.alliance-kicker { text-transform: uppercase; letter-spacing: .08em; }

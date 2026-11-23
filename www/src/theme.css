@@ -1260,7 +1260,7 @@ html[data-ui-motion="off"] .language-gate-button { transition: none; }
 .hero-avatar.has-avatar { background: none; border: 0; padding: 0; overflow: visible; font-size: 0; } .hero-avatar.has-avatar .avatar-svg { width: 100%; height: 100%; display: block; }
 .player-avatar.has-avatar { background: none; border: 0; padding: 0; } .player-avatar.has-avatar .avatar-svg { width: 100%; height: 100%; display: block; }
 @media (max-width: 760px) {
-  .avatar-editor { padding: 10px; } .avatar-editor-body { grid-template-columns: minmax(0, 1fr) 84px; gap: 8px; } .avatar-controls { grid-column: 1; grid-row: 1; } .avatar-preview { grid-column: 2; grid-row: 1; position: sticky; top: 6px; z-index: 6; align-self: start; justify-self: end; width: 84px; padding: 4px; border-radius: 14px; background: rgba(10,16,26,.92); } .avatar-preview .avatar-svg { width: 74px; }
+  .avatar-editor { padding: 10px; } .avatar-editor-body { grid-template-columns: minmax(0, 1fr) 116px; gap: 8px; } .avatar-controls { grid-column: 1; grid-row: 1; } .avatar-preview { grid-column: 2; grid-row: 1; position: sticky; top: 6px; z-index: 6; align-self: start; justify-self: end; width: 116px; padding: 5px; border-radius: 16px; background: rgba(10,16,26,.92); } .avatar-preview .avatar-svg { width: 104px; }
   .avatar-choice { min-height: 44px; } .avatar-choice.is-swatch { width: 44px; }
 }
 @media (prefers-reduced-motion: reduce) { .avatar-choice { transition: none; } .avatar-choice:hover { transform: none; } }
@@ -1627,3 +1627,52 @@ button:not(:disabled):active, a.primary-button:active, a.secondary-button:active
 /* The main call to action of a concluded campaign sits at the very top of the results page. */
 .campaign-result-cta{display:flex;margin:0 0 14px}.campaign-result-cta .primary-button{flex:1;min-height:52px;font-size:16px;font-weight:700}
 .law-changes{margin:10px 0;border:1px solid var(--line);border-radius:12px;padding:8px 12px;background:rgba(255,255,255,.02)}.law-changes>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}.law-changes .law-outcomes p{margin:6px 0;line-height:1.5}
+
+/* Leggi in vigore: una scheda chiusa per legge (titolo, stato, data, proponente), dettagli e azioni dentro */
+.statute-row { padding: 0; }
+.statute-fold > summary { list-style: none; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 10px 12px; min-height: 52px; cursor: pointer; }
+.statute-fold > summary::-webkit-details-marker { display: none; }
+.statute-title { display: grid; gap: 2px; min-width: 0; } .statute-title strong { overflow-wrap: anywhere; } .statute-title small { opacity: .8; overflow-wrap: anywhere; }
+.statute-fold .fold-chevron { width: 10px; height: 10px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); transition: transform .15s; margin-right: 4px; }
+.statute-fold[open] > summary .fold-chevron { transform: rotate(-135deg); }
+.statute-fold > summary:focus-visible { outline: 2px solid var(--gold, #d9b45a); outline-offset: 2px; border-radius: 10px; }
+.statute-body { display: grid; gap: 10px; padding: 0 12px 12px; } .statute-body p { margin: 0; }
+.statute-facts { display: grid; gap: 6px; margin: 0; } .statute-facts > div { display: grid; grid-template-columns: minmax(96px, 30%) minmax(0, 1fr); gap: 8px; } .statute-facts dt { opacity: .75; font-size: .85rem; } .statute-facts dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 520px) { .statute-facts > div { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
+.statute-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; }
+.statute-actions .secondary-button { width: 100%; min-height: 44px; height: auto; padding: 8px 14px; font: inherit; font-weight: 600; white-space: normal; text-align: center; }
+
+.ini-kind-link { text-align: left; font: inherit; color: inherit; cursor: pointer; width: 100%; }
+
+/* ===================================================================================================================================================
+   DESIGN LAYER (aggiornamento generale): una sola gerarchia di controlli per tutto il gioco, caricata per ultima.
+   · primaria  = oro (l’azione che porta avanti)           · secondaria = verde petrolio (azione normale, bordo chiaro)
+   · terziaria = testo/«ghost» oro, senza riquadro           · positiva  = verde (conferma)        · distruttiva = rosso (bordo/riempimento)
+   Stessa famiglia tipografica, stessa altezza minima e stesso raggio per tutti: cambiano il colore e il peso visivo, non il linguaggio.
+   =================================================================================================================================================== */
+:root {
+  --petrol: #123b3a; --petrol-2: #1a4e4a; --petrol-line: rgba(110,182,168,.55); --petrol-ink: #e8f4f0;
+  --good-fill: #1f5a3a; --good-line: rgba(92,190,134,.65);
+  --ctl-h: 42px; --ctl-radius: 10px; --ctl-font: 13.5px;
+}
+:where(button, input[type="button"], input[type="submit"], input[type="reset"]) { font-family: inherit; }
+.primary-button, .secondary-button, .ghost-button { font-family: inherit; font-size: var(--ctl-font); line-height: 1.2; min-height: var(--ctl-h); border-radius: var(--ctl-radius); padding: 8px 16px; letter-spacing: .005em; }
+.primary-button { font-weight: 750; }
+.secondary-button { background: var(--petrol); color: var(--petrol-ink); border: 1px solid var(--petrol-line); font-weight: 650; }
+.secondary-button:hover:not(:disabled) { background: var(--petrol-2); border-color: var(--accent); color: #fff; }
+.secondary-button.good, .primary-button.good { background: var(--good-fill); border-color: var(--good-line); color: #eafaf1; }
+.secondary-button.danger, .danger-card .secondary-button { background: rgba(122,34,34,.22); border: 1px solid rgba(220,86,80,.7); color: #ffb3ad; }
+.secondary-button.danger:hover:not(:disabled) { background: rgba(160,40,40,.34); border-color: #e8706a; color: #fff; }
+.ghost-button { background: transparent; color: var(--gold-soft, #e8c875); border: 1px solid transparent; font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
+.ghost-button:hover:not(:disabled) { background: rgba(217,180,90,.12); border-color: rgba(217,180,90,.4); color: var(--gold-soft, #e8c875); }
+.compact.secondary-button, .secondary-button.compact, .primary-button.compact { min-height: 38px; padding: 6px 12px; font-size: 13px; }
+/* the buttons of the agenda choices and the news filters had no rule of their own (16px, regular): same voice as the others */
+.hq-choice { font-family: inherit; font-size: var(--ctl-font); border-radius: var(--ctl-radius); border: 1px solid var(--petrol-line); background: var(--petrol); color: var(--petrol-ink); }
+.hq-choice:hover:not(:disabled) { background: var(--petrol-2); border-color: var(--accent); color: #fff; }
+button[data-news-filter], button[data-newsFilter], [data-news-filter] { font-family: inherit; font-size: 13px; font-weight: 650; }
+.plan-add { font-family: inherit; font-weight: 650; }
+html[data-contrast="high"] .secondary-button { border-width: 2px; border-color: #bfe8de; }
+@media (max-width: 720px) { .primary-button, .secondary-button, .ghost-button, .hq-choice { min-height: 44px; } }
+
+@media (max-width: 359px) { .avatar-editor-body { grid-template-columns: minmax(0, 1fr) 92px; } .avatar-preview { width: 92px; } .avatar-preview .avatar-svg { width: 82px; } }
+@media (min-width: 761px) { .avatar-preview .avatar-svg { width: min(240px, 100%); } }

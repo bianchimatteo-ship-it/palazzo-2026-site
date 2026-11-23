@@ -37,6 +37,17 @@ if (chromeAvailable) await withBrowser(async ({ evaluate, goto, waitFor: wait, p
   assert.ok(!(await evaluate(`Boolean(document.querySelector('[data-promise-reminder]'))`)), '«Più tardi» chiude la scheda.');
   await evaluate(`window.__offerReminder?.(); true`); await pause(600);
   assert.ok(!(await evaluate(`Boolean(document.querySelector('[data-promise-reminder]'))`)), 'Lo stesso promemoria non ricompare.');
+  // «Apri il programma» opens the real Programme tab of Elections (not the first tab), from any other page, and the card is gone
+  await S(`const g = store.getState().game; g.promises.push({ id: 'p-extra', kind: 'programma', label: 'Più posti letto', intervention: 'Investimento', madeWeek: g.week.index - 3, dueWeek: g.week.index + 5, status: 'in-corso', progress: 10, area: 'sanita', scope: 'candidato' }); g.reminderLog = {}; return true;`);
+  await evaluate(`document.querySelector('[data-nav="sondaggi"]')?.click(), true`); await pause(700);
+  await evaluate(`window.__offerReminder?.(); true`); await pause(900);
+  assert.equal(await evaluate(`Boolean(document.querySelector('[data-reminder-open]'))`), true, 'Il promemoria compare da un’altra pagina (Sondaggi).');
+  {
+    await evaluate(`document.querySelector('[data-reminder-open]').click(); true`); await pause(1500);
+    assert.equal(await evaluate(`location.hash`), '#elezioni', '«Apri il programma» porta a Elezioni.');
+    assert.equal(await evaluate(`Boolean(document.querySelector('.program-page'))`), true, '… e apre la scheda Programma, non la prima scheda di Elezioni.');
+    assert.equal(await evaluate(`Boolean(document.querySelector('[data-promise-reminder]'))`), false, 'La scheda si chiude.');
+  }
   assert.deepEqual(errors, [], 'Nessun errore JavaScript.');
 });
 console.log('Promemoria delle promesse verificati: scadenze a otto, quattro e una settimana, ritardo, promessa non avviata, una scheda ogni tre settimane, mai ripetuti, scheda non bloccante in un momento tranquillo.');

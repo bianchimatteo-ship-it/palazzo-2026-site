@@ -1,0 +1,41 @@
+// L'agenda delle promesse: per ogni promessa aperta area e strumento, avanzamento, scadenza o ritardo, perché è ferma e la prossima azione secondo il ruolo; il pulsante apre la schermata utile.
+// Il motore (promiseAgenda) distingue realizzazione, proposta e sostegno e il potere reale; l'interfaccia (Chrome) la mostra nella scheda Programma e nel riepilogo «Da fare».
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+const build = (await readFile(new URL('../index.html', import.meta.url), 'utf8')).match(/main\.js\?v=([^"']+)/)?.[1];
+const { promiseAgenda } = await import(new URL(`../src/core/program-engine.js?v=${build}`, import.meta.url).href);
+const promise = (extra = {}) => ({ id: 'p', label: 'Più posti letto', area: 'sanita', instrument: 'investimento', status: 'in-corso', progress: 20, madeWeek: 1, dueWeek: 20, currentWeek: 10, impediments: [], ...extra });
+const exec = { executive: true, seat: true, majority: true }, seatOnly = { executive: false, seat: true, majority: false }, none = { executive: false, seat: false, majority: false };
+assert.equal(promiseAgenda(promise({ status: 'mantenuta' }), { power: exec }), null, 'Una promessa conclusa non ha agenda.');
+let a = promiseAgenda(promise(), { week: 10, power: exec });
+assert.equal(a.weeksLeft, 10); assert.equal(a.late, 0); assert.equal(a.next.nav, 'governo', 'Chi governa porta l’intervento nel Governo.');
+a = promiseAgenda(promise(), { week: 10, power: seatOnly });
+assert.equal(a.next.nav, 'elezioni', 'Dall’opposizione una realizzazione non è fattibile da soli: si propone di cambiarla.'); assert.match(a.next.text, /proposta|sostegno|alleato/);
+a = promiseAgenda(promise({ commitment: 'proposta' }), { week: 10, power: seatOnly }); assert.equal(a.next.nav, 'leggi', 'Una proposta si presenta nella pagina Leggi.');
+a = promiseAgenda(promise({ commitment: 'proposta' }), { week: 10, power: none }); assert.equal(a.next.nav, 'elezioni', 'Senza seggio non si presenta una proposta.');
+a = promiseAgenda(promise({ commitment: 'sostegno' }), { week: 10, power: seatOnly }); assert.equal(a.next.nav, 'leggi');
+a = promiseAgenda(promise({ impediments: ['Il bilancio non lascia margine per questa spesa.'] }), { week: 25, power: exec });
+assert.equal(a.late, 5); assert.match(a.blocked, /bilancio/); assert.match(a.next.text, /^Scaduta da 5 settimane/);
+console.log('Agenda delle promesse (motore): realizzazione, proposta e sostegno secondo il potere, ritardo, ostacolo e prossima azione.');
+const { chromeAvailable, createCareerInPage, openCareer, withBrowser } = await import('./lib/browser.mjs');
+if (!chromeAvailable) process.exit(0);
+await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, version, errors }) => {
+  await createCareerInPage({ evaluate, version }, { weeks: 2 });
+  await openCareer({ evaluate, goto, waitFor: wait });
+  await evaluate(`localStorage.setItem('politicando.settings.v1', JSON.stringify({ newsPopup: 'off', sceneMotion: 'off', language: 'it', weeklyReport: 'off' })); true`);
+  const S = body => evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); ${body} })()`);
+  await S(`store.getState().game.resources.politicalCapital = 40; try { store.makePromise({ area: 'sanita', scope: 'candidato', instrument: 'investimento', ambition: 'media', dueWeeks: 8 }); store.makePromise({ area: 'lavoro', scope: 'candidato', instrument: 'riforma', ambition: 'media', dueWeeks: 12, commitment: 'proposta' }); } catch (e) { return e.message; } return true;`);
+  await evaluate(`localStorage.setItem('politicando.views.v1', ''); document.querySelector('[data-nav="elezioni"]')?.click(), true`); await pause(900);
+  await wait(() => evaluate(`Boolean(document.querySelector('[data-section-tab="elezioni"][data-section-tab-value="programma"]'))`), 20000);
+  await wait(async () => { await evaluate(`document.querySelector('[data-section-tab="elezioni"][data-section-tab-value="programma"]')?.click(), true`); await pause(400); return evaluate('Boolean(document.querySelector(".program-page"))'); }, 20000);
+  const n = await evaluate(`document.querySelectorAll('[data-promise-agenda]').length`);
+  assert.ok(n >= 1, `Ogni promessa aperta ha la sua agenda (${n}).`);
+  const text = await evaluate(`document.querySelector('[data-promise-agenda]').innerText`);
+  assert.match(text, /Area e strumento/); assert.match(text, /Avanzamento/); assert.match(text, /Prossima azione/); assert.match(text, /alla scadenza|In ritardo/);
+  assert.equal(await evaluate(`Boolean(document.querySelector('[data-promise-agenda-list]'))`), true, 'Il riepilogo «Da fare» c’è.');
+  const target = await evaluate(`document.querySelector('[data-promise-agenda] [data-ask-open]').dataset.askOpen`);
+  await evaluate(`document.querySelector('[data-promise-agenda] [data-ask-open]').click(), true`); await pause(1200);
+  assert.equal(await evaluate(`location.hash`), `#${target}`, 'Il pulsante apre la schermata utile.');
+  assert.deepEqual(errors, [], 'Nessun errore JavaScript.');
+  console.log('Agenda delle promesse (Chrome): scheda con area, avanzamento, scadenza, prossima azione e collegamento alla schermata.');
+});

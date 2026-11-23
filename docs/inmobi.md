@@ -1,4 +1,6 @@
-# InMobi — unico provider pubblicitario (Android + iOS)
+# InMobi — configurazione LEGACY (in pausa su Android e iOS)
+
+> **Aggiornamento generale:** questa pagina descrive ciò che era stato costruito per InMobi. **Non è più l'architettura in uso.** Android usa **Appodeal** (`docs/appodeal.md`); iOS **non ha pubblicità** (`docs/ios-senza-pubblicita.md`, `IOS_ADS_ENABLED = false`). Il codice InMobi resta nel repository, spento e non incluso nei build, solo come riferimento.
 
 Stato: codice completo nel branch `feature/inmobi-integrazione`, **spento di base**. Nessun annuncio reale; nessun Account ID inventato. Sostituisce la vecchia integrazione AdMob (eliminata: adattatore, plugin, manifest, id).
 

@@ -16,7 +16,7 @@ const lines = [];
 // ---- configuration
 assert.ok(['test', 'production'].includes(APPODEAL_MODE), 'Modalità valida.'); assert.ok(APPODEAL_MODE !== 'production' || APPODEAL_PRODUCTION_AUTHORIZED === true, 'Produzione solo con autorizzazione esplicita.');
 assert.match(APPODEAL.android.appKey, /^[0-9a-f]{48}$/, 'App Key Android: 48 caratteri esadecimali.'); assert.equal(APPODEAL.android.appKey, '8d31e2dc0428104dbfcf36959833bc1020f210c3914df496'); assert.equal(APPODEAL.dashboardId, '790468'); assert.equal(APPODEAL.android.placement, 'default');
-assert.equal(providerFor('android'), 'appodeal'); assert.equal(providerFor('ios'), 'inmobi', 'iOS resta con il suo provider.');
+assert.equal(providerFor('android'), 'appodeal'); assert.equal(providerFor('ios'), 'none', 'iOS: nessun provider pubblicitario (versione senza pubblicità).');
 const test = resolveAppodeal(null); assert.equal(test.mode, 'test'); assert.equal(test.testing, true); assert.equal(test.enabled, true); assert.equal(test.appKey, APPODEAL.android.appKey);
 for (const f of ['rewarded', 'banner', 'interstitial']) assert.equal(test[f].enabled, true, `TEST: ${f} attivo.`);
 assert.equal(test.interstitialPolicy.minGapMs, 180_000, 'Interstitial: almeno 180 secondi.'); assert.deepEqual(APPODEAL_INTERSTITIAL, test.interstitialPolicy);

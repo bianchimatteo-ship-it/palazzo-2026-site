@@ -1,9 +1,9 @@
-import { campaignScope } from '../core/campaign-engine.js?v=20261120-1';
-import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261120-1';
-import { formatDate } from '../core/time.js?v=20261120-1';
-import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261120-1';
-import { distinctSeries, sparkline } from './charts.js?v=20261120-1';
-import { documentedProgramOf } from '../data/party-programs.js?v=20261120-1';
+import { campaignScope } from '../core/campaign-engine.js?v=20261123-13';
+import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261123-13';
+import { formatDate } from '../core/time.js?v=20261123-13';
+import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261123-13';
+import { distinctSeries, sparkline } from './charts.js?v=20261123-13';
+import { documentedProgramOf } from '../data/party-programs.js?v=20261123-13';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const pctFormats = new Map();
@@ -372,11 +372,19 @@ export function myCoalitionPanel(state, world, index, poll, options = {}) {
   const registrationHtml = `${registeredHtml}${registrationPanel(alliance, options, secretary)}`;
   const registrationFold = allianceFold('registrazione', 'ballot', 'Registrazione per le elezioni', registered ? 'coalizione registrata' : 'alleanza politica: non ancora registrata', registrationHtml);
   const ruptureFold = allianceFold('rotture', 'alert', 'Cronologia e rotture', 'cosa è successo e cosa succede se ci si lascia', `${history ? `<ul class="coalition-history">${history}</ul>` : '<p class="quiet-copy">Nessun evento registrato.</p>'}<p class="quiet-copy">Uscire dall’accordo peggiora i rapporti con gli alleati; se la coesione scende sotto 25 la coalizione perde il membro più distante. Dopo il deposito delle liste la composizione registrata per il voto non cambia.</p>`);
-  return `<section class="my-coalition" data-my-coalition="${esc(alliance.id)}"><header><strong>${coalition ? 'La mia coalizione' : 'La mia alleanza'}</strong> ${kindBadge}</header>
+  const canText = options.windowClosed ? 'le intese sono ferme fino al voto (inviti e uscite riprendono dopo).' : !secretary ? 'solo il segretario del partito invita o esce dall’accordo; tu puoi migliorare i rapporti con le tue attività.' : `${choices.length ? `invitare uno dei ${choices.length} partiti liberi` : 'nessun partito libero da invitare'} · uscire dall’accordo${alliance.partyIds.length >= 3 ? ' (gli altri restano insieme)' : ' (l’intesa si scioglie)'}.`;
+  // A summary card first (name, kind, the three numbers that matter), then the commands one under the other; everything else is a closed fold.
+  const tile = (label, value, tone = '') => `<div class="alliance-tile ${tone}"><small>${esc(label)}</small><strong>${value}</strong></div>`;
+  const summary = `<div class="alliance-summary" data-alliance-summary>
+      <div class="alliance-summary-head"><div class="alliance-summary-title"><span class="section-kicker alliance-kicker">${coalition ? 'La mia coalizione' : 'La mia alleanza'}</span><h3>${esc(alliance.label)}</h3></div>${kindBadge}</div>
+      <div class="alliance-tiles">${tile('Partiti', String(members.length))}${tile('Peso nei sondaggi', weight.total === null ? '—' : esc(pct(weight.total)))}${tile('Coesione', `${cohesion}<small>/100</small>`, cohesion < 25 ? 'is-bad' : cohesion < 40 ? 'is-warn' : 'is-good')}${leader ? tile('Guida', esc(leader.abbreviation ?? leader.label)) : ''}</div>
+      ${weight.measured.length && !weight.complete ? '<p class="quiet-copy">Peso calcolato solo sui partiti rilevati.</p>' : ''}
+      <p class="quiet-copy" data-kind-note>${esc(kindInfo.label)}${coalition ? '' : '. Diventa una coalizione solo se tutti la approvano per una elezione precisa, prima del deposito delle liste.'}</p>
+    </div>`;
+  return `<section class="my-coalition" data-my-coalition="${esc(alliance.id)}">
     ${reportHtml}
-    <p class="quiet-copy" data-kind-note>${esc(kindInfo.label)}${coalition ? '' : '. Diventa una coalizione solo se tutti la approvano per una elezione precisa, prima del deposito delle liste.'}</p>
-    <p><strong>${esc(alliance.label)}</strong> <span>· ${members.length} partiti · ${weight.total === null ? 'peso non rilevato' : `insieme ${pct(weight.total)} nei sondaggi`}</span>${weight.measured.length && !weight.complete ? ' <span>(solo i partiti rilevati)</span>' : ''}${leader ? ` <span>· guida: ${esc(leader.label)}</span>` : ''}</p>
-    <p class="coalition-can" data-coalition-can><strong>Cosa puoi fare ora:</strong> ${esc(options.windowClosed ? 'le intese sono ferme fino al voto (inviti e uscite riprendono dopo).' : !secretary ? 'solo il segretario del partito invita o esce dall’accordo; tu puoi migliorare i rapporti con le tue attività.' : `${choices.length ? `invitare uno dei ${choices.length} partiti liberi` : 'nessun partito libero da invitare'} · uscire dall’accordo${alliance.partyIds.length >= 3 ? ' (gli altri restano insieme)' : ' (l’intesa si scioglie)'}.`)}</p>
+    ${summary}
+    <p class="coalition-can" data-coalition-can><strong>Cosa puoi fare ora:</strong> ${esc(canText)}</p>
     <div class="coalition-actions">${invite}${leave}</div>
     <div class="alliance-folds">${memberFold}${cohesionFold}${programFold}${talksFold}${activitiesFold}${registrationFold}${ruptureFold}</div></section>`;
 }
@@ -566,106 +574,5 @@ export function renderBarometerPanel(state) {
   return `<div class="barometer"><div class="barometer-main"><div><small>${player ? esc(player.label) : 'Gradimento personale'}</small><strong>${player ? pct(row?.share) : pct(poll.personal.approval, 0)}</strong>${player ? deltaChip(row?.delta ?? 0, true) : ''}</div>${sparkline(series, player?.color ?? 'var(--party-accent)')}</div><dl class="hq-facts"><div><dt>Gradimento personale</dt><dd>${pct(poll.personal.approval, 0)}</dd></div>${player ? `<div><dt>${esc(world.place.municipality || 'Territorio')}</dt><dd>${pct(poll.local)}</dd></div>` : ''}${poll.government ?? poll.executive ? `<div><dt>Governo</dt><dd>${pct((poll.government ?? poll.executive).approval, 0)}</dd></div>` : ''}<div><dt>${isReal(poll) ? 'Fonte' : 'Istituto'}</dt><dd>${esc(poll.institute)} · ${marginText(poll)}</dd></div></dl></div>${chronicle(world, 3)}`;
 }
 
-// Tooltips for charts and marks: values stay reachable through labels and the data table.
-// One tooltip for the whole page. It is hidden with display:none (the stylesheet gives it display:grid, which would
-// otherwise override the hidden attribute and leave an empty dark box on screen), and it disappears whenever its
-// anchor goes away: pointer out, touch end, render, route change, scroll, resize, focus loss.
-let tipElement = null;
-let tipAnchor = null;
-let touchTimer = null;
-let listening = false;
-const attachedRoots = new WeakSet();
-export function hideChartTip() {
-  if (tipElement) { tipElement.hidden = true; tipElement.style.display = 'none'; tipElement.replaceChildren(); }
-  tipAnchor = null;
-  if (touchTimer) { clearTimeout(touchTimer); touchTimer = null; }
-  if (typeof document !== 'undefined') for (const line of document.querySelectorAll?.('.crosshair') ?? []) line.setAttribute('visibility', 'hidden');
-}
-export const isChartTipVisible = () => Boolean(tipElement && !tipElement.hidden && tipElement.style.display !== 'none');
-function ensureTip() {
-  if (tipElement && tipElement.isConnected !== false) return tipElement;
-  for (const stale of document.querySelectorAll?.('.viz-tip') ?? []) stale.remove?.();
-  tipElement = document.createElement('div');
-  tipElement.className = 'viz-tip';
-  tipElement.setAttribute?.('role', 'tooltip');
-  tipElement.hidden = true;
-  tipElement.style.display = 'none';
-  document.body.append(tipElement);
-  return tipElement;
-}
-export function attachChartInteractions(root) {
-  if (!root?.addEventListener || typeof document === 'undefined' || attachedRoots.has(root)) return;
-  attachedRoots.add(root);
-  ensureTip();
-  const place = (clientX, clientY) => {
-    const tip = ensureTip();
-    const { innerWidth } = window;
-    tip.style.left = `${Math.max(8, Math.min(innerWidth - tip.offsetWidth - 12, clientX + 14))}px`;
-    tip.style.top = `${Math.max(8, clientY - tip.offsetHeight - 12)}px`;
-  };
-  const reveal = () => { const tip = ensureTip(); tip.hidden = false; tip.style.display = ''; return tip; };
-  const showText = (anchor, text, x, y) => { if (!text) return hideChartTip(); tipAnchor = anchor; const tip = reveal(); tip.replaceChildren(document.createTextNode(text)); place(x, y); };
-  const showTrend = (chart, clientX, clientY) => {
-    let data;
-    try { data = JSON.parse(chart.dataset.trend); } catch { return hideChartTip(); }
-    const box = chart.getBoundingClientRect();
-    const ratio = (clientX - box.left) / box.width;
-    // The chart is drawn at two widths: the one on screen decides where the points are.
-    const svg = [...chart.querySelectorAll('svg')].find(item => item.getClientRects().length) ?? chart.querySelector('svg');
-    const xs = (svg.classList.contains('lc-narrow') && data.xn) || (svg.classList.contains('lc-mid') && data.xm) || data.x;
-    const index = xs.reduce((best, value, i) => Math.abs(value - ratio) < Math.abs(xs[best] - ratio) ? i : best, 0);
-    const line = svg.querySelector('.crosshair');
-    const xPos = xs[index] * Number(svg.viewBox.baseVal.width);
-    line?.setAttribute('x1', xPos); line?.setAttribute('x2', xPos); line?.setAttribute('visibility', 'visible');
-    const title = document.createElement('strong');
-    title.textContent = data.weeks[index];
-    const rows = data.series.map(series => {
-      const row = document.createElement('span');
-      const key = document.createElement('i');
-      key.style.background = series.color;
-      const value = document.createElement('b');
-      value.textContent = Number.isFinite(series.values[index]) ? `${series.values[index].toLocaleString('it-IT', { maximumFractionDigits: 1 })}${data.unit ?? '%'}` : '—';
-      row.append(key, value, document.createTextNode(` ${series.label}`));
-      return row;
-    });
-    tipAnchor = chart;
-    const tip = reveal();
-    tip.replaceChildren(title, ...rows);
-    place(clientX, clientY);
-  };
-  root.addEventListener('pointermove', event => {
-    const chart = event.target.closest?.('[data-trend]');
-    if (chart) return showTrend(chart, event.clientX, event.clientY);
-    const mark = event.target.closest?.('[data-tip]');
-    if (mark) return showText(mark, mark.dataset.tip, event.clientX, event.clientY);
-    if (tipAnchor || isChartTipVisible()) hideChartTip();
-  });
-  // Leaving the anchor for anything that is not part of it hides the tooltip at once.
-  root.addEventListener('pointerout', event => {
-    if (!tipAnchor) return;
-    const next = event.relatedTarget;
-    if (!next || !tipAnchor.contains?.(next)) hideChartTip();
-  });
-  root.addEventListener('pointerleave', hideChartTip);
-  root.addEventListener('pointerdown', event => { if (event.pointerType !== 'touch') hideChartTip(); });
-  // On touch screens a tap shows the value briefly, then it goes away by itself.
-  root.addEventListener('pointerup', event => { if (event.pointerType === 'touch' && tipAnchor) { clearTimeout(touchTimer); touchTimer = setTimeout(hideChartTip, 1800); } });
-  root.addEventListener('pointercancel', hideChartTip);
-  root.addEventListener('click', event => { if (!event.target.closest?.('[data-tip],[data-trend]')) hideChartTip(); });
-  root.addEventListener('focusin', event => {
-    const chart = event.target.closest?.('[data-trend]');
-    const box = event.target.getBoundingClientRect();
-    if (chart) showTrend(chart, box.right - 4, box.top + 20);
-    else if (event.target.closest?.('[data-tip]')) showText(event.target, event.target.dataset.tip, box.left + box.width / 2, box.top);
-  });
-  root.addEventListener('focusout', hideChartTip);
-  // A re-render can remove the anchor under a still pointer: the tooltip goes with it.
-  if (typeof MutationObserver !== 'undefined') new MutationObserver(() => { if (tipAnchor && !tipAnchor.isConnected) hideChartTip(); }).observe(root, { childList: true, subtree: true });
-  if (listening) return;
-  listening = true;
-  // Anything that changes the page takes the tooltip away with it (registered once, whatever the number of roots).
-  for (const type of ['hashchange', 'popstate', 'blur', 'resize']) globalThis.addEventListener?.(type, hideChartTip);
-  globalThis.addEventListener?.('law', hideChartTip, { passive: true, capture: true });
-  globalThis.addEventListener?.('keydown', event => { if (event.key === 'Escape') hideChartTip(); });
-  document.addEventListener?.('visibilitychange', hideChartTip);
-}
+// the tooltips of the charts live in chart-tips.js (loaded with the first screen); re-exported here for the pages and tests that import them from this module
+export { attachChartInteractions, hideChartTip, isChartTipVisible } from './chart-tips.js?v=20261123-13';

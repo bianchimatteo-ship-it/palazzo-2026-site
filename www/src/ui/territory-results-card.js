@@ -1,10 +1,10 @@
 // "Risultati per territorio": the last simulated vote of the player's game read by Region, Province and Comune (core/territory-results.js). Everything here is SIMULATED and says so: the votes of every list
 // in the country are shared down the ISTAT hierarchy in proportion to the inhabitants, with the regional lean of the model and a small local deviation, and every level adds up to the one above. The only official
 // figures are the national ones of 2022 and the winners of the uninominal colleges by Region (the map above): the page never shows an official figure for a Province or a Comune.
-import { districtRows, nationalElectorate } from '../core/legislature-engine.js?v=20261120-1';
-import { municipalPopulationIndex } from '../core/municipal-rules.js?v=20261120-1';
-import { addsUp, buildHierarchy, territoryBreakdown } from '../core/territory-results.js?v=20261120-1';
-import { card, esc, num, pct } from './sections-kit.js?v=20261120-1';
+import { districtRows, nationalElectorate } from '../core/legislature-engine.js?v=20261123-13';
+import { municipalPopulationIndex } from '../core/municipal-rules.js?v=20261123-13';
+import { addsUp, buildHierarchy, localModel, territoryBreakdown } from '../core/territory-results.js?v=20261123-13';
+import { card, esc, num, pct } from './sections-kit.js?v=20261123-13';
 
 const MAX_COMUNI = 40;
 export const OTHERS = 'altri';
@@ -55,14 +55,21 @@ export function territoryInputs(last, geography) {
   return { totals, lean, valid };
 }
 export const hierarchyFor = hierarchyOf;
+// The local model for the breakdown of a vote: the declared inputs of the game (forces and their axis, the coalitions of the vote, the player's party list, his notoriety and reputation, his home comune and the
+// committees of his party). Without a career (a page with no state) the model has only the demographic factors.
+export function localFor({ overview = null, last = null, state = null, hierarchy }) {
+  const stat = metric => Number(state?.dataset?.statistics?.find(item => item.subjectId === state.career?.playerId && item.metric === metric)?.value ?? 50);
+  const player = state?.dataset?.politicians?.find(item => item.id === state?.career?.playerId);
+  return localModel({ hierarchy, forces: overview?.forces?.forces ?? [], coalitions: last?.coalitions ?? overview?.coalitions ?? [], playerKey: overview?.playerPartyId ?? state?.world?.playerPartyId ?? null, notoriety: stat('notoriety'), reputation: stat('reputation'), homeComuneCode: player?.municipalityCode ?? state?.career?.municipalityCode ?? null, committees: state?.game?.party?.org?.committees ?? [] }).local;
+}
 
-export function territoryResultsCard({ overview, last, geography, terr = '', municipalities = [], swatch, colorOf, labelOf }) {
+export function territoryResultsCard({ overview, last, geography, terr = '', municipalities = [], swatch, colorOf, labelOf, state = null }) {
   const head = { fold: { id: 'nv-territorio', icon: 'map', start: 'closed' }, kicker: 'RISULTATI PER TERRITORIO · SIMULATO' };
   const hierarchy = hierarchyOf(municipalities);
   if (!last || !hierarchy) return card({ ...head, title: 'Regioni, province e comuni', body: `<p class="sx-empty" role="status" data-territory-state="missing">${last ? 'I dati ISTAT dei comuni non sono ancora caricati: riapri la pagina tra un momento.' : 'Il risultato per territorio compare dopo il primo voto politico della partita.'}</p>` });
   const { totals, lean } = territoryInputs(last, geography);
   const [regionCode = '', provinceCode = ''] = String(terr ?? '').split('|');
-  const breakdown = territoryBreakdown({ totals, hierarchy, seed: `${last.id ?? last.date}|territorio`, regionLean: lean, regionCode: regionCode || null, provinceCode: provinceCode || null });
+  const breakdown = territoryBreakdown({ totals, hierarchy, seed: `${last.id ?? last.date}|territorio`, regionLean: lean, regionCode: regionCode || null, provinceCode: provinceCode || null, local: localFor({ overview, last, state, hierarchy }) });
   const level = breakdown.level;
   const checks = addsUp(breakdown);
   const shown = level === 'provincia' ? [...breakdown.rows].sort((a, b) => b.population - a.population).slice(0, MAX_COMUNI) : breakdown.rows;
@@ -83,7 +90,7 @@ export function territoryResultsCard({ overview, last, geography, terr = '', mun
   const part = level === 'provincia' && breakdown.rows.length > shown.length ? ` I ${num(shown.length, 0)} comuni più popolosi su ${num(breakdown.rows.length, 0)}.` : '';
   const what = level === 'italia' ? 'le regioni sommano l’Italia' : level === 'regione' ? `le province sommano la regione ${parent.name}` : `i comuni sommano la provincia ${parent.name}`;
   const sum = `<p class="sx-note" data-territory-sum>${checks ? 'Somma controllata' : 'Somma da verificare'}: ${what}, lista per lista (${num(parent.valid, 0)} voti validi simulati).${part}</p>`;
-  const source = `<p class="sx-note" data-territory-source>Dato simulato: i voti di lista del voto nazionale della partita, ripartiti per abitanti (ISTAT, 1 gennaio 2026) con lo scarto regionale del modello e una piccola variazione locale. Non è un dato ufficiale. I dati reali delle politiche 2022 esistono per collegio: sono nella mappa qui sopra («Vincitori 2022»), non per provincia né per comune.</p>`;
+  const source = `<p class="sx-note" data-territory-source>Dato simulato: i voti di lista del voto nazionale della partita, ripartiti per abitanti (ISTAT, 1 gennaio 2026) con lo scarto regionale del modello e una piccola variazione locale. Non è un dato ufficiale. I dati reali delle politiche 2022 esistono per collegio: sono nella mappa qui sopra («Vincitori 2022»), non per provincia né per comune.</p><p class="sx-note" data-territory-model>Contano anche la dimensione del luogo, l’organizzazione del partito e la notorietà del candidato nel suo comune.</p>`;
   const title = level === 'italia' ? 'Come è andato il voto nelle regioni' : level === 'regione' ? `Le province: ${breakdown.region.name}` : `I comuni: ${breakdown.province.name}`;
   return card({ ...head, title, body: `${nav}${table}${sum}${source}<p><button type="button" class="secondary-button" data-nav="risultati" data-territory-fullpage>Apri la pagina completa: ricerca dei comuni, filtri e confronto</button></p>` });
 }

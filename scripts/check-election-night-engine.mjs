@@ -13,7 +13,7 @@ assert.deepEqual(apportion(0, [1, 2]), [0, 0]);
 assert.equal(hash01('a'), hash01('a'), 'L’hash è deterministico.');
 assert.notEqual(hash01('a'), hash01('b'));
 
-const levels = (process.env.ONLY ? process.env.ONLY.split(',') : ['comunale', 'regionale', 'deputato']);
+const levels = (process.env.ONLY ? process.env.ONLY.split(',') : ['comunale', 'regionale', 'deputato', 'europeo']);
 let nights = 0, runoffs = 0;
 for (const level of levels) {
   const { store, db, decide } = await startCareer({ seed: `notte-${level}`, level, fast: true, territorial: true });

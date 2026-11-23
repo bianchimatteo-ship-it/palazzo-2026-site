@@ -2137,3 +2137,41 @@ details[open].program-proposal > .program-proposal-head::after { transform: rota
 .guide-path { display: block; padding: 14px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); }
 .guide-path p { color: var(--ink-2); font-size: 13px; line-height: 1.5; }
 .tutorial-card.is-compact .tutorial-task { margin: 4px 0; padding: 6px 8px; gap: 8px; } .tutorial-card.is-compact .tutorial-task small { display: none; } .tutorial-card.is-compact .tutorial-task-mark { width: 22px; height: 22px; }
+/* Partito › Panoramica › Appartenenza: what leaving the party does, read before confirming */
+.sx-list { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 6px; font-size: 0.92rem; line-height: 1.4; }
+.pp-leave-details { margin-top: 8px; border: 1px solid var(--line, rgba(0,0,0,.14)); border-radius: 10px; padding: 8px 12px; }
+.pp-leave-details > summary { cursor: pointer; font-weight: 600; }
+
+/* «Chiedi al gioco»: scheda compatta con campo, esempi e risposte a passi numerati */
+.ask-game { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--line, rgba(127,140,134,.35)); border-radius: 16px; background: linear-gradient(180deg, rgba(217,180,90,.10), rgba(127,140,134,.04)); min-width: 0; }
+.ask-head { display: flex; gap: 10px; align-items: center; } .ask-head h3 { margin: 0; } .ask-head p { margin: 2px 0 0; }
+.ask-mark { display: inline-grid; place-items: center; flex: 0 0 38px; width: 38px; height: 38px; border-radius: 50%; background: rgba(217,180,90,.18); color: var(--gold-soft, #e8c875); }
+.ask-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; } .ask-form input { min-width: 0; min-height: 46px; padding: 0 14px; border-radius: 12px; font: inherit; }
+.ask-form .primary-button { min-height: 46px; padding: 0 18px; }
+.ask-chips, .ask-suggest { display: flex; flex-wrap: wrap; gap: 8px; }
+.ask-chip { min-height: 40px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line-strong, rgba(127,140,134,.5)); background: rgba(127,140,134,.10); color: inherit; font: inherit; font-size: .9rem; cursor: pointer; }
+.ask-suggest .secondary-button { width: auto; max-width: 100%; white-space: normal; }
+.ask-answer { display: grid; gap: 10px; padding: 12px; border-radius: 12px; background: rgba(0,0,0,.16); min-width: 0; } .ask-answer h4 { margin: 0; font-size: 1.05rem; }
+.ask-steps { margin: 0; padding-left: 0; list-style: none; counter-reset: ask; display: grid; gap: 8px; }
+.ask-steps li { counter-increment: ask; display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 8px; align-items: start; overflow-wrap: anywhere; }
+.ask-steps li::before { content: counter(ask); display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--gold, #d9b45a); color: #1a1408; font-weight: 700; font-size: .8rem; }
+.ask-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; } .ask-facts > div { display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; background: rgba(127,140,134,.10); overflow-wrap: anywhere; } .ask-facts small { text-transform: uppercase; letter-spacing: .05em; font-size: .7rem; opacity: .75; }
+.ask-open { width: 100%; min-height: 46px; }
+@media (max-width: 420px) { .ask-form { grid-template-columns: minmax(0, 1fr); } }
+
+.ask-head { align-items: flex-start; } .ask-head > div { flex: 1; min-width: 0; } .ask-head .guide-section-title { margin: 0 !important; padding: 0; }
+.ask-form .primary-button, .ask-open { display: inline-flex; align-items: center; justify-content: center; text-align: center; }
+.ask-chips .ask-chip { flex: 0 1 auto; }
+
+/* Agenda delle promesse */
+.program-agenda { display: grid; gap: 8px; padding: 10px; border-radius: 10px; background: rgba(127,140,134,.08); min-width: 0; }
+.program-agenda dl { display: grid; gap: 6px; margin: 0; } .program-agenda dl > div { display: grid; grid-template-columns: minmax(104px, 28%) minmax(0, 1fr); gap: 8px; } .program-agenda dt { opacity: .75; font-size: .85rem; } .program-agenda dd { margin: 0; overflow-wrap: anywhere; }
+.program-agenda .is-late { color: var(--sem-bad, #e07070); }
+@media (max-width: 520px) { .program-agenda dl > div { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
+.program-agenda-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; } .program-agenda-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; } .program-agenda-list small { display: block; opacity: .85; overflow-wrap: anywhere; }
+
+/* Candidature senza partito */
+.campaign-routes { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--line, rgba(127,140,134,.35)); border-radius: 14px; min-width: 0; }
+.route-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; } .route { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px; border-radius: 10px; background: rgba(127,140,134,.08); } .route.is-closed { opacity: .65; } .route.is-chosen { outline: 2px solid var(--gold, #d9b45a); }
+.route small { display: block; overflow-wrap: anywhere; opacity: .85; } .route-req { margin-top: 4px; }
+.route-work { display: grid; gap: 8px; } .route-checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; } .route-checklist .is-done { color: var(--sem-good, #4cae7a); }

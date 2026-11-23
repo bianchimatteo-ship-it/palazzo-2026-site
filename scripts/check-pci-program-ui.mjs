@@ -26,7 +26,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, send, screensho
   assert.equal(data.rows, 10, 'dieci temi nel confronto');
   assert.ok(data.conf >= 8, `la confidenza è indicata sui temi documentati (${data.conf})`);
   assert.match(data.text, /Programma ricostruito dai documenti ufficiali del partito/);
-  assert.equal(data.areas, 12, 'i temi trasversali sono elencati');
+  assert.equal(data.areas, 15, 'i temi trasversali sono elencati');
   assert.match(data.text, /Scuola, università e ricerca/); assert.match(data.text, /Turismo, borghi e aree interne/);
   const istituzioni = await evaluate(`document.querySelector('[data-coalition-program="${ID}"] tr[data-program-theme="istituzioni"]').innerText`);
   assert.match(istituzioni, /posizione non rilevata/i, 'il tema senza risposta nelle fonti è dichiarato');

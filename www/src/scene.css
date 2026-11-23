@@ -242,3 +242,13 @@ html[data-scene-motion="off"] .rm-live, html[data-scene-motion="reduced"] .rm-li
 html[data-scene-motion="off"] .rm-live.rm-flash, html[data-scene-motion="reduced"] .rm-live.rm-flash { opacity: 0; }
 .rm-live.rm-flash { opacity: 0; }
 @media (prefers-reduced-motion: reduce) { .rm-live.rm-flash { opacity: .8; } }
+
+/* Scene delle attività: la luce della stanza cambia da una scena all'altra (giorno, sera, luce piena); il movimento ridotto non toglie la luce, che non si muove */
+.st-svg[data-light="evening"] { filter: sepia(.28) saturate(1.12) brightness(.93) hue-rotate(-8deg); }
+.st-svg[data-light="bright"] { filter: brightness(1.06) saturate(1.05); }
+/* The in-game setting «Animazioni delle scene» wins over the system preference: with it OFF nothing of the scene animates (the entrance of the lines and the ambience of the rooms included); with it REDUCED the entrances are brief */
+html[data-scene-motion="off"] .scene-said, html[data-scene-motion="off"] .scene-result, html[data-scene-motion="off"] .scene-why, html[data-scene-motion="off"] .scene-facts,
+html[data-scene-motion="off"] .rm-live, html[data-scene-motion="off"] .rm-live.rm-flash { animation: none !important; }
+html[data-scene-motion="off"] .scene-choice { transition: none !important; }
+html[data-scene-motion="reduced"] .scene-said, html[data-scene-motion="reduced"] .scene-result, html[data-scene-motion="reduced"] .scene-why, html[data-scene-motion="reduced"] .scene-facts { animation: none !important; }   /* reduced: the lines simply appear */
+html[data-scene-motion="reduced"] .rm-live, html[data-scene-motion="reduced"] .rm-live.rm-flash { animation: none !important; }

@@ -3,7 +3,7 @@
 // the country, from the model of the polls) and a small local deviation that is drawn from the keys (the same vote gives the same figures). The shares are exact (largest remainder): the comuni of a
 // Province add up to the Province, the Provinces of a Region to the Region, the Regions to the country, list by list. Nothing here is an official figure and the page says so; the official data of the
 // real 2022 vote exist only by Region (the uninominal colleges do not coincide with Provinces and comuni): the page does not invent a lower level for it.
-import { seededRandom } from './vote-engine.js?v=20261120-1';
+import { seededRandom } from './vote-engine.js?v=20261123-13';
 
 // Share an integer total among the children by weights, exactly (largest remainder), never below zero.
 export function shareExactly(total, weights) {
@@ -96,4 +96,47 @@ export function addsUp(breakdown) {
   const parent = breakdown.province ?? breakdown.region ?? breakdown.italy;
   const sum = sums(breakdown.rows);
   return Object.keys(parent.votes).every(key => (sum[key] ?? 0) === (parent.votes[key] ?? 0)) && Object.keys(sum).every(key => key in parent.votes);
+}
+
+// ---------- the local model: what makes a comune vote differently from the national average (all SIMULATED, declared inputs only) ----------
+// Factors on the weight of a list in a territory (distribute() renormalises, so every level still adds up and the national result does not move):
+//   demographic  the size of the place: the big cities lean to the left lists and the small comuni to the right ones (a small, declared slope), and the civic/local lists («altri», «lista:») do better in the small ones;
+//   presence     the organisation of the player's party in the place (its committees, 0–100 around 50): more organisation, more votes, within ±10%;
+//   candidate    the notoriety and the reputation of the player in his home comune (and, weaker, in its province and region): the edge of effectsFromHome, from −8% to +30%;
+//   coalition    a list of a coalition takes a quarter of the regional lean of the list that leads it (the allies campaign together).
+// Nothing is drawn: the same inputs give the same factors.
+const clampFactor = value => Math.min(LOCAL_FACTOR.max, Math.max(LOCAL_FACTOR.min, value));
+export function localModel({ hierarchy = [], forces = [], coalitions = [], playerKey = null, notoriety = 50, reputation = 50, homeComuneCode = null, committees = [] } = {}) {
+  const axisOf = new Map((forces ?? []).filter(force => Number.isFinite(force?.axis)).map(force => [force.id, force.axis]));
+  const population = { comune: new Map(), provincia: new Map(), regione: new Map() };
+  const regionName = new Map();
+  for (const region of hierarchy) { population.regione.set(region.code, region.population); regionName.set(region.code, region.gameRegion ?? region.name); for (const province of region.provinces) { population.provincia.set(province.code, province.population); for (const comune of province.comuni) population.comune.set(comune.code, comune.population); } }
+  const size = (level, code) => { const people = population[level]?.get(code); if (!(people > 0)) return 0; const centre = { comune: 3.7, provincia: 5.5, regione: 6.5 }[level], width = { comune: 1.4, provincia: 0.6, regione: 0.5 }[level]; return Math.max(-1, Math.min(1, (Math.log10(people) - centre) / width)); };
+  const edge = Math.max(-0.08, Math.min(0.3, (notoriety - 50) / 250 + (reputation - 50) / 500));
+  const home = playerKey ? localLeanOf(effectsFromHome({ hierarchy, comuneCode: homeComuneCode, key: playerKey, edge })) : () => 1;
+  const presence = new Map();
+  for (const committee of committees ?? []) {
+    if (!committee?.name || !Number.isFinite(committee.organization)) continue;
+    const key = committee.level === 'regione' ? `regione|${committee.name}` : `provincia|${committee.name}`;
+    presence.set(key.toLowerCase(), committee.organization);
+  }
+  const leader = new Map();
+  for (const coalition of coalitions ?? []) for (const id of coalition.partyIds ?? []) if (id !== coalition.leaderId) leader.set(id, coalition.leaderId);
+  const nameOf = new Map();
+  for (const region of hierarchy) { nameOf.set(`regione|${region.code}`, region.name); for (const province of region.provinces) nameOf.set(`provincia|${province.code}`, province.name); }
+  const local = (level, code, key) => {
+    let factor = 1;
+    const s = size(level, code);
+    if (level !== 'regione') {
+      if (axisOf.has(key)) factor *= 1 + 0.07 * s * (-axisOf.get(key) / 3);
+      else if (key === 'altri' || String(key).startsWith('lista:')) factor *= 1 - 0.12 * s;
+    }
+    if (key === playerKey) {
+      factor *= home(level, code, key);
+      const organisation = presence.get(`${level}|${nameOf.get(`${level}|${code}`) ?? ''}`.toLowerCase());
+      if (organisation !== undefined) factor *= 1 + Math.max(-0.1, Math.min(0.1, (organisation - 50) / 500));
+    }
+    return clampFactor(factor);
+  };
+  return { local, edge, leaderOf: leader };
 }

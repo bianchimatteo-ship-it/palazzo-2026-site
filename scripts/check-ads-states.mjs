@@ -34,16 +34,16 @@ assert.ok(!/ca-app-pub-/.test(fs.readdirSync(new URL('../src/', import.meta.url)
 
 // ---- 1. not integrated / not configured ----
 let state = await card({});
-assert.match(state.button, /disabled/, '1. Il pulsante è spento.'); assert.match(state.button, /data-ads-state="not-configured"/);
-assert.equal(state.note, REWARDED_ADS_OFF, '1. La nota dice che i video non sono attivi.'); assert.match(state.note, /non sono attivi/);
+// where no ad provider is configured (iOS, the web, Android without the plugin) the card of the rewarded video is NOT drawn at all: no button promises a reward that cannot be given
+assert.equal(state.button, '', '1. Nessun pulsante «Guarda il video» dove non c’è un provider.'); assert.ok(!state.note, '1. Né una nota: la scheda dei video non compare.');
 state = await card({ config: TEST_CONFIG });
-assert.match(state.button, /data-ads-state="not-configured"/, '1. Configurato ma senza il provider nativo: resta «non integrato».');
+assert.equal(state.button, '', '1. Configurato ma senza il provider nativo: resta «non integrato».');
 state = await card({ provider: { kind: 'inmobi', isReady: () => true, show: async () => ({}) } });
-assert.match(state.button, /data-ads-state="not-configured"/, '1. Il provider senza identificativi non basta.');
+assert.equal(state.button, '', '1. Il provider senza identificativi non basta.');
 state = await card({ config: { rewarded: { enabled: false } }, provider: { kind: 'inmobi', isReady: () => true, show: async () => ({}) } });
-assert.match(state.button, /data-ads-state="not-configured"/, '1. Configurazione incompleta: non configurato.');
+assert.equal(state.button, '', '1. Configurazione incompleta: non configurato.');
 state = await card({ config: TEST_CONFIG, provider: { kind: 'demo', isReady: () => true, show: async () => ({}) } });
-assert.match(state.button, /data-ads-state="not-configured"/, '1. Un provider di prova è rifiutato in produzione.');
+assert.equal(state.button, '', '1. Un provider di prova è rifiutato in produzione.');
 
 // ---- 2. integrated, configured, a video is available ----
 let ready = true, shown = 0;

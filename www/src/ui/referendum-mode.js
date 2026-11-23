@@ -1,11 +1,11 @@
 // The page «Referendum»: the abrogative one (art. 75) and the constitutional confirmatory one (art. 138), kept apart in rules, phases, quorum and effects. Every button calls the store: nothing is decorative.
 // Figures of the votes are a simulation of the game (never a real result).
-import { REVISION_TOPICS, ABROGATIVE, CONSTITUTIONAL, CAMPAIGN_ACTIONS, COUNCIL_ROUTE, EXCLUDED, PHASES, pathOf, isActive } from '../core/referendum-engine.js?v=20261120-1';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261120-1';
-import { badge, card, empty, esc, foldPanel, kpi, sectionTabs } from './sections-kit.js?v=20261120-1';
-import { glyph } from './visuals.js?v=20261120-1';
-import { abrogativeSuggestions, CUSTOM_DRAFT, revisionDrafts } from '../data/referendum-drafts.js?v=20261120-1';
-import { formatDate } from '../core/time.js?v=20261120-1';
+import { REVISION_TOPICS, ABROGATIVE, CONSTITUTIONAL, CAMPAIGN_ACTIONS, COUNCIL_ROUTE, EXCLUDED, PHASES, pathOf, isActive } from '../core/referendum-engine.js?v=20261123-13';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261123-13';
+import { badge, card, empty, esc, foldPanel, kpi, sectionTabs } from './sections-kit.js?v=20261123-13';
+import { glyph } from './visuals.js?v=20261123-13';
+import { abrogativeSuggestions, CUSTOM_DRAFT, revisionDrafts } from '../data/referendum-drafts.js?v=20261123-13';
+import { formatDate } from '../core/time.js?v=20261123-13';
 
 const number = value => Math.round(Number(value) || 0).toLocaleString('it-IT');
 const pct = value => `${(Math.round(value * 10) / 10).toLocaleString('it-IT')}%`;
@@ -191,5 +191,9 @@ export function renderReferendums(state, data = {}) {
   const natural = count('costituzionale') && !count('abrogativo') ? 'costituzionale' : 'abrogativo';
   const tab = ['abrogativo', 'costituzionale'].includes(data.tab) ? data.tab : natural;
   const tabs = sectionTabs('referendum', [['abrogativo', 'Abrogativo', count('abrogativo')], ['costituzionale', 'Costituzionale', count('costituzionale')]], tab);
-  return `<div class="ini-page ref-page" data-referendum-page data-ref-tab="${tab}">${summaryCard(state, list, data)}${tabs}${pathSection(tab, state, list, data)}${rulesCard()}</div>`;
+  // collections of signatures opened from the Initiatives page that no referendum owns yet: they wait for a law to repeal
+  const orphans = (state.game.initiatives ?? []).filter(item => item.kind === 'referendum' && ['raccolta', 'verifica', 'depositata'].includes(item.status) && !list.some(ref => ref.initiativeId === item.id));
+  const targets = (data.targets ?? []).filter(item => !item.taken);
+  const waiting = orphans.length ? card({ kicker: 'FIRME SENZA LEGGE', title: 'Raccolte di firme da collegare a un referendum', tone: 'warn', body: orphans.map(item => `<form class="ref-link-form" data-ref-link-form data-initiative-id="${esc(item.id)}"><p><b>${esc(item.title)}</b> · ${esc(item.status === 'raccolta' ? 'raccolta in corso' : item.status === 'verifica' ? 'firme in verifica' : 'firme depositate')}.</p><label>Legge da abrogare<select name="statuteId" required>${targets.map(target => `<option value="${esc(target.statuteId)}">${esc(target.title)}</option>`).join('')}</select></label><button type="submit" class="primary-button"${targets.length ? '' : ' disabled aria-disabled="true"'}>Collega al referendum abrogativo</button>${targets.length ? '' : '<small>Non ci sono leggi in vigore che si possano sottoporre a referendum.</small>'}</form>`).join('') }) : '';
+  return `<div class="ini-page ref-page" data-referendum-page data-ref-tab="${tab}">${summaryCard(state, list, data)}${waiting}${tabs}${pathSection(tab, state, list, data)}${rulesCard()}</div>`;
 }
