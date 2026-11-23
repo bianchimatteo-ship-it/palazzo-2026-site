@@ -428,7 +428,16 @@ export function lawContent(law, parliament, state) {
     premier && law.origin === 'governo' && ['amendments', 'final-vote'].includes(law.stage) && !law.confidence ? `<button class="secondary-button" data-law-confidence="${esc(law.id)}">Poni la questione di fiducia · 4 cap.</button>` : '',
     open && law.stage !== 'proposal' && law.kind !== 'decreto' ? `<button class="text-link" data-law-withdraw="${esc(law.id)}">Ritira la proposta</button>` : ''
   ].filter(Boolean).join('');
-  return `<div class="law-content">${content}<div class="law-status-line">${status}</div>${demands ? `<div class="law-demands">${demands}</div>` : ''}${edits}${extra ? `<div class="law-extra">${extra}</div>` : ''}</div>`;
+  // «Cosa cambierebbe»: before the vote, what the measure does in practice (the same projection the Government desk uses: cost, cover, deficit, who gains and who loses, regions), and what the two outcomes mean.
+  let changes = '';
+  if (open && spec && policy && state.society && law.kind !== 'manovra') {
+    try {
+      const preview = policyPreview(state.society, policy);
+      const area = spec.label.toLowerCase();
+      changes = preview ? `<details class="law-changes" data-law-changes open><summary><strong>Cosa cambierebbe</strong> <small>effetti concreti prima del voto</small></summary>${preview}<div class="law-outcomes"><p><b>Se viene approvata:</b> entra in vigore e produce gli effetti qui sopra, a regime nelle settimane indicate; il costo pesa sul bilancio e sul deficit.</p><p><b>Se viene bocciata o decade:</b> non cambia nulla per i cittadini; il problema in materia di ${esc(area)} resta com’è e la questione può tornare in Parlamento più avanti.</p></div></details>` : '';
+    } catch { changes = ''; }
+  }
+  return `<div class="law-content">${content}${changes}<div class="law-status-line">${status}</div>${demands ? `<div class="law-demands">${demands}</div>` : ''}${edits}${extra ? `<div class="law-extra">${extra}</div>` : ''}</div>`;
 }
 
 // ---------- the country: areas, security, accounts ----------

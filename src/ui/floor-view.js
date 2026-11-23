@@ -28,6 +28,8 @@ export function floorBand(votes, modeOf = () => null) {
 }
 
 let current = null, previousFocus = null;
+// Whether the floor-vote overlay is on screen right now (app.js: the ad banner is never shown while it is).
+export function isFloorOpen() { return current !== null; }
 export function closeFloor() {
   if (!current) return;
   for (const id of current.timers) clearTimeout(id);

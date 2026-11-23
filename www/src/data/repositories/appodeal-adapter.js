@@ -55,7 +55,7 @@ export function createAppodealAdapter({ plugin = globalThis.Capacitor?.Plugins?.
   return {
     get ids() { return ids; }, rewardedProvider, consent: () => ({ ...consent }), provider: 'appodeal',
     // A new configuration arrived: the formats follow it; a change of key or of test mode re-initialises.
-    setConfig(next) { const changed = (next?.appKey ?? null) !== (ids.appKey ?? null) || next?.testing !== ids.testing; ids = next ?? resolveAppodeal(null, 'off'); if (changed) { initPromise = null; ready.clear(); } if (!ids.banner?.enabled && bannerShown) this.hideBanner(); },
+    setConfig(next) { const changed = (next?.appKey ?? null) !== (ids.appKey ?? null) || next?.testing !== ids.testing; ids = next ?? resolveAppodeal(null, 'off'); if (changed) { initPromise = null; ready.clear(); } if (!ids.banner?.enabled && bannerShown) this.hideBanner().catch(() => {}); },
     // Why the ads are not there: 'not-configured' (off, no plugin, no key), 'no-consent', 'error', or ok when the SDK is started.
     async status() { if (!usable()) return { ok: false, code: 'not-configured' }; return start(); },
     start,
@@ -63,7 +63,8 @@ export function createAppodealAdapter({ plugin = globalThis.Capacitor?.Plugins?.
       if (bannerShown || !on('banner') || !(await isReady())) return false;
       try { const out = await plugin.showBanner({ margin }); bannerShown = out?.shown === true; return bannerShown; } catch { return false; }
     },
-    async hideBanner() { if (!bannerShown) return; bannerShown = false; try { await plugin.hideBanner(); } catch { /* ignored */ } },
+    // true when there is nothing (left) to hide, false when the native hide failed: the banner may still be up, so it stays «shown» and the manager retries. Never throws (callers just await it).
+    async hideBanner() { if (!bannerShown) return true; bannerShown = false; try { await plugin.hideBanner(); return true; } catch { bannerShown = true; return false; } },
     isBannerShown: () => bannerShown,
     async showInterstitial() {
       if (!(await load('interstitial'))) return false;

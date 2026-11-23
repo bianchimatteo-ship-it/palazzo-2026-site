@@ -94,8 +94,12 @@ h1, h2, h3, h4 { color: var(--ink); }
 /* phones: the bottom bar and the sheet menu (also on a phone held sideways, 667–932 px wide but only 320–430 px tall: the side menu would show three items) */
 @media (max-width: 600px), (orientation: landscape) and (max-height: 500px) and (max-width: 1000px) {
   .app-shell > .sidebar { display: none; }
-  .main-area { margin: 0; padding-bottom: calc(82px + env(safe-area-inset-bottom)); }
-  .mobile-tabbar { position: fixed; inset: auto 0 0; z-index: 30; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); height: calc(64px + env(safe-area-inset-bottom)); padding: 0 max(4px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom) max(4px, env(safe-area-inset-left, 0px)); background: rgba(10, 20, 16, .97); border-top: 1px solid var(--line-strong); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  /* The Appodeal banner, when there is one (Android only, --appodeal-banner-height is 0px otherwise), sits below the tab bar and above
+     the system nav/gesture area: the tab bar is pushed up by exactly its height (that one value already IS the banner's whole footprint,
+     its own margin above the system bar included — see AppodealAdsPlugin.kt, notifyBannerHeight), and the page reserves at least that
+     much on top of its own padding too: `max()`, not `+`, so the safe-area inset is never counted twice under the banner. */
+  .main-area { margin: 0; padding-bottom: calc(82px + max(env(safe-area-inset-bottom), var(--appodeal-banner-height, 0px))); }
+  .mobile-tabbar { position: fixed; inset: auto 0 0; bottom: var(--appodeal-banner-height, 0px); z-index: 30; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); height: calc(64px + env(safe-area-inset-bottom)); padding: 0 max(4px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom) max(4px, env(safe-area-inset-left, 0px)); background: rgba(10, 20, 16, .97); border-top: 1px solid var(--line-strong); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); transition: bottom .18s ease; }
   .mobile-tabbar::before { content: ""; position: absolute; inset: -1px 0 auto 0; height: 2px; background: linear-gradient(90deg, var(--tri-green) 0 33.34%, var(--tri-white) 33.34% 66.67%, var(--tri-red) 66.67% 100%); opacity: .75; }
   .mobile-tab { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-width: 0; min-height: 58px; border: 0; border-radius: var(--radius); background: none; color: var(--muted); font: 600 12px var(--font-ui); touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   .mobile-tabbar .mobile-tab span { max-width: none; white-space: nowrap; overflow-wrap: normal; word-break: keep-all; font-size: 11.5px; letter-spacing: -.02em; }
@@ -657,7 +661,9 @@ html[data-density="compact"] .hq-grid, html[data-density="compact"] .dash-grid {
 
 @media (max-width: 600px) {
 
-  .main-area { margin: 0; padding-bottom: calc(78px + env(safe-area-inset-bottom)); }
+  /* Same rule as the one above (this block wins the cascade on a portrait phone: same selector, later in the file) — kept
+     in sync by hand since the two media queries only partly overlap (this one skips the landscape-phone case above). */
+  .main-area { margin: 0; padding-bottom: calc(78px + max(env(safe-area-inset-bottom), var(--appodeal-banner-height, 0px))); }
 
 
 
@@ -1419,7 +1425,9 @@ html[data-ui-motion="off"] .language-gate-button { transition: none; }
    index.html has viewport-fit=cover: the page is drawn under the status bar on iOS (WKWebView, Safari) AND on Android 15+ (targetSdk 36 is edge-to-edge; Capacitor 8 passes the insets to the WebView as env(safe-area-inset-*)
    from WebView 140; an older WebView is shifted by Capacitor natively and reports 0 here, so nothing is added twice). The top inset is added INSIDE the topbar (its background runs under the status bar: one continuous
    surface) and never to the body, and it is divided by the interface scale: .app-shell has zoom: var(--ui-scale), which would multiply an inset that is already in real CSS pixels. */
-:root { --safe-top: env(safe-area-inset-top, 0px); --safe-bottom: env(safe-area-inset-bottom, 0px); --safe-left: env(safe-area-inset-left, 0px); --safe-right: env(safe-area-inset-right, 0px); --touch-min: 44px; }
+:root { --safe-top: env(safe-area-inset-top, 0px); --safe-bottom: env(safe-area-inset-bottom, 0px); --safe-left: env(safe-area-inset-left, 0px); --safe-right: env(safe-area-inset-right, 0px); --touch-min: 44px;
+  /* The real height of the native Appodeal banner (Android), set by src/ui/app.js from the bridge's own "bannerHeight" event: 0 the moment there is none loaded or shown, so nothing is ever reserved for a banner that is not there. */
+  --appodeal-banner-height: 0px; }
 html.platform-android { --touch-min: 48px; }
 .app-shell { --safe-top: calc(env(safe-area-inset-top, 0px) / var(--ui-scale, 1)); --safe-bottom: calc(env(safe-area-inset-bottom, 0px) / var(--ui-scale, 1)); }
 body { padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
@@ -1615,3 +1623,7 @@ button:not(:disabled):active, a.primary-button:active, a.secondary-button:active
 .ref-card .sx-card { border-left-width: 4px; }
 /* results by territory on a phone: the list names are long («Partito democratico»), so the label takes what it needs and the value stays on its right instead of running over it */
 @container (max-width: 520px) { .sx-table.tp-table td { grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; } .sx-table.tp-table td::before { overflow-wrap: anywhere; text-align: left; } .sx-table.tp-table td.num { text-align: right; } }
+
+/* The main call to action of a concluded campaign sits at the very top of the results page. */
+.campaign-result-cta{display:flex;margin:0 0 14px}.campaign-result-cta .primary-button{flex:1;min-height:52px;font-size:16px;font-weight:700}
+.law-changes{margin:10px 0;border:1px solid var(--line);border-radius:12px;padding:8px 12px;background:rgba(255,255,255,.02)}.law-changes>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}.law-changes .law-outcomes p{margin:6px 0;line-height:1.5}

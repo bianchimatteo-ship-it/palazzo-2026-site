@@ -367,7 +367,14 @@
     "check:runoff-rule": "node scripts/check-runoff-rule.mjs",
     "check:challenges-ui": "node scripts/check-challenges-ui.mjs",
     "check:load-careers": "node scripts/check-load-careers.mjs",
-    "check:appodeal": "node scripts/check-appodeal.mjs"
+    "check:appodeal": "node scripts/check-appodeal.mjs",
+    "check:avatar-gender": "node scripts/check-avatar-gender.mjs",
+    "check:ask-game": "node scripts/check-ask-game.mjs",
+    "check:promise-feasibility": "node scripts/check-promise-feasibility.mjs",
+    "check:hscroll-menus": "node scripts/check-hscroll-menus.mjs",
+    "check:scene-balance": "node scripts/scene-balance-report.mjs",
+    "probe:scene-perf": "node scripts/scene-perf-probe.mjs",
+    "check:appodeal-safety": "node scripts/check-appodeal-safety.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",

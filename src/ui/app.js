@@ -1,6 +1,8 @@
 import { onLanguageChange, retranslate, setAutoTranslator, setLanguage, watchTree } from '../core/i18n.js?v=20261120-1';
 import { createAutoTranslator } from '../core/i18n-auto.js?v=20261120-1';
 import { pendingCelebration, pendingOutcome } from '../core/celebration.js?v=20261120-1';
+import { isFloorOpen } from './floor-view.js?v=20261120-1';
+import { isAulaOpen } from './aula-view.js?v=20261120-1';
 import { fullDate, formatDate } from '../core/time.js?v=20261120-1';
 import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20261120-1';
 import * as accountApi from '../data/repositories/account-sync.js?v=20261120-1';
@@ -29,6 +31,7 @@ import { userPartyLogo, partyLogoDataUrl } from './party-logo.js?v=20261120-1';
 import { resolveMergerIdentity } from '../core/merger-identity.js?v=20261120-1';
 import { WIZARD_VIEWS, validateWizardStep } from '../core/career-rules.js?v=20261120-1';
 import { parseBirth, parseTyped } from '../core/birth-date.js?v=20261120-1';
+import { askGame } from '../core/ask-game.js?v=20261120-1';
 import { avatarOf, normalizeAvatar, randomAvatar } from '../core/avatar.js?v=20261120-1';
 import { avatarSvg } from './avatar-svg.js?v=20261120-1';
 import { renderElectionsHub } from './lazy-views.js?v=20261120-1';
@@ -73,7 +76,7 @@ import { resolveInstitution } from './lazy-views.js?v=20261120-1';
 import { createRewardsService } from './rewards-service.js?v=20261120-1';
 import { createInMobiAdapter } from '../data/repositories/inmobi-adapter.js?v=20261120-1';
 import { createAppodealAdapter } from '../data/repositories/appodeal-adapter.js?v=20261120-1';
-import { resolveAds, defaultAds, resolveAppodeal, APPODEAL_MODE, APPODEAL_BANNER_PAGES } from '../data/ads-config.js?v=20261120-1';
+import { resolveAds, defaultAds, resolveAppodeal, APPODEAL_MODE, APPODEAL_BANNER_PAGES, APPODEAL_BANNER } from '../data/ads-config.js?v=20261120-1';
 import { setAdRewardPoints } from '../data/simulation/reward-rules.js?v=20261120-1';
 import { createAdsManager, interruptible } from '../data/repositories/ads-manager.js?v=20261120-1';
 import { createReviewPrompt } from '../data/repositories/review-prompt.js?v=20261120-1';
@@ -203,6 +206,9 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   const askBackground = () => { try { return Promise.resolve(needBackground?.()).catch(() => null); } catch { return Promise.resolve(); } };
   const dataLoading = () => bootPhase() === 'loading';
   let wizard = null;
+  // Reassigned once the ad manager exists (below); a plain no-op until then so `render()` can call it unconditionally
+  // from its very first invocation (createCareer and other early store mutations render before that point).
+  let syncBanner = () => {};
   // The election night (election-night.js): the tab and the territory chosen are only of the screen; the night itself lives in the career (state.night).
   let nightTab = 'diretta', nightArea = null;
   store.setElectionNightLive?.(true);
@@ -717,7 +723,24 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   };
   // Crossing the phone breakpoint (rotation, window) re-applies the open/closed state of the responsive blocks.
   if (typeof matchMedia === 'function') { try { matchMedia('(max-width: 600px)').addEventListener('change', () => restoreDetails()); } catch { /* old browsers: the next redraw does it */ } }
-  const render = (state, lastSaved) => { settings = loadSettings(settingsScope()); setForceColorOverrides(new Map((state.world?.parties ?? []).filter(item => item.brandColor && /^#[\da-f]{6}$/i.test(item.color ?? '')).map(item => [item.id, item.color]))); renderFrame(state, lastSaved); paintLogoEditor(); restoreDetails(); paintMergePreview(); pointTutorialTarget(); markPlanned(); persistViewState(); scrollPending(); settleRadioVoice(); openPendingArticle(); };
+  // The horizontal menus (section tabs, sub-navigation, archive tabs, wizard chips) are redrawn with the page: their scroll position is kept, and the selected tab is brought into view only when it is not already visible.
+  const H_SCROLLERS = '.sx-tabs,.section-subnav,.archive-tabs,.main-nav,.mobile-tabbar,.wizard-chips,[role="tablist"]';
+  const hKey = el => `${el.className}|${el.getAttribute?.('aria-label') ?? ''}`;
+  const snapshotHScroll = () => { try { const seen = {}; return [...root.querySelectorAll(H_SCROLLERS)].map(el => { const key = hKey(el); const n = seen[key] = (seen[key] ?? -1) + 1; return { key, n, left: el.scrollLeft }; }); } catch { return []; } };
+  const restoreHScroll = saved => { try {
+    const seen = {};
+    for (const el of root.querySelectorAll(H_SCROLLERS)) {
+      const key = hKey(el); const n = seen[key] = (seen[key] ?? -1) + 1;
+      const before = saved.find(item => item.key === key && item.n === n);
+      if (before) el.scrollLeft = before.left;
+      const active = el.querySelector('.active,[aria-selected="true"],[aria-current="page"],[aria-pressed="true"]');
+      if (active && el.scrollWidth > el.clientWidth + 2) {
+        const left = active.offsetLeft - (el.offsetLeft && el.contains(active.offsetParent) ? 0 : el.offsetLeft), right = left + active.offsetWidth;
+        if (left < el.scrollLeft || right > el.scrollLeft + el.clientWidth) el.scrollLeft = Math.max(0, left - Math.round((el.clientWidth - active.offsetWidth) / 2));
+      }
+    }
+  } catch { /* a scroll position is a convenience */ } };
+  const render = (state, lastSaved) => { const hSaved = snapshotHScroll(); settings = loadSettings(settingsScope()); setForceColorOverrides(new Map((state.world?.parties ?? []).filter(item => item.brandColor && /^#[\da-f]{6}$/i.test(item.color ?? '')).map(item => [item.id, item.color]))); syncBanner(); renderFrame(state, lastSaved); restoreHScroll(hSaved); paintLogoEditor(); restoreDetails(); paintMergePreview(); pointTutorialTarget(); markPlanned(); persistViewState(); scrollPending(); settleRadioVoice(); openPendingArticle(); };
   // The six optional scenes of the weekly activities (core/activity-scenes.js, loaded on demand): «Partecipa» opens the animated scene, «Simula» plays it by the best choices with no stage; there is no third button (an activity not chosen is simply left alone).
   // Nothing starts by itself.
   const startActivityScene = async (activityId, quick) => {
@@ -1566,12 +1589,24 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     const celebrationClose = event.target.closest('[data-celebration-dismiss]');
     if (celebrationClose) { clearTimeout(celebrationTimer); store.dismissCelebration(celebrationClose.dataset.celebrationDismiss); return; }
     // «Candidati» of a vote of the calendar: its kind of election is chosen in the setup and the player lands on it, ready to start (or sees why not).
+    const askOpen = event.target.closest('[data-ask-open]');
+    if (askOpen) {
+      // «Chiedi al gioco» → the page it names (and the tab, when it names one): only navigation, the game is never changed
+      if (!store.hasCareer()) { menu.ask = { ...(menu.ask ?? {}), note: 'Per aprire la schermata serve una carriera in corso.' }; render(store.getState(), store.getLastSaved()); return; }
+      const page = askOpen.dataset.askOpen, tab = askOpen.dataset.askTab;
+      if (tab && ['elezioni', 'carriera', 'partito'].includes(page)) { views.tabs[page] = { value: tab, context: sectionContext(page, store.getState()) }; saveViews(); }
+      menu.open = false; playSound('click');
+      setHash(page); await ensurePageData(page); render(store.getState(), store.getLastSaved());
+      return;
+    }
     const campaignGoto = event.target.closest('[data-campaign-goto]');
     if (campaignGoto) {
       // one navigation at a time: a second tap while the page is still being prepared is the same intention, not a new one (nothing is lost: the choice is already saved)
       if (campaignGotoBusy) return;
       campaignGotoBusy = true;
       try {
+      // «Candidati ora» always opens the preparation of a NEW candidacy for the chosen vote: a campaign already concluded (its result) is closed first, otherwise the tab keeps showing the old result in its place
+      if (store.getState().campaign && store.getState().campaign.status !== 'active') store.clearCampaign();
       const current = store.getState();
       // the EXACT vote (its id) travels with its type: setup, then store.startCampaign, never «the first vote of that type»
       const values = { ...campaignChoices(current), 'setup.electionType': campaignGoto.dataset.campaignGoto };
@@ -1829,6 +1864,8 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
         const mode = floorControl.dataset.floorMode === 'diretta' && !vote.deferred ? 'diretta' : 'simulata';
         store.setFloorMode(voteId, mode);
         const [floor, aulaModule] = await Promise.all([import('./floor-view.js?v=20261120-1'), import('./aula-view.js?v=20261120-1')]);
+        // Before the floor overlay opens, never after: it cannot be tracked by adBlocked() until openFloor() below has actually set it current.
+        await adMob.hideBanner?.();
         const motion = document.documentElement.dataset.sceneMotion ?? settings.sceneMotion;
         // The Aula of the vote just counted: the Chambers through the hemicycle, a council through the totals of its groups.
         const aulaOf = () => {
@@ -1856,6 +1893,8 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     if (aulaControl) {
       try {
         const module = await import('./aula-view.js?v=20261120-1');
+        // Same as the floor overlay above: hidden before openAula() opens it, since isAulaOpen() cannot see it yet.
+        await adMob.hideBanner?.();
         let aula = null;
         if (aulaControl.dataset.aulaOpen) aula = module.parliamentAula(store.getState(), { voteId: aulaControl.dataset.aulaOpen, chamber: aulaControl.dataset.aulaChamber, politicians: realDatabase.politicians ?? [], db: realDatabase });
         else {
@@ -2378,7 +2417,9 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       if (level) {
         syncWizardDraft();
         if (CAREER_LEVELS[level]?.chamber !== CAREER_LEVELS[wizard.initialLevel]?.chamber) { wizard.parliamentaryGroupId = ''; wizard.groupQuery = ''; }
-        wizard.initialLevel = level; wizard.startingOffice = null; wizard.parliamentStartMode = 'real-context'; wizard.errors = []; render(store.getState(),store.getLastSaved());
+        // «Semplice iscritto» is a way of starting, the level only says WHERE: choosing a local level afterwards keeps it (it used to be dropped silently, so a plain member found a council seat on day one).
+        const keepsMember = wizard.startingOffice === 'iscritto' && ['comunale', 'provinciale', 'regionale'].includes(level);
+        wizard.initialLevel = level; wizard.startingOffice = keepsMember ? 'iscritto' : null; wizard.parliamentStartMode = 'real-context'; wizard.errors = []; render(store.getState(),store.getLastSaved());
       }
       else if (startingOffice) {
         syncWizardDraft();
@@ -2418,8 +2459,8 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     }
     // The phone sheet opens and closes at once, without redrawing the page.
     const sheet = root.querySelector('[data-mobile-sheet]');
-    if (event.target.closest('[data-mobile-more]')) { const open = sheet.hidden; sheet.hidden = !open; event.target.closest('[data-mobile-more]').setAttribute('aria-expanded', String(open)); if (open) sheet.querySelector('.sheet-item.active, .sheet-item')?.focus?.(); return; }
-    if (sheet && !sheet.hidden && (event.target.closest('[data-mobile-close]') || event.target === sheet)) { sheet.hidden = true; root.querySelector('[data-mobile-more]')?.setAttribute('aria-expanded', 'false'); return; }
+    if (event.target.closest('[data-mobile-more]')) { const open = sheet.hidden; sheet.hidden = !open; event.target.closest('[data-mobile-more]').setAttribute('aria-expanded', String(open)); if (open) sheet.querySelector('.sheet-item.active, .sheet-item')?.focus?.(); syncBanner(); return; }
+    if (sheet && !sheet.hidden && (event.target.closest('[data-mobile-close]') || event.target === sheet)) { sheet.hidden = true; root.querySelector('[data-mobile-more]')?.setAttribute('aria-expanded', 'false'); syncBanner(); return; }
     if (event.target.closest('[data-sheet-guide]')) { menu.open = true; menu.view = 'guida'; render(store.getState(), store.getLastSaved()); return; }
     const nav = event.target.closest('[data-nav]');
     if (nav) {
@@ -2519,6 +2560,8 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     }
   });
   root.addEventListener('submit', async event => {
+    const askForm = event.target.closest?.('[data-ask-form]');
+    if (askForm) { event.preventDefault(); menu.ask = { result: askGame(new FormData(askForm).get('question')) }; playSound('click'); render(store.getState(), store.getLastSaved()); return; }
     const form = event.target;
     if (form.matches('[data-merge-form]')) { event.preventDefault(); return; }   // the merger is confirmed with its own button (never by Enter in a field)
     if (form.matches('[data-staff-form],[data-staff-edit-form]')) {
@@ -2745,7 +2788,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       event.preventDefault();
       const data = new FormData(form);
       try {
-        if (form.matches('[data-promise-form]')) store.makePromise({ area: data.get('area'), scope: data.get('scope'), instrument: data.get('instrument'), ambition: data.get('ambition') });
+        if (form.matches('[data-promise-form]')) store.makePromise({ area: data.get('area'), scope: data.get('scope'), instrument: data.get('instrument'), ambition: data.get('ambition'), commitment: data.get('commitment') || null });
         else store.modifyPromise(form.dataset.promiseId, { ambition: data.get('ambition'), instrument: data.get('instrument'), extraWeeks: Number(data.get('extraWeeks')), reason: data.get('reason') ?? 'nessuno' });
         playSound('confirm');
       } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
@@ -3258,19 +3301,32 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     if (!items.length) return;
     store.markPromisesReminded();
     let watch = null;
-    reminderCard = mountReminderCard({ items, onAnswer: answer => { clearInterval(watch); reminderCard = null; if (answer === 'open') { location.hash = '#elezioni'; } } });
+    reminderCard = mountReminderCard({ items, onAnswer: answer => { clearInterval(watch); reminderCard = null; if (answer === 'open') { views.tabs.elezioni = { value: 'programma', context: sectionContext('elezioni', store.getState()) }; saveViews(); setHash('elezioni'); ensurePageData('elezioni').finally(() => render(store.getState(), store.getLastSaved())); } } });   // the real Programme tab of the Elections hub (it used to open the hub on whatever tab was current)
     watch = setInterval(() => reminderCard?.setQuiet(quietNow()), 800);
   };
   globalThis.__offerReminder = offerReminder;
   const nativePlatform = isNativeApp() ? (/Android/i.test(globalThis.navigator?.userAgent ?? '') ? 'android' : /iPhone|iPad|iPod/i.test(globalThis.navigator?.userAgent ?? '') || globalThis.Capacitor?.getPlatform?.() === 'ios' ? 'ios' : null) : null;
   // Android app: Appodeal (TEST by default: test creatives only, see data/ads-config.js); iOS app: InMobi (unchanged); the website: nothing (no plugin, every call answers «not available»).
   const androidApp = nativePlatform === 'android';
+  // Rewarded, banner and interstitial are all live (1.0.5): resolveAppodeal enables every format by default once APPODEAL_MODE is
+  // 'production' and APPODEAL_PRODUCTION_AUTHORIZED is true (data/ads-config.js); the Worker's /api/account/ads/config carries no
+  // `appodeal` block (it is InMobi-only, for iOS), so a missing or offline remote answer never disables a format by accident —
+  // it only ever narrows what the local defaults already allow (resolveAppodeal: a remote reply can switch a format OFF, never on).
   const adMob = androidApp ? createAppodealAdapter({ config: resolveAppodeal(null, APPODEAL_MODE) }) : createInMobiAdapter({ platform: nativePlatform ?? 'android', config: nativePlatform ? defaultAds(nativePlatform) : defaultAds('android') });
-  const adsManager = createAdsManager({ adapter: adMob, policy: () => adMob.ids.interstitialPolicy, ...(androidApp ? { pages: APPODEAL_BANNER_PAGES } : {}) });
+  const adsManager = createAdsManager({ adapter: adMob, policy: () => adMob.ids.interstitialPolicy, ...(androidApp ? { pages: APPODEAL_BANNER_PAGES, bannerMinGapMs: APPODEAL_BANNER.minGapMs, bannerMaxSessionMs: APPODEAL_BANNER.maxSessionMs } : {}) });
+  // The real, native-reported banner height (0 while there is none): the bridge fires this every time the banner is loaded
+  // or removed (plugins/appodeal-ads .../AppodealAdsPlugin.kt, notifyBannerHeight). The app's own bottom chrome (the mobile
+  // tab bar, the page's bottom padding) reserves exactly this much space in src/theme.css, so nothing is ever guessed here
+  // and nothing is reserved when the banner is hidden or has nothing loaded.
+  if (androidApp) globalThis.Capacitor?.Plugins?.AppodealAds?.addListener?.('bannerHeight', ({ heightDp } = {}) => { document.documentElement.style.setProperty('--appodeal-banner-height', `${Number.isFinite(heightDp) && heightDp > 0 ? heightDp : 0}px`); });
   // The remote configuration: read at start and every 30 minutes; a failure keeps what is in force (the safe defaults at first). The points of the video follow it, held to [0, 0.5].
   const loadAdsConfig = async () => {
     if (!nativePlatform) return;
-    try { const remote = await accountApi.fetchAdsConfig(); const next = androidApp ? resolveAppodeal(remote, APPODEAL_MODE) : resolveAds(nativePlatform, remote); adMob.setConfig(next); setAdRewardPoints(next.rewardPoints); rewardsApi?.refreshAds?.(); syncBanner(); } catch { /* offline: the defaults stay (all formats off) */ }
+    try {
+      const remote = await accountApi.fetchAdsConfig();
+      const next = androidApp ? resolveAppodeal(remote, APPODEAL_MODE) : resolveAds(nativePlatform, remote);
+      adMob.setConfig(next); setAdRewardPoints(next.rewardPoints); rewardsApi?.refreshAds?.(); syncBanner();
+    } catch { /* offline: the defaults stay (all formats off) */ }
   };
   const rewards = createRewardsService({ store, ads: { config: () => adMob.ids, provider: adMob.rewardedProvider }, claimAd: (id, careerId, device) => accountApi.claimAdRewardOnServer(id, careerId, device, nativePlatform), claimGuestAd: nativePlatform ? (id, careerId, device) => accountApi.claimAdRewardForDevice(id, careerId, device, nativePlatform) : null, onAdCompleted: () => adsManager.noteRewarded(), username: () => account.user?.username ?? null, claimDaily: (careerId, device) => accountApi.claimDailyReward(careerId, device), syncTime: body => accountApi.syncRewardTime(body), claimBlocks: body => accountApi.claimRewardBlocks(body), claimCommunity: (reward, careerId, device) => accountApi.claimCommunityReward(reward, careerId, device), env: { playing: () => !menu.open && !wizard } });
   rewardsApi = rewards;
@@ -3348,8 +3404,27 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   // the main menu) starts from the Home, never from the last page visited.
   const initialPage = 'panoramica';
   setHash(initialPage, true);
-  const syncBanner = () => { if (!adMob.ids.banner?.enabled) return; const page = String(globalThis.location?.hash ?? '').replace(/^#/, '').split(/[/?]/)[0]; adsManager.syncBanner({ page, blocked: interruptible(store.getState()) || reportOpen || menu.open || Boolean(wizard), margin: 72 }); };
-  store.subscribe(syncBanner); globalThis.addEventListener?.('hashchange', syncBanner);
+  // SAFETY FIRST, never commercial: the banner may show only on an explicitly authorised page (APPODEAL_BANNER_PAGES — Home
+  // for now; any other page is added only after checking it has no bottom action of its own), and only when NONE of the
+  // moments below hold. One single list: a confirmation dialog, the weekly report, the outcome card, a celebration, the
+  // news popup, the main menu, the career wizard, a floor vote or Aula replay (floor-view.js/aula-view.js: these open
+  // their own overlay outside render(), so they are checked here explicitly), and everything `interruptible()` already
+  // covers (night, scene — including the voting-booth scene, an open campaign). Anything new that can interrupt the
+  // player is added to THIS list and nowhere else; if it cannot be proven safe, it is not added and the banner stays off.
+  // The "Altro" bottom sheet (mobileSheet()) toggles its own `hidden` attribute directly (app.js, the `[data-mobile-more]`
+  // handler) without ever going through render() or any tracked flag: read straight from the DOM, the only certain answer.
+  const mobileSheetOpen = () => document.getElementById('mobile-sheet')?.hidden === false;
+  const adBlocked = () => { const state = store.getState(); return interruptible(state) || reportOpen || menu.open || Boolean(wizard) || Boolean(pendingConfirm) || Boolean(newsPopup) || Boolean(pendingOutcome(state.game)) || Boolean(pendingCelebration(state.game)) || isFloorOpen() || isAulaOpen() || mobileSheetOpen(); };
+  syncBanner = () => { if (!adMob.ids.banner?.enabled) return; const page = String(globalThis.location?.hash ?? '').replace(/^#/, '').split(/[/?]/)[0]; adsManager.syncBanner({ page, blocked: adBlocked() }); };
+  // Not also store.subscribe(syncBanner): render() (store.subscribe(render), above) already calls syncBanner() first
+  // thing on every state change — a second subscription here fired the same check twice per change, each one racing the
+  // other before either call's showBanner() promise resolved (the duplicate-call guard only ever sees it after that).
+  globalThis.addEventListener?.('hashchange', syncBanner);
+  // The only timer of the banner system: re-checks the same single rule above often enough to enforce the maximum
+  // session length (APPODEAL_BANNER_MAX_SESSION_MS) even on a static page where nothing else would ever re-render.
+  if (androidApp) globalThis.setInterval?.(syncBanner, 5000);
+  // Back from the background (the timers of a hidden page can be late or frozen): the maximum length and the cooldown are re-checked at once, not at the next tick.
+  if (androidApp) { globalThis.document?.addEventListener?.('visibilitychange', () => { if (!globalThis.document.hidden) syncBanner(); }); globalThis.addEventListener?.('pageshow', syncBanner); globalThis.addEventListener?.('focus', syncBanner); }
   loadAdsConfig(); if (nativePlatform) setInterval(loadAdsConfig, 30 * 60_000);
   globalThis.addEventListener?.('hashchange', () => {
     const page = pageFromHash();

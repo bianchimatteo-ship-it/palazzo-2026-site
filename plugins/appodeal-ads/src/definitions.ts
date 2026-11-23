@@ -25,4 +25,6 @@ export interface AppodealAdsPlugin {
   showPrivacyOptions(): Promise<ConsentResult | void>;
   /** Not used on Android (no ATT): always `unavailable`. */
   requestTracking(): Promise<{ status: string }>;
+  /** Debug-only: clears Appodeal's CMP/consent state to re-test the GDPR form; never touches game saves. No-op (code `not-debug`) outside a Debug build. */
+  resetConsentDebug(): Promise<{ ok: boolean; code?: string }>;
 }

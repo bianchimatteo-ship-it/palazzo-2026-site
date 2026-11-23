@@ -209,11 +209,14 @@ function judge(scene, move, stage) {
   const score = Math.round(clamp(32 + stat * 0.42 + fit + seq.delta + noise, 5, 95));
   return { score, fit: move.id === best ? 'giusto' : move.id === second ? 'discreto' : 'debole', why: [`${STAT_LABELS[move.stat]} ${Math.round(stat)}`, fit > 10 ? 'l’approccio giusto per questo tema' : fit > 0 ? 'un approccio discreto per questo tema' : 'un approccio poco adatto a questo tema', ...seq.reasons] };
 }
-const band = score => score >= 62 ? 'good' : score < 45 ? 'bad' : 'mid';
+const band = score => score >= 60 ? 'good' : score < 45 ? 'bad' : 'mid';   // 60 (it was 62): with the stats of an average player a fitting move now reads as a success, while a poor one still does not (scripts/scene-balance-report.mjs)
 // How the people take a move: approval, disagreement, doubt, protest, satisfaction, a compromise, or a request for guarantees (the visual reaction and the second voice follow it).
 const GOOD_TYPE = { listen: 'approvazione', probe: 'approvazione', data: 'approvazione', own: 'approvazione', clarify: 'approvazione', story: 'approvazione', verify: 'approvazione', appoint: 'approvazione', table: 'approvazione', propose: 'soddisfazione', announce: 'soddisfazione', fund: 'soddisfazione', involve: 'soddisfazione', vote: 'soddisfazione', assign: 'soddisfazione', priority: 'soddisfazione', mediate: 'compromesso', compromise: 'compromesso', contest: 'dissenso' };
-export function reactionType(fn, bandName) {
+// A middling move is not always met with doubt: for the listening, factual and clarifying moves about four meetings in ten end in a (qualified) approval. `seed` makes it repeatable for the same scene.
+const SOFT_FN = ['listen', 'probe', 'data', 'own', 'clarify', 'story', 'verify', 'appoint'];
+export function reactionType(fn, bandName, seed = null) {
   if (bandName === 'good') return GOOD_TYPE[fn] ?? 'approvazione';
+  if (bandName === 'mid' && seed !== null && SOFT_FN.includes(fn) && hashOf(`${seed}|mite`) % 10 < 4) return 'approvazione';
   if (bandName === 'mid') return ['propose', 'announce', 'fund', 'table', 'involve'].includes(fn) ? 'garanzie' : ['mediate', 'compromise'].includes(fn) ? 'compromesso' : fn === 'contest' ? 'protesta' : 'perplessita';
   return ['contest', 'announce', 'priority', 'vote', 'assign'].includes(fn) ? 'protesta' : ['data', 'probe', 'listen', 'story', 'verify', 'appoint'].includes(fn) ? 'perplessita' : 'dissenso';
 }
@@ -283,7 +286,7 @@ export function activityChoose(scene, choiceId) {
   const move = moveFor(scene, stage, choiceId);
   const result = judge(scene, move, stage);
   const b = band(result.score);
-  const type = reactionType(move.fn, b);
+  const type = reactionType(move.fn, b, `${scene.seed}|${stage}`);
   const reaction = pickBy((isCitizens(scene) ? CITIZENS.reactions : spec.reactions)[b], `${scene.seed}|${stage}|${b}|reazione`)[0];
   const stakePair = STAKES[scene.sceneKey]?.[scene.familyId]?.[b === 'good' ? 0 : b === 'bad' ? 1 : -1];
   scene.history.push({ node: stage, choice: choiceId, fn: move.fn, type, score: result.score, band: b, why: result.why, k: scene.tally.k, said: move.label[0], reaction, ...(stakePair ? { stake: stakePair[0] } : {}) });

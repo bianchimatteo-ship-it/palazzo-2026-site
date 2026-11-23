@@ -4,7 +4,7 @@
 import { testAccessGate, privateResponse } from './worker-test-access.js';
 import { handleTranslate } from './worker-translate.js';
 import { REWARD_MIGRATION, REWARD_COLUMNS, ACTIVITY_KEEP_DAYS, MAIL_SUBJECTS, RETENTION, PORTAL_PATHS } from './worker-constants.js';
-import { resolveAds, PLATFORMS } from './src/data/ads-config.js';
+import { resolveAds, resolveAppodeal, APPODEAL_MODE, PLATFORMS } from './src/data/ads-config.js';
 const ARCHIVE_KEY = 'archivio-condiviso';
 const PIN_KEY = 'pin-amministratore';
 const MAX_BYTES = 1_500_000;
@@ -777,7 +777,10 @@ async function bookAdReward(request, env, db, userId, body) {
   if (typeof id !== 'string' || !AD_COMPLETION_ID.test(id)) return json(request, { error: 'Completamento non valido.' }, 400);
   if (body?.platform !== undefined && !PLATFORMS.includes(body.platform)) return json(request, { error: 'Piattaforma non valida.' }, 400);
   const platform = PLATFORMS.includes(body?.platform) ? body.platform : null;
-  const live = platform ? [adsFor(env, platform)] : PLATFORMS.map(item => adsFor(env, item));
+  // Android's rewarded video provider is Appodeal (src/data/ads-config.js), not InMobi: resolveAds('android', ...) is always closed by
+  // design (InMobi is paused on Android), so the gate must follow Appodeal's own state there instead, or every Android claim is refused.
+  const adsForReward = p => (p === 'android' ? resolveAppodeal(null, APPODEAL_MODE) : adsFor(env, p));
+  const live = platform ? [adsForReward(platform)] : PLATFORMS.map(adsForReward);
   const config = live.find(item => item.rewarded.enabled);
   if (!config) return json(request, { error: 'I video con premio non sono al momento attivi.', code: 'disabled' }, 403);
   const careerId = typeof body?.careerId === 'string' && REWARD_ID.test(body.careerId) ? body.careerId : null, device = typeof body?.device === 'string' && REWARD_ID.test(body.device) ? body.device : null;

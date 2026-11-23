@@ -8,6 +8,7 @@
 import { DATA_SOURCES } from '../data/schema.js?v=20261120-1';
 import { AREA_BY_ID, DECREE_RULES, FINANCING, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261120-1';
 import { statuteBlock, statutesOf, amendLawPolicy, campOfAxis, cohesiveShare, confidenceBallotMissing, directiveOf, governingGroupIds, groupDirectiveEffect, groupProfile, parliamentInternals, playerSeatedOn } from './parliament-engine.js?v=20261120-1';
+import { projectMeasure } from './society-engine.js?v=20261120-1';
 import { openLocalFloors, playerVotesIn } from './local-engine.js?v=20261120-1';
 import { absentOf, groupLine, seededRandom, spreadAbsent, splitGroupVote } from './vote-engine.js?v=20261120-1';
 
@@ -600,7 +601,26 @@ const FLOOR_INTENSITY = Object.freeze({ 1: 'Intervento limitato', 2: 'Intervento
 const row = (label, value) => value ? { label, value: String(value) } : null;
 
 // What the text of a bill provides, from the fields the engine keeps (never invented).
-function lawContent(law) {
+// «Cosa cambierebbe», told in the sitting before the ballot: from the same projection the Government desk uses (projectMeasure), nothing invented. Without a society or a measure there is nothing to say.
+function consequencesOf(law, society) {
+  const policy = law.policy;
+  if (!society || !policy?.area || law.kind === 'manovra') return [];
+  try {
+    const p = projectMeasure(society, policy);
+    if (!p) return [];
+    const num = value => (Math.round(Number(value) * 10) / 10).toLocaleString('it-IT');
+    const names = list => (list ?? []).slice(0, 2).map(item => item.label).join(', ');
+    return [
+      row('Cosa cambierebbe', `${p.areaLabel}: da ${num(p.areaBefore)} a ${num(p.areaAfter)} a regime, in ${p.phaseIn} settimane${p.lasting ? '' : ' (poi in parte svanisce)'}`),
+      row('Costo e copertura', `${num(p.billions)} miliardi · copertura ${p.covered ? 'trovata' : 'mancante (gli effetti si riducono)'} · deficit al ${num(p.deficitAfter)}%`),
+      row('Chi ci guadagna', names(p.winners) || null),
+      row('Chi ci perde', names(p.losers) || null),
+      row('Se viene approvata', 'entra in vigore e produce questi effetti; il costo pesa su bilancio e deficit'),
+      row('Se viene bocciata', 'non cambia nulla per i cittadini: il problema resta e può tornare in Parlamento più avanti')
+    ].filter(Boolean);
+  } catch { return []; }
+}
+function lawContent(law, society = null) {
   const policy = law.policy ?? {};
   const area = AREA_BY_ID[policy.area];
   return [
@@ -609,7 +629,8 @@ function lawContent(law) {
     row('Portata', FLOOR_INTENSITY[policy.intensity] ?? null),
     row('Copertura', FINANCING[policy.financing]?.label ?? null),
     row('Emendamenti accolti', (law.amendments ?? []).length ? String(law.amendments.length) : null),
-    row('Fiducia', law.confidence ? 'Il governo ha posto la questione di fiducia: se il testo è respinto, il governo cade' : null)
+    row('Fiducia', law.confidence ? 'Il governo ha posto la questione di fiducia: se il testo è respinto, il governo cade' : null),
+    ...consequencesOf(law, society)
   ].filter(Boolean);
 }
 function actContent(inst, act) {
@@ -664,7 +685,7 @@ export function openVotesOf(state) {
       const group = parliament.chambers?.[chamber]?.groups?.find(item => item.groupId === parliament.player.groupId);
       out.push({
         id: `law:${law.id}`, scope: 'nazionale', own, lawId: law.id, assembly: chamber, assemblyName: FLOOR_ASSEMBLIES[chamber].name, place: '', president: FLOOR_ASSEMBLIES[chamber].president, hall: FLOOR_ASSEMBLIES[chamber].hall,
-        title: law.title, kindLabel: KIND_LABELS[law.kind] ?? 'Proposta di legge', reading: law.stage === 'final-vote' ? 'Votazione finale' : 'Prima votazione', summary: lawSummary(law), content: lawContent(law),
+        title: law.title, kindLabel: KIND_LABELS[law.kind] ?? 'Proposta di legge', reading: law.stage === 'final-vote' ? 'Votazione finale' : 'Prima votazione', summary: lawSummary(law), content: lawContent(law, state.society),
         proposer: own ? 'Tu (primo firmatario)' : law.sponsor?.label ?? 'Un gruppo parlamentare', proposerParts: proposerParts({ sponsor: law.sponsor, own, groups: parliament.chambers?.[chamber]?.groups ?? [], parties: state.world?.parties ?? [], playerGroupId: parliament.player.groupId }), confidence: Boolean(law.confidence), openedAt: law.floor.openedAt ?? null,
         line: law.floor.line ?? (group ? lineOf(groupSupport(parliament, law, group, { world: state.world })) : 'astenuto'), intention: BALLOTS[law.pendingPlayerVote] ? law.pendingPlayerVote : null,
         voteId: `${law.id}-${chamber}-${(law.votes ?? []).length + 1}`, floorKey: law.floor.key

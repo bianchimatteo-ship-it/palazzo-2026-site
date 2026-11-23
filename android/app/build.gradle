@@ -20,6 +20,27 @@ if (!releaseKeyAlias) missingSigning << 'keyAlias / POLITICANDO_KEY_ALIAS'
 if (!releaseKeyPassword) missingSigning << 'keyPassword / POLITICANDO_KEY_PASSWORD'
 gradle.taskGraph.whenReady { graph ->
     def releaseTask = graph.allTasks.find { it.path.startsWith(project.path + ':') && it.name ==~ /^(bundle|assemble|package|sign|publish)Release.*|.*ReleaseBundle$/ }
+    // Advertising coherence of a RELEASE: the shipped config (src, www and the Capacitor copy) must agree and be explicit.
+    //   production + authorised  -> real ads (the intended future Release); test or off -> allowed but reported (no earnings);
+    //   production WITHOUT authorisation, a malformed key, or copies that disagree -> the build is refused.
+    if (releaseTask != null) {
+        def adsFiles = ['../../src/data/ads-config.js', '../../www/src/data/ads-config.js', 'src/main/assets/public/src/data/ads-config.js'].collect { file(it) }.findAll { it.exists() }
+        def adsMode = { String text -> (text =~ /export const APPODEAL_MODE\s*=\s*'([a-z]+)'/).with { it.find() ? it.group(1) : null } }
+        def adsAuth = { String text -> (text =~ /export const APPODEAL_PRODUCTION_AUTHORIZED\s*=\s*(true|false)/).with { it.find() ? it.group(1) : null } }
+        def adsKey = { String text -> (text =~ /appKey:\s*'([0-9a-f]{48})'/).find() }
+        def seen = adsFiles.collect { f -> def t = f.text; [f.path, adsMode(t), adsAuth(t), adsKey(t)] }
+        def problems = []
+        if (seen.isEmpty()) problems << 'ads-config.js not found'
+        seen.each { r ->
+            if (r[1] == null || r[2] == null) problems << "${r[0]}: APPODEAL_MODE / APPODEAL_PRODUCTION_AUTHORIZED not readable"
+            if (r[1] == 'production' && r[2] != 'true') problems << "${r[0]}: mode 'production' without APPODEAL_PRODUCTION_AUTHORIZED = true (it would silently run as test)"
+            if (r[1] != 'production' && r[1] != 'test' && r[1] != 'off') problems << "${r[0]}: unknown APPODEAL_MODE '${r[1]}'"
+            if (r[1] == 'production' && !r[3]) problems << "${r[0]}: production without a well-formed Appodeal app key"
+        }
+        if (seen.collect { [it[1], it[2]] }.unique().size() > 1) problems << 'src, www and the Capacitor copy disagree (run the web build and cap sync)'
+        if (!problems.isEmpty()) throw new GradleException("POLITICANDO: refusing to build ${releaseTask.name}: incoherent advertising configuration: ${problems.join('; ')}")
+        if (seen.any { it[1] != 'production' }) logger.warn("POLITICANDO: WARNING - the ${releaseTask.name} build is NOT in production ads mode (${seen.collect { it[1] }.unique()}): it will show test ads or none.")
+    }
     if (releaseTask != null && !releaseSigningReady) {
         throw new GradleException("POLITICANDO: refusing to build ${releaseTask.name}: no valid release signing key (missing: ${missingSigning.join(', ')}). Configure android/keystore.properties or the POLITICANDO_KEY* environment variables (docs/google-play.md). Debug builds (assembleDebug) do not need it.")
     }
@@ -32,8 +53,8 @@ android {
         applicationId "it.matteobianchi.politicando2026"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 4
-        versionName "1.0.3"
+        versionCode 6
+        versionName "1.0.5"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

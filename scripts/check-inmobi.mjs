@@ -181,31 +181,37 @@ const local = await startLocalWorker({ port: 8795 });
 try {
   const get = async path => { const r = await fetch(`${local.origin}${path}`); return { status: r.status, body: await r.json(), cache: r.headers.get('cache-control') }; };
   const post = async (path, body) => { const r = await fetch(`${local.origin}${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); return { status: r.status, body: await r.json().catch(() => ({})) }; };
-  // no variable: everything off
+  // no variable: InMobi (iOS) stays off by default. Android no longer reads this InMobi variable at all for its reward gate: its provider is
+  // Appodeal (data/ads-config.js APPODEAL_MODE / APPODEAL_PRODUCTION_AUTHORIZED), checked directly by the Worker, open here by default.
   let cfg = await get('/api/account/ads/config');
   assert.equal(cfg.status, 200); assert.equal(cfg.body.android.enabled, false); assert.equal(cfg.body.ios.enabled, false); assert.equal(cfg.body.android.rewarded.enabled, false); assert.equal(cfg.body.android.enabled, false);
   assert.match(cfg.cache ?? '', /max-age/, 'La configurazione ha una cache breve.');
-  assert.equal((await post('/api/account/ads/reward', { id: 'imb-spento-000001', device: 'dev-1' })).status, 403, 'Formato spento: il credito è rifiutato dal server.');
+  assert.equal((await post('/api/account/ads/reward', { id: 'imb-spento-000001', device: 'dev-1', platform: 'ios' })).status, 403, 'iOS (InMobi), formato spento: il credito è rifiutato dal server.');
+  // Android (Appodeal): aperto di default, indipendentemente da questa variabile InMobi — qui si regredisce il bug del video premiato non accreditato.
+  const androidFirst = await post('/api/account/ads/reward', { id: 'apd-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', device: 'dev-1', platform: 'android' });
+  assert.equal(androidFirst.status, 200, 'Android: il credito non è più rifiutato con «formato spento» mentre Appodeal è in produzione.');
+  assert.equal(androidFirst.body.credited, true); assert.equal(androidFirst.body.points, 0.15, 'Android: i punti vengono da Appodeal (data/ads-config.js), non da questa variabile InMobi.');
+  const androidAgain = await post('/api/account/ads/reward', { id: 'apd-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', device: 'dev-1', platform: 'android' });
+  assert.equal(androidAgain.body.credited, false); assert.equal(androidAgain.body.duplicate, true, 'Android: lo stesso completamento non è accreditato due volte.');
   // an invalid variable is the same as none
   local.env.ADS_CONFIG = '{non json'; assert.equal((await get('/api/account/ads/config')).body.android.enabled, false);
-  // the owner turns the rewarded format on for Android only, with 0.2 points
-  local.env.ADS_CONFIG = JSON.stringify({ android: { accountId: ACCOUNT, rewarded: { enabled: true }, rewardPoints: 0.2 }, ios: { accountId: ACCOUNT } });
+  // the owner turns the rewarded format on for iOS (InMobi) only, with 0.2 points: this variable never reaches Android (its gate is Appodeal, checked above)
+  local.env.ADS_CONFIG = JSON.stringify({ ios: { accountId: ACCOUNT, rewarded: { enabled: true }, rewardPoints: 0.2 } });
   cfg = await get('/api/account/ads/config');
-  assert.equal(cfg.body.android.rewarded.enabled, true); assert.equal(cfg.body.android.rewardPoints, 0.2); assert.equal(cfg.body.ios.rewarded.enabled, false);
+  assert.equal(cfg.body.ios.rewarded.enabled, true); assert.equal(cfg.body.ios.rewardPoints, 0.2); assert.equal(cfg.body.android.rewarded.enabled, false, 'La variabile InMobi non accende Android: lì decide Appodeal, non questa.');
   assert.ok(!JSON.stringify(cfg.body).includes('ADS_CONFIG') && !/secret|token|password/i.test(JSON.stringify(cfg.body)), 'Niente di segreto nella configurazione pubblica.');
-  const first = await post('/api/account/ads/reward', { id: 'imb-ospite-000001', device: 'dev-1', platform: 'android' });
+  const first = await post('/api/account/ads/reward', { id: 'imb-ospite-000001', device: 'dev-1', platform: 'ios' });
   assert.equal(first.status, 200); assert.equal(first.body.credited, true); assert.equal(first.body.points, 0.2, 'Il server risponde con i punti in vigore.');
-  const again = await post('/api/account/ads/reward', { id: 'imb-ospite-000001', device: 'dev-1', platform: 'android' });
+  const again = await post('/api/account/ads/reward', { id: 'imb-ospite-000001', device: 'dev-1', platform: 'ios' });
   assert.equal(again.body.credited, false); assert.equal(again.body.duplicate, true, 'Lo stesso completamento non è accreditato due volte.');
-  const burst = await Promise.all(Array.from({ length: 5 }, () => post('/api/account/ads/reward', { id: 'imb-raffica-000001', device: 'dev-2', platform: 'android' })));
+  const burst = await Promise.all(Array.from({ length: 5 }, () => post('/api/account/ads/reward', { id: 'imb-raffica-000001', device: 'dev-2', platform: 'ios' })));
   assert.equal(burst.filter(item => item.body.credited === true).length, 1, 'Richieste in parallelo: un solo credito.');
-  assert.equal((await post('/api/account/ads/reward', { id: 'imb-ios-0000001', device: 'dev-1', platform: 'ios' })).status, 403, 'iOS ha il formato spento: rifiutato.');
   assert.equal((await post('/api/account/ads/reward', { id: 'imb-piattaforma-1', device: 'dev-1', platform: 'windows' })).status, 400, 'Piattaforma sconosciuta: rifiutata.');
   for (const bad of [{ id: 'x', device: 'dev-1' }, { id: 'con spazi non validi', device: 'dev-1' }, { id: 'imb-senza-device-1' }, { id: 'imb-dispositivo-1', device: 'sp azi' }]) assert.equal((await post('/api/account/ads/reward', bad)).status, 400, `Richiesta non valida rifiutata (${JSON.stringify(bad)}).`);
-  let credited = 0, limited = 0; for (let n = 0; n < 33; n++) { const out = await post('/api/account/ads/reward', { id: `imb-limite-${String(n).padStart(6, '0')}`, device: 'dev-3', platform: 'android' }); if (out.body.credited) credited += 1; else if (out.status === 429) limited += 1; }
+  let credited = 0, limited = 0; for (let n = 0; n < 33; n++) { const out = await post('/api/account/ads/reward', { id: `imb-limite-${String(n).padStart(6, '0')}`, device: 'dev-3', platform: 'ios' }); if (out.body.credited) credited += 1; else if (out.status === 429) limited += 1; }
   assert.equal(credited, 30, 'Limite giornaliero: 30 video.'); assert.equal(limited, 3);
 } finally { await local.close(); }
-lines.push('Worker: configurazione pubblica, credito validato dal server per ospiti e account, formato spento rifiutato, un solo credito, limite giornaliero');
+lines.push('Worker: configurazione pubblica, credito validato dal server per ospiti e account (Android: Appodeal, iOS: InMobi), formato spento rifiutato, un solo credito, limite giornaliero');
 
 // ---------- 7. no AdMob left, no invented id ----------
 const files = fs.readdirSync(new URL('src/', ROOT), { recursive: true }).filter(name => /\.(js|json|html|css)$/.test(name) && !/^data\/(real|i18n)\//.test(name) && !/release-pairs|dictionary/.test(name)).map(name => [`src/${name}`, fs.readFileSync(new URL(`src/${name}`, ROOT), 'utf8')]);

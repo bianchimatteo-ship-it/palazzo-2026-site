@@ -11,6 +11,8 @@ import { motionAllows } from './stage-player.js?v=20261120-1';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const COLORS = { ...Object.fromEntries(Object.entries(VOTE_CHOICES).map(([id, spec]) => [id, spec.color])), waiting: '#3a4540' };
 let timer = null, current = null, previousFocus = null;
+// Whether the Aula overlay (a floor vote or a replayed result) is on screen right now (app.js: the ad banner is never shown while it is).
+export function isAulaOpen() { return current !== null; }
 
 // What a window needs: the seats (position, colour of the group, whose), the choices, the script, the legend of the groups.
 export function parliamentAula(state, { voteId, chamber, politicians = [], db = {} }) {

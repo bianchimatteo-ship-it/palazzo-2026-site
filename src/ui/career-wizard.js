@@ -260,7 +260,7 @@ function levelStep(d, parliamentaryGroups, realPoliticians, place = null) {
   // A provincial career needs a province with organs in the chosen place (not Valle d’Aosta, the autonomous provinces, FVG).
   const noProvince = key => key === 'provinciale' && Boolean(place) && !hasProvincialLevel({ region: place.region, provinceCode: place.unit.code, provinceType: place.unit.type });
   const cards = levels.map(([key], i) => {
-    const selected = !d.startingOffice && d.initialLevel === key;
+    const selected = (!d.startingOffice || (d.startingOffice === 'iscritto' && ['comunale', 'provinciale', 'regionale'].includes(key))) && d.initialLevel === key;
     return '<button type="button" class="level-card ' + (selected ? 'selected' : '') + (noProvince(key) ? ' is-disabled' : '') + '" data-level="' + esc(key) + '" aria-pressed="' + selected + '"' + (noProvince(key) ? ' disabled aria-disabled="true"' : '') + '><span class="level-card-top"><span class="level-index">0' + (i + 1) + '</span><span class="radio-ring"></span></span><strong>' + (key === 'deputato' ? 'DEPUTATO' : key === 'senatore' ? 'SENATORE' : key === 'comunale' ? 'COMUNALE' : key === 'europeo' ? 'EURODEPUTATO' : key === 'provinciale' ? 'PROVINCIALE' : 'REGIONALE') + '</strong><p>' + esc(noProvince(key) ? PROVINCIAL_LEVEL_PROBLEM : details[key][1]) + '</p><span class="level-scope">' + esc(details[key][0]) + '</span></button>';
   }).join('');
   const pdcSelected = d.startingOffice === 'presidenteConsiglio';

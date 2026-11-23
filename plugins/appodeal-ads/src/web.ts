@@ -10,4 +10,5 @@ export class AppodealAdsWeb implements AppodealAdsPlugin {
   async hideBanner() { /* nothing */ }
   async showPrivacyOptions() { return { canRequestAds: false, status: 'UNKNOWN', privacyOptionsRequired: false }; }
   async requestTracking() { return { status: 'unavailable' }; }
+  async resetConsentDebug() { return { ok: false, code: 'unavailable' }; }
 }

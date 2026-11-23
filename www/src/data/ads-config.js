@@ -77,10 +77,17 @@ export const APPODEAL = Object.freeze({
   android: Object.freeze({ appKey: '8d31e2dc0428104dbfcf36959833bc1020f210c3914df496', placement: 'default' }),
   sdk: Object.freeze({ android: '4.4.0' })
 });
-export const APPODEAL_MODE = 'test';
-export const APPODEAL_PRODUCTION_AUTHORIZED = false;
-// The pages (hash) that may carry a banner on Android: the home and the static screens, never a scene, the vote, the night, the weekly report, a menu or the first start (the manager also blocks those).
-export const APPODEAL_BANNER_PAGES = Object.freeze(['panoramica', 'ricompense', 'notizie', 'archivio', 'impostazioni', 'storico']);
+export const APPODEAL_MODE = 'production';
+export const APPODEAL_PRODUCTION_AUTHORIZED = true;
+// ALLOWLIST, not a blacklist: a page carries a banner ONLY if it is named here, and only this list ever grows it — nothing
+// defaults to "on". Home/Panoramica is the only one checked and confirmed free of a bottom action of its own; any other
+// page is added here only after the same check (no "Continua", no vote, no save/confirm button near where the banner sits).
+// The manager also blocks every interrupting moment (src/ui/app.js: adBlocked()) regardless of the page.
+export const APPODEAL_BANNER_PAGES = Object.freeze(['panoramica']);
+// The banner's own frequency, centralised and the only place that sets it: a new viewing session never starts less than
+// `minGapMs` after the previous one ended, and never runs longer than `maxSessionMs` (src/data/repositories/ads-manager.js
+// enforces both; src/ui/app.js re-checks it every few seconds so the maximum holds even on a page nothing else redraws).
+export const APPODEAL_BANNER = Object.freeze({ minGapMs: 120_000, maxSessionMs: 60_000 });
 // At most one interstitial every 180 seconds, only at a natural pause (a week closed, every 2nd), never during a game moment, a vote or an important action.
 export const APPODEAL_INTERSTITIAL = Object.freeze({ everyWeeks: 2, minGapMs: 180_000, perDay: 12 });
 const APPKEY = /^[0-9a-f]{48}$/;

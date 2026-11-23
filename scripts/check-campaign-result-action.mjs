@@ -15,8 +15,8 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
     await viewport(w, h, mobile); await pause(500);
     const r = await evaluate(`(() => { const root = document.querySelector('.campaign-result-head').parentElement; const kids = [...root.children]; const idx = sel => kids.findIndex(el => el.matches(sel) || el.querySelector(sel));
       const btn = document.querySelector('[data-action="campaign-new"]'); const box = btn?.getBoundingClientRect(); const cs = btn && getComputedStyle(btn); const d = document.documentElement;
-      return { head: idx('.campaign-result-head'), actions: idx('.campaign-result-actions'), history: idx('.campaign-history'), buttons: document.querySelectorAll('[data-action="campaign-new"]').length, w: box?.width, h: box?.height, top: box?.top, fs: parseFloat(cs?.fontSize), text: btn?.textContent.trim(), over: d.scrollWidth > innerWidth + 1, inView: box && box.right <= innerWidth + 1 && box.left >= -1 }; })()`);
-    assert.ok(r.head === 0 && r.actions > r.head && r.actions < r.history, `${name}: il pulsante segue il risultato e precede lo storico (${JSON.stringify(r)}).`);
+      return { cta: idx('.campaign-result-cta'), head: idx('.campaign-result-head'), actions: idx('.campaign-result-actions'), history: idx('.campaign-history'), buttons: document.querySelectorAll('[data-action="campaign-new"]').length, w: box?.width, h: box?.height, top: box?.top, fs: parseFloat(cs?.fontSize), text: btn?.textContent.trim(), over: d.scrollWidth > innerWidth + 1, inView: box && box.right <= innerWidth + 1 && box.left >= -1 }; })()`);
+    assert.ok(r.cta === 0 && r.head === 1 && r.actions > r.head && r.actions < r.history, `${name}: il pulsante «Prepara una nuova elezione» è la prima cosa della pagina, prima del risultato e dello storico (${JSON.stringify(r)}).`);
     assert.equal(r.buttons, 1, `${name}: un solo pulsante «Prepara una nuova elezione».`);
     assert.equal(r.text, 'Prepara una nuova elezione');
     assert.ok(r.h >= 44 && r.w >= 160 && r.fs >= 15 && r.inView, `${name}: dimensioni e posizione adeguate (${r.w}×${r.h}, ${r.fs}px).`);

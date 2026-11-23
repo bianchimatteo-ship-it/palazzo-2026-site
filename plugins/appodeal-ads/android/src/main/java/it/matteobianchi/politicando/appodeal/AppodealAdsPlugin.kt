@@ -1,18 +1,22 @@
 package it.matteobianchi.politicando.appodeal
 
 import android.app.Activity
+import android.content.pm.ApplicationInfo
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import android.util.TypedValue
 import android.view.Gravity
 import android.widget.FrameLayout
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.appodeal.ads.Appodeal
 import com.appodeal.ads.BannerCallbacks
 import com.appodeal.ads.InterstitialCallbacks
 import com.appodeal.ads.RewardedVideoCallbacks
 import com.appodeal.ads.initializing.ApdInitializationCallback
 import com.appodeal.ads.initializing.ApdInitializationError
+import com.appodeal.consent.ConsentDebugGeography
+import com.appodeal.consent.ConsentDebugSettings
 import com.appodeal.consent.ConsentInfoUpdateCallback
 import com.appodeal.consent.ConsentManager
 import com.appodeal.consent.ConsentManagerError
@@ -50,6 +54,12 @@ class AppodealAdsPlugin : Plugin() {
     private var initializing = false
     private var callbacksSet = false
     private var banner: com.appodeal.ads.BannerView? = null
+    // The banner's own bottom margin (dp): the real system navigation-bar/gesture-bar inset, kept live by the
+    // OnApplyWindowInsetsListener in showBanner(). Folded into notifyBannerHeight() below so the ONE number the game
+    // reserves is the banner's true total footprint from the physical bottom of the screen, counted once — the game's
+    // own CSS safe-area padding (env(safe-area-inset-bottom)) is for when there is NO banner, never added to this too.
+    private var bannerMarginDp = 0
+    private var bannerContentHeightDp = 0   // the last height Appodeal reported; re-sent (with the margin above) whenever the margin itself changes (e.g. a rotation)
 
     private val loaded = HashMap<String, Boolean>()
     private val loadCalls = HashMap<String, PluginCall>()
@@ -60,6 +70,12 @@ class AppodealAdsPlugin : Plugin() {
     private fun activityOrNull(): Activity? = try { activity } catch (e: Throwable) { null }
     private fun type(format: String): Int? = when (format) { "interstitial" -> Appodeal.INTERSTITIAL; "rewarded" -> Appodeal.REWARDED_VIDEO; else -> null }
     private fun obj(vararg pairs: Pair<String, Any?>) = JSObject().apply { for ((k, v) in pairs) put(k, v) }
+
+    // The game reserves exactly this much space (dp, the same unit Appodeal's own callback reports and the WebView's CSS px
+    // both use at the default device-width viewport) above its own bottom chrome: 0 the moment there is no banner to show.
+    // `contentHeightDp` is the ad creative's own height (Appodeal's callback); bannerMarginDp (the real nav-bar/gesture-bar
+    // inset the banner already sits above) is added on top, once, here — never also by the game's own CSS safe area.
+    private fun notifyBannerHeight(contentHeightDp: Int) { bannerContentHeightDp = contentHeightDp; notifyListeners("bannerHeight", obj("heightDp" to (if (contentHeightDp > 0) contentHeightDp + bannerMarginDp else 0))) }
 
     // ---------------------------------------------------------------- consent (Appodeal ConsentManager)
     private fun statusName(): String = when (ConsentManager.status) {
@@ -72,6 +88,38 @@ class AppodealAdsPlugin : Plugin() {
     private fun consentResult() = obj("canRequestAds" to ConsentManager.canShowAds(), "status" to statusName(), "privacyOptionsRequired" to privacyRequired())
     private fun failedConsent() = obj("canRequestAds" to false, "status" to "UNKNOWN", "privacyOptionsRequired" to false)
 
+    // ---------------------------------------------------------------- GDPR/CMP debug (Debug builds only)
+    // Forces Appodeal's CMP to behave as if this device were in the EEA, to test the GDPR form without a real
+    // EEA device or a VPN. `BuildConfig.DEBUG` follows this module's own build type, which Gradle always matches
+    // to the app's (debug app -> debug library); a Release build gets `null` here, and the SDK itself separately
+    // refuses any debug settings in a release build ("[Appodeal CMP] Debug settings ignored - release build").
+    // ---------------------------------------------------------------- Debug builds: test ads ONLY (native, final word)
+    // Two independent signals, either one is enough: this module's `BuildConfig.DEBUG` and the HOST APP's
+    // `ApplicationInfo.FLAG_DEBUGGABLE` (set by Gradle for every debuggable build and never for a normal Release).
+    // Whatever the JavaScript side, the remote configuration or APPODEAL_MODE ask for, a debuggable build ALWAYS runs
+    // `Appodeal.setTesting(true)`: there is no code path from a Debug build to a real ad request.
+    private fun isDebugBuild(): Boolean {
+        if (BuildConfig.DEBUG) return true
+        return try { (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0 } catch (e: Throwable) { true }   // cannot tell: assume Debug (the safe side)
+    }
+    private fun effectiveTesting(requested: Boolean): Boolean = isDebugBuild() || requested
+
+    private val APPODEAL_DEBUG_GEOGRAPHY: ConsentDebugGeography? = if (BuildConfig.DEBUG) ConsentDebugGeography.EEA else null
+
+    // Hashed test-device ids allowed to receive the forced debug geography. Appodeal's CMP ignores the forced
+    // geography for any device NOT listed here, and logs (logcat tag "ConsentManager") the hashed id of the
+    // current device the first time it runs: "Add testDeviceIds = [\"<id>\"] to ConsentDebugSettings." Copy that
+    // id into this list and rebuild to unlock the forced EEA flow on that phone. Empty by default: no device is
+    // forced into the EEA flow until its id is added here.
+    private val APPODEAL_DEBUG_TEST_DEVICE_IDS: List<String> = listOf(
+        "5CC96CD4E66F284C249423DB2CA04F2D",   // phone x4z5iffapbwc8dhm (24116RACCG / obsidian_eea), logged 2026-11-22 testing the EEA debug flow
+    )
+
+    private fun applyDebugConsentSettings() {
+        val geography = APPODEAL_DEBUG_GEOGRAPHY ?: return
+        ConsentManager.debugSettings = ConsentDebugSettings(geography, APPODEAL_DEBUG_TEST_DEVICE_IDS)
+    }
+
     @PluginMethod
     fun requestConsent(call: PluginCall) {
         val a = activityOrNull()
@@ -80,6 +128,7 @@ class AppodealAdsPlugin : Plugin() {
         try {
             a.runOnUiThread {
                 try {
+                    applyDebugConsentSettings()
                     // The consent information is updated at EVERY launch; the form is shown only when it is required (GDPR / EEA, Italy). The audience is 14+: no under-age tag.
                     ConsentManager.requestConsentInfoUpdate(
                         ConsentUpdateRequestParameters(a, key, false, "Appodeal", Appodeal.getVersion()),
@@ -118,6 +167,22 @@ class AppodealAdsPlugin : Plugin() {
         } catch (e: Throwable) { call.resolve(failedConsent()) }
     }
 
+    // Debug-only: clears Appodeal's own CMP/consent state (its SharedPreferences) so the GDPR form can be
+    // re-tested from scratch on the same device. It touches ONLY Appodeal's consent storage, never the game's
+    // saves (WebView localStorage/IndexedDB, Capacitor Preferences) which live in a separate storage area this
+    // call never reaches. No-op (ok=false, code=not-debug) outside a Debug build.
+    @PluginMethod
+    fun resetConsentDebug(call: PluginCall) {
+        if (!BuildConfig.DEBUG) { call.resolve(obj("ok" to false, "code" to "not-debug")); return }
+        val ctx = try { context } catch (e: Throwable) { null }
+        if (ctx == null) { call.resolve(obj("ok" to false, "code" to "no-context")); return }
+        try {
+            ConsentManager.revoke(ctx)
+            sdkReady = false
+            call.resolve(obj("ok" to true))
+        } catch (e: Throwable) { Log.e(TAG, "resetConsentDebug", e); call.resolve(obj("ok" to false, "code" to "error")) }
+    }
+
     // ---------------------------------------------------------------- SDK
     @PluginMethod
     fun initialize(call: PluginCall) {
@@ -128,20 +193,25 @@ class AppodealAdsPlugin : Plugin() {
         if (sdkReady) { call.resolve(obj("ok" to true)); return }
         if (initializing) { call.resolve(obj("ok" to false, "code" to "busy")); return }
         initializing = true
-        val test = call.getBoolean("testMode", true) != false   // TEST is the default
+        val requestedTest = call.getBoolean("testMode", true) != false   // TEST is the default
+        val debugBuild = isDebugBuild()
+        val test = effectiveTesting(requestedTest)   // a Debug build is ALWAYS test, even when production was asked for
+        if (debugBuild && !requestedTest) Log.w(TAG, "production requested in a DEBUG build: refused, test ads forced")
         try {
             a.runOnUiThread {
                 try {
-                    Appodeal.setTesting(test)
-                    Appodeal.setLogLevel(if (test) com.appodeal.ads.utils.Log.LogLevel.verbose else com.appodeal.ads.utils.Log.LogLevel.none)
+                    Appodeal.setTesting(test)   // `test` is already forced to true in a Debug build (effectiveTesting)
+                    // Kept on regardless of test/production: needed to monitor the first live rollouts (logcat tag "Appodeal"), not tied to test mode.
+                    Appodeal.setLogLevel(com.appodeal.ads.utils.Log.LogLevel.verbose)
                     Appodeal.set728x90Banners(false)
                     setCallbacks()
                     Appodeal.initialize(a, key, Appodeal.INTERSTITIAL or Appodeal.REWARDED_VIDEO or Appodeal.BANNER_VIEW, object : ApdInitializationCallback {
                         override fun onInitializationFinished(errors: List<ApdInitializationError>?) {
                             initializing = false
                             sdkReady = true
+                            if (debugBuild) Appodeal.setTesting(true)   // re-asserted once started: nothing can leave a Debug build in production
                             if (errors != null && errors.isNotEmpty()) Log.w(TAG, "initialisation finished with ${errors.size} non-blocking error(s): $errors")
-                            call.resolve(obj("ok" to true))
+                            call.resolve(obj("ok" to true, "testing" to test, "debugBuild" to debugBuild, "productionRefused" to (debugBuild && !requestedTest)))
                         }
                     })
                 } catch (e: Throwable) { initializing = false; Log.e(TAG, "initialize", e); call.resolve(obj("ok" to false, "code" to "error")) }
@@ -193,12 +263,12 @@ class AppodealAdsPlugin : Plugin() {
             override fun onRewardedVideoExpired() { loaded["rewarded"] = false }
         })
         Appodeal.setBannerCallbacks(object : BannerCallbacks {
-            override fun onBannerLoaded(height: Int, isPrecache: Boolean) { Log.d(TAG, "banner loaded (height $height)") }
+            override fun onBannerLoaded(height: Int, isPrecache: Boolean) { Log.d(TAG, "banner loaded (height $height)"); if (banner != null) notifyBannerHeight(height) }
             override fun onBannerFailedToLoad() { Log.d(TAG, "banner failed to load") }
             override fun onBannerShown() { Log.d(TAG, "banner shown") }
-            override fun onBannerShowFailed() { Log.d(TAG, "banner show failed") }
+            override fun onBannerShowFailed() { Log.d(TAG, "banner show failed"); notifyBannerHeight(0) }
             override fun onBannerClicked() {}
-            override fun onBannerExpired() {}
+            override fun onBannerExpired() { Log.d(TAG, "banner expired") }
         })
     }
 
@@ -243,25 +313,38 @@ class AppodealAdsPlugin : Plugin() {
         } catch (e: Throwable) { call.resolve(obj("shown" to false, "rewarded" to false, "code" to "error")) }
     }
 
-    // ---------------------------------------------------------------- banner (adaptive, in its own view above the bottom margin the game gives: it never covers the content)
+    // ---------------------------------------------------------------- banner
+    // A native sibling of the WebView (Appodeal.BANNER_VIEW, added programmatically per Appodeal's own docs: getBannerView()
+    // + addContentView()), bottom-anchored. Its bottom margin follows the real system navigation-bar/gesture-bar inset
+    // (never a fixed guess), so the banner sits flush above it; the game reserves its OWN bottom chrome (tab bar, content
+    // padding) by listening to the "bannerHeight" event this plugin fires (0 when there is nothing to show), rather than
+    // this native code guessing the height of web content it cannot see. No fixed margin is passed in from JS.
     @PluginMethod
     fun showBanner(call: PluginCall) {
         val a = activityOrNull()
         if (!sdkReady || a == null) { call.resolve(obj("shown" to false, "code" to "not-initialized")); return }
         if (banner != null) { call.resolve(obj("shown" to true)); return }
-        val margin = call.getInt("margin", 0) ?: 0
         try {
             a.runOnUiThread {
                 try {
-                    val unit = { dp: Int -> TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp.toFloat(), a.resources.displayMetrics).toInt() }
                     val view = Appodeal.getBannerView(a)
-                    val params = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = unit(margin) }
+                    val params = FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
+                    ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
+                        val navBottomPx = insets.getInsets(WindowInsetsCompat.Type.navigationBars() or WindowInsetsCompat.Type.displayCutout()).bottom
+                        val density = a.resources.displayMetrics.density
+                        val navBottomDp = if (density > 0f) (navBottomPx / density).toInt() else navBottomPx
+                        (v.layoutParams as FrameLayout.LayoutParams).bottomMargin = navBottomPx
+                        v.requestLayout()
+                        if (navBottomDp != bannerMarginDp) { bannerMarginDp = navBottomDp; if (bannerContentHeightDp > 0) notifyBannerHeight(bannerContentHeightDp) }
+                        insets
+                    }
                     a.addContentView(view, params)
                     banner = view
+                    ViewCompat.requestApplyInsets(view)
                     val accepted = Appodeal.show(a, Appodeal.BANNER_VIEW, PLACEMENT)
-                    if (!accepted) { (view.parent as? android.view.ViewGroup)?.removeView(view); banner = null }
+                    if (!accepted) { (view.parent as? android.view.ViewGroup)?.removeView(view); banner = null; notifyBannerHeight(0) }
                     call.resolve(obj("shown" to accepted))
-                } catch (e: Throwable) { Log.e(TAG, "banner", e); call.resolve(obj("shown" to false, "code" to "error")) }
+                } catch (e: Throwable) { Log.e(TAG, "banner", e); notifyBannerHeight(0); call.resolve(obj("shown" to false, "code" to "error")) }
             }
         } catch (e: Throwable) { call.resolve(obj("shown" to false, "code" to "error")) }
     }
@@ -271,6 +354,7 @@ class AppodealAdsPlugin : Plugin() {
         val a = activityOrNull()
         val view = banner
         banner = null
+        notifyBannerHeight(0)
         if (a == null || view == null) { call.resolve(); return }
         try { a.runOnUiThread { try { Appodeal.hide(a, Appodeal.BANNER_VIEW); (view.parent as? android.view.ViewGroup)?.removeView(view) } catch (e: Throwable) { /* ignored */ }; call.resolve() } } catch (e: Throwable) { call.resolve() }
     }

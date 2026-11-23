@@ -6,25 +6,27 @@ import { readFile, readdir } from 'node:fs/promises';
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 const build = (await read('index.html')).match(/main\.js\?v=([^"']+)/)?.[1];
 const mod = path => import(new URL(`../${path}?v=${build}`, import.meta.url).href);
-const { APPODEAL, APPODEAL_MODE, APPODEAL_PRODUCTION_AUTHORIZED, APPODEAL_BANNER_PAGES, APPODEAL_INTERSTITIAL, resolveAppodeal, providerFor } = await mod('src/data/ads-config.js');
+const { APPODEAL, APPODEAL_MODE, APPODEAL_PRODUCTION_AUTHORIZED, APPODEAL_BANNER_PAGES, APPODEAL_INTERSTITIAL, resolveAppodeal: resolveAppodealReal, providerFor } = await mod('src/data/ads-config.js');
+// The shipped default is now 'production' (APPODEAL_MODE): this check exercises the TEST path, so its default mode is explicit. The production gate and the Debug protection are covered by check-appodeal-safety.mjs.
+const resolveAppodeal = (remote = null, mode = 'test') => resolveAppodealReal(remote, mode);
 const { createAppodealAdapter } = await mod('src/data/repositories/appodeal-adapter.js');
 const { createAdsManager } = await mod('src/data/repositories/ads-manager.js');
 const lines = [];
 
 // ---- configuration
-assert.equal(APPODEAL_MODE, 'test', 'Modalità predefinita: TEST.'); assert.equal(APPODEAL_PRODUCTION_AUTHORIZED, false, 'Produzione non autorizzata di default.');
+assert.ok(['test', 'production'].includes(APPODEAL_MODE), 'Modalità valida.'); assert.ok(APPODEAL_MODE !== 'production' || APPODEAL_PRODUCTION_AUTHORIZED === true, 'Produzione solo con autorizzazione esplicita.');
 assert.match(APPODEAL.android.appKey, /^[0-9a-f]{48}$/, 'App Key Android: 48 caratteri esadecimali.'); assert.equal(APPODEAL.android.appKey, '8d31e2dc0428104dbfcf36959833bc1020f210c3914df496'); assert.equal(APPODEAL.dashboardId, '790468'); assert.equal(APPODEAL.android.placement, 'default');
 assert.equal(providerFor('android'), 'appodeal'); assert.equal(providerFor('ios'), 'inmobi', 'iOS resta con il suo provider.');
 const test = resolveAppodeal(null); assert.equal(test.mode, 'test'); assert.equal(test.testing, true); assert.equal(test.enabled, true); assert.equal(test.appKey, APPODEAL.android.appKey);
 for (const f of ['rewarded', 'banner', 'interstitial']) assert.equal(test[f].enabled, true, `TEST: ${f} attivo.`);
 assert.equal(test.interstitialPolicy.minGapMs, 180_000, 'Interstitial: almeno 180 secondi.'); assert.deepEqual(APPODEAL_INTERSTITIAL, test.interstitialPolicy);
 assert.equal(resolveAppodeal(null, 'off').enabled, false, 'OFF: niente.'); assert.equal(resolveAppodeal(null, 'off').appKey, null);
-const prod = resolveAppodeal(null, 'production'); assert.equal(prod.mode, 'test', 'Produzione richiesta ma non autorizzata: resta TEST.'); assert.equal(prod.testing, true);
+const prod = resolveAppodeal(null, 'production'); assert.equal(prod.mode, APPODEAL_PRODUCTION_AUTHORIZED ? 'production' : 'test', 'Produzione solo se autorizzata, altrimenti resta TEST.'); assert.equal(prod.testing, !APPODEAL_PRODUCTION_AUTHORIZED);
 assert.equal(resolveAppodeal({ appodeal: { mode: 'live' } }).testing, true, 'Un valore remoto non attiva mai la produzione.'); assert.equal(resolveAppodeal({ appodeal: { mode: 'production' } }).testing, true);
 assert.equal(resolveAppodeal({ appodeal: { mode: 'off' } }).enabled, false, 'Interruttore remoto: spegne tutto.'); assert.equal(resolveAppodeal({ appodeal: { enabled: false } }).enabled, false);
 assert.equal(resolveAppodeal({ appodeal: { banner: { enabled: false } } }).banner.enabled, false); assert.equal(resolveAppodeal({ appodeal: { banner: { enabled: false } } }).rewarded.enabled, true);
 assert.equal(resolveAppodeal({ appodeal: { rewarded: { enabled: true }, rewardPoints: 99 } }).rewardPoints, 0.15, 'Punti fuori limite: predefinito 0,15.');
-assert.deepEqual(APPODEAL_BANNER_PAGES, ['panoramica', 'ricompense', 'notizie', 'archivio', 'impostazioni', 'storico']);
+assert.deepEqual(APPODEAL_BANNER_PAGES, ['panoramica'], 'Allowlist del banner: solo Panoramica.');
 lines.push('configurazione TEST/OFF/produzione bloccata, chiave, placement `default`, 180 s');
 
 // ---- adapter against a fake plugin
@@ -86,7 +88,7 @@ lines.push('consenso prima di tutto, init con sola chiave+flag, nessun annuncio 
   assert.equal(await m.onWeekClosed(state), false); assert.equal(await m.onWeekClosed(state), true, 'Ogni 2 settimane chiuse.'); t += 60_000; assert.equal(await m.onWeekClosed(state), false); assert.equal(await m.onWeekClosed(state), false, 'Meno di 180 s: no.'); t += 130_000; assert.equal(await m.onWeekClosed(state), true, 'Dopo 180 s: sì.'); assert.equal(shown(), 2);
   for (const busy of [{ game: {}, night: {} }, { game: {}, scene: {} }, { game: {}, vote: {} }, { game: {}, campaign: {} }, { game: {}, wizard: {} }, {}]) { t += 400_000; await m.onWeekClosed(busy); await m.onWeekClosed(busy); }
   assert.equal(shown(), 2, 'Mai durante notte, scena, voto, campagna, wizard o senza partita.');
-  assert.equal(await m.syncBanner({ page: 'panoramica', margin: 72 }), true, 'Banner sulla Home.'); assert.equal(plugin.calls.find(c => c[0] === 'showBanner')[1].margin, 72, 'Margine sopra la barra: non copre i contenuti.');
+  assert.equal(await m.syncBanner({ page: 'panoramica' }), true, 'Banner sulla Home.'); assert.ok(plugin.calls.some(c => c[0] === 'showBanner'), 'Il margine/altezza del banner è gestito dal nativo (evento bannerHeight), non più dal chiamante.');
   assert.equal(await m.syncBanner({ page: 'elezioni' }), false); assert.equal(a.isBannerShown(), false, 'Nascosto nelle pagine di gioco.'); assert.equal(await m.syncBanner({ page: 'notizie', blocked: true }), false);
 }
 lines.push('interstitial: ogni 2 settimane, mai entro 180 s, mai in notte/scena/voto/campagna; banner solo su Home e schermate statiche, mai in gioco');
@@ -102,7 +104,7 @@ const code = kt.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 assert.ok(!/setUserId|setCustomFilter|setExtraData|setLocation|setUserAge|setUserGender|setBirthday|setSegmentFilter/i.test(code), 'Nessun dato del giocatore passato all’SDK (niente profilazione).');
 assert.ok(!/admob|gms\.ads|facebook|inmobi/i.test(code), 'Il bridge non usa AdMob, Meta né InMobi.');
 const gradle = await read('plugins/appodeal-ads/android/build.gradle'); assert.match(gradle, /appodealVersion = '4\.4\.0'/); assert.match(gradle, /artifactory\.appodeal\.com\/appodeal/);
-const deps = [...gradle.matchAll(/^\s*api "([^"]+)"/gm)].map(m => m[1]); assert.ok(deps.some(d => d.startsWith('com.appodeal.ads.sdk:core:')), 'SDK core.');
+const deps = [...gradle.matchAll(/^\s*api\(?\s*"([^"]+)"/gm)].map(m => m[1]); assert.ok(deps.some(d => d.startsWith('com.appodeal.ads.sdk:core:')), 'SDK core.');
 for (const d of deps) assert.ok(!/admob|meta|facebook|inmobi|bidmachine|gam|google/i.test(d.replace('com.appodeal.ads.sdk.adapters:', 'adapter:')), `Nessun adapter AdMob/Meta/InMobi/BidMachine (che porta Google Ad Manager): ${d}`);
 // Registration of the plugin in Capacitor 8, link by link (a broken link gives a precise message, not just a missing string in a generated file):
 //  1. package.json depends on the local plugin; 2. the plugin declares itself as an Android Capacitor plugin; 3. `npm install` linked it in node_modules (without the link Capacitor finds NO plugin and the generated

@@ -5,8 +5,10 @@ import { DEBATE_PAIRS } from './debate-choices.js?v=20261120-1';
 import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261120-1';
 import { ALL_PAIRS as MOVE_PAIRS } from './activity-scene-moves.js?v=20261120-1';
 import { ALL_PAIRS as TOPIC_PAIRS } from './activity-scene-topics.js?v=20261120-1';
+import { MORE_PAIRS as INITIATIVE_MORE_PAIRS } from './initiative-drafts-more.js?v=20261120-1';
 import { LAW_TERM_PAIRS } from './law-terms.js?v=20261120-1';
 export const ALL_PAIRS = [
+  ...INITIATIVE_MORE_PAIRS,
   ...GUEST_PAIRS,
   ...DEBATE_PAIRS,
   ...APPROACH_PAIRS,

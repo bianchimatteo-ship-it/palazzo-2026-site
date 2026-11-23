@@ -23,6 +23,9 @@ apply plugin: 'kotlin-android'
 android {
     namespace = "it.matteobianchi.politicando.appodeal"
     compileSdk = project.hasProperty('compileSdkVersion') ? rootProject.ext.compileSdkVersion : 36
+    buildFeatures {
+        buildConfig = true
+    }
     defaultConfig {
         minSdkVersion project.hasProperty('minSdkVersion') ? rootProject.ext.minSdkVersion : 24
         targetSdkVersion project.hasProperty('targetSdkVersion') ? rootProject.ext.targetSdkVersion : 36
@@ -56,8 +59,23 @@ dependencies {
     implementation project(':capacitor-android')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    // Appodeal SDK (core: ads + consent manager) and the adapters of the networks connected by Appodeal's automatic connection
-    api "com.appodeal.ads.sdk:core:$appodealVersion"
-    api "com.appodeal.ads.sdk.adapters:applovin:13.6.3.0"
-    api "com.appodeal.ads.sdk.adapters:unity_ads:4.17.0.0"
+    // Appodeal SDK (core: ads + consent manager) and the adapters of the networks connected by Appodeal's automatic connection.
+    // No AdMob adapter is declared (verified with `./gradlew :app:dependencies`: no com.appodeal.ads.sdk.adapters:admob,
+    // no com.google.android.gms:play-services-ads in the resolved graph). The `exclude` below is a guard against a future
+    // SDK update pulling either one back in transitively; it is a no-op today.
+    api("com.appodeal.ads.sdk:core:$appodealVersion") {
+        exclude group: 'com.appodeal.ads.sdk.adapters', module: 'admob'
+        exclude group: 'com.google.android.gms', module: 'play-services-ads'
+        exclude group: 'com.google.android.gms', module: 'play-services-ads-lite'
+    }
+    api("com.appodeal.ads.sdk.adapters:applovin:13.6.3.0") {
+        exclude group: 'com.google.android.gms', module: 'play-services-ads'
+    }
+    api("com.appodeal.ads.sdk.adapters:unity_ads:4.17.0.0") {
+        exclude group: 'com.google.android.gms', module: 'play-services-ads'
+    }
+    // Appodeal's own in-house MRAID/VAST renderer (no third-party dependency: its own com.explorestack:iab has none).
+    // Without it, AdNetworkRegistry has no "mraid"/"vast" entry, so the server's house-ad waterfall fallback fails
+    // with ADAPTER NOT FOUND whenever a format has no real AppLovin/Unity Ads line item configured yet.
+    api "com.appodeal.ads.sdk.adapters:iab:1.8.1.1"
 }

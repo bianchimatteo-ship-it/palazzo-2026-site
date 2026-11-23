@@ -1,6 +1,6 @@
 // The programme and the promises (program-engine.js): what the party proposes, what the player promised, how credible it is, how each promise is going against what the game really did,
 // the commitments of the coalition, and what the rivals promise. Every button here calls the store (makePromise, modifyPromise, withdrawPromise, announcePromise): nothing is decorative.
-import { AMBITIONS, PROMISE_SCOPES, PROMISE_SETTLED, PROMISE_STATES, promiseLine } from '../core/program-engine.js?v=20261120-1';
+import { AMBITIONS, COMMITMENT_KINDS, PROMISE_SCOPES, PROMISE_SETTLED, PROMISE_STATES, promiseLine } from '../core/program-engine.js?v=20261120-1';
 import { AREA_BY_ID, INSTRUMENT_KINDS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261120-1';
 import { badge, bar, card, empty, esc, kpi, num } from './sections-kit.js?v=20261120-1';
 import { glyph, inkOn } from './visuals.js?v=20261120-1';
@@ -41,6 +41,15 @@ function partyCard(view, premier) {
   return card({ kicker: 'IL PARTITO', title: 'Le proposte del partito', body });
 }
 
+// What the role can promise (program-engine.js: promiseFeasibility): the commitment is chosen among the ones the role can honour, and the page says why the others are not offered.
+function commitmentField(view) {
+  const f = view.feasibility;
+  if (!f || f.unknown) return '';
+  const choices = f.available.map(id => [id, COMMITMENT_KINDS[id].label]);
+  const tone = f.difficulty >= 3 ? 'danger' : f.difficulty >= 2 ? 'warn' : 'ok';
+  return `<label>Che impegno prendi<select name="commitment">${options(choices, f.default)}</select></label>
+    <p class="sx-note program-feasibility is-${tone}" data-promise-feasibility><strong>${esc(f.label)}.</strong> ${esc(f.detail)}${f.available.length < 3 ? ' Non vengono offerti gli impegni che il tuo ruolo non può mantenere.' : ''}</p>`;
+}
 function makeForm(view, { premier, hasAccord }) {
   const scopes = Object.entries(PROMISE_SCOPES).filter(([id]) => id !== 'governo' || premier).filter(([id]) => id !== 'coalizione' || hasAccord || premier);
   return card({ kicker: 'NUOVA PROMESSA', title: 'Prendi un impegno', body: `<form class="program-form" data-promise-form>
@@ -48,6 +57,7 @@ function makeForm(view, { premier, hasAccord }) {
     <label>In nome di chi<select name="scope">${options(scopes.map(([id, spec]) => [id, spec.label]), 'candidato')}</select></label>
     <label>Con quale strumento<select name="instrument">${options(INSTRUMENT_OPTIONS, 'investimento')}</select></label>
     <label>Quanto ambiziosa<select name="ambition">${options(AMBITION_OPTIONS, 'media')}</select></label>
+    ${commitmentField(view)}
     <button type="submit" class="primary-button">${glyph('target', 16)} Registra la promessa</button>
   </form>
   <p class="sx-note">Ogni promessa indica il problema, l’intervento, l’obiettivo, il costo stimato e la scadenza. Più sono ambiziose e numerose, meno sono credibili; dopo il voto vengono verificate sulle leggi davvero approvate e sugli indicatori del territorio.</p>` });
@@ -63,6 +73,7 @@ function promiseCard(promise, { campaign, allies = [] }) {
   const settled = PROMISE_SETTLED.includes(promise.status);
   const weeksLeft = promise.dueWeek - (promise.currentWeek ?? promise.dueWeek);
   const scope = PROMISE_SCOPES[promise.scope]?.label ?? promise.scope;
+  const commitment = promise.commitment && COMMITMENT_KINDS[promise.commitment] ? ` · ${COMMITMENT_KINDS[promise.commitment].label}` : '';
   const impediments = !settled && promise.impediments?.length ? `<ul class="program-impediments">${promise.impediments.map(line => `<li>${esc(line)}</li>`).join('')}</ul>` : '';
   const history = (promise.history ?? []).slice(-3).map(item => `<li>${esc(item.text)}</li>`).join('');
   const announced = (promise.announced ?? []).length;
@@ -78,7 +89,7 @@ function promiseCard(promise, { campaign, allies = [] }) {
       ${allies.length ? `<form data-promise-negotiate-form data-promise-id="${esc(promise.id)}" class="program-negotiate"><label>Trattativa con un alleato<select name="ally">${options(allies.filter(ally => !(promise.backedBy ?? []).some(item => item.id === ally.id)).map(ally => [ally.id, ally.label]))}</select></label><button type="submit" class="ghost-button"${(promise.backedBy ?? []).length >= 2 ? ' disabled' : ''}>Chiedi sostegno (1 capitale)</button></form>` : ''}
       <button type="button" class="ghost-button" data-promise-withdraw="${esc(promise.id)}">Ritira</button></div>`;
   return `<article class="program-promise status-${esc(promise.status)}">
-    <header><div><strong>${esc(promise.label)}</strong><small>${esc(scope)} · ${esc(AMBITIONS[promise.ambition]?.label ?? '')}</small></div>${stateChip(promise.status)}</header>
+    <header><div><strong>${esc(promise.label)}</strong><small>${esc(scope)} · ${esc(AMBITIONS[promise.ambition]?.label ?? '')}${esc(commitment)}</small></div>${stateChip(promise.status)}</header>
     ${promise.problem ? `<p class="program-problem"><b>Problema</b> ${esc(promise.problem)}</p>` : ''}
     <p><b>Intervento</b> ${esc(promise.intervention)}</p><p><b>Obiettivo</b> ${esc(promise.objective)}</p>
     <div class="program-meta"><span>${esc(PRIORITIES[promise.priority]?.label ?? PRIORITIES.media.label)}</span><span>Costo ~${num(promise.cost, 1)} mld</span>${(promise.backedBy ?? []).length ? `<span>Sostenuta da ${esc(promise.backedBy.map(item => item.label).join(', '))}</span>` : ''}<span>${settled ? (promise.outcome ? `Esito: ${esc(promise.outcome)}` : '') : `Scadenza tra ${Math.max(0, weeksLeft)} settimane`}</span>${announced ? `<span>Presentata in campagna</span>` : ''}</div>

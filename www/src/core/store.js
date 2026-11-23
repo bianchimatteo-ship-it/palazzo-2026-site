@@ -20,7 +20,7 @@ import { answerRivalMove, rivalPulse, rivalsView } from './rival-life-engine.js?
 import { abandonChallenge as abandonChallengeRun, challengeView as challengeViewOf, recordVerdict as recordChallengeVerdict, startChallenge as startChallengeRun, tickChallenge } from './challenge-engine.js?v=20261120-1';
 import { tickerFor } from './studio-lines.js?v=20261120-1';
 import { assessProposal, createProposal, placeProposal, linkProposal as linkProposalTo, moveProposals, programPreview as programPreviewOf, proposalContext, proposalCredibility, proposalsOf, removeProposals, setProposalState as setProposalStateOf, updateProposal as updateProposalOf, linkableTo, FINANCING, TERRITORIES, DEADLINES, PROPOSAL_LIMIT } from './program-proposals.js?v=20261120-1';
-import { accordPromises, areaIndicator as areaIndicatorOf, fiscalRoom, credibility as baseProgramCredibility, derivePriorities, makePromise as makeProgramPromise, modifyPromise as modifyProgramPromise, negotiatePromise as negotiateProgramPromise, promisesOf, rivalProgram, setPromisePriority as setProgramPromisePriority, tickPromises, topicOfArea, withdrawPromise as withdrawProgramPromise } from './program-engine.js?v=20261120-1';
+import { promiseFeasibility as promiseFeasibilityOf, accordPromises, areaIndicator as areaIndicatorOf, fiscalRoom, credibility as baseProgramCredibility, derivePriorities, makePromise as makeProgramPromise, modifyPromise as modifyProgramPromise, negotiatePromise as negotiateProgramPromise, promisesOf, rivalProgram, setPromisePriority as setProgramPromisePriority, tickPromises, topicOfArea, withdrawPromise as withdrawProgramPromise } from './program-engine.js?v=20261120-1';
 import { advanceDays, formatDate } from './time.js?v=20261120-1';
 import { CALENDAR_RULES } from './calendar-planner.js?v=20261120-1';
 import { GENDERS, STARTING_OFFICES, STARTING_ROLES, normalizeGender, validateNewCareerDraft } from './career-rules.js?v=20261120-1';
@@ -1786,7 +1786,7 @@ function tickSociety(s, date, report) {
   // The promises of the programme (program-engine.js): checked every week against the laws in force, the bills in Parliament and the indicators; each one settled has its consequences once.
   let partnerShift = 0;
   {
-    const result = tickPromises(game, { week: report.week, date, society, parliament: s.parliament, inMajority: playerInMajority(s.parliament) || isPrimeMinister(s.parliament), instability: (s.parliament?.government?.stability ?? 60) < 35 });
+    const result = tickPromises(game, { power: promisePowerOf(s), week: report.week, date, society, parliament: s.parliament, inMajority: playerInMajority(s.parliament) || isPrimeMinister(s.parliament), instability: (s.parliament?.government?.stability ?? 60) < 35 });
     game.promises = result.promises;
     for (const note of result.notes) {
       lines.push(note.text); promiseNotes.push({ kind: 'promessa', title: note.text, tone: 'bad' });
@@ -4353,10 +4353,26 @@ function castOpenVoteIn(voteId, choice, { mode = 'simulata' } = {}) {
   return { vote, choice, mode, result, deferred: Boolean(vote.deferred), voteId: vote.voteId };
 }
 // Before a week is closed: null when nothing waits (or the headless voter cast every ballot), otherwise the votes that stop the close.
+// What the player's role lets him do about a promise (program-engine.js: promiseFeasibility). From the offices actually held, never from a label or from the party: a mayor without a party governs, a councillor of the
+// opposition does not. executive = head or member of a local executive, minister, Prime Minister; seat = a seat in a council or in Parliament; majority = in or supporting the majority (a council: the majority list).
+function promisePowerOf(s) {
+  try {
+    const roles = playerRoles(s);
+    const kinds = new Set(roles.roles.map(item => item[0]));
+    const executive = ['esecutivo-locale', 'assessore', 'ministro', 'vicepremier', 'premier', 'sottosegretario', 'presidente'].some(id => kinds.has(id));
+    const localSeats = (s.local?.institutions ?? []).filter(item => item.status === 'active');
+    const seat = Boolean(s.parliament?.player?.groupId) || localSeats.length > 0;
+    const majority = playerInMajority(s.parliament) || isPrimeMinister(s.parliament) || localSeats.some(item => item.executive?.leader === 'player' || item.playerInMajority === true || item.side === 'maggioranza');
+    const alliance = s.world?.parties && s.game?.party ? (s.world.alliances ?? []).find(item => item.withPlayer && (item.partyIds?.length ?? 0) >= 2) : null;
+    return { executive, seat, majority, independent: !s.game?.party, allies: Boolean(alliance) };
+  } catch { return null; }
+}
 // The staff that takes the ballots when the player delegates (the setting «Votazioni delegate allo staff»): only the votes that do not decide anything big. A confidence vote, a bill of the player's own and
 // the budget always wait for the player; the others are cast by the line of the player's group (or as an abstention) and written in the diary.
 let staffDelegating = false;
 const essentialVote = vote => vote.scope === 'fiducia' || Boolean(vote.own) || /bilancio|manovra/i.test(`${vote.kindLabel ?? ''} ${vote.title ?? ''}`);
+// The player's own choice (a setting), not a flag of one call: with it on, every ordinary week advance lets the staff cast the non-essential ballots (it used to need the «delegate» option of a long advance, which the Advance button never passed).
+const staffTakesBallots = () => (loadSettings().staffVotes ?? 'ferma') !== 'ferma';
 function castByStaff(open) {
   const mode = loadSettings().staffVotes ?? 'ferma';
   if (!staffDelegating || mode === 'ferma') return open;
@@ -4391,7 +4407,8 @@ export const store = {
   // The votes that wait for the player's ballot (Home, the bill's card, the council's page).
   openVotes: () => openVotesOf(state),
   // The open votes that stop the week from closing (none when a test voter casts the ballots: only scripts and test pages have one).
-  votesStoppingTheWeek: () => headlessVoter ? [] : openVotesOf(state),
+  // With the setting «Votazioni delegate allo staff» on «linea» or «astensione» only the essential ballots (confidence, the player's own bills, the budget) stop the week: the others are cast by the staff.
+  votesStoppingTheWeek: () => headlessVoter ? [] : staffTakesBallots() ? openVotesOf(state).filter(essentialVote) : openVotesOf(state),
   // The way the player chose to attend an open vote ('diretta' | 'simulata'): kept in the save, so a sitting left before voting reopens as it was.
   setFloorMode(voteId, mode) {
     if (!state.game || !openVotesOf(state).some(item => item.id === voteId)) return null;
@@ -4616,7 +4633,7 @@ export const store = {
   // player, and the call says how many weeks really went by and why it stopped when it is fewer than asked: { requested, weeks, reason, title } with reason 'completato', 'decisione' (an urgent matter or a situation),
   // 'campagna' (the campaign needs the player: the nomination, or the last week before the vote), 'voto' (an open ballot in an assembly where the player sits), 'fine' (the career is over), 'bloccato'.
   advanceTurn(weeks = Number(loadSettings().weeksPerTurn) || 1, { delegate = false } = {}) {
-    staffDelegating = delegate;
+    staffDelegating = delegate || staffTakesBallots();
     try { return store.advanceTurnInner(weeks, { delegate }); } finally { staffDelegating = false; }
   },
   advanceTurnInner(weeks = 1, { delegate = false } = {}) {
@@ -4921,6 +4938,8 @@ export const store = {
     return { ministry, ...extra };
   },
   // ---------- reminders of the promises ----------
+  // What the player can promise from his role (the three commitments and which of them the role allows), for the programme page.
+  promiseFeasibility(scope = 'candidato') { return state.game ? promiseFeasibilityOf(promisePowerOf(state), { scope }) : null; },
   promiseReminders() { return state.game ? dueReminders(state.game, { week: state.game.week.index }).items : []; },
   markPromisesReminded() {
     if (!state.game) return;
@@ -5061,7 +5080,7 @@ export const store = {
     const reputation = playerStat(state, 'reputation');
     const campaign = state.campaign?.status === 'active' ? state.campaign : null;
     const rivals = campaign ? campaign.candidates.filter(item => !item.isPlayer && item.status === 'active').map(item => ({ id: item.id, label: item.label ?? item.name ?? item.id, partyId: item.partyId ?? null, areas: rivalProgram(state.world, item.partyId) })) : [];
-    return { known: rivalsView(game, partyId => partyId ? rivalProgram(state.world, partyId) : []), promises, accord: accordPromises(state.parliament), partyAreas: game?.party?.program?.areas ?? [], credibility: programCredibility(game ?? { promises: [] }, { society: state.society, reputation }), suggestion: derivePriorities(game, state.parliament, 5, proposalsOf(game)), proposals: proposalsView(state), campaign: campaign ? { id: campaign.id, day: campaign.day, totalDays: campaign.totalDays, rivals } : null };
+    return { feasibility: promiseFeasibilityOf(promisePowerOf(state)), feasibilityGoverno: promiseFeasibilityOf(promisePowerOf(state), { scope: 'governo' }), known: rivalsView(game, partyId => partyId ? rivalProgram(state.world, partyId) : []), promises, accord: accordPromises(state.parliament), partyAreas: game?.party?.program?.areas ?? [], credibility: programCredibility(game ?? { promises: [] }, { society: state.society, reputation }), suggestion: derivePriorities(game, state.parliament, 5, proposalsOf(game)), proposals: proposalsView(state), campaign: campaign ? { id: campaign.id, day: campaign.day, totalDays: campaign.totalDays, rivals } : null };
   },
   // ---------- the programme editor: proposals (program-proposals.js) ----------
   addProposal(input = {}) {
@@ -5120,7 +5139,7 @@ export const store = {
   makePromise(args = {}) {
     requireCareer();
     const week = state.game.week.index, date = state.clock.currentDate;
-    const made = makeProgramPromise(state.game, args, { week, date, society: state.society, reputation: playerStat(state, 'reputation') });
+    const made = makeProgramPromise(state.game, args, { power: promisePowerOf(state), week, date, society: state.society, reputation: playerStat(state, 'reputation') });
     const game = deepCopy(state.game);
     game.promises = [...(game.promises ?? []), made.promise];
     remember(game, { date, kind: 'promessa-fatta', text: `Promessa su ${made.promise.label.toLowerCase()}: ${made.promise.intervention}.`, weight: 0.6 });

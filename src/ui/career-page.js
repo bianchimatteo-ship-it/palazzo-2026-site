@@ -62,7 +62,7 @@ function origin(state, player) {
   const start = (state.game.timeline ?? [])[0];
   const directPresidency = state.career.startingOffice === 'presidenteRepubblica';
   const rows = [
-    [directPresidency ? 'Percorso iniziale' : 'Livello iniziale', esc(directPresidency ? 'Presidente della Repubblica' : careerLevelLabel(state.career.initialLevel) ?? 'Da definire')],
+    [directPresidency || state.career.startingOffice === 'iscritto' ? 'Percorso iniziale' : 'Livello iniziale', esc(directPresidency ? 'Presidente della Repubblica' : state.career.startingOffice === 'iscritto' ? 'Semplice iscritto · nessun incarico' : careerLevelLabel(state.career.initialLevel) ?? 'Da definire')],
     ['Territorio', esc(territory)],
     ['Professione precedente', esc(player?.previousProfession ?? '—')],
     ['Inizio della carriera', start?.date ? esc(formatDate(start.date)) : '—'],
@@ -159,7 +159,7 @@ function hero(state, player, overview) {
   const focusTrack = overview.focus ? overview.tracks.find(track => track.id === overview.focus.track) : null;
   const focusAction = focusTrack ? actionButton(focusTrack.action, ['party-contest', 'parliament-contest'].includes(focusTrack.action?.type) ? focusTrack.blocker : null) : `<button class="primary-button" data-section-tab="carriera" data-section-tab-value="progressione">Valuta i prossimi passi ${arrow}</button>`;
   return sectionHero({
-    kicker: `IL TUO PERCORSO · ${(careerLevelLabel(state.career.currentLevel ?? state.career.initialLevel) ?? 'CARRIERA').toUpperCase()} · SIMULAZIONE`, icon: 'route',
+    kicker: `IL TUO PERCORSO · ${(!state.career.currentLevel && state.career.startingOffice === 'iscritto' ? 'SEMPLICE ISCRITTO' : (careerLevelLabel(state.career.currentLevel ?? state.career.initialLevel) ?? 'CARRIERA').toUpperCase())} · SIMULAZIONE`, icon: 'route',
     title: player?.displayName ?? 'Il tuo politico',
     lead: `${office ? office.title : 'Nessun incarico'} · ${territory}${game.party ? ` · ${game.party.rankTitle}` : ' · indipendente'}. ${overview.focus ? overview.focus.text : 'Nessun passo è automatico: ogni promozione dipende da numeri, rapporti e momento politico.'}`,
     actions: `${focusAction}<button class="secondary-button" data-action="new-career">Nuova carriera</button>`,
