@@ -75,9 +75,11 @@ for (const id of ids) {
 }
 assert.ok(new Set(ids.map(id => JSON.stringify(A.defaultAvatarFor(id)))).size > 1, 'Gli aspetti predefiniti non sono tutti uguali.');
 const oldPlayer = { id: 'politico-vecchio', firstName: 'Ada', lastName: 'Prova', gender: 'donna' };
-assert.deepEqual(A.avatarOf(oldPlayer), A.defaultAvatarFor('politico-vecchio'), 'Una carriera senza avatar riceve il suo aspetto predefinito stabile.');
+assert.deepEqual(A.avatarOf(oldPlayer), A.avatarForGender(A.defaultAvatarFor('politico-vecchio'), 'donna'), 'Una carriera senza avatar riceve il suo aspetto predefinito stabile, sulla base del genere dichiarato.');
 assert.equal('avatar' in oldPlayer, false, 'Mostrarlo non modifica il record.');
-assert.equal(A.avatarOf({ ...oldPlayer, gender: 'uomo' }).face, A.avatarOf(oldPlayer).face, 'Il genere non decide l’avatar.');
+// the gender gives the avatar its base (the rule was the opposite before this update: check-avatar-gender.mjs)
+assert.equal(A.avatarOf({ ...oldPlayer, gender: 'uomo' }).face, 'maschile', 'Il genere decide la base dell’avatar: uomo.');
+assert.equal(A.avatarOf(oldPlayer).face, 'femminile', 'Il genere decide la base dell’avatar: donna.');
 // an avatar saved before the new traits (seven fields, and the old neutral face) keeps what it had
 const legacy = { id: 'politico-legacy', avatar: { face: 'neutro', skin: 'bruna', hair: 'rosso', hairstyle: 'riccio', beard: 'corta', glasses: 'tondi', jacket: 'bordeaux' } };
 const kept = A.avatarOf(legacy);
@@ -171,7 +173,8 @@ lines.push('schermate e controlli: mappa esplicita');
 const stateOf = () => store.getState();
 const playerOf = state => state.dataset.politicians.find(person => person.id === state.career.playerId);
 const player = playerOf(stateOf());
-assert.deepEqual(player.avatar, { face: 'femminile', skin: 'bruna', hair: 'rosso', hairstyle: 'riccio', beard: 'nessuna', glasses: 'tondi', jacket: 'bordeaux', eyes: 'marroni', expression: 'serena', moustache: 'nessuno' }, 'L’avatar sta nel record canonico del personaggio.');
+// the avatar chosen, on the base of the gender of the record (core/avatar.js avatarForGender: the gender gives the face)
+assert.deepEqual(player.avatar, A.avatarForGender({ face: 'femminile', skin: 'bruna', hair: 'rosso', hairstyle: 'riccio', beard: 'nessuna', glasses: 'tondi', jacket: 'bordeaux', eyes: 'marroni', expression: 'serena', moustache: 'nessuno' }, player.gender), 'L’avatar sta nel record canonico del personaggio.');
 assert.equal(player.gender, 'uomo', 'E resta distinto dal genere (volto femminile, genere «uomo»).');
 assert.deepEqual([player.avatar.eyes, player.avatar.expression, player.avatar.moustache], ['marroni', 'serena', 'nessuno'], 'Un avatar parziale si completa con i tratti nuovi.');
 const minimal = { id: 'p1', firstName: 'Ada', lastName: 'Prova', source: 'user', gender: 'donna', avatar: player.avatar };
@@ -179,7 +182,8 @@ assert.doesNotThrow(() => validateEntity('politicians', minimal), 'Lo schema can
 assert.throws(() => validateEntity('politicians', { ...minimal, avatarX: 1 }), /campi non riconosciuti/, 'Lo schema resta rigoroso sugli altri campi.');
 const created = create({ ...draftOf({ gender: 'donna' }), avatar: { face: 'maschile', hairstyle: 'lungo' } }, db.parties, db.parliamentaryGroups);
 const fresh = playerOf(store.getState());
-assert.deepEqual(fresh.avatar, { ...base, face: 'maschile', hairstyle: 'lungo' }, 'Un avatar parziale nel draft si completa con i valori predefiniti.');
+assert.deepEqual(fresh.avatar, A.avatarForGender({ ...base, face: 'maschile', hairstyle: 'lungo' }, 'donna'), 'Un avatar parziale nel draft si completa con i valori predefiniti, sulla base del genere.');
+assert.equal(fresh.avatar.face, 'femminile', 'Una donna ha il volto femminile anche se il draft diceva altro.');
 assert.equal(fresh.gender, 'donna');
 create(draftOf({ avatar: undefined }), db.parties, db.parliamentaryGroups);
 assert.deepEqual(playerOf(store.getState()).avatar, base, 'Senza avatar nel draft la carriera parte con quello predefinito.');
@@ -300,7 +304,8 @@ for (const field of ['face', 'expression', 'hairstyle', 'beard', 'moustache', 'g
   assert.ok(previews.every(Boolean) && new Set(previews).size === previews.length, `${field}: ogni scelta ha la sua mini-anteprima, diversa dalle altre.`);
   assert.ok(previews.every(svg => svg.includes('viewBox="18 8 84 84"')), `${field}: le anteprime sono ritagliate sul volto.`);
 }
-const changed = view({ step: 1, avatar: { ...base, face: 'femminile', hairstyle: 'lungo' } });
+// (a woman: the gender gives the feminine face; check-avatar-gender.mjs)
+const changed = view({ step: 1, gender: 'donna', avatar: { ...base, face: 'femminile', hairstyle: 'lungo' } });
 assert.ok(changed.includes('data-avatar="femminile.chiara.castano.lungo.nessuna.nessuno.blu.marroni.serena.nessuno"') && !changed.includes(`data-avatar="${Object.values(base).join('.')}"`), 'L’anteprima segue il draft.');
 const second = view({ step: 2 }), third = view({ step: 3 });
 assert.ok(second.includes('data-wizard-region') && !second.includes('data-level=') && !second.includes('data-starting-office='), 'Territorio e partenza: solo il territorio.');
@@ -400,6 +405,9 @@ await withBrowser(async browser => {
   // every choice changes the preview at once and marks the choice
   for (const field of A.AVATAR_FIELDS) {
     for (const item of A.AVATAR_OPTIONS[field]) {
+      // what the gender fixes is shown but not offered (the other face; beard and moustache for a woman): disabled, with the reason in its title
+      const lockedChoice = await evaluate(`(() => { const b = document.querySelector('[data-avatar-field="${field}"][data-avatar-value="${item.id}"]'); return b?.disabled ? b.title : null; })()`);
+      if (lockedChoice !== null) { assert.ok(/segue il genere/.test(lockedChoice) && ['face', 'beard', 'moustache'].includes(field), `${field}/${item.id}: bloccato dal genere, con il motivo (${lockedChoice}).`); continue; }
       await t.click(`[data-avatar-field="${field}"][data-avatar-value="${item.id}"]`, 60);
       const parts = (await t.preview()).split('.');
       assert.equal(parts[A.AVATAR_FIELDS.indexOf(field)], item.id, `${field}/${item.id}: l’anteprima si aggiorna subito.`);
@@ -407,6 +415,9 @@ await withBrowser(async browser => {
     }
   }
   assert.equal(await evaluate(`document.querySelector('.wizard-body').scrollTop`), 0);
+  // a woman: choosing the gender gives the feminine face at once (the base of the avatar follows the gender), the other choices stay
+  await evaluate(`(() => { const select = document.querySelector('.career-wizard [name="gender"]'); select.value = 'donna'; select.dispatchEvent(new Event('change', { bubbles: true })); return true; })()`); await pause(300);
+  assert.equal((await t.preview()).split('.')[0], 'femminile', 'Scelto «Donna», l’anteprima prende subito il volto femminile.');
   for (const [field, value] of Object.entries(FEMALE)) await t.click(`[data-avatar-field="${field}"][data-avatar-value="${value}"]`, 60);
   assert.equal(await t.preview(), Object.values(FEMALE).join('.'));
   assert.equal(await evaluate(`document.activeElement?.dataset?.avatarValue`), 'nessuno', 'Il focus resta sulla scelta fatta.');

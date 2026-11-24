@@ -2,8 +2,8 @@
 // headquarters, the committee room, the newsroom and the room of the Council of Ministers. Each room is a back layer (walls, windows, furniture), the characters (the same ones the other stages use,
 // made from the avatars of the game), and a front layer (the table in front of whoever sits). Name straps with the full name and the role of everyone are drawn over the camera (never cut: the text is
 // wrapped). Loaded with the scene page; it registers its settings in stage-art.js. Nothing here decides anything: it draws the poses that core/activity-scenes.js gives.
-import { actorSvg, inkOn, registerStageSetting, strap } from './stage-art.js?v=20261123-13';
-import { ambienceOf } from '../data/activity-scene-variety.js?v=20261123-13';
+import { actorSvg, inkOn, registerStageSetting, strap } from './stage-art.js?v=20261124-3';
+import { ambienceOf } from '../data/activity-scene-variety.js?v=20261124-3';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const R = (x, y, w, h, fill, extra = '') => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}"${extra ? ` ${extra}` : ''}/>`;
@@ -74,6 +74,36 @@ const DECOR = [
 ];
 const TINT = ['rgba(255,225,170,.10)', 'rgba(150,190,230,.10)', 'rgba(210,150,150,.08)'];
 const decorOf = (setting, scene) => { const h = seedOf(scene); return `${DECOR[h % 3](setting)}${R(-200, -100, 1040, 330, TINT[(h >> 3) % 3], 'class="rm-tint" pointer-events="none"')}`; };
+// ---------- the time of the encounter, the props of the place and the depth: what makes two encounters of the same kind look different ----------
+// The light of the hour (drawn over the room, under the people): a cool morning with the rays of a window, a warm afternoon, an evening with the lamps lit, a late night under spotlights. Chosen by the seed
+// of the encounter, so the same encounter always looks the same and two encounters rarely do.
+const HOURS = Object.freeze([
+  { id: 'mattina', layer: uid => `<defs><linearGradient id="${uid}h" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff6dc" stop-opacity=".22"/><stop offset=".6" stop-color="#fff6dc" stop-opacity="0"/></linearGradient></defs><path d="M-120 -100L120 -100L420 330L60 330Z" fill="url(#${uid}h)"/><path d="M40 -100L150 -100L520 330L330 330Z" fill="#fffaf0" opacity=".06"/>` },
+  { id: 'pomeriggio', layer: uid => `<defs><radialGradient id="${uid}h" cx=".85" cy=".1" r=".9"><stop offset="0" stop-color="#ffcf8a" stop-opacity=".26"/><stop offset="1" stop-color="#ffcf8a" stop-opacity="0"/></radialGradient></defs>${R(-200, -100, 1040, 430, `url(#${uid}h)`)}` },
+  { id: 'sera', layer: uid => `<defs><radialGradient id="${uid}h" cx=".5" cy=".05" r=".75"><stop offset="0" stop-color="#ffd27a" stop-opacity=".18"/><stop offset="1" stop-color="#0b1424" stop-opacity=".38"/></radialGradient></defs>${R(-200, -100, 1040, 430, `url(#${uid}h)`)}${[120, 320, 520].map(x => `<ellipse cx="${x}" cy="40" rx="70" ry="26" fill="#ffd98f" opacity=".1"/>`).join('')}` },
+  { id: 'notte', layer: uid => `<defs><radialGradient id="${uid}h" cx=".5" cy=".55" r=".7"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#05080f" stop-opacity=".5"/></radialGradient></defs>${R(-200, -100, 1040, 430, `url(#${uid}h)`)}${[[180, '#fff1c9'], [460, '#e8f0ff']].map(([x, c]) => `<path d="M${x - 20} -100L${x + 20} -100L${x + 120} 330L${x - 120} 330Z" fill="${c}" opacity=".08"/>`).join('')}` }
+]);
+export const hourOf = scene => HOURS[(seedOf(scene) >>> 5) % HOURS.length].id;
+const hourLayer = (scene, uid) => `<g class="rm-hour" data-hour="${hourOf(scene)}" pointer-events="none">${HOURS[(seedOf(scene) >>> 5) % HOURS.length].layer(uid)}</g>`;
+// What stands in the place: the lectern and the flags of a hall, the name plates and the folders of a committee, the flags of Italy and of Europe at the table of the Council, the screens of a newsroom,
+// the cones and the crane of a building site, the awnings of a market. Two arrangements per place (by the seed).
+const FLAGS = (x, y) => `<g transform="translate(${x},${y})">${R(-1, 0, 2, 70, '#6b5a3a')}<path d="M1 2h14v22H1z" fill="#1f8a4c"/><path d="M15 2h14v22H15z" fill="#f5f3ec"/><path d="M29 2h14v22H29z" fill="#cd2b35"/></g><g transform="translate(${x + 54},${y})">${R(-1, 0, 2, 70, '#6b5a3a')}<path d="M1 2h40v26H1z" fill="#1f4fa0"/>${Array.from({ length: 8 }, (_, i) => `<circle cx="${21 + 8 * Math.cos(i * Math.PI / 4)}" cy="${15 + 8 * Math.sin(i * Math.PI / 4)}" r="1.4" fill="#f5d34a"/>`).join('')}</g>`;
+const PROPS = {
+  sala: [() => `<g class="rm-props">${R(296, 150, 48, 64, '#6b4a30')}${R(292, 146, 56, 8, '#8a6440')}<path d="M320 146v-18" stroke="#333" stroke-width="2"/><circle cx="320" cy="126" r="4" fill="#222"/>${FLAGS(560, 140)}</g>`, () => `<g class="rm-props">${FLAGS(36, 136)}${R(250, 30, 140, 50, '#22324a', 'rx="4"')}<text x="320" y="62" text-anchor="middle" font-size="13" font-family="Manrope, sans-serif" fill="#f0cf85">INCONTRO PUBBLICO</text></g>`],
+  commissione: [() => `<g class="rm-props">${[180, 300, 420].map(x => `${R(x - 26, 196, 52, 14, '#f2ead6', 'rx="2"')}${R(x - 18, 186, 36, 8, '#c9b58a')}`).join('')}${R(470, 176, 46, 30, '#8a2b2b', 'rx="2"')}</g>`, () => `<g class="rm-props">${FLAGS(560, 132)}${[130, 250].map(x => `${R(x, 184, 40, 26, '#e8e0cc', 'rx="2"')}${R(x + 4, 180, 40, 26, '#f6f0e0', 'rx="2"')}`).join('')}</g>`],
+  consiglio: [() => `<g class="rm-props">${FLAGS(40, 130)}${R(200, 196, 240, 10, '#5a3a24', 'rx="3"')}${[230, 300, 370].map(x => R(x, 186, 34, 10, '#f3ecd8', 'rx="1"')).join('')}</g>`, () => `<g class="rm-props">${FLAGS(548, 128)}<circle cx="320" cy="58" r="22" fill="none" stroke="#c4a66a" stroke-width="3"/><path d="M308 58h24M320 46v24" stroke="#c4a66a" stroke-width="2"/></g>`],
+  redazione: [() => `<g class="rm-props">${[120, 260, 400].map(x => `${R(x, 60, 90, 56, '#13202e', 'rx="3"')}${R(x + 6, 66, 78, 30, '#2f5b7a', 'opacity=".55"')}${R(x + 6, 100, 50, 4, '#c4a66a')}`).join('')}</g>`, () => `<g class="rm-props">${R(80, 186, 120, 24, '#ece4cf', 'rx="2"')}${R(90, 180, 100, 8, '#d8cdb0')}${R(470, 54, 120, 70, '#13202e', 'rx="3"')}<text x="530" y="96" text-anchor="middle" font-size="14" font-family="Manrope, sans-serif" fill="#e94b4b">ULTIM’ORA</text></g>`],
+  cantiere: [() => `<g class="rm-props">${[90, 520, 560].map(x => `<path d="M${x} 212l10-26l10 26z" fill="#ff8a2a"/>${R(x + 3, 198, 14, 4, '#f5f3ec')}`).join('')}</g>`, () => `<g class="rm-props"><path d="M520 30v170M520 30h-140M400 30v40" stroke="#e0a32a" stroke-width="5" fill="none"/>${R(390, 70, 20, 16, '#7a6a52')}</g>`],
+  mercato: [() => `<g class="rm-props">${[60, 470].map((x, i) => `<path d="M${x} 120h120l-10 26h-100z" fill="${i ? '#cd2b35' : '#1f8a4c'}"/>${Array.from({ length: 6 }, (_, k) => `<path d="M${x + k * 20} 146q10 10 20 0" fill="${k % 2 ? '#f5f3ec' : i ? '#cd2b35' : '#1f8a4c'}"/>`).join('')}${R(x + 6, 150, 108, 56, '#a07a4a')}`).join('')}</g>`, () => `<g class="rm-props">${R(240, 174, 160, 36, '#a07a4a')}${[256, 296, 336, 376].map((x, k) => `<circle cx="${x}" cy="172" r="10" fill="${['#e94b2a', '#f2c14e', '#7fb24a', '#e98a2a'][k]}"/>`).join('')}</g>`]
+};
+export const propsOf = (setting, scene) => { const list = PROPS[setting]; return list ? list[(seedOf(scene) >>> 9) % list.length]() : ''; };
+// The depth: the heads of the people in front of the camera, out of focus, where a crowd fills the place (a hall, a market, a building site).
+const CROWDED = new Set(['sala', 'mercato', 'cantiere']);
+export const depthOf = (setting, scene) => {
+  if (!CROWDED.has(setting)) return '';
+  const h = seedOf(scene);
+  return `<g class="rm-depth" opacity=".72" pointer-events="none">${Array.from({ length: 7 }, (_, i) => { const x = -10 + i * 108 + ((h >>> (i + 2)) % 30); const w = 26 + ((h >>> i) % 10); return `<ellipse cx="${x}" cy="${372 - (i % 2) * 6}" rx="${w}" ry="${w * 1.1}" fill="${['#1a1712', '#231d16', '#16140f'][i % 3]}"/><ellipse cx="${x}" cy="${420}" rx="${w * 1.7}" ry="40" fill="#14120e"/>`; }).join('')}</g>`;
+};
 // ---------- the front layers: the table in front of whoever sits ----------
 const FRONT = {
   sala: () => '',
@@ -130,9 +160,9 @@ function roomSvg(scene, stage, node, uid, identity = null) {
   const [me, one, two] = [scene.cast.find(item => item.role === 'giocatore'), ...scene.cast.filter(item => item.role === 'ospite')];
   const body = scene.bodyLabel ?? '';
   const straps = `${strap(me, 8, 204, 334, speaking(me.id), body)}${strap(one, 218, 204, 334, speaking(one.id), body)}${strap(two, 428, 204, 334, speaking(two.id), body)}`;
-  const back = (setting === 'sede' ? partyHeadquarters(identity, { uid }) : BACK[setting](scene)) + decorOf(setting, scene);
+  const back = (setting === 'sede' ? partyHeadquarters(identity, { uid }) : BACK[setting](scene)) + decorOf(setting, scene) + propsOf(setting, scene) + hourLayer(scene, uid);
   const ambience = (AMBIENCE_ART[ambienceOf(scene.activityId)] ?? AMBIENCE_ART.carte)();
-  return { body: `<g class="st-room" data-room="${esc(setting)}">${back}</g>${ambience}<g class="st-actors">${actors}</g><g class="st-room-front">${FRONT[setting]()}</g>`, overlay: `<g class="st-straps">${straps}</g>` };
+  return { body: `<g class="st-room" data-room="${esc(setting)}">${back}</g>${ambience}<g class="st-actors">${actors}</g><g class="st-room-front">${FRONT[setting]()}${depthOf(setting, scene)}</g>`, overlay: `<g class="st-straps">${straps}</g>` };
 }
 for (const setting of Object.keys(BACK)) registerStageSetting(setting, roomSvg);
 export const ROOMS = Object.freeze(Object.keys(BACK));

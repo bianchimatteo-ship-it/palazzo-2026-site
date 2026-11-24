@@ -73,7 +73,9 @@ console.log(`  Genere: ${checked} personaggi di scena (${men} uomini, ${women} d
 
 // ---------- 2. the choices follow the subject ----------
 const topics = Object.keys(studio.DEBATE_CHOICES);
-assert.equal(topics.length, 8, 'Otto temi del dibattito.');
+// the eight topics of the debate, plus the three subjects that only the facts of the days and the promises bring into a debate (core/topic-of-text.js: rescue, immigration, civil rights)
+assert.deepEqual(topics.filter(id => !['soccorsi', 'immigrazione', 'diritti'].includes(id)).length, 8, 'Otto temi del dibattito.');
+assert.ok(['soccorsi', 'immigrazione', 'diritti'].every(id => topics.includes(id)), 'Le risposte dei temi portati dai fatti (soccorsi, immigrazione, diritti civili).');
 const labelsOf = topic => ['styles', 'asks', 'replies', 'closings'].flatMap(group => Object.values(studio.DEBATE_CHOICES[topic][group]).map(item => item[0][0]));
 const seen = new Set();
 for (const topic of topics) {
@@ -90,7 +92,17 @@ for (const node of ['q1', 'domanda', 'attacco', 'chiusura']) {
 }
 assert.ok(choicesAt('sanita', 'q1').some(item => /liste d’attesa/.test(item[1])), 'Nel dibattito sulla sanità ci sono le liste d’attesa.');
 assert.ok(choicesAt('costo-vita', 'q1').some(item => /inflazione|bollette/.test(item[1])), 'In quello sul costo della vita inflazione e bollette.');
-assert.ok(choicesAt('sanita', 'q2').some(item => /occupazione|salari/.test(item[1])), 'La seconda domanda segue il secondo tema (lavoro).');
+// the second question follows the subject it is asked on (core/topic-of-text.js): on the second topic of the debate its choices are those of that topic (check-dialogue-coherence.mjs checks the other sources)
+{
+  let found = false;
+  for (let n = 0; n < 80 && !found; n++) {
+    const s = engine.withStats(engine.createDebateScene({ id: 'd', seed: `q2-${n}`, player, playerAvatar: null, rival: { id: 'r', name: 'Luca Bianchi', partyId: 'p' }, host: { id: 'h', name: 'Marco Valenti', tag: 'Moderatore' }, topic: { id: 'sanita', label: 'Sanità' }, secondTopic: { id: 'lavoro', label: 'Lavoro' } }), { competence: 60, charisma: 60 });
+    if (engine.secondQuestion(s, 'Anna').source !== 'q2.topic') continue;
+    found = true; s.nodeId = 'q2';
+    assert.ok(engine.sceneNode(s).choices.some(item => /occupazione|salari/.test(item[1])), 'La seconda domanda sul secondo tema (lavoro) offre le scelte di quel tema.');
+  }
+  assert.ok(found, 'Una seconda domanda sul secondo tema è stata provata.');
+}
 for (const topic of topics) for (const group of ['styles', 'asks', 'replies', 'closings']) for (const [id, [label, detail]] of Object.entries(studio.DEBATE_CHOICES[topic][group])) assert.ok(label[0] && label[1] && detail[0] && detail[1], `${topic}/${group}/${id}: bilingue.`);
 // the activity scenes: each family has its own words for the three approaches
 let familyCount = 0;

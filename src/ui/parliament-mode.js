@@ -1,25 +1,25 @@
-import { activeMinisters, canManageParliament, CHAMBERS, CONTEST_COST, CONTEST_WINDOW_DAYS, GOVERNMENT_POST_REQUIREMENTS, governingGroupIds, governmentPostProblems, MINISTERIAL_PORTFOLIOS, nextParliamentaryRole, parliamentGroupFacts, playerInMajority } from '../core/parliament-engine.js?v=20261123-13';
-import { amendmentOdds, forecastVote, LAW_SPONSORS, openVotesOf, PLAYER_VOTE_CHOICES, statuteContent } from '../core/lawmaking-engine.js?v=20261123-13';
-import { formatDate } from '../core/time.js?v=20261123-13';
-import { isEnglish } from '../core/i18n.js?v=20261123-13';
-import { floorOffer } from './floor-view.js?v=20261123-13';
-import { competenceIn } from '../core/standing-engine.js?v=20261123-13';
-import { heldOfficesOf } from '../core/roles.js?v=20261123-13';
-import { AREA_BY_ID, FINANCING, GOVERNMENT_LINES, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261123-13';
+import { activeMinisters, canManageParliament, CHAMBERS, CONTEST_COST, CONTEST_WINDOW_DAYS, GOVERNMENT_POST_REQUIREMENTS, governingGroupIds, governmentPostProblems, MINISTERIAL_PORTFOLIOS, nextParliamentaryRole, parliamentGroupFacts, playerInMajority } from '../core/parliament-engine.js?v=20261124-3';
+import { amendmentOdds, forecastVote, LAW_SPONSORS, openVotesOf, PLAYER_VOTE_CHOICES, statuteContent } from '../core/lawmaking-engine.js?v=20261124-3';
+import { formatDate } from '../core/time.js?v=20261124-3';
+import { isEnglish } from '../core/i18n.js?v=20261124-3';
+import { floorOffer } from './floor-view.js?v=20261124-3';
+import { competenceIn } from '../core/standing-engine.js?v=20261124-3';
+import { heldOfficesOf } from '../core/roles.js?v=20261124-3';
+import { AREA_BY_ID, FINANCING, GOVERNMENT_LINES, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261124-3';
 const GOVERNMENT_LINE_LABELS = Object.fromEntries(Object.entries(GOVERNMENT_LINES).map(([id, item]) => [id, item.label]));
-import { AMENDMENT_CAPITAL_COST, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20261123-13';
-import { DATA_SOURCES } from '../data/schema.js?v=20261123-13';
-import { careerOverview } from '../core/career-overview.js?v=20261123-13';
-import { voteSummary } from '../core/vote-engine.js?v=20261123-13';
-import { artTile, glyph, LAW_ICONS } from './visuals.js?v=20261123-13';
-import { measureDesign, projectLaw } from '../core/society-engine.js?v=20261123-13';
-import { dossierPanel } from './dossier-view.js?v=20261123-13';
-import { ministryPanel } from './ministry-view.js?v=20261123-13';
-import { accordPanel, govNav, govSectionClose, govSectionOpen, governmentDesk, governmentGlance, lawContent, policyFields, policyPreview } from './policy-mode.js?v=20261123-13';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261123-13';
-import { avatarOf } from '../core/avatar.js?v=20261123-13';
-import { avatarSvg } from './avatar-svg.js?v=20261123-13';
-import { legislatureLabel } from '../core/legislature-engine.js?v=20261123-13';
+import { AMENDMENT_CAPITAL_COST, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20261124-3';
+import { DATA_SOURCES } from '../data/schema.js?v=20261124-3';
+import { careerOverview } from '../core/career-overview.js?v=20261124-3';
+import { voteSummary } from '../core/vote-engine.js?v=20261124-3';
+import { artTile, glyph, LAW_ICONS } from './visuals.js?v=20261124-3';
+import { measureDesign, projectLaw } from '../core/society-engine.js?v=20261124-3';
+import { dossierPanel } from './dossier-view.js?v=20261124-3';
+import { ministryPanel } from './ministry-view.js?v=20261124-3';
+import { accordPanel, govNav, govSectionClose, govSectionOpen, governmentDesk, governmentGlance, lawContent, policyFields, policyPreview } from './policy-mode.js?v=20261124-3';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261124-3';
+import { avatarOf } from '../core/avatar.js?v=20261124-3';
+import { avatarSvg, playerPortrait } from './avatar-svg.js?v=20261124-3';
+import { legislatureLabel } from '../core/legislature-engine.js?v=20261124-3';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const icon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
@@ -106,7 +106,7 @@ function renderParliament(parliament, party, politicians, player, currentDate, o
   const currentGroup = seat?.groupId ? groupsFor(parliament).find(group => group.groupId === seat.groupId) : null;
   const roleText = seat ? CHAMBERS[seat.chamber].label : 'Nessun incarico parlamentare nella carriera';
   const majorityLabel = seat?.groupId && ['active', 'crisis'].includes(parliament.government?.status) ? (playerInMajority(parliament) ? 'Il tuo gruppo sostiene il governo' : 'Il tuo gruppo è all’opposizione') : '';
-  return '<div class="parliament-mode"><section class="parliament-mode-hero"><div><span class="section-kicker">POLITICA IN AULA' + (parliament.legislature?.label ? ' · ' + esc(parliament.legislature.label.toUpperCase()) : '') + '</span><h2>Due Camere, una partita.</h2><p>' + (parliament.legislature?.reference === 'simulation' ? 'Le Camere nate dal voto della partita: gruppi, seggi, maggioranze e posizione del giocatore sono simulati. La XIX legislatura reale resta nell’archivio.' : 'Composizione reale usata come riferimento; maggioranze, posizione del giocatore e conseguenze appartengono al salvataggio simulato.') + '</p></div><div class="parliament-player"><span class="player-avatar has-avatar">' + (player ? avatarSvg(avatarOf(player), { size: 48, label: '' }) : 'P') + '</span><span><small>' + esc(roleText) + '</small><strong>' + esc(seat ? currentGroup?.officialName || 'Gruppo da scegliere' : 'Osservatore') + '</strong></span></div></section>' + playerParty(party) + (seat && !seat.groupId ? playerGroupSelector(parliament) : '') + (seat ? '<section class="parliament-status-line">' + dataMarker(DATA_SOURCES.SIMULATION, 'RUOLO DI GIOCO') + '<span>' + esc(seat.position) + '</span><span>Capitale politico <b>' + whole(parliament.resources?.politicalCapital) + ' / 100</b></span>' + (majorityLabel ? '<span>' + esc(majorityLabel) + '</span>' : '') + '<span>Approvazione e seggi non sono dati ufficiali.</span></section>' : '') + rolePanel(parliament, currentDate, odds) + (seat?.groupId ? playerGroupSelector(parliament) : '') + '<div class="parliament-chamber-grid">' + chamberPanel(parliament, 'camera', politicians) + chamberPanel(parliament, 'senato', politicians) + '</div>' + accessNote(parliament) + timeline(parliament) + '</div>';
+  return '<div class="parliament-mode"><section class="parliament-mode-hero"><div><span class="section-kicker">POLITICA IN AULA' + (parliament.legislature?.label ? ' · ' + esc(parliament.legislature.label.toUpperCase()) : '') + '</span><h2>Due Camere, una partita.</h2><p>' + (parliament.legislature?.reference === 'simulation' ? 'Le Camere nate dal voto della partita: gruppi, seggi, maggioranze e posizione del giocatore sono simulati. La XIX legislatura reale resta nell’archivio.' : 'Composizione reale usata come riferimento; maggioranze, posizione del giocatore e conseguenze appartengono al salvataggio simulato.') + '</p></div><div class="parliament-player"><span class="player-avatar has-avatar">' + (player ? playerPortrait(player, { size: 48, label: '' }) : 'P') + '</span><span><small>' + esc(roleText) + '</small><strong>' + esc(seat ? currentGroup?.officialName || 'Gruppo da scegliere' : 'Osservatore') + '</strong></span></div></section>' + playerParty(party) + (seat && !seat.groupId ? playerGroupSelector(parliament) : '') + (seat ? '<section class="parliament-status-line">' + dataMarker(DATA_SOURCES.SIMULATION, 'RUOLO DI GIOCO') + '<span>' + esc(seat.position) + '</span><span>Capitale politico <b>' + whole(parliament.resources?.politicalCapital) + ' / 100</b></span>' + (majorityLabel ? '<span>' + esc(majorityLabel) + '</span>' : '') + '<span>Approvazione e seggi non sono dati ufficiali.</span></section>' : '') + rolePanel(parliament, currentDate, odds) + (seat?.groupId ? playerGroupSelector(parliament) : '') + '<div class="parliament-chamber-grid">' + chamberPanel(parliament, 'camera', politicians) + chamberPanel(parliament, 'senato', politicians) + '</div>' + accessNote(parliament) + timeline(parliament) + '</div>';
 }
 
 function groupChecks(parliament, selectedIds = [], politicians = []) {

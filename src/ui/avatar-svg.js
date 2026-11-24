@@ -1,6 +1,7 @@
 // The avatar of the player, drawn as one local SVG from the chosen traits: no library, no request, no remote image. The same renderer draws it in the wizard (live preview), in the profile, in the
 // headquarters and in the Parliament, so that the player is the same face everywhere. The input is always cleaned first (an unknown value falls back to the default).
-import { AVATAR_FIELDS, AVATAR_OPTIONS, SHAPE_FIELDS, normalizeAvatar } from '../core/avatar.js?v=20261123-13';
+import { AVATAR_FIELDS, AVATAR_OPTIONS, SHAPE_FIELDS, avatarOf, normalizeAvatar } from '../core/avatar.js?v=20261124-3';
+import { photoAvatarOf } from '../core/photo-avatar-store.js?v=20261124-3';
 
 const colorOf = (field, id) => AVATAR_OPTIONS[field].find(item => item.id === id)?.color ?? '#888888';
 // A colour made lighter (amount > 0) or darker (amount < 0).
@@ -165,4 +166,12 @@ export function avatarParts(input, uid, { expression = null } = {}) {
     + glasses(a.glasses, u)
     + `${u ? '</g>' : ''}</g>`;
   return { defs, figure, avatar: a };
+}
+
+// The portrait of the player where the player is shown (the home, the profile, the Chamber): the avatar made from a photograph when this device keeps one for that politician (the player of a career)
+// (core/photo-avatar-store.js), else the illustrated avatar. The scenes and the animations keep drawing the illustrated figure (they draw a whole body, not a portrait).
+export function playerPortrait(player, { size = 96, label = '' } = {}) {
+  const photo = photoAvatarOf(player?.id);
+  if (photo) return `<img class="avatar-photo" src="${photo.image}" width="${size}" height="${size}" alt="${String(label).replace(/"/g, '&quot;')}" decoding="async" />`;
+  return avatarSvg(avatarOf(player), { size, label });
 }

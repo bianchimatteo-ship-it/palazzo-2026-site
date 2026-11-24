@@ -94,7 +94,11 @@ try {
   const pbx = await readFile(join(ROOT, 'ios/App/App.xcodeproj/project.pbxproj'), 'utf8');
   assert.ok([...pbx.matchAll(/PRODUCT_BUNDLE_IDENTIFIER = ([^;]+);/g)].every(match => match[1].trim() === identity.ios.bundleId) && config.appId === identity.android.applicationId && config.appId !== identity.ios.bundleId, 'Il progetto iOS ha il Bundle ID iOS, Capacitor (comune) l’appId Android: sono diversi.');
   const plist = await readFile(join(ROOT, 'ios/App/App/Info.plist'), 'utf8');
-  assert.equal(/UsageDescription/.test(plist), false, 'Nessun permesso richiesto sull’iPhone (nessuna descrizione d’uso: il gioco non usa fotocamera, microfono, posizione, contatti).');
+  // Since 24 November 2026 the avatar can be made from a photo (on the device only): the camera and the photo library are the ONLY uses described, asked by iOS only when the player picks a photo;
+  // never microphone, position, contacts, tracking.
+  const usages = [...plist.matchAll(/<key>(NS\w+UsageDescription)<\/key>/g)].map(match => match[1]).sort();
+  assert.deepEqual(usages, ['NSCameraUsageDescription', 'NSPhotoLibraryUsageDescription'], `Sull’iPhone si descrivono solo fotocamera e libreria foto (avatar da foto), nient’altro: ${usages.join(', ')}.`);
+  assert.ok(/<key>NSCameraUsageDescription<\/key>\s*<string>[^<]*(avatar)[^<]*<\/string>/i.test(plist) && /<key>NSPhotoLibraryUsageDescription<\/key>\s*<string>[^<]*(avatar)[^<]*<\/string>/i.test(plist), 'Le descrizioni dicono a cosa serve: l’avatar.');
   assert.equal(/UIBackgroundModes/.test(plist), false, 'Nessuna modalità in background.');
   // ---------- 3b. iOS: universal app (iPhone portrait, iPad every orientation), real icon and splash, privacy manifest, safe area ----------
   const { createHash } = await import('node:crypto');

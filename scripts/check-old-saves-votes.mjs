@@ -2,7 +2,7 @@
 // ballots), loaded through the real store. A result is repaired only when the old rule is PROVED; the original votes are kept; what cannot be reconstructed with certainty is left exactly as it is.
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { startCareer } from './lib/long-run.mjs';
+import { approveNomination, startCareer } from './lib/long-run.mjs';
 const build = (await readFile(new URL('../index.html', import.meta.url), 'utf8')).match(/main\.js\?v=([^"']+)/)?.[1];
 const M = await import(new URL(`../src/core/result-migration.js?v=${build}`, import.meta.url).href);
 const E = await import(new URL(`../src/core/electorate.js?v=${build}`, import.meta.url).href);
@@ -13,7 +13,15 @@ async function realResult(type, role, seed) {
   const { store } = await startCareer({ seed, level: role === 'eurodeputato' ? 'deputato' : 'deputato', fast: true });
   store.fastForwardToElection(type);
   store.startCampaign({ electionType: type, role: type === 'europee' ? 'eurodeputato' : 'deputato', objective: 'seat' }, []);
+  approveNomination(store);
   for (let i = 0; i < 40 && store.getState().campaign?.status === 'active'; i++) store.advance(7);
+  // The old saves listed the lists and left «Altri» implicit (valid ballots − lists); a result now also carries the row «altre liste». That row is taken out of the result and of the report of the
+  // career (same position), exactly as those saves were written. (Until November 2026 this fixture came from a candidacy the party had turned down, which missed the row; such a campaign now
+  // closes with no vote, so the fixture plays a confirmed candidacy.)
+  const state = clone(store.getState());
+  const at = state.campaign.result.groups.findIndex(g => g.id === 'altre-liste' || g.others);
+  if (at >= 0) { state.campaign.result.groups.splice(at, 1); state.career.lastElectionReport.groups.splice(at, 1); }
+  store.loadGame(clone(state));
   return { store, state: clone(store.getState()) };
 }
 // the old rule: the rows shown are stretched to 100 % of the valid ballots

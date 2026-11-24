@@ -1,2 +1,2 @@
 // Backward-compatible shim. New imports should use the explicit simulation namespace.
-export { makeDemoParties, makeDemoState } from './simulation/demo.js?v=20261123-13';
+export { makeDemoParties, makeDemoState } from './simulation/demo.js?v=20261124-3';

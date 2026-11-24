@@ -77,3 +77,7 @@ Eseguiti in 3 processi paralleli. 299 verdi al primo giro; i 9 rossi sono stati 
 
 ## Dispositivi realmente provati
 Chrome headless 320–1280 px (audit responsive di 740 schermate: tutto verde tranne il titolo del topbar a 1024 px, corretto dopo averlo trovato); simulatori iOS 27.2 con WKWebView reale: iPhone 17 (menu, primo avvio, guida con «Chiedi al gioco») e iPhone 17e (selezione lingua). Nessun dispositivo Android, iPad o Safari.
+
+## Seguito: aggiornamento ufficiale del 24/11/2026
+
+I problemi aperti qui sopra ripresi nell’ultima fase (candidature indipendenti, programmi, agenda, provinciali, prestazioni) e le nuove richieste sono nella matrice di [`aggiornamento-ufficiale-2026-11-24.md`](aggiornamento-ufficiale-2026-11-24.md).

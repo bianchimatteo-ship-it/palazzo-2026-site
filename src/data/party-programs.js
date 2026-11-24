@@ -17,7 +17,9 @@ export const DOCUMENTED_PROGRAMS = Object.freeze({
       ambiente: { value: -1.5, confidence: 'media' },
       europa: { value: -2.5, confidence: 'alta' },
       diritti: { value: -1.5, confidence: 'media' },
-      istituzioni: { value: null, confidence: 'nessuna' },
+      // the scale asks «centrality of Parliament and guarantees» against «premierato»: the sources do not name the premierato, but they state the guarantees side (the independence of the judiciary, the
+      // balance of powers, participation and transparency): a cautious position on that side, with low confidence and the evidence quoted
+      istituzioni: { value: -1, confidence: 'bassa', evidence: P('Fonti del partito: «difesa dell’indipendenza della magistratura e dell’equilibrio dei poteri», partecipazione (bilanci partecipativi, consultazioni) e trasparenza: posizione sul lato delle garanzie; il premierato non è nominato.', 'Party sources: “defence of the independence of the judiciary and of the balance of powers”, participation (participatory budgets, consultations) and transparency: a position on the side of guarantees; the premierato is not named.') },
       esteri: { value: 0.5, confidence: 'bassa' }
     },
     // the topics the sources cover beyond the ten themes: shown on the programme, they do not move the compatibility score ([Italian, English])

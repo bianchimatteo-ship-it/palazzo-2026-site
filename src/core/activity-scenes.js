@@ -6,17 +6,17 @@
 // activity is applied ONCE, by the store, when the scene ends.
 // Deterministic: the family of topics, the names and the small variations come from the seed of the scene (and from what the player met lately: the same family is not drawn again in a row).
 // Loaded on demand (it is not in the first screen): it registers itself in scene-engine.js and stage-script.js when imported.
-import { AVATAR_OPTIONS, EXTRA_NAMES, F, M, defaultAvatarFor, genderOf, normalizeAvatar, roleGender } from './avatar.js?v=20261123-13';
-import { personName, registerSceneKind } from './scene-engine.js?v=20261123-13';
-import { SPEAK_GESTURES, LISTEN_GESTURES, pickGesture, registerStageScript, stagePose } from './stage-script.js?v=20261123-13';
-import { ACTIVITY_SCENES, ACTIVITY_SCENE_UI } from '../data/activity-scene-lines.js?v=20261123-13';
-import { ACTIVITY_CONTEXT } from '../data/activity-scene-context.js?v=20261123-13';
-import { STAKES } from '../data/activity-scene-stakes.js?v=20261123-13';
-import { BODIES, CITIZEN_GUESTS, CITIZENS, GUESTS, HEADINGS, REFS } from '../data/activity-scene-guests.js?v=20261123-13';
-import { ATMOSPHERE, BYSTANDERS, LEADIN } from '../data/activity-scene-variety.js?v=20261123-13';
-import { APPROACH_LABELS } from '../data/activity-scene-approaches.js?v=20261123-13';
-import { ONLY, TOPIC_KIND, TOPIC_MOVES, areasOf, newsFits } from '../data/activity-scene-topics.js?v=20261123-13';
-import { APPROACH_FUNCTIONS, COMMITMENTS, COMMITMENT_TEXT, CONSEQUENCE_LINES, EXTRA_Q1, FUNCTIONS, FUND_COST, GUARANTEE_MOVES, MOVES, OUTCOME_KINDS, REACTION_ALT, REACTION_LINES, REACTION_TYPES, STAGE_TEXT, WHY_LINES } from '../data/activity-scene-moves.js?v=20261123-13';
+import { AVATAR_OPTIONS, EXTRA_NAMES, F, M, avatarForGender, defaultAvatarFor, genderOf, normalizeAvatar, roleGender } from './avatar.js?v=20261124-3';
+import { personName, registerSceneKind } from './scene-engine.js?v=20261124-3';
+import { SPEAK_GESTURES, LISTEN_GESTURES, pickGesture, registerStageScript, stagePose } from './stage-script.js?v=20261124-3';
+import { ACTIVITY_SCENES, ACTIVITY_SCENE_UI } from '../data/activity-scene-lines.js?v=20261124-3';
+import { ACTIVITY_CONTEXT } from '../data/activity-scene-context.js?v=20261124-3';
+import { STAKES } from '../data/activity-scene-stakes.js?v=20261124-3';
+import { BODIES, CITIZEN_GUESTS, CITIZENS, GUESTS, HEADINGS, REFS } from '../data/activity-scene-guests.js?v=20261124-3';
+import { ATMOSPHERE, BYSTANDERS, LEADIN } from '../data/activity-scene-variety.js?v=20261124-3';
+import { APPROACH_LABELS } from '../data/activity-scene-approaches.js?v=20261124-3';
+import { ONLY, TOPIC_KIND, TOPIC_MOVES, areasOf, newsFits } from '../data/activity-scene-topics.js?v=20261124-3';
+import { APPROACH_FUNCTIONS, COMMITMENTS, COMMITMENT_TEXT, CONSEQUENCE_LINES, EXTRA_Q1, FUNCTIONS, FUND_COST, GUARANTEE_MOVES, MOVES, OUTCOME_KINDS, REACTION_ALT, REACTION_LINES, REACTION_TYPES, STAGE_TEXT, WHY_LINES } from '../data/activity-scene-moves.js?v=20261124-3';
 
 export { ACTIVITY_SCENES, ACTIVITY_SCENE_UI };
 export const SCENE_KIND = 'attivita';
@@ -84,6 +84,7 @@ const character = (id, role, spec, seed, used, { roleLabel = null, partyLabel = 
     if (!taken.some(other => other.skin === candidate.skin && other.hair === candidate.hair && other.jacket === candidate.jacket)) avatar = candidate;
     else if (attempt === 5) avatar = candidate;
   }
+  avatar = avatarForGender(avatar, gender);
   taken.push(avatar);
   return { id, role, name, gender, avatar, tag: roleLabel ?? spec.tag[0], roleLabel: roleLabel ?? spec.tag[0], partyLabel };
 };
@@ -92,7 +93,20 @@ const character = (id, role, spec, seed, used, { roleLabel = null, partyLabel = 
 // (the building site) — the dialogue banks are the same, the introduction changes.
 // Who belongs to what: in the party meeting everyone is of the party of the player; in the committee and in the Council of Ministers the guests sit for the parties the game gives (`pool`); the others speak for
 // the body of the scene (civil society, the public works, the press). `refs`: what the career holds that a scene can mention (the party, a promise, the territory, a rival, a headline of the week).
-const AFFILIATION = Object.freeze({ sede: 'party', commissione: 'pool', consiglio: 'pool' });
+// The Council of Ministers seats the ministers of the Government of the game (`cabinet`: the records of parliament.government, portfolio by portfolio): each guest who is a minister shows the group of
+// THAT minister (or «Tecnico indipendente»), never one drawn from the majority; a guest whose portfolio has no minister on record, or who is not a minister (the undersecretary, the head of a
+// department), shows no group. In a committee the guests are people the game does not follow one by one: no group is given to them (before, both drew a group from a list at random).
+const AFFILIATION = Object.freeze({ sede: 'party', commissione: 'none', consiglio: 'cabinet' });
+const PORTFOLIO_WORDS = Object.freeze([['economia', 'Economia'], ['lavoro', 'Lavoro'], ['interno', 'Interno'], ['esteri', 'Esteri'], ['affari europei', 'Affari europei'], ['riforme', 'Riforme'], ['infrastrutture', 'Infrastrutture'], ['rapporti con il parlamento', 'Rapporti con il Parlamento'], ['salute', 'Salute'], ['giustizia', 'Giustizia'], ['difesa', 'Difesa'], ['istruzione', 'Istruzione'], ['ambiente', 'Ambiente']]);
+// The minister of the Government who holds the portfolio a role names («Ministro dell’Economia» → the record of «Economia»), or null.
+export function ministerForRole(roleLabel, cabinet = []) {
+  const text = String(roleLabel ?? '').toLowerCase();
+  if (!/^ministr[oa]\b/.test(text)) return null;
+  const word = PORTFOLIO_WORDS.find(([key]) => text.includes(key));
+  if (!word) return null;
+  return cabinet.find(item => String(item.portfolio ?? '').toLowerCase() === word[1].toLowerCase()) ?? cabinet.find(item => String(item.portfolio ?? '').toLowerCase().includes(word[0])) ?? null;
+}
+const membershipLabel = minister => !minister ? '' : minister.groupName && minister.groupId ? minister.groupName : minister.technical || !minister.groupId ? 'Tecnico indipendente' : '';
 const REF_ORDER = ['party', 'promise', 'region', 'rival', 'news'];
 export function pickRef(sceneKey, seed, refs = {}) {
   const available = REF_ORDER.filter(type => String(refs[type] ?? '').trim() && REFS[type]?.[sceneKey]);
@@ -100,7 +114,7 @@ export function pickRef(sceneKey, seed, refs = {}) {
   const type = available[hashOf(`${seed}|riferimento`) % available.length];
   return { type, value: String(refs[type]).trim(), text: REFS[type][sceneKey][0].replace('{}', String(refs[type]).trim()) };
 }
-export function createActivityScene({ id, seed, sceneKey, activityId, target = null, variant = 'default', player, playerAvatar, stats = {}, recent = [], prefer = null, date = null, party = null, refs = {}, pool = [], situation = {}, promises = null, news = null, priorFamilies = null }) {
+export function createActivityScene({ id, seed, sceneKey, activityId, target = null, variant = 'default', player, playerAvatar, stats = {}, recent = [], prefer = null, date = null, party = null, refs = {}, pool = [], cabinet = [], situation = {}, promises = null, news = null, priorFamilies = null }) {
   const spec = ACTIVITY_SCENES[sceneKey];
   if (!spec) throw new Error('Scena non riconosciuta.');
   const context = ACTIVITY_CONTEXT[activityId] ?? null;
@@ -108,12 +122,16 @@ export function createActivityScene({ id, seed, sceneKey, activityId, target = n
   const used = new Set();
   const roles = (activityId === 'cittadini' ? CITIZEN_GUESTS[family.id] : null) ?? GUESTS[sceneKey]?.[family.id] ?? [spec.cast[0].tag, spec.cast[1].tag];
   const heading = sceneKey === 'associazioni' ? HEADINGS[activityId === 'cittadini' ? 'cittadini' : 'associazioni'] : null;
-  const partyOf = index => AFFILIATION[sceneKey] === 'party' ? (party?.label ?? '') : AFFILIATION[sceneKey] === 'pool' && pool.length ? pool[hashOf(`${seed}|appartenenza|${index}`) % pool.length] : '';
+  const ministerOf = index => AFFILIATION[sceneKey] === 'cabinet' ? ministerForRole(roles[index - 1]?.[0] ?? null, cabinet) : null;
+  const partyOf = index => AFFILIATION[sceneKey] === 'party' ? (party?.label ?? '') : AFFILIATION[sceneKey] === 'cabinet' ? membershipLabel(ministerOf(index)) : '';
+  // the record of who sits there: the portfolio, the group and whether the minister is a technician (null when the game holds none for that person)
+  const recordOf = index => { const minister = ministerOf(index); return minister ? { portfolio: minister.portfolio, groupId: minister.groupId ?? null, groupName: minister.groupId ? minister.groupName ?? null : null, technical: !minister.groupId, playerAppointed: Boolean(minister.playerAppointed) } : null; };
   const cast = [
     { id: 'giocatore', role: 'giocatore', name: personName(player?.name, 'Tu'), avatar: normalizeAvatar(playerAvatar), tag: player?.tag ?? '' },
-    character('ospite1', 'ospite', spec.cast[0], seed, used, { roleLabel: roles[0]?.[0] ?? null, partyLabel: partyOf(1) }),
-    character('ospite2', 'ospite', spec.cast[1], seed, used, { roleLabel: roles[1]?.[0] ?? null, partyLabel: partyOf(2) })
+    { ...character('ospite1', 'ospite', spec.cast[0], seed, used, { roleLabel: roles[0]?.[0] ?? null, partyLabel: partyOf(1) }), member: recordOf(1) },
+    { ...character('ospite2', 'ospite', spec.cast[1], seed, used, { roleLabel: roles[1]?.[0] ?? null, partyLabel: partyOf(2) }), member: recordOf(2) }
   ];
+  void pool;
   // A person in the room who does not speak (an usher, a photographer, a foreman…): drawn behind the others, it reacts to what is said.
   const bystanders = BYSTANDERS[activityId === 'cittadini' ? 'mercato' : sceneKey] ?? [];
   const bystander = bystanders.length ? bystanders[hashOf(`${seed}|comparsa`) % bystanders.length] : null;

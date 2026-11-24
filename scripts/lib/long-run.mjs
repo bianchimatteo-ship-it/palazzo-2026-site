@@ -136,6 +136,14 @@ const STATE_SCHEMA = 1;
 const CAMPAIGN_ROLE = { politiche: 'deputato', europee: null, regionale: null, comunale: null };
 // One week of play with the same rules for every seed: each open decision takes a choice drawn from the seed; when
 // the candidacies open, the player runs (most of the times) and campaigns until the vote; then the week advances.
+// The party confirms the candidacy, for fixtures whose subject is the vote and not the internal selection: since the update of 24 November 2026 a candidacy the party does not confirm closes the
+// campaign there and then (no vote, no result), so a fixture that needs a result settles the selection first, as the party would on a favourable decision.
+export function approveNomination(store) {
+  const campaign = store.getState().campaign;
+  if (campaign?.nomination?.status === 'pending') { campaign.nomination.status = 'approved'; if (campaign.candidacy) campaign.candidacy.listPosition = campaign.nomination.listPosition; }
+  store.loadGame(JSON.parse(store.exportSave()));
+  return store.getState().campaign;
+}
 export function playWeek({ store, db, decide }) {
   const state = store.getState();
   for (const item of [...(state.game?.inbox ?? [])]) {

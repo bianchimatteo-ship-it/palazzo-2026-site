@@ -6,7 +6,7 @@ import { chromeAvailable, createCareerInPage, openCareer, withBrowser } from './
 if (!chromeAvailable) { console.log('Contatore dei giorni della campagna saltato: Chrome non trovato (imposta CHROME_PATH per eseguirlo).'); process.exit(0); }
 await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, version }) => {
   const mod = `import('/src/core/store.js?v=${version}')`;
-  await createCareerInPage({ evaluate, version }, { level: 'comunale', weeks: 0, onboarding: true, extra: `store.fastForwardToElection('comunale'); store.startCampaign({ electionType: 'comunale', role: 'sindaco', objective: 'win', municipalityBand: 'fino-15000' }, real.realDatabase.parties); store.getState().campaign.nomination.status = 'approved';` });
+  await createCareerInPage({ evaluate, version }, { level: 'comunale', weeks: 0, onboarding: true, extra: `store.fastForwardToElection('comunale'); store.startCampaign({ electionType: 'comunale', role: 'sindaco', objective: 'win', municipalityBand: 'fino-15000' }, real.realDatabase.parties); store.getState().campaign.nomination.status = 'approved'; store.loadGame(JSON.parse(store.exportSave()));` });
   await openCareer({ evaluate, goto, waitFor: wait });
   await evaluate(`location.hash = '#elezioni'; true`);
   const shown = () => evaluate(`(() => { const box = document.querySelector('.campaign-countdown'); if (!box) return null; return { days: Number(box.querySelector('strong')?.childNodes[0]?.textContent), date: box.querySelector('time')?.textContent?.trim() ?? null, hubTitle: document.querySelector('.campaign-active-head') ? null : null }; })()`);

@@ -4,7 +4,7 @@
 // The reward is counted ONLY when the native side reports the SDK's own completion (`onRewardedVideoFinished`, turned into `rewarded: true` by the plugin); a video closed early, a failed show, a missing plugin or any
 // error gives nothing, and one completion id is made natively for each video (so it can never be credited twice).
 // No data of the player (position, birth date, gender, career, simulated political choices) is ever passed to the SDK: the only things sent to the plugin are the app key, the format and the test flag.
-import { FORMATS, resolveAppodeal } from '../ads-config.js?v=20261123-13';
+import { FORMATS, resolveAppodeal } from '../ads-config.js?v=20261124-3';
 
 export function createAppodealAdapter({ plugin = globalThis.Capacitor?.Plugins?.AppodealAds ?? null, config = null } = {}) {
   let ids = config ?? resolveAppodeal(null, 'off');

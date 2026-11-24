@@ -9,7 +9,7 @@ if (!chromeAvailable) { console.log('Notte elettorale nel browser saltata: Chrom
 await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, screenshot, errors, version }) => {
   const band = process.env.BAND ?? 'oltre-15000';
   const startOver = async () => {
-    await createCareerInPage({ evaluate, version }, { level: 'comunale', onboarding: true, extra: `store.fastForwardToElection('comunale'); store.startCampaign({ electionType: 'comunale', role: 'sindaco', objective: 'win', municipalityBand: ${JSON.stringify(band)} }, real.parties ?? []);` });
+    await createCareerInPage({ evaluate, version }, { level: 'comunale', onboarding: true, extra: `store.fastForwardToElection('comunale'); store.startCampaign({ electionType: 'comunale', role: 'sindaco', objective: 'win', municipalityBand: ${JSON.stringify(band)} }, real.parties ?? []); store.getState().campaign.nomination.status = 'approved'; store.loadGame(JSON.parse(store.exportSave()));` });
     await goto();
     await wait(() => evaluate('Boolean(document.querySelector("[data-menu=continua]"))'));
     await evaluate('document.querySelector("[data-menu=continua]").click(), true');

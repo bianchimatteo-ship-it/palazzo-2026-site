@@ -1,12 +1,12 @@
-import { advanceDays } from './time.js?v=20261123-13';
-import { genderOf } from './avatar.js?v=20261123-13';
-import { difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261123-13';
-import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261123-13';
-import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261123-13';
-import { aggregateShares, listVote, mateForce, runFinalElection, runFirstRound, voteScale } from './election-engine.js?v=20261123-13';
-import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261123-13';
-import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261123-13';
-import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261123-13';
+import { advanceDays } from './time.js?v=20261124-3';
+import { genderOf } from './avatar.js?v=20261124-3';
+import { difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261124-3';
+import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261124-3';
+import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261124-3';
+import { aggregateShares, listVote, mateForce, runFinalElection, runFirstRound, voteScale } from './election-engine.js?v=20261124-3';
+import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261124-3';
+import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261124-3';
+import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261124-3';
 
 const SOURCE = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));
@@ -511,7 +511,7 @@ const partyKindOf = source => source === 'user' ? 'utente' : source === 'simulat
 // not have the same field): active parties only, regional parties only in their own region, the forces with more weight in the polls more often than the
 // small ones, the real parties the polls do not measure at their small weight, and now and then a candidacy without a party, declared independent
 // (never a made-up party: a simulated candidate belongs to a real force, to a force of the player or to nobody).
-function buildOpponents(partyId, catalog, seed, count = 3, realCandidates = [], { type = null, region = null, weights = {}, roster = null, place = null, independents = 0, excluded = [] } = {}) {
+function buildOpponents(partyId, catalog, seed, count = 3, realCandidates = [], { type = null, region = null, weights = {}, roster = null, place = null, independents = 0, excluded = [], allies = [], allyProfiles = [] } = {}) {
   const placeKey = place ? `${place.municipalityCode ?? place.municipality ?? ''}|${place.region ?? region ?? ''}` : null;
   const rand = randomFrom(placeKey ? (seed ^ 0x5bd1e995) ^ pollHash(placeKey) : seed ^ 0x5bd1e995);
   const home = regionIdOf(region);
@@ -537,6 +537,12 @@ function buildOpponents(partyId, catalog, seed, count = 3, realCandidates = [], 
     // A candidacy without a party: a civic list or an independent, for as many slots as the kind of election gives (at most one fewer than the field).
     const free = clamp(Math.round(independents), 0, Math.max(0, slots.length - 1));
     for (let index = 0; index < free; index++) slots[slots.length - 1 - index] = { independent: true };
+    // The partners of a coalition registered for this vote stand in the race with their lists, beside the player (createCampaign makes them allies at once): a slot each, beyond the rivals, never in place of one.
+    for (const id of allies ?? []) {
+      if (id === partyId || slots.some(slot => slot?.id === id)) continue;
+      const item = catalog.find(entry => entry?.id === id) ?? allyProfiles.find(entry => entry?.id === id);
+      if (item) slots.push({ id: item.id, officialName: item.officialName ?? item.name, name: item.name ?? item.officialName, abbreviation: item.abbreviation ?? null, source: item.source, rosterReason: 'coalizione', surveyed: Number(weights[item.id] ?? 0) > 0, regional: Boolean(item.regionId), coalitionPartner: true });
+    }
   }
   // A real parliamentarian stands for the force his group resembles (his party): his identity is verified, the numbers are simulated. In a vote
   // without a roster he stands for no party, as before; one whose group matches no force of the roster is not made a rival of its own.
@@ -1115,8 +1121,18 @@ function evaluateNomination(campaign) {
     campaign.nomination.status = 'excluded';
     campaign.candidates.find(item=>item.isPlayer).status='eliminated';
     campaign.candidateStats.reputation=round(clamp(campaign.candidateStats.reputation-1.5));
-    addHistory(campaign,'candidatura',lead < 0 ? 'Il partito ha preferito un’altra candidatura interna.' : 'La candidatura non ha ottenuto sostegno interno sufficiente entro la scadenza.',{source:SOURCE});
+    const reason = lead < 0 ? 'Il partito ha preferito un’altra candidatura interna.' : 'La candidatura non ha ottenuto sostegno interno sufficiente entro la scadenza.';
+    addHistory(campaign,'candidatura',reason,{source:SOURCE});
+    excludeFromRace(campaign, reason);
   }
+}
+// A candidacy the party does not confirm ends the player's campaign there and then: no vote, no result and no Notte Elettorale for a race the player never entered. The campaign is closed
+// (status «excluded») with the reason and the decision on record; the store closes it in the career (what the campaign had not spent goes back, the history keeps the outcome).
+export function excludeFromRace(campaign, reason) {
+  campaign.status = 'excluded'; campaign.stage = 'escluso'; campaign.closedAt = campaign.currentDate;
+  campaign.pendingEvents = []; campaign.runoff = null;
+  campaign.exclusion = { date: campaign.currentDate, day: campaign.day, reason, decision: campaign.nomination?.decision ?? null, source: SOURCE };
+  return campaign;
 }
 function chooseRivalAction(campaign, rival, ranked, rivals, player) {
   const profile = ensureRivalProfile(campaign, rival, rivals.indexOf(rival));
@@ -1668,6 +1684,7 @@ function tick(campaign) {
   campaign.currentDate=withinDays(campaign.startedAt,campaign.day);
   crewDay(campaign);
   evaluateNomination(campaign);
+  if (campaign.status !== 'active') return;
   if (campaign.day>0 && campaign.day%7===0) {
     opponentTurn(campaign);
     if (campaign.stage==='ballottaggio') runoffRivalMoves(campaign);
@@ -1885,7 +1902,7 @@ export function createCampaign({career,player,statistics=[],offices=[],territori
   const place=config.place ?? null;
   const independentsOf=()=>{ if(!['comunale','provinciale','regionale'].includes(type)) return 0; const key=type==='comunale'?(config.municipalityBand==='oltre-15000'?'comunale':'comunaleSmall'):type; const chance=CAMPAIGN_POLL_RULES.independents[key]??0; const roll=randomFrom(hash(`indipendenti|${seed}|${place?.municipalityCode??place?.municipality??''}|${place?.region??player.region??''}`)); return (roll()<chance?1:0)+(key==='comunale'&&roll()<chance*.3?1:0); };
   const roster=config.roster?.participants?.length?config.roster:null;
-  const opponents=buildOpponents(partyId,partyCatalog,seed,rivals,config.realCandidates??[],{ type, region:player.region ?? null, weights:config.partyWeights ?? {}, roster, place, independents:Number.isFinite(config.independents)?config.independents:independentsOf(), excluded:config.excluded ?? [] });
+  const opponents=buildOpponents(partyId,partyCatalog,seed,rivals,config.realCandidates??[],{ type, region:player.region ?? null, weights:config.partyWeights ?? {}, roster, place, independents:Number.isFinite(config.independents)?config.independents:independentsOf(), excluded:config.excluded ?? [], allies:config.allies ?? [], allyProfiles:config.allyProfiles ?? [] });
   const candidates=[candidate,...opponents];
   // What each candidacy stands for in the segments of the electorate: the agenda and the stance of its force (the forces of the world give them), else of its camp.
   const campOf=position=>/destra/.test(position??'')?'destra':/sinistra/.test(position??'')?'sinistra':'centro';

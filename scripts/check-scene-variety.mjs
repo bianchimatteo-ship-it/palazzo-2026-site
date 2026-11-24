@@ -38,7 +38,8 @@ for (const kind of KINDS) {
   const sample = scenes.createActivityScene({ id: `p-${kind}`, seed: `appartenenza|${kind}`, sceneKey: kind, activityId: spec.activityIds[0], player, playerAvatar: null, party: { label: 'Rotta Civica' }, refs: {}, pool: ['Gruppo Uno', 'Gruppo Due'] });
   const guestsOf = sample.cast.filter(item => item.role === 'ospite');
   if (kind === 'sede') assert.ok(guestsOf.every(item => item.partyLabel === 'Rotta Civica'), 'Alla riunione di partito tutti sono del partito del giocatore.');
-  if (['commissione', 'consiglio'].includes(kind)) assert.ok(guestsOf.every(item => ['Gruppo Uno', 'Gruppo Due'].includes(item.partyLabel)), `${kind}: gli ospiti siedono per i partiti dati.`);
+  // committee and Council: never a group drawn from the list (check-council-ministers.mjs checks the Council against the ministers of the Government); with no minister on record, no group
+  if (['commissione', 'consiglio'].includes(kind)) assert.ok(guestsOf.every(item => item.partyLabel === ''), `${kind}: nessun gruppo preso a caso dall’elenco (${guestsOf.map(item => item.partyLabel).join(', ')}).`);
   // the references to the career: each kind can mention each datum, and without data it says nothing more
   const seen = new Set();
   for (let n = 0; n < 40; n++) {

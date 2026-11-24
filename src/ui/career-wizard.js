@@ -1,19 +1,19 @@
-import { residentsText } from '../core/municipal-rules.js?v=20261123-13';
-import { MONTHS, parseBirth, splitBirth } from '../core/birth-date.js?v=20261123-13';
-import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261123-13';
-import { DEFAULT_LOGO_SECONDARY, LOGO_SECONDARY_PALETTE, LOGO_SHAPES, LOGO_SYMBOLS, isLogoColor, partyLogoDataUrl } from './party-logo.js?v=20261123-13';
-import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261123-13';
-import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261123-13';
-import { AVATAR_GROUPS, AVATAR_LABELS, AVATAR_OPTIONS, DEFAULT_AVATAR, SHAPE_FIELDS, SHAPE_LABELS, SHAPE_LIMIT, normalizeAvatar } from '../core/avatar.js?v=20261123-13';
-import { avatarSvg } from './avatar-svg.js?v=20261123-13';
-import { DATA_SOURCES, isPendingReal, isSelectableParty } from '../data/schema.js?v=20261123-13';
-import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261123-13';
-import { POLL_SCENARIOS, SCENARIO_LIMITS } from '../core/poll-scenario.js?v=20261123-13';
-import { startStep, startSummary } from './start-wizard.js?v=20261123-13';
-import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261123-13';
-import { normalizeStart } from '../core/start-engine.js?v=20261123-13';
-import { legacyBanner } from './hall-view.js?v=20261123-13';
-import { formatDate } from '../core/time.js?v=20261123-13';
+import { residentsText } from '../core/municipal-rules.js?v=20261124-3';
+import { MONTHS, parseBirth, splitBirth } from '../core/birth-date.js?v=20261124-3';
+import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261124-3';
+import { DEFAULT_LOGO_SECONDARY, LOGO_SECONDARY_PALETTE, LOGO_SHAPES, LOGO_SYMBOLS, isLogoColor, partyLogoDataUrl } from './party-logo.js?v=20261124-3';
+import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261124-3';
+import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261124-3';
+import { AVATAR_GROUPS, AVATAR_LABELS, AVATAR_OPTIONS, DEFAULT_AVATAR, SHAPE_FIELDS, SHAPE_LABELS, SHAPE_LIMIT, normalizeAvatar, avatarForGender } from '../core/avatar.js?v=20261124-3';
+import { avatarSvg } from './avatar-svg.js?v=20261124-3';
+import { DATA_SOURCES, isPendingReal, isSelectableParty } from '../data/schema.js?v=20261124-3';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261124-3';
+import { POLL_SCENARIOS, SCENARIO_LIMITS } from '../core/poll-scenario.js?v=20261124-3';
+import { startStep, startSummary } from './start-wizard.js?v=20261124-3';
+import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261124-3';
+import { normalizeStart } from '../core/start-engine.js?v=20261124-3';
+import { legacyBanner } from './hall-view.js?v=20261124-3';
+import { formatDate } from '../core/time.js?v=20261124-3';
 
 const POSITIONS = ['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra'];
 
@@ -57,8 +57,17 @@ export const GAME_MODE_CARDS = Object.freeze([
   ['realistica', 'Realistica', 'Segui il tuo percorso politico: ti candidi solo se hai i requisiti, le condizioni di eleggibilità e i vincoli istituzionali del sistema italiano.', 'Vivi la politica seguendo le regole e le dinamiche della realtà.'],
   ['sandbox', 'Modalità libera', 'Ti candidi a qualsiasi elezione senza bisogno dei requisiti: per esempio alle provinciali senza essere sindaco, o al Quirinale senza avere 50 anni.', 'Le incompatibilità tra cariche restano: ti avvisiamo prima del voto e le applichiamo dopo la vittoria.']
 ]);
+// What each mode is like at a glance: a tag, the difficulty and three advantages (the card says them before the long description).
+const MODE_FACTS = Object.freeze({
+  realistica: { tag: 'Consigliata', level: 'Difficoltà: impegnativa', dots: 3, perks: ['Requisiti e vincoli del sistema italiano', 'Carriera passo dopo passo, dal territorio', 'Ogni candidatura va conquistata'] },
+  sandbox: { tag: 'Più libera', level: 'Difficoltà: accessibile', dots: 1, perks: ['Ti candidi a qualunque elezione', 'Ideale per esplorare il gioco', 'Restano le incompatibilità tra cariche'] }
+});
 function renderModeGate(draft) {
-  const cards = GAME_MODE_CARDS.map(([id, label, text, note]) => `<button type="button" class="wizard-mode-card ${draft.gameMode === id ? 'selected' : ''}" data-wizard-mode="${id}" aria-pressed="${draft.gameMode === id}"><strong>${label}</strong><span>${text}</span><small>${note}</small></button>`).join('');
+  const cards = GAME_MODE_CARDS.map(([id, label, text, note]) => {
+    const facts = MODE_FACTS[id];
+    const on = draft.gameMode === id;
+    return `<button type="button" class="wizard-mode-card ${on ? 'selected' : ''}" data-wizard-mode="${id}" aria-pressed="${on}"><span class="mode-top"><span class="mode-tag">${facts.tag}</span><span class="mode-level" aria-label="${facts.level}">${[1, 2, 3].map(n => `<i class="${n <= facts.dots ? 'on' : ''}"></i>`).join('')}<em>${facts.level}</em></span></span><strong>${label}</strong><span class="mode-text">${text}</span><ul class="mode-perks">${facts.perks.map(perk => `<li>${perk}</li>`).join('')}</ul><small>${note}</small><span class="mode-pick">${on ? 'Selezionata' : 'Scegli questa modalità'}</span></button>`;
+  }).join('');
   return `<div class="wizard-backdrop" data-wizard-backdrop><section class="career-wizard wizard-mode-gate" data-step="0" role="dialog" aria-modal="true" aria-labelledby="wizard-title">
     <aside class="wizard-aside"><div class="wizard-brand"><img class="brand-logo wizard-logo" src="icons/logo-politicando-640.webp" srcset="icons/logo-politicando-240.webp 240w, icons/logo-politicando-640.webp 640w" sizes="88px" width="88" height="88" alt="POLITICANDO 2026" decoding="async" /></div><span class="wizard-aside-label">NUOVA CARRIERA</span><h2>Una storia<br/>da scrivere.</h2><p>Prima di cominciare scegli come giocare: i sei passaggi che seguono sono gli stessi in entrambe le modalità.</p></aside>
     <div class="wizard-main"><header class="wizard-header"><div><span class="wizard-kicker">PRIMA DI COMINCIARE</span><h1 id="wizard-title">Come vuoi giocare?</h1><p>La modalità si sceglie ora e resta con questa carriera. Le elezioni sono le stesse: cambia l’accesso alle candidature.</p></div><button class="wizard-x" type="button" aria-label="Annulla nuova carriera" data-wizard-action="cancel">×</button></header>
@@ -224,7 +233,8 @@ function profileStep(state, d) {
   </div><small class="wizard-hint">Sono i dati del tuo personaggio, non i tuoi: puoi inventarli. Servono solo a questa carriera. La data di nascita è quella del personaggio.</small></section>${avatarEditor(d)}`;
 }
 // The visual editor of the avatar: a live preview and one group of choices per trait. Each choice is a button (data-avatar-field / data-avatar-value) that changes the draft's `avatar` at once;
-// the avatar is its own field, never derived from (or tied to) the gender.
+// the gender gives the avatar its base: the face of that gender, and for a woman no beard or moustache (core/avatar.js avatarForGender); skin, hair, eyes, glasses, jacket, expression and proportions
+// stay free choices.
 // The proportions: six sliders (-3 … +3), the drawing as it always was at zero; moving one redraws the preview and the little previews at once.
 function shapeSliders(avatar) {
   const shape = avatar.shape ?? {};
@@ -232,13 +242,17 @@ function shapeSliders(avatar) {
   return `<fieldset class="avatar-group avatar-shape" data-avatar-group="shape"><legend>Proporzioni del volto</legend><div class="avatar-sliders">${rows}</div><button type="button" class="ghost-button" data-avatar-shape-reset${avatar.shape ? '' : ' disabled'}>Azzera le proporzioni</button></fieldset>`;
 }
 function avatarEditor(d) {
-  const avatar = normalizeAvatar(d.avatar);
+  const avatar = avatarForGender(d.avatar, d.gender);
+  const feminine = avatar.face === 'femminile';
+  // what the gender fixes is shown, not offered: the other face, and beard and moustache for a woman
+  const lockedBy = (field, id) => (field === 'face' && id !== avatar.face) || (feminine && ((field === 'beard' && id !== 'nessuna') || (field === 'moustache' && id !== 'nessuno')));
   // Every trait is shown with what it looks like: a colour sample for the colours, a small preview of the avatar itself (cropped on the head, with that choice applied) for the shapes.
   const groups = AVATAR_GROUPS.map(field => {
     const swatches = AVATAR_OPTIONS[field][0].color !== undefined;
     const choices = AVATAR_OPTIONS[field].map(item => {
       const on = avatar[field] === item.id;
-      const attrs = `data-avatar-field="${field}" data-avatar-value="${item.id}" aria-pressed="${on}" title="${esc(item.label)}" aria-label="${esc(item.label)}"`;
+      const locked = lockedBy(field, item.id);
+      const attrs = `data-avatar-field="${field}" data-avatar-value="${item.id}" aria-pressed="${on}" title="${esc(locked ? `${item.label}: segue il genere scelto` : item.label)}" aria-label="${esc(item.label)}"${locked ? ' disabled' : ''}`;
       return swatches
         ? `<button type="button" class="avatar-choice is-swatch ${on ? 'selected' : ''}" ${attrs} style="--sw:${item.color}"><i></i></button>`
         : `<button type="button" class="avatar-choice is-mini ${on ? 'selected' : ''}" ${attrs}>${avatarSvg({ ...avatar, [field]: item.id }, { size: 56, label: '', focus: true, className: 'avatar-mini' })}<span>${esc(item.label)}</span></button>`;

@@ -1,11 +1,11 @@
-import { uniqueId } from './ids.js?v=20261123-13';
-import { HARD_GAP, THEMES, THEME_BY_ID, compare as compareProgram, compromise as compromiseOn, positionOf as programPositionOf, refusalBlock, refusalKey, recordRefusal, coalitionBlock, registrationsOf, pairKey as programPairKey } from './alliance-rules.js?v=20261123-13';
-import { AD_REWARD } from '../data/simulation/reward-rules.js?v=20261123-13';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261123-13';
-import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261123-13';
-import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261123-13';
-import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261123-13';
-import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261123-13';
+import { uniqueId } from './ids.js?v=20261124-3';
+import { HARD_GAP, THEMES, THEME_BY_ID, compare as compareProgram, compromise as compromiseOn, positionOf as programPositionOf, refusalBlock, refusalKey, recordRefusal, coalitionBlock, registrationsOf, pairKey as programPairKey } from './alliance-rules.js?v=20261124-3';
+import { AD_REWARD } from '../data/simulation/reward-rules.js?v=20261124-3';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261124-3';
+import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261124-3';
+import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261124-3';
+import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261124-3';
+import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261124-3';
 export { houseEffect };
 
 // The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.
@@ -2134,7 +2134,7 @@ export function registerCoalition(input, allianceId, election, date) {
     if (clash.length) reasons.push(`${members[i].label} e ${members[j].label} sono incompatibili su ${clash.map(row => row.label.toLowerCase()).join(', ')}`);
   }
   if ((alliance.cohesion ?? 60) < 35) reasons.push('la coesione dell’alleanza è troppo bassa per presentarsi insieme');
-  const record = { electionId: election.id, type: election.type, label: election.label, status: reasons.length ? 'respinta' : 'approvata', approvedAt: date, reasons, members: [...alliance.partyIds] };
+  const record = { electionId: election.id, type: election.type, label: election.label, electionDate: election.electionDate ?? null, status: reasons.length ? 'respinta' : 'approvata', approvedAt: date, reasons, members: [...alliance.partyIds] };
   alliance.coalitions.push(record);
   alliance.history = [...(alliance.history ?? []), { date, text: reasons.length ? `Coalizione per ${election.label} non approvata: ${reasons.join('; ')}` : `Approvata la coalizione per ${election.label}: le forze si presentano insieme` }].slice(-12);
   const player = playerParty(world);

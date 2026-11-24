@@ -3,6 +3,8 @@
 Branch `feature/qa-completamento` (81 commit sopra `main` e302c45). Versione di build `20261117-1`. Data: 17/11/2026.
 Stati usati: **Completato · In lavorazione · Bloccato · Non iniziato**. Il dettaglio punto per punto è in `docs/qa/master-checklist.md`; qui sono i risultati reali.
 
+> **Aggiornamento del 24/11/2026 (build `20261124-3`).** L’ultima fase (crash della leadership da indipendente, coalizioni registrate in corsa, candidatura esclusa, Notte fino alla dodicesima ora, calendario dalla barra, partito da indipendente, Consiglio dei ministri, avatar e genere, dialoghi, pulsanti oro, BETA, avatar da foto, premio di benvenuto) è descritta in [`aggiornamento-ufficiale-2026-11-24.md`](aggiornamento-ufficiale-2026-11-24.md): regressione di 325 controlli, AAB 1.0.6 (7) e IPA 1.0.2 (3) firmati e verificati, non caricati.
+
 ## 1. Che cosa è stato fatto in questa fase
 
 | Area | Esito |

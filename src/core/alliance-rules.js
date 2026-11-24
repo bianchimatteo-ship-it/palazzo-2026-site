@@ -6,7 +6,7 @@
 //   · the REFUSAL: a force that said no to a request is not asked again by the same party for seven days of the game;
 //   · the COALITION as an agreement for ONE election, apart from the alliance (the standing political agreement): it is registered for that election by an explicit approval and only until the filing of the lists.
 // Nothing here draws a random number or reads a clock: the callers pass the roll and the date, so every rule can be tested.
-import { documentedProgramOf } from '../data/party-programs.js?v=20261123-13';
+import { documentedProgramOf } from '../data/party-programs.js?v=20261124-3';
 export const THEMES = Object.freeze([
   { id: 'immigrazione', label: 'Immigrazione e integrazione', low: 'accoglienza senza restrizioni', high: 'remigrazione e chiusura', weight: 1.4, veto: true },
   { id: 'sicurezza', label: 'Sicurezza', low: 'prevenzione e garanzie', high: 'pugno duro e controllo', weight: 1.0, veto: false },
@@ -119,3 +119,19 @@ export function isElectoral(alliance, electionType = null) {
   return alliance.coalitions.some(item => item.status === 'approvata' && (!electionType || item.type === electionType));
 }
 export const registrationsOf = alliance => (alliance?.coalitions ?? []).filter(item => item.status === 'approvata');
+// The registration of an alliance for ONE vote: approved for that election (its id; a race of the same round, the same kind of vote on the same day), granted to the members the alliance has now (a
+// change of the members, a merger, a force that left, asks for a new approval: registerCoalition). A refused or expired approval, or one for another vote, is not a registration for this one.
+// Old records without the election (written before the rule) stand for the kind of vote they name.
+export function registrationFor(alliance, election) {
+  if (!alliance || !election || !Array.isArray(alliance.coalitions)) return null;
+  const sameMembers = item => !Array.isArray(item.members) || (item.members.length === alliance.partyIds.length && item.members.every(id => alliance.partyIds.includes(id)));
+  const forThis = item => item.electionId ? item.electionId === election.id || (item.type === election.type && Boolean(item.electionDate) && item.electionDate === election.electionDate) : item.type === election.type;
+  return [...alliance.coalitions].reverse().find(item => item.status === 'approvata' && forThis(item) && sameMembers(item)) ?? null;
+}
+// Whether an alliance runs as a coalition at THIS vote (the exact election), with the same exceptions as isElectoral for the poles and the accords of old saves.
+export function isElectoralFor(alliance, election) {
+  if (!alliance || alliance.status !== 'active') return false;
+  if (!election) return isElectoral(alliance);
+  if (alliance.kind === 'coalizione' || alliance.electoral || !Array.isArray(alliance.coalitions)) return true;
+  return Boolean(registrationFor(alliance, election));
+}

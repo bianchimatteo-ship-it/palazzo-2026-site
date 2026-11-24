@@ -361,4 +361,17 @@ class AppodealAdsPlugin : Plugin() {
 
     @PluginMethod
     fun requestTracking(call: PluginCall) { call.resolve(obj("status" to "unavailable")) }   // iOS only
+
+    // What the installed app is: its version name and code (from the package, the values Gradle wrote) and whether it is a debuggable build. The web layer uses it for the thank-you reward of one
+    // exact release (src/core/welcome-reward.js): nothing is sent anywhere, no advertising is involved.
+    @PluginMethod
+    fun buildInfo(call: PluginCall) {
+        try {
+            val ctx = context
+            val info = ctx.packageManager.getPackageInfo(ctx.packageName, 0)
+            @Suppress("DEPRECATION")
+            val code = if (android.os.Build.VERSION.SDK_INT >= 28) info.longVersionCode.toString() else info.versionCode.toString()
+            call.resolve(obj("platform" to "android", "version" to (info.versionName ?: ""), "build" to code, "debug" to isDebugBuild()))
+        } catch (e: Throwable) { Log.e(TAG, "buildInfo", e); call.resolve(obj("platform" to "android", "version" to "", "build" to "", "debug" to true)) }
+    }
 }

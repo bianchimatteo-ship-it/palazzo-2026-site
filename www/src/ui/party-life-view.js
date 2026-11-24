@@ -1,17 +1,17 @@
 // VITA INTERNA — the people behind the currents, what they ask, the agreements, the congress, the local leaders, the
 // rebuilding of the party and the way it is founded, merged or renamed. All simulated: no real person appears here.
-import { costProblem, lifeOverview, partyOpsAvailability } from '../core/career-engine.js?v=20261123-13';
-import { mergeCandidates } from '../core/world-engine.js?v=20261123-13';
-import { OP_COSTS } from '../core/party-ops-engine.js?v=20261123-13';
-import { CADRE_ACTIONS, REBUILD_FOCUS, RENAME_STYLES } from '../data/simulation/party-life-rules.js?v=20261123-13';
-import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20261123-13';
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261123-13';
-import { badge, bar, card, empty, esc, euro, foldPanel, num, weeksLabel } from './sections-kit.js?v=20261123-13';
-import { glyph, territoryTile, territoryVisual } from './visuals.js?v=20261123-13';
-import { planAddButton } from './plan-view.js?v=20261123-13';
-import { renderNewPartyFields } from './career-wizard.js?v=20261123-13';
-import { LOGO_SHAPES, LOGO_SYMBOLS, LOGO_SECONDARY_PALETTE } from './party-logo.js?v=20261123-13';
-import { NAME_MODES } from '../core/merger-identity.js?v=20261123-13';
+import { costProblem, lifeOverview, partyOpsAvailability } from '../core/career-engine.js?v=20261124-3';
+import { mergeCandidates } from '../core/world-engine.js?v=20261124-3';
+import { OP_COSTS } from '../core/party-ops-engine.js?v=20261124-3';
+import { CADRE_ACTIONS, REBUILD_FOCUS, RENAME_STYLES } from '../data/simulation/party-life-rules.js?v=20261124-3';
+import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20261124-3';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261124-3';
+import { badge, bar, card, empty, esc, euro, foldPanel, num, weeksLabel } from './sections-kit.js?v=20261124-3';
+import { glyph, territoryTile, territoryVisual } from './visuals.js?v=20261124-3';
+import { planAddButton } from './plan-view.js?v=20261124-3';
+import { renderNewPartyFields } from './career-wizard.js?v=20261124-3';
+import { LOGO_SHAPES, LOGO_SYMBOLS, LOGO_SECONDARY_PALETTE } from './party-logo.js?v=20261124-3';
+import { NAME_MODES } from '../core/merger-identity.js?v=20261124-3';
 
 const STANCE = { alleata: ['good', 'Alleata'], neutrale: ['neutral', 'Neutrale'], ostile: ['bad', 'Ostile'] };
 const PACT_STATUS = { attivo: ['good', 'In vigore'], scaduto: ['neutral', 'Scaduto'], rotto: ['bad', 'Rotto'], rinnovato: ['good', 'Rinnovato'] };
@@ -168,7 +168,7 @@ function opsCard(state, view, party, neighbours, ops, { foundOnly = false } = {}
   const found = `<article class="pl-op"><h4>Fonda un nuovo partito</h4><p>Lasci ${esc(party.label ?? 'il partito')} (o parti da indipendente) e ne fondi uno tuo: porti con te le aree che scegli, i comitati che guidi, una parte di iscritti, volontari e cassa. Nel Parlamento una parte del gruppo ti segue. ${costChips(OP_COSTS.found)}</p>
     <div class="pl-found-form" data-life-found-form>${renderNewPartyFields(foundDraft(state, party), { upload: false })}<section class="wizard-section pl-found-logo" aria-label="Logo caricato"><div class="policy-heading"><strong>Oppure carica il tuo logo</strong><small>PNG, JPEG o WebP fino a 5 MB: resta nel catalogo dei loghi di questo dispositivo e prende il posto del disegno appena il partito nasce.</small></div><label class="wizard-full-field logo-admin-upload">File del logo<input type="file" accept="image/png,image/jpeg,image/webp" data-life-logo-upload /></label><div class="pl-found-logo-preview" data-life-logo-preview hidden><img alt="Anteprima del logo caricato" /><button type="button" class="text-link" data-life-logo-clear>Togli il file</button></div><small class="menu-error" data-life-logo-error role="alert"></small></section><small class="pl-note">I campi partono dai valori del partito che lasci e si possono modificare.</small></div>
     ${view.currents.length ? `<fieldset class="pl-followers"><legend>Aree che ti seguono</legend>${view.currents.map(item => `<label><input type="checkbox" data-life-follower value="${esc(item.id)}" ${item.aligned ? 'checked' : ''}/> ${esc(item.label)} <small>${item.share}%</small></label>`).join('')}</fieldset>` : ''}
-    <button type="button" class="primary-button" data-life-found ${ops.found.ok ? '' : `disabled title="${esc(ops.found.reason ?? '')}"`}>Fonda il partito</button>${ops.found.ok ? '' : `<small class="pl-reason">${esc(ops.found.reason ?? '')}</small>`}</article>`;
+    <button type="button" class="primary-button cta-hero" data-life-found ${ops.found.ok ? '' : `disabled title="${esc(ops.found.reason ?? '')}"`}>Fonda il partito</button>${ops.found.ok ? '' : `<small class="pl-reason">${esc(ops.found.reason ?? '')}</small>`}</article>`;
   const founder = party.affiliation === 'founder';
   const ownRecord = state.dataset?.parties?.find(item => item.id === state.career?.partyId) ?? null;
   const modeCard = (id, title, text) => `<label class="mg-mode"><input type="radio" name="merge-nameMode" value="${id}" data-life-field="merge-nameMode"${id === 'own' ? ' checked' : ''}><span><b>${esc(title)}</b><small>${esc(text)}</small></span></label>`;

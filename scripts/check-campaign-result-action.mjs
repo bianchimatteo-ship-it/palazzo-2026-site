@@ -5,7 +5,7 @@ import { chromeAvailable, createCareerInPage, openCareer, withBrowser } from './
 
 if (!chromeAvailable) { console.log('Azione di fine campagna nel browser saltata: Chrome non trovato (imposta CHROME_PATH per eseguirlo).'); process.exit(0); }
 await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, errors, version }) => {
-  await createCareerInPage({ evaluate, version }, { level: 'comunale', onboarding: true, extra: `store.fastForwardToElection('comunale'); store.startCampaign({ electionType: 'comunale', role: 'sindaco', objective: 'win', municipalityBand: 'fino-15000' }, real.parties ?? []);` });
+  await createCareerInPage({ evaluate, version }, { level: 'comunale', onboarding: true, extra: `store.fastForwardToElection('comunale'); store.startCampaign({ electionType: 'comunale', role: 'sindaco', objective: 'win', municipalityBand: 'fino-15000' }, real.parties ?? []); store.getState().campaign.nomination.status = 'approved'; store.loadGame(JSON.parse(store.exportSave()));` });
   await openCareer({ evaluate, goto, waitFor: wait });
   await evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); for (let i = 0; i < 80 && store.getState().campaign?.status !== 'finished'; i++) store.advance(7); return store.getState().campaign?.status; })()`).then(status => assert.equal(status, 'finished', 'La campagna si conclude.'));
   await evaluate(`location.hash = '#elezioni'; true`); await pause(900);

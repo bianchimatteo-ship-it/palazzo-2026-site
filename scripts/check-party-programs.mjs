@@ -56,15 +56,17 @@ assert.deepEqual(pci.areas.map(area => area.id).filter(id => ['scuola', 'giovani
 {
   const pciParty = world.parties.find(party => party.id === 'party-progetto-civico-italia') ?? { id: 'party-progetto-civico-italia', label: 'Progetto Civico Italia' };
   const program = R.programOf(world, pciParty);
-  assert.equal(Object.values(program).filter(Number.isFinite).length, 9, 'nove temi con posizione');
-  assert.equal(program.istituzioni, null, 'istituzioni: le fonti non rispondono alla domanda della scala');
+  // all ten themes have a position (aggiornamento ufficiale): «istituzioni» from the guarantees the sources state, with low confidence and the evidence quoted
+  assert.equal(Object.values(program).filter(Number.isFinite).length, 10, 'dieci temi con posizione');
+  assert.equal(program.istituzioni, -1, 'istituzioni: sul lato delle garanzie (fonti: indipendenza della magistratura, equilibrio dei poteri)');
+  assert.equal(R.programSource(pciParty, 'istituzioni').confidence, 'bassa', 'istituzioni: confidenza bassa dichiarata');
   assert.ok(program.europa <= -2 && program.immigrazione < 0 && program.immigrazione > -1.5, 'europeista; immigrazione regolata e inclusiva');
   const sorted = [...documented].sort((a, b) => a.axis - b.axis);
   const far = sorted.at(-1), near = sorted[0];
   const withFar = R.compare(world, pciParty, far), withNear = R.compare(world, pciParty, near);
-  assert.equal(withFar.missing, 1, 'un solo tema non rilevato'); assert.equal(withNear.missing, 1);
+  assert.equal(withFar.missing, 0, 'nessun tema non rilevato (dieci temi con posizione)'); assert.equal(withNear.missing, 0);
   assert.ok(withNear.score > withFar.score, `più compatibile con ${near.label} che con ${far.label} (${withNear.score} vs ${withFar.score})`);
-  assert.ok(withFar.rows.find(row => row.id === 'europa').level !== 'non-rilevato' && withFar.rows.find(row => row.id === 'istituzioni').level === 'non-rilevato');
+  assert.ok(withFar.rows.find(row => row.id === 'europa').level !== 'non-rilevato' && withFar.rows.find(row => row.id === 'istituzioni').level !== 'non-rilevato');
   assert.equal(withFar.rows.find(row => row.id === 'europa').bSource.documented, false);
   assert.equal(withFar.rows.find(row => row.id === 'europa').aSource.documented, true);
   // a compromise on a documented theme works and settles it for both sides

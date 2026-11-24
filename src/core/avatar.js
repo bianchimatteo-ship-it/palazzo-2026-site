@@ -72,7 +72,24 @@ export function randomAvatar(rand = Math.random, { keepShape = null, gender = nu
   const out = { face, skin: pick('skin'), hair: pick('hair'), hairstyle: hairstyleId, beard, glasses, jacket: pick('jacket'), eyes: pick('eyes'), expression: pick('expression'), moustache };
   return normalizeAvatar(keepShape ? { ...out, shape: keepShape } : out);
 }
-export const avatarOf = player => player ? (player.avatar && typeof player.avatar === 'object' && !Array.isArray(player.avatar) ? normalizeAvatar(player.avatar, defaultAvatarFor(player.id)) : defaultAvatarFor(player.id)) : { ...DEFAULT_AVATAR };
+// The look of a person of a given gender: the face follows the gender, and what the drawings give only to a masculine face (a beard, a moustache, the receding hairline) is taken off a feminine one;
+// everything else the player or the game chose (skin, hair and its colour, eyes, glasses, jacket, expression, proportions) stays as it is. With no gender known the avatar stays as it is: no feature is
+// attributed to a person whose gender the data do not give.
+export function avatarForGender(value, gender) {
+  const face = FACE_OF_GENDER[String(gender ?? '').toLowerCase()] ?? null;
+  const avatar = normalizeAvatar(value);
+  if (!face) return avatar;
+  const out = { ...avatar, face };
+  if (face === 'femminile') {
+    out.beard = 'nessuna'; out.moustache = 'nessuno';
+    if (out.hairstyle === 'stempiato') { const hairs = AVATAR_OPTIONS.hairstyle; out.hairstyle = hairs[(hairs.findIndex(item => item.id === 'stempiato') + 1) % hairs.length].id; }
+  }
+  return out;
+}
+// The gender a record states (the player's choice in the wizard, the data of a simulated person): the explicit field only; a real politician whose verified data give no gender has none here.
+export const statedGender = person => person?.legacyGender ? null : FACE_OF_GENDER[String(person?.gender ?? '').toLowerCase()] ?? null;
+// The avatar of a politician record: its own, or the stable default of the character; the base follows the gender the record states.
+export const avatarOf = player => player ? avatarForGender(player.avatar && typeof player.avatar === 'object' && !Array.isArray(player.avatar) ? normalizeAvatar(player.avatar, defaultAvatarFor(player.id)) : defaultAvatarFor(player.id), statedGender(player)) : { ...DEFAULT_AVATAR };
 // A value given with a wrong trait is refused; a missing trait is not a problem (it is completed with the default one).
 const shapeOk = value => value?.shape == null || (typeof value.shape === 'object' && !Array.isArray(value.shape) && Object.keys(value.shape).every(key => SHAPE_FIELDS.includes(key) && Number.isInteger(value.shape[key]) && Math.abs(value.shape[key]) <= SHAPE_LIMIT));
 export const avatarProblems = value => value == null || (typeof value === 'object' && !Array.isArray(value) && AVATAR_FIELDS.every(field => !(field in value) || IDS[field].has(value[field])) && shapeOk(value)) ? [] : ['Scegli un aspetto valido per l’avatar.'];

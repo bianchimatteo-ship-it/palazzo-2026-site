@@ -29,7 +29,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, send, screensho
   assert.equal(data.areas, 15, 'i temi trasversali sono elencati');
   assert.match(data.text, /Scuola, università e ricerca/); assert.match(data.text, /Turismo, borghi e aree interne/);
   const istituzioni = await evaluate(`document.querySelector('[data-coalition-program="${ID}"] tr[data-program-theme="istituzioni"]').innerText`);
-  assert.match(istituzioni, /posizione non rilevata/i, 'il tema senza risposta nelle fonti è dichiarato');
+  assert.ok(!/posizione non rilevata/i.test(istituzioni) && /bassa|garanzie|−1|-1/i.test(istituzioni), `istituzioni: posizione documentata con confidenza bassa (${istituzioni.replace(/\s+/g, ' ').slice(0, 120)})`);
   if (process.env.QA_SHOT_DIR) { await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 1000, deviceScaleFactor: 1, mobile: false }); await pause(500); await expandAll(); await pause(400); await screenshot(`${process.env.QA_SHOT_DIR}/progetto-civico-italia-programma-1280.png`); }
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true }); await pause(500); await expandAll(); await pause(300);
   data = await read(); assert.ok(!data.hscroll, 'nessuno scorrimento orizzontale su smartphone');

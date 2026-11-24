@@ -2175,3 +2175,12 @@ details[open].program-proposal > .program-proposal-head::after { transform: rota
 .route-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; } .route { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px; border-radius: 10px; background: rgba(127,140,134,.08); } .route.is-closed { opacity: .65; } .route.is-chosen { outline: 2px solid var(--gold, #d9b45a); }
 .route small { display: block; overflow-wrap: anywhere; opacity: .85; } .route-req { margin-top: 4px; }
 .route-work { display: grid; gap: 8px; } .route-checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; } .route-checklist .is-done { color: var(--sem-good, #4cae7a); }
+
+/* ---- party page of an independent: the ways back into party politics ---- */
+.pp-independent .pp-sub { margin: 4px 0 8px; font-size: 14px; color: var(--ink-2); }
+.pp-reqs { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.pp-reqs li { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.pp-reqs li span { width: 18px; color: var(--gold); }
+.pp-reqs li.is-missing span, .pp-reqs li.is-missing b { color: var(--amber); }
+.pp-reqs small { color: var(--ink-3); }
+#fonda-partito, #aderisci-partito { scroll-margin-top: 96px; }

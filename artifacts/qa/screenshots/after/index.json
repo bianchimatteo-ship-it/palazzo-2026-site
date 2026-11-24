@@ -1,0 +1,194 @@
+[
+  {
+    "file": "artifacts/qa/screenshots/after/home-320x640.png",
+    "screen": "home",
+    "scenario": "Panoramica della carriera (deputato, settimana 2)",
+    "language": "it",
+    "device": "Chrome headless (emulazione)",
+    "resolution": "320×640"
+  },
+  {
+    "file": "artifacts/qa/screenshots/after/governo-320x640.png",
+    "screen": "governo",
+    "scenario": "Istituzioni › Governo",
+    "language": "it",
+    "device": "Chrome headless (emulazione)",
+    "resolution": "320×640"
+  },
+  {
+    "file": "artifacts/qa/screenshots/after/partito-320x640.png",
+    "screen": "partito",
+    "scenario": "Partito › Panoramica",
+    "language": "it",
+    "device": "Chrome headless (emulazione)",
+    "resolution": "320×640"
+  },
+  {
+    "file": "artifacts/qa/screenshots/after/alleanze-320x640.png",
+    "screen": "alleanze",
+    "scenario": "Sondaggi › Alleanze e coalizioni",
+    "language": "it",
+    "device": "Chrome headless (emulazione)",
+    "resolution": "320×640"
+  },
+  {
+    "file": "artifacts/qa/screenshots/after/calendario-topbar-320x640.png",
+    "screen": "calendario-topbar",
+    "scenario": "Data della barra superiore › calendario",
+    "language": "it",
+    "device": "Chrome headless (emulazione)",
+    "resolution": "320×640"
+  },
+  {
+    "file": "artifacts/qa/screenshots/after/menu-320x640.png",
+    "screen": "menu",
+    "scenario": "Menu principale",
+    "language": "it",
+    "device": "Chrome headless (emulazione)",
+    "resolution": "320×640"
+  },
+  {
+    "file": "artifacts/qa/screenshots/after/account-320x640.png",
+    "screen": "account",
+    "scenario": "Menu › Account (accesso e creazione)",
+    "language": "it",
+    "device": "Chrome headless (emulazione)",
+    "resolution": "320×640"
+  },
+  {
+    "file": "artifacts/qa/screenshots/after/nuova-partita-modalita-320x640.png",
+    "screen": "nuova-partita-modalita",
+    "scenario": "Nuova partita › scelta della modalità",
+    "language": "it",
+    "device": "Chrome headless (emulazione)",
+    "resolution": "320×640"
+  },
+  {
+    "file": "artifacts/qa/screenshots/after/home-390x844.png",
+    "screen": "home",
+    "scenario": "Panoramica della carriera (deputato, settimana 2)",
+    "language": "it",
+    "device": "Chrome headless (emulazione)",
+    "resolution": "390×844"
+  },
+  {
+    "file": "artifacts/qa/screenshots/after/governo-390x844.png",
+    "screen": "governo",
+    "scenario": "Istituzioni › Governo",
+    "language": "it",
+    "device": "Chrome headless (emulazione)",
+    "resolution": "390×844"
+  },
+  {
+    "file": "artifacts/qa/screenshots/after/partito-390x844.png",
+    "screen": "partito",
+    "scenario": "Partito › Panoramica",
+    "language": "it",
+    "device": "Chrome headless (emulazione)",
+    "resolution": "390×844"
+  },
+  {
+    "file": "artifacts/qa/screenshots/after/alleanze-390x844.png",
+    "screen": "alleanze",
+    "scenario": "Sondaggi › Alleanze e coalizioni",
+    "language": "it",
+    "device": "Chrome headless (emulazione)",
+    "resolution": "390×844"
+  },
+  {
+    "file": "artifacts/qa/screenshots/after/calendario-topbar-390x844.png",
+    "screen": "calendario-topbar",
+    "scenario": "Data della barra superiore › calendario",
+    "language": "it",
+    "device": "Chrome headless (emulazione)",
+    "resolution": "390×844"
+  },
+  {
+    "file": "artifacts/qa/screenshots/after/menu-390x844.png",
+    "screen": "menu",
+    "scenario": "Menu principale",
+    "language": "it",
+    "device": "Chrome headless (emulazione)",
+    "resolution": "390×844"
+  },
+  {
+    "file": "artifacts/qa/screenshots/after/account-390x844.png",
+    "screen": "account",
+    "scenario": "Menu › Account (accesso e creazione)",
+    "language": "it",
+    "device": "Chrome headless (emulazione)",
+    "resolution": "390×844"
+  },
+  {
+    "file": "artifacts/qa/screenshots/after/nuova-partita-modalita-390x844.png",
+    "screen": "nuova-partita-modalita",
+    "scenario": "Nuova partita › scelta della modalità",
+    "language": "it",
+    "device": "Chrome headless (emulazione)",
+    "resolution": "390×844"
+  },
+  {
+    "file": "artifacts/qa/screenshots/after/home-820x1180.png",
+    "screen": "home",
+    "scenario": "Panoramica della carriera (deputato, settimana 2)",
+    "language": "it",
+    "device": "Chrome headless (emulazione)",
+    "resolution": "820×1180"
+  },
+  {
+    "file": "artifacts/qa/screenshots/after/governo-820x1180.png",
+    "screen": "governo",
+    "scenario": "Istituzioni › Governo",
+    "language": "it",
+    "device": "Chrome headless (emulazione)",
+    "resolution": "820×1180"
+  },
+  {
+    "file": "artifacts/qa/screenshots/after/partito-820x1180.png",
+    "screen": "partito",
+    "scenario": "Partito › Panoramica",
+    "language": "it",
+    "device": "Chrome headless (emulazione)",
+    "resolution": "820×1180"
+  },
+  {
+    "file": "artifacts/qa/screenshots/after/alleanze-820x1180.png",
+    "screen": "alleanze",
+    "scenario": "Sondaggi › Alleanze e coalizioni",
+    "language": "it",
+    "device": "Chrome headless (emulazione)",
+    "resolution": "820×1180"
+  },
+  {
+    "file": "artifacts/qa/screenshots/after/calendario-topbar-820x1180.png",
+    "screen": "calendario-topbar",
+    "scenario": "Data della barra superiore › calendario",
+    "language": "it",
+    "device": "Chrome headless (emulazione)",
+    "resolution": "820×1180"
+  },
+  {
+    "file": "artifacts/qa/screenshots/after/menu-820x1180.png",
+    "screen": "menu",
+    "scenario": "Menu principale",
+    "language": "it",
+    "device": "Chrome headless (emulazione)",
+    "resolution": "820×1180"
+  },
+  {
+    "file": "artifacts/qa/screenshots/after/account-820x1180.png",
+    "screen": "account",
+    "scenario": "Menu › Account (accesso e creazione)",
+    "language": "it",
+    "device": "Chrome headless (emulazione)",
+    "resolution": "820×1180"
+  },
+  {
+    "file": "artifacts/qa/screenshots/after/nuova-partita-modalita-820x1180.png",
+    "screen": "nuova-partita-modalita",
+    "scenario": "Nuova partita › scelta della modalità",
+    "language": "it",
+    "device": "Chrome headless (emulazione)",
+    "resolution": "820×1180"
+  }
+]

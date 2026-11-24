@@ -8,9 +8,9 @@
 //   - the exit poll, the projections and the seat estimates are estimates and are never built from the units not yet counted (they use the exit poll as the prior of what is still to count);
 //   - the news of the night are derived from those figures, stored once when the hour is reached (so a reload or a save does not write them twice) and never touch the career.
 // The career is touched once, when the night is concluded (store.concludeElectionNight → the same closeCampaign as before).
-import { SEAT_RULES, EUROPEAN_THRESHOLD, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261123-13';
-import { allocateDHondt, allocateWithBonus } from './election-engine.js?v=20261123-13';
-import { distributeVotes } from './electorate.js?v=20261123-13';
+import { SEAT_RULES, EUROPEAN_THRESHOLD, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261124-3';
+import { allocateDHondt, allocateWithBonus } from './election-engine.js?v=20261124-3';
+import { distributeVotes } from './electorate.js?v=20261124-3';
 
 export const NIGHT_HOURS = 12;
 export const NIGHT_STAGES = Object.freeze({ finale: 'Esito della consultazione', 'primo-turno': 'Primo turno' });
@@ -52,15 +52,18 @@ const CLOSE = Object.freeze({
   provinciale: { hour: 20, label: 'seggi chiusi alle 20:00' },
   ballottaggio: { hour: 15, label: 'seggi chiusi alle 15:00 del lunedì' }
 });
-// The share of the units counted at the end of each hour (the first hour is the exit poll: the count has not begun). A general or European count is slow, a small council fast.
+// The share of the units counted at the end of each hour (the first hour is the exit poll: the count has not begun). A general or European count is slow, a small council fast. Every count closes
+// at the LAST hour of the special and only there: a fast count gets near the end earlier (a province, a runoff), but the last units, and so the final result and the final seats, come at the twelfth
+// hour (before, the provincial curve reached 1 at the tenth hour and the runoff at the eleventh, and the night showed «Risultato definitivo» with hours still to go).
 const CURVES = Object.freeze({
   politiche: [0, .03, .09, .18, .30, .43, .56, .68, .79, .89, .96, 1],
   europee: [0, .02, .08, .17, .28, .41, .55, .68, .80, .90, .97, 1],
   regionale: [0, .06, .15, .27, .41, .55, .68, .79, .88, .95, .99, 1],
   comunale: [0, .08, .20, .35, .50, .64, .76, .86, .93, .97, .99, 1],
-  provinciale: [0, .12, .28, .45, .62, .76, .87, .94, .98, 1, 1, 1],
-  ballottaggio: [0, .10, .25, .42, .58, .72, .83, .91, .96, .99, 1, 1]
+  provinciale: [0, .12, .28, .45, .62, .76, .86, .92, .96, .98, .99, 1],
+  ballottaggio: [0, .10, .25, .42, .58, .72, .83, .90, .95, .98, .99, 1]
 });
+export const nightCurves = () => CURVES;
 export function nightSchedule(electionType, stage = 'finale', runoff = false) {
   const key = runoff ? 'ballottaggio' : electionType;
   return { key, close: CLOSE[key] ?? CLOSE.comunale, curve: CURVES[key] ?? CURVES.comunale };
@@ -177,7 +180,8 @@ export function countedAt(night, hour) {
   const curve = nightSchedule(night.snapshot.electionType, night.stage, night.snapshot.runoff).curve;
   const fraction = curve[Math.max(0, Math.min(NIGHT_HOURS, hour)) - 1] ?? 0;
   if (hour >= NIGHT_HOURS) return tally.units.length;
-  return Math.min(tally.units.length, Math.floor(tally.units.length * fraction));
+  // before the last hour at least one unit is still out: the count (and with it the final result) is never complete before the end of the night, whatever the curve and the rounding
+  return Math.max(0, Math.min(tally.units.length - 1, Math.floor(tally.units.length * fraction)));
 }
 
 // ---------- what the night shows at an hour ----------

@@ -351,3 +351,25 @@ Rapporto con la matrice completa (🟢/🟡/🔴), le cause trovate, i test e i 
 | 26.10 | Prestazioni del ridisegno | Non iniziato | — | Limite noto in reattivita.md |
 | 26.11 | Test su Xiaomi/iPad/Safari | Bloccato | — | Nessun dispositivo disponibile |
 | 26.12 | check-load, check-long-run, check-poll-election-consistency | Preesistenti | — | Rossi anche prima (stessi valori) |
+
+## 27. Aggiornamento ufficiale del 24/11/2026 (build 20261124-3)
+
+Matrice completa (🟢/🟡/🔴/⚫), regressione e build: [`docs/qa/aggiornamento-ufficiale-2026-11-24.md`](aggiornamento-ufficiale-2026-11-24.md).
+
+| Punto | Richiesta | Stato | Test | Note |
+|---|---|---|---|---|
+| 27.1 | Crash della leadership da indipendente; eventi di partito dopo l’uscita | Completato | check-party-events-after-leave | Archiviati con motivo, anche nei vecchi salvataggi |
+| 27.2 | Coalizioni registrate in corsa insieme in tutte le elezioni | Completato | check-coalition-elections | |
+| 27.3 | Candidatura esclusa chiude la campagna | Completato | check-nomination-exclusion | Nessuna Notte Elettorale, rimborso, storico |
+| 27.4 | Risultato finale solo alla dodicesima ora | Completato | check-night-final-hour | |
+| 27.5 | Calendario dalla data della barra | Completato | check-topbar-date-jump | Stesso motore di «Avanza fino al…» |
+| 27.6 | Fondare un partito da indipendente | Completato | check-found-from-independent | |
+| 27.7 | Consiglio dei ministri con appartenenze reali | Completato | check-council-ministers | |
+| 27.8 | Avatar coerente con il genere | Completato | check-avatar-gender, check-avatar | |
+| 27.9 | Dialoghi coerenti (soccorsi) | Completato · revisione generale In lavorazione | check-dialogue-coherence | |
+| 27.10 | Atmosfera delle scene, pulsanti oro, BETA, schermate | Completato · animazioni In lavorazione | check-scene-atmosphere, check-button-palette | |
+| 27.11 | Avatar da foto sul dispositivo | Completato · fotocamera reale Bloccato | check-photo-avatar | Nessun dispositivo |
+| 27.12 | Premio di benvenuto 2.500 € | Completato (logica) · store Bloccato | check-welcome-reward | Solo Android 1.0.6 (7) / iOS 1.0.2 (3) release |
+| 27.13 | Regressione `check:all` | Completato | 325 controlli | 313 al primo giro, 12 corretti e rieseguiti |
+| 27.14 | AAB, xcarchive, IPA firmati | Completato | verifiche manuali | Non caricati sugli store |
+| 27.15 | Appodeal su dispositivo, 9/13 decisioni legali, iPhone/Xiaomi/Safari | Bloccato | — | Serve il titolare o un dispositivo |

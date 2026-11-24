@@ -1,9 +1,9 @@
-import { campaignScope } from '../core/campaign-engine.js?v=20261123-13';
-import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261123-13';
-import { formatDate } from '../core/time.js?v=20261123-13';
-import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261123-13';
-import { distinctSeries, sparkline } from './charts.js?v=20261123-13';
-import { documentedProgramOf } from '../data/party-programs.js?v=20261123-13';
+import { campaignScope } from '../core/campaign-engine.js?v=20261124-3';
+import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261124-3';
+import { formatDate } from '../core/time.js?v=20261124-3';
+import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261124-3';
+import { distinctSeries, sparkline } from './charts.js?v=20261124-3';
+import { documentedProgramOf } from '../data/party-programs.js?v=20261124-3';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const pctFormats = new Map();
@@ -575,4 +575,4 @@ export function renderBarometerPanel(state) {
 }
 
 // the tooltips of the charts live in chart-tips.js (loaded with the first screen); re-exported here for the pages and tests that import them from this module
-export { attachChartInteractions, hideChartTip, isChartTipVisible } from './chart-tips.js?v=20261123-13';
+export { attachChartInteractions, hideChartTip, isChartTipVisible } from './chart-tips.js?v=20261124-3';
