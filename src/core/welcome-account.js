@@ -1,5 +1,5 @@
 // Loaded only for a player signed in (ui/app.js), not with the first screen.
-import { WELCOME_PROMO, readLedger, rewardKey, writeLedger } from './welcome-reward.js?v=20261125-10';
+import { WELCOME_PROMO, readLedger, rewardKey, writeLedger } from './welcome-reward.js?v=20261125-11';
 // Signed in: one claim per account on the Worker (reward_community «benvenuto»); a guest has only this device (docs/qa/premio-benvenuto-deduplicazione.md).
 export const ACCOUNT_REWARD = 'benvenuto';
 // 'bind' when this installation credited it as a guest (the claim goes to the account, no new credit), else 'claim'

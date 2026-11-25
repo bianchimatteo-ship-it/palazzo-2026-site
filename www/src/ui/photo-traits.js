@@ -3,7 +3,7 @@
 // illustrated avatar (core/avatar.js AVATAR_OPTIONS): carnagione, colore e lunghezza dei capelli, occhiali, barba e baffi, larghezza del volto. Every trait comes with how sure the reading is
 // ('alta', 'media', 'bassa') or 'non-visibile': the editor shows it and the player corrects what is wrong. The gender is NEVER read from the photo: the face of the avatar follows the gender chosen
 // in the wizard, and beard and moustache are proposed only for a masculine face. Pure functions on RGBA arrays: the same code runs in the tests (Node) and in the page.
-import { AVATAR_OPTIONS } from '../core/avatar.js?v=20261125-10';
+import { AVATAR_OPTIONS } from '../core/avatar.js?v=20261125-11';
 
 // The guide drawn over the crop (fractions of the side): the oval of the face. The zones below are placed on it.
 export const GUIDE = Object.freeze({ cx: 0.5, cy: 0.52, rx: 0.25, ry: 0.33 });

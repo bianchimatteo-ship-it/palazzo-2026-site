@@ -65,13 +65,13 @@ lines.push('versioni SDK, Gradle sincronizzato (Android), iOS senza SDK pubblici
 // ---- C ----
 const pbx = read('ios/App/App.xcodeproj/project.pbxproj');
 assert.ok([...pbx.matchAll(/PRODUCT_BUNDLE_IDENTIFIER = ([^;]+);/g)].every(m => m[1] === 'it.politicando2026.app'), 'iOS: Bundle ID it.politicando2026.app (quello registrato in App Store Connect), non quello Android.');
-assert.ok([...pbx.matchAll(/MARKETING_VERSION = ([^;]+);/g)].every(m => m[1] === '1.0.2') && [...pbx.matchAll(/CURRENT_PROJECT_VERSION = ([^;]+);/g)].every(m => m[1] === '3'), 'iOS: versione 1.0.1 (2) in Debug e Release (la 1.0 (1) è quella già inviata ad Apple).');
+assert.ok([...pbx.matchAll(/MARKETING_VERSION = ([^;]+);/g)].every(m => m[1] === '1.0.3') && [...pbx.matchAll(/CURRENT_PROJECT_VERSION = ([^;]+);/g)].every(m => m[1] === '4'), 'iOS: versione 1.0.1 (2) in Debug e Release (la 1.0 (1) è quella già inviata ad Apple).');
 assert.ok(!/DEVELOPMENT_TEAM|CODE_SIGN_IDENTITY = "?(iPhone|Apple) Distribution/.test(pbx), 'iOS: nessun Team né identità di firma nel repository.');
 assert.match(sw, /func showPrivacyOptions[\s\S]{0,500}call\.resolve\(InMobiAdsPlugin\.consentResult\(\)\)[\s\S]{0,60}\}\s*\}/, 'Swift: le opzioni privacy restituiscono lo stato dopo il modulo, come su Android 1.0.2.');
 assert.ok(!/DEVELOPMENT_TEAM = [A-Z0-9]{10}/.test(pbx), 'iOS: nessun Team nel repository.'); assert.ok(!/ca-app-pub|GADApplication/.test(pbx));
 const app = read('android/app/build.gradle'); assert.match(app, /applicationId "it\.matteobianchi\.politicando2026"/); assert.match(app, /versionCode \d+/); assert.match(app, /versionName "\d+\.\d+\.\d+"/);
 assert.equal(JSON.parse(read('capacitor.config.json')).appId, 'it.matteobianchi.politicando2026', 'capacitor.config.json porta l’appId Android.');
-lines.push('Bundle ID iOS it.politicando2026.app e versione iOS 1.0.2 (3); applicationId Android e versionCode corrente: separati; firma e Team: invariati');
+lines.push('Bundle ID iOS it.politicando2026.app e versione iOS 1.0.3 (4); applicationId Android e versionCode corrente: separati; firma e Team: invariati');
 
 // ---- D ----
 function compileKotlin() {

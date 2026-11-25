@@ -4,7 +4,7 @@
 // fits who says it and where. Every text is a pair [Italian, English] with no free part (the phrase-book reads `ALL_PAIRS`); nothing here decides a result.
 // The engine (core/activity-scenes.js) chooses among the questions by the memory of the career (the wording met least recently first), so the same encounter does not repeat the same words.
 
-import { F as FEMALE, M as MALE, registerRoleGenders } from '../core/avatar.js?v=20261125-10';
+import { F as FEMALE, M as MALE, registerRoleGenders } from '../core/avatar.js?v=20261125-11';
 const P = (it, en) => [it, en];
 // a move of a profile: { id, fn, stat, label, when? } like the moves of data/activity-scene-moves.js
 const M = (id, fn, stat, it, en, when = null) => ({ id, fn, stat, label: [it, en], ...(when ? { when } : {}) });

@@ -22,8 +22,8 @@ assert.ok(bundleIds.every(id => id === identity.ios.bundleId), `iOS: Bundle ID i
 const marketing = [...pbx.matchAll(/MARKETING_VERSION = ([^;]+);/g)].map(match => match[1].trim());
 const build = [...pbx.matchAll(/CURRENT_PROJECT_VERSION = ([^;]+);/g)].map(match => match[1].trim());
 assert.deepEqual([marketing.length, build.length], [2, 2], 'iOS: versione e build in Debug e Release.');
-assert.ok(marketing.every(v => v === '1.0.2'), `iOS: MARKETING_VERSION 1.0.2 (${marketing}).`);
-assert.ok(build.every(v => v === '3'), `iOS: CURRENT_PROJECT_VERSION 3, oltre la 2 della 1.0.1 (2) già inviata (${build}).`);
+assert.ok(marketing.every(v => v === '1.0.3'), `iOS: MARKETING_VERSION 1.0.3 (${marketing}).`);
+assert.ok(build.every(v => v === '4'), `iOS: CURRENT_PROJECT_VERSION 4, oltre la 3 della 1.0.2 (${build}).`);
 const plist = await read('ios/App/App/Info.plist');
 assert.match(plist, /<key>CFBundleIdentifier<\/key>\s*<string>\$\(PRODUCT_BUNDLE_IDENTIFIER\)<\/string>/, 'iOS: Info.plist prende il Bundle ID dal progetto.');
 assert.match(plist, /CFBundleShortVersionString<\/key>\s*<string>\$\(MARKETING_VERSION\)/); assert.match(plist, /CFBundleVersion<\/key>\s*<string>\$\(CURRENT_PROJECT_VERSION\)/);
@@ -33,7 +33,7 @@ const iosInfo = JSON.parse(await read('ios/App/App/public/build-info.json'));
 assert.deepEqual(iosInfo.appIds, { android: identity.android.applicationId, ios: identity.ios.bundleId }, 'iOS: build-info del pacchetto con i due identificativi, separati.');
 assert.ok(!/it\.matteobianchi/.test(pbx) && !/it\.matteobianchi/.test(JSON.stringify(iosConfig)), 'iOS: nessun identificativo Android nel progetto Xcode né nella configurazione iOS.');
 assert.ok(!/DEVELOPMENT_TEAM = [A-Z0-9]{10}/.test(pbx), 'iOS: nessun Team nel repository.');
-lines.push(`iOS ${identity.ios.bundleId} · Apple ID ${identity.ios.appleAppId} · SKU ${identity.ios.sku} · 1.0.2 (3) Debug+Release`);
+lines.push(`iOS ${identity.ios.bundleId} · Apple ID ${identity.ios.appleAppId} · SKU ${identity.ios.sku} · 1.0.3 (4) Debug+Release`);
 
 // ---------- Android ----------
 const gradle = await read('android/app/build.gradle');
@@ -45,7 +45,7 @@ assert.ok(!gradle.includes(identity.ios.bundleId) && !(await read('android/app/s
 const vc = /versionCode (\d+)/.exec(gradle)?.[1], vn = /versionName "(\d+\.\d+\.\d+)"/.exec(gradle)?.[1]; assert.ok(Number(vc) >= 4 && vn, `versionCode e versionName di Android presenti (${vc} / ${vn}).`);
 const androidInfo = JSON.parse(await read('android/app/src/main/assets/public/build-info.json'));
 assert.deepEqual(androidInfo.appIds, { android: identity.android.applicationId, ios: identity.ios.bundleId }, 'Android: build-info del pacchetto con i due identificativi, separati.');
-lines.push(`Android ${identity.android.applicationId} · versionCode ${vc} / ${vn} (iOS 1.0.2 build 3)`);
+lines.push(`Android ${identity.android.applicationId} · versionCode ${vc} / ${vn} (iOS 1.0.3 build 4)`);
 
 // ---------- never mixed in the shared code or the ads ----------
 const ads = await read('src/data/ads-config.js');

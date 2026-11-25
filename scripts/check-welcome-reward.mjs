@@ -16,18 +16,22 @@ const ANDROID = { platform: 'android', version: '1.0.6', build: '7', debug: fals
 const IOS = { platform: 'ios', version: '1.0.2', build: '3', debug: false };
 // eligibility
 check(W.promoEligible(ANDROID) && W.promoEligible(IOS), 'Le versioni della release della promozione restano idonee (Android 1.0.6 build 7, iOS 1.0.2 build 3).');
-// 25/11/2026: the next build of each platform is authorised too (the update that follows); the versions are those of the native projects (+1), checked here against android/app/build.gradle and the Xcode project
+// The authorised builds are listed EXPLICITLY (owner's decision of 25/11/2026), never derived from the version configured in the native projects: Android 1.0.6 (7) and 1.0.7 (8), iOS 1.0.2 (3) and 1.0.3 (4).
+// A later build (iOS 1.0.4 build 5, Android 1.0.8 build 9) gets no reward unless the owner authorises it explicitly (a new entry in core/welcome-reward.js AND here).
 {
   const { readFileSync } = await import('node:fs');
+  const AUTHORISED = [['android', '1.0.6', '7'], ['android', '1.0.7', '8'], ['ios', '1.0.2', '3'], ['ios', '1.0.3', '4']];
+  for (const [platform, version, buildNo] of AUTHORISED) check(W.promoEligible({ platform, version, build: buildNo, debug: false }), `${platform} ${version} (${buildNo}): il premio è attivo.`);
+  for (const [platform, version, buildNo] of [['ios', '1.0.4', '5'], ['android', '1.0.8', '9'], ['ios', '1.0.3', '3'], ['ios', '1.0.2', '4'], ['android', '1.0.7', '7']]) check(!W.promoEligible({ platform, version, build: buildNo, debug: false }), `${platform} ${version} (${buildNo}): non autorizzata, nessun premio automatico.`);
+  check(JSON.stringify(Object.fromEntries(Object.entries(W.WELCOME_PROMO.targets ?? {}).map(([platform, list]) => [platform, [list].flat().map(item => `${item.version}/${item.build}`)]))) === JSON.stringify({ android: ['1.0.6/7', '1.0.7/8'], ios: ['1.0.2/3', '1.0.3/4'] }), 'Le build autorizzate della promozione sono esattamente quelle dichiarate.');
+  // the native projects point to authorised builds (the project can never carry a build the promotion does not cover)
   const gradle = readFileSync(new URL('../android/app/build.gradle', import.meta.url), 'utf8'), pbx = readFileSync(new URL('../ios/App/App.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
-  const vc = Number(gradle.match(/versionCode (\d+)/)?.[1]), vn = gradle.match(/versionName "([^"]+)"/)?.[1];
-  const mv = pbx.match(/MARKETING_VERSION = ([^;]+);/)?.[1], cv = Number(pbx.match(/CURRENT_PROJECT_VERSION = (\d+);/)?.[1]);
-  const bump = v => v.replace(/(\d+)$/, n => String(Number(n) + 1));
-  check(W.promoEligible({ platform: 'android', version: vn, build: String(vc), debug: false }), `Android del progetto (${vn} build ${vc}): idonea.`);
-  check(W.promoEligible({ platform: 'android', version: bump(vn), build: String(vc + 1), debug: false }), `Android successiva prevista (${bump(vn)} build ${vc + 1}): idonea.`);
-  check(W.promoEligible({ platform: 'ios', version: mv, build: String(cv), debug: false }), `iOS del progetto (${mv} build ${cv}): idonea.`);
-  check(W.promoEligible({ platform: 'ios', version: bump(mv), build: String(cv + 1), debug: false }), `iOS successiva prevista (${bump(mv)} build ${cv + 1}): idonea.`);
+  const vc = gradle.match(/versionCode (\d+)/)?.[1], vn = gradle.match(/versionName "([^"]+)"/)?.[1];
+  const mv = [...new Set([...pbx.matchAll(/MARKETING_VERSION = ([^;]+);/g)].map(m => m[1]))], cv = [...new Set([...pbx.matchAll(/CURRENT_PROJECT_VERSION = (\d+);/g)].map(m => m[1]))];
+  check(AUTHORISED.some(([platform, version, buildNo]) => platform === 'android' && version === vn && buildNo === vc), `Android del progetto (${vn} build ${vc}) è una build autorizzata.`);
+  check(mv.length === 1 && cv.length === 1 && AUTHORISED.some(([platform, version, buildNo]) => platform === 'ios' && version === mv[0] && buildNo === cv[0]), `iOS del progetto (${mv} build ${cv}) è una build autorizzata.`);
   check(W.WELCOME_PROMO.id === 'grazie-aggiornamento-2026-11' && W.WELCOME_PROMO.amount === 2500, 'Stessa promozione (stesso id, stesso importo): nessuna nuova promozione.');
+  check(W.ACCOUNT_REWARD === 'benvenuto', 'La chiave dell’account resta `benvenuto`.');
 }
 for (const [info, what] of [[{ ...ANDROID, debug: true }, 'Android Debug'], [{ ...IOS, debug: true }, 'iOS Debug'], [{ ...ANDROID, version: '1.0.5', build: '6' }, 'Android precedente'], [{ ...ANDROID, version: '1.0.8', build: '9' }, 'Android oltre la prossima'], [{ ...ANDROID, version: '1.0.7', build: '9' }, 'Android 1.0.7 con un altro build'],
   [{ ...IOS, version: '1.0.1', build: '2' }, 'iOS precedente'], [{ ...IOS, version: '1.0.4', build: '5' }, 'iOS oltre la prossima'], [{ ...IOS, version: '1.0.3', build: '5' }, 'iOS 1.0.3 con un altro build'], [{ ...ANDROID, build: '8' }, 'stesso nome, altro build'], [null, 'sito web / sito TEST'], [{ ...ANDROID, debug: undefined }, 'debug sconosciuto']])

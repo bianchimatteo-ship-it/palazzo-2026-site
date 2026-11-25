@@ -6,7 +6,7 @@
 //   · where nothing is documented the GAME uses an estimate of its own for the play (core/alliance-rules.js), always labelled «stima simulata del gioco», never as the party's position.
 // The scale is a convention of the game, not a classification the parties use. `read`: 'diretta' (the page was read on 24/11/2026), 'dossier' (summarised in the owner's dossier, the page was not
 // readable by the tool on that day). Party records are referred to by their id; aliases point to the canonical record (PARTY_CATALOG).
-import { programTexts, registerProgramTexts } from './party-program-values.js?v=20261125-10';
+import { programTexts, registerProgramTexts } from './party-program-values.js?v=20261125-11';
 const P = (it, en) => [it, en];
 const T = (value, confidence, doc, it, en, extra = {}) => ({ value, confidence: value === null ? 'nessuna' : confidence, doc, summary: [it, en], ...extra });
 const NO = (doc, it = 'Le fonti consultate non affrontano il tema.', en = 'The sources consulted do not address the theme.') => T(null, 'nessuna', doc, it, en);
