@@ -17,4 +17,4 @@ export const MAIL_SUBJECTS = Object.freeze({
 
 export const RETENTION = Object.freeze({ inactivityMonths: 12, noticeDays: 30, batch: 50 });
 
-export const PORTAL_PATHS = /^\/(?:index\.html|portal\.(?:js|css)|privacy(?:-en)?\.html|support(?:-en)?\.html|termini\.html|terms-en\.html|elimina-account\.html|delete-account-en\.html|favicon\.(?:ico|svg)|src\/legal\.css|src\/legal\/delete-account\.js|src\/data\/repositories\/(?:account-sync|career-visibility)\.js)?$/;
+export const PORTAL_PATHS = /^\/(?:index\.html|portal\.(?:js|css)|privacy(?:-en)?\.html|support(?:-en)?\.html|termini\.html|terms-en\.html|elimina-account\.html|delete-account-en\.html|favicon\.(?:ico|svg)|app-ads\.txt|src\/legal\.css|src\/legal\/delete-account\.js|src\/data\/repositories\/(?:account-sync|career-visibility)\.js)?$/;

@@ -39,7 +39,7 @@ for (const path of ['/src/main.js', '/src/core/store.js', '/sw.js', '/src/data/r
   assert.equal(response.status, 404, `${path}: non è raggiungibile dal browser in produzione.`);
 }
 assert.deepEqual(served, [], 'Per le richieste non API non si leggono i file del gioco.');
-for (const path of ['/', '/index.html', '/portal.js', '/privacy.html', '/termini.html', '/elimina-account.html', '/support.html', '/support-en.html', '/src/data/repositories/account-sync.js']) assert.equal((await ask(path)).status, 200, `${path}: pagina del portale servita.`);
+for (const path of ['/', '/index.html', '/portal.js', '/privacy.html', '/termini.html', '/elimina-account.html', '/support.html', '/support-en.html', '/app-ads.txt', '/src/data/repositories/account-sync.js']) assert.equal((await ask(path)).status, 200, `${path}: pagina del portale servita.`);
 // the API stays (the app uses it): the Android origins are accepted, a web origin of the game (GitHub Pages) is not
 const origin = async value => (await ask('/api/account/status', { method: 'OPTIONS', headers: { origin: value, 'access-control-request-method': 'GET' } })).headers.get('access-control-allow-origin');
 assert.equal(await origin('https://localhost'), 'https://localhost', 'L’app Android (https://localhost) è accettata.');
