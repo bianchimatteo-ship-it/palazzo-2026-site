@@ -8,7 +8,7 @@ export const SKINS = { porcellana: '#f3d6be', chiara: '#e6b994', oliva: '#c8956a
 export const HAIRS = { nero: '#16100e', castano: '#583823', biondo: '#d8b46a', rosso: '#a8441c', grigio: '#b4b4b4' };
 
 // `frame`: the face in the crop — 1 = exactly the guide, < 1 a smaller face (the photo taken from farther), with an offset (dx, dy) and an overall light (`light`).
-export function paintFace({ size = 256, skin = 'chiara', hair = 'castano', length = 'corto', glasses = false, beard = 'nessuna', moustache = false, background = '#6f8fa8', noise = 10, seed = 7, light = 1, frame = 1, dx = 0, dy = 0 } = {}) {
+export function paintFace({ size = 256, skin = 'chiara', hair = 'castano', length = 'corto', glasses = false, beard = 'nessuna', moustache = false, background = '#6f8fa8', noise = 10, seed = 7, light = 1, frame = 1, dx = 0, dy = 0, eyeFringe = false, heavyBrows = false, shadow = 0, glare = false, round = false, thinRims = false, sideLight = 0 } = {}) {
   const px = new Uint8ClampedArray(size * size * 4);
   let s = seed; const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
   const S = hex(SKINS[skin] ?? skin), H = hex(HAIRS[hair] ?? hair), B = hex(background);
@@ -32,7 +32,7 @@ export function paintFace({ size = 256, skin = 'chiara', hair = 'castano', lengt
       for (const ex of [cx - rx * 0.38, cx + rx * 0.38]) {
         if (inEllipse(x, y, ex, cy - ry * 0.16, rx * 0.16, ry * 0.05)) c = [245, 245, 240];
         if (inEllipse(x, y, ex, cy - ry * 0.16, rx * 0.06, ry * 0.045)) c = [60, 40, 30];
-        if (inEllipse(x, y, ex, cy - ry * 0.3, rx * 0.2, ry * 0.025)) c = H.map(v => v * 0.9 + 20);
+        if (inEllipse(x, y, ex, cy - ry * (heavyBrows ? 0.26 : 0.3), rx * (heavyBrows ? 0.26 : 0.2), ry * (heavyBrows ? 0.05 : 0.025))) c = heavyBrows ? [20, 16, 14] : H.map(v => v * 0.9 + 20);
       }
       if (inEllipse(x, y, cx, cy + ry * 0.55, rx * 0.28, ry * 0.035)) c = [150, 70, 70];
       // beard and moustache (hair colour, a little texture)
@@ -47,12 +47,20 @@ export function paintFace({ size = 256, skin = 'chiara', hair = 'castano', lengt
     // the hair above the face (any length but shaved)
     if (length !== 'rasato' && !face && inEllipse(x, y, cx, cy - ry * 0.25, rx * 1.12, ry * 0.92) && y < cy - ry * 0.05) c = H.map(v => v + (rnd() - 0.5) * 16);
     if (length !== 'rasato' && !face && inEllipse(x, y, cx, cy, rx * 1.1, ry * 1.02) && y < cy + ry * 0.1 && y > cy - ry * 0.4) c = H.map(v => v + (rnd() - 0.5) * 16);
+    // a fringe of hair falling over the forehead and the eyes (dark and filled, not an outline)
+    if (eyeFringe && face && y < cy - ry * 0.1 && y > cy - ry * 0.7 && Math.abs(x - cx) < rx * 0.95) c = H.map(v => v + (rnd() - 0.5) * 16);
+    // a band of shadow across the eyes (a cap, a strong overhead light): darker, soft, no outline
+    if (shadow && face && y > cy - ry * 0.3 && y < cy - ry * 0.05) c = c.map(v => v * (1 - shadow));
+    // light from the side: one half of the face darker
+    if (sideLight && face) c = c.map(v => v * (x < cx ? 1 - sideLight : 1));
     // glasses: dark rims around the eyes and a bridge
     if (glasses) {
       for (const ex of [cx - rx * 0.38, cx + rx * 0.38]) {
         const ox = Math.abs(x - ex), oy = Math.abs(y - (cy - ry * 0.16));
-        const W = rx * 0.27, Hh = ry * 0.11, t = Math.max(1.5, size / 110);
-        if ((ox <= W && Math.abs(oy - Hh) <= t) || (oy <= Hh && Math.abs(ox - W) <= t)) c = [25, 25, 28];
+        const W = rx * 0.27, Hh = ry * 0.11, t = Math.max(thinRims ? 1 : 1.5, size / (thinRims ? 160 : 110));
+        if (round) { const d = Math.hypot(ox / W, oy / Hh); if (Math.abs(d - 1) * Math.min(W, Hh) <= t) c = [25, 25, 28]; }
+        else if ((ox <= W && Math.abs(oy - Hh) <= t) || (oy <= Hh && Math.abs(ox - W) <= t)) c = [25, 25, 28];
+        if (glare && ox < W * 0.6 && oy < Hh * 0.7 && ox > W * 0.15) c = c.map(v => Math.min(255, v + 90));
       }
       if (Math.abs(y - (cy - ry * 0.18)) <= Math.max(1.5, size / 110) && Math.abs(x - cx) <= rx * 0.11) c = [25, 25, 28];
     }

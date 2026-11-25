@@ -5,7 +5,7 @@
 //   { kind: 'inmobi', isReady(): boolean | Promise<boolean>, show(): Promise<{ completed: boolean, verified: boolean, completionId: string }> }
 // `completed` is the SDK's own confirmation that the user earned the reward, `verified` that it comes from the SDK / the ad network (and not from the page), `completionId` an id that is unique for each completion
 // (the transaction id of the network). A `demo` provider (kind: 'demo') is for tests only and is refused unless the caller passes `allowDemo: true`; production never does.
-import { ADS_CONFIG } from '../ads-config.js?v=20261125-7';
+import { ADS_CONFIG } from '../ads-config.js?v=20261125-10';
 
 // The kinds of reward a video can give (the SAME provider and placement for both: what the video is worth is chosen by the button that started it). The kind is fixed when watch() is called and is the
 // one handed to `grant` with the completion: it cannot change while the video plays or after it.

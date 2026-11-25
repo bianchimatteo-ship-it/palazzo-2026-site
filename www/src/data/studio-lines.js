@@ -176,7 +176,7 @@ export const TICKER = Object.freeze({
 // More words for the rallies (core/rally-scene.js adds them to its own banks): `{token}` is filled by the engine; each token appears once per line, so that the phrase-book pair is well formed.
 export const RALLY_EXTRA = Object.freeze({
   promessa: [
-    ['«Ho firmato un impegno: {intervention}. Qui, in {place}, ve lo ripeto e vi chiedo di ricordarlo.»', '“I signed a commitment: {intervention}. Here, in {place}, I repeat it and ask you to remember it.”'],
+    ['«Ho firmato un impegno: {intervention}. Qui, a {place}, ve lo ripeto e vi chiedo di ricordarlo.»', '“I signed a commitment: {intervention}. Here, in {place}, I repeat it and ask you to remember it.”'],
     ['«Su {area} non ho girato intorno alle parole: ho promesso e ora vi dico a che punto siamo.»', '“On {area} I did not beat around the bush: I promised and now I tell you where we stand.”'],
     ['«{party} mette la firma sotto le promesse. Su {area} ogni passo sarà verificabile da voi.»', '“{party} puts its signature under its promises. On {area} every step will be checkable by you.”']
   ],

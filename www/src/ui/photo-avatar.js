@@ -5,10 +5,10 @@
 // character (never read from the photo). What is kept: the avatar (choices only, in the career) and, ON THIS DEVICE ONLY, a reduced copy of the photo with the framing and the corrections, to
 // edit it again later (core/photo-avatar-store.js). Also the editor of an avatar already saved (the profile): it opens on the saved choices and on the kept photo, if any.
 // Loaded only when the editor is opened.
-import { AVATAR_GROUPS, AVATAR_LABELS, AVATAR_OPTIONS, avatarForGender, normalizeAvatar } from '../core/avatar.js?v=20261125-7';
-import { avatarSvg } from './avatar-svg.js?v=20261125-7';
-import { ANALYSIS_SIZE, CONFIDENCE_LABELS, GUIDE, READING_LABELS, analyzeFace } from './photo-traits.js?v=20261125-7';
-import { PHOTO_SOURCE_MAX } from '../core/photo-avatar-store.js?v=20261125-7';
+import { AVATAR_GROUPS, AVATAR_LABELS, AVATAR_OPTIONS, avatarForGender, normalizeAvatar } from '../core/avatar.js?v=20261125-10';
+import { avatarSvg } from './avatar-svg.js?v=20261125-10';
+import { ANALYSIS_SIZE, CONFIDENCE_LABELS, GUIDE, READING_LABELS, analyzeFace } from './photo-traits.js?v=20261125-10';
+import { PHOTO_SOURCE_MAX } from '../core/photo-avatar-store.js?v=20261125-10';
 
 export const MAX_INPUT_BYTES = 25 * 1024 * 1024;
 export const MAX_PIXELS = 60_000_000;
@@ -112,7 +112,7 @@ export function openPhotoAvatar({ avatar = null, gender = null, source = null } 
     return `<label class="pa-trait" data-pa-trait-box="${field}"><span>${esc(AVATAR_LABELS[field])} <i data-pa-reading="${field}"></i></span><select data-pa-trait="${field}" ${locked ? 'disabled' : ''}>${AVATAR_OPTIONS[field].map(item => `<option value="${esc(item.id)}">${esc(item.label)}</option>`).join('')}</select></label>`;
   }).join('');
   root.innerHTML = `<div class="pa-panel" role="dialog" aria-modal="true" aria-labelledby="pa-title">
-    <header class="pa-head"><small>AVATAR · DA UNA FOTO</small><h2 id="pa-title">Il tuo personaggio illustrato</h2><button type="button" class="pa-close" data-pa-close aria-label="Chiudi">×</button></header>
+    <header class="pa-head"><small>AVATAR · DA UNA FOTO <em class="beta-tag" data-beta-tag>BETA</em></small><h2 id="pa-title">Il tuo personaggio illustrato</h2><button type="button" class="pa-close" data-pa-close aria-label="Chiudi">×</button></header>
     <p class="pa-privacy">La foto si legge qui, sul dispositivo: nessun invio a server o servizi esterni. Il gioco ne ricava i tratti dell’avatar illustrato (capelli, occhiali, barba, carnagione); una copia ridotta resta solo su questo dispositivo per poterlo modificare, mai nei salvataggi online.</p>
     <div class="pa-sources"><label class="secondary-button pa-pick">Scegli dalla galleria<input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" data-pa-file hidden /></label><label class="secondary-button pa-pick">Scatta una foto<input type="file" accept="image/*" capture="user" data-pa-file hidden /></label></div>
     <p class="pa-error" role="alert" data-pa-error hidden></p>
@@ -145,8 +145,10 @@ export function openPhotoAvatar({ avatar = null, gender = null, source = null } 
       root.querySelector(`[data-pa-trait-box="${field}"]`)?.classList.toggle('is-read', Boolean(r) && r.confidence !== 'non-visibile' && !ui.manual.has(field));
     }
     // what the photo showed, each piece a text of its own (a label and an option of the avatar: both in the phrase-book)
-    const found = Object.entries(READING_LABELS).map(([field, label]) => { const r = readings[field]; if (!r || r.confidence === 'non-visibile' || r.value == null) return null; const option = AVATAR_OPTIONS[field].find(item => item.id === r.value); return option ? `<li><b>${esc(label)}</b> <span>${esc(option.label)}</span></li>` : null; }).filter(Boolean);
+    const found = Object.entries(READING_LABELS).map(([field, label]) => { const r = readings[field]; if (!r || r.confidence === 'non-visibile' || r.confidence === 'bassa' || r.value == null) return null; const option = AVATAR_OPTIONS[field].find(item => item.id === r.value); return option ? `<li><b>${esc(label)}</b> <span>${esc(option.label)}</span></li>` : null; }).filter(Boolean);
     const missing = Object.entries(READING_LABELS).filter(([field]) => readings[field]?.confidence === 'non-visibile').map(([, label]) => `<li class="is-missing"><b>${esc(label)}</b> <span>non visibile</span></li>`);
+    const unsure = Object.entries(READING_LABELS).filter(([field]) => readings[field]?.confidence === 'bassa' && !ui.manual.has(field)).map(([, label]) => `<li class="is-missing"><b>${esc(label)}</b> <span>incerto: scegli tu</span></li>`);
+    missing.push(...unsure);
     const box = root.querySelector('[data-pa-summary]');
     box.innerHTML = ui.reading ? `<span>${found.length ? 'Dalla foto:' : 'Dalla foto non si leggono tratti certi.'}</span>${found.length || missing.length ? `<ul class="pa-found">${found.join('')}${missing.join('')}</ul>` : ''}<span>Correggi qui sotto ciò che non torna.</span>` : '';
   };

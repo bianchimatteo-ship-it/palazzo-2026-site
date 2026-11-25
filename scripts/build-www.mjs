@@ -88,6 +88,9 @@ if (LOCAL_API) {
   else files.set('index.html', Buffer.from(text('index.html').replace(/<head>/, `<head>\n  <meta name="politicando-api-origin" content="${LOCAL_API}">\n  <meta name="politicando-local-test" content="1">`).replace(/(connect-src [^;"]*)/, `$1 ${LOCAL_API}`)));
 }
 
+// RELEASE build (POLITICANDO_RELEASE): the CSP of the app that goes to the stores does not list the ports of the local test harness (127.0.0.1:8791, localhost:8791): they exist for the site and the tests only.
+if (process.env.POLITICANDO_RELEASE && !LOCAL_API) files.set('index.html', Buffer.from(files.get('index.html').toString('utf8').replace(/ http:\/\/127\.0\.0\.1:8791 http:\/\/localhost:8791/, '')));
+
 // ---------- 2. one build stamp ----------
 const stamps = new Set();
 for (const [name, data] of files) if (/\.(html|js|css)$/.test(name)) for (const match of data.toString('utf8').matchAll(/[?&]v=([0-9]{8}-[0-9]+)\b/g)) stamps.add(match[1]);

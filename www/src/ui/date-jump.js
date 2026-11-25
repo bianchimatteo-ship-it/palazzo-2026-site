@@ -1,10 +1,10 @@
 // «Avanza fino a…» from the date of the top bar: a small calendar over the page to pick a day ahead, with the weeks and days that will pass, the votes and deadlines of the agenda marked on the
 // days, and quick choices. It only PICKS the date: the advance is the one of the agenda (store.advanceToDate, through the same confirmation of app.js), week after week, stopping where the game
 // stops (an urgent decision, a vote in the Chamber, a campaign). Loaded only when the date is clicked.
-import { agendaCalendar } from '../core/agenda-engine.js?v=20261125-7';
-import { ADVANCE_RULES } from '../data/simulation/career-rules.js?v=20261125-7';
-import { advanceDays, formatDate } from '../core/time.js?v=20261125-7';
-import { isEnglish } from '../core/i18n.js?v=20261125-7';
+import { agendaCalendar } from '../core/agenda-engine.js?v=20261125-10';
+import { ADVANCE_RULES } from '../data/simulation/career-rules.js?v=20261125-10';
+import { advanceDays, formatDate } from '../core/time.js?v=20261125-10';
+import { isEnglish } from '../core/i18n.js?v=20261125-10';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const MONTHS = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];

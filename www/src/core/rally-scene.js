@@ -8,9 +8,9 @@
 // of the game: the variation comes from a hash of the seed of the scene, so a scene resumed or played again from the same choices is the same scene.
 //
 // VOTE ('voto'): the player votes in his polling station — entrance, desk, booth, ballot folded, urn, exit. It decides nothing: the result of the election is the one of election-engine.js.
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261125-7';
-import { defaultAvatarFor, genderOf, normalizeAvatar } from './avatar.js?v=20261125-7';
-import { RALLY_CROWD_EXTRA, RALLY_EXTRA } from '../data/studio-lines.js?v=20261125-7';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261125-10';
+import { defaultAvatarFor, genderOf, normalizeAvatar } from './avatar.js?v=20261125-10';
+import { RALLY_CROWD_EXTRA, RALLY_EXTRA } from '../data/studio-lines.js?v=20261125-10';
 
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 const round1 = value => Math.round(value * 10) / 10;
@@ -25,6 +25,8 @@ export const VOTE_BEATS = Object.freeze(['ingresso', 'banco', 'cabina', 'voto', 
 
 // ---------- the builders ----------
 function crowdOf(notoriety, trust) { return Math.round(clamp(80 + notoriety * 4.2 + (trust - 50) * 1.6, 60, 700)); }
+// A name that carries its own article («la mia lista», «il partito») cannot follow «di»: the sentences that name the party say «con il nome «…»», and the proposal is the one «del programma».
+const capital = text => text.charAt(0).toUpperCase() + text.slice(1);
 export function createRallyScene({ id, seed, player, playerAvatar, party = {}, place = {}, mode = 'settimana', campaignId = null, date = null, context = {} }) {
   const stats = context.stats ?? { competence: 50, charisma: 50, reputation: 50, notoriety: 40 };
   const crowd = crowdOf(stats.notoriety, context.territory?.trust ?? 50);
@@ -138,7 +140,7 @@ function speechOptions(scene, nodeId) {
   for (const event of (ctx.events ?? []).slice(0, 1)) options.push({ id: `attualita-${hashOf(event) % 997}`, kind: 'attualita', area: null, label: 'Commenta i fatti di questi giorni', detail: `In piazza si parla di «${event}»: prendi posizione.` });
   if (ctx.governing) options.push({ id: 'governo', kind: 'governo', area: null, label: 'Rendi conto dell’azione del Governo', detail: `Governi tu: racconti cosa hai fatto e cosa resta da fare. ${(ctx.government?.approval ?? 50) >= 50 ? 'Il gradimento ti sostiene.' : 'Il gradimento è basso: sarà dura.'}` });
   const program = (ctx.programAreas ?? []).filter(id => !open.some(item => item.area === id)).slice(0, 1);
-  for (const area of program) options.push({ id: `proposta-${area}`, kind: 'proposta', area, label: `Presenta la proposta di ${party} su ${areaLabel(area)}`, detail: 'Una proposta del programma del partito che non hai ancora promesso: coerente, ma senza una tua parola data.' });
+  for (const area of program) options.push({ id: `proposta-${area}`, kind: 'proposta', area, label: `Presenta la proposta del programma su ${areaLabel(area)}`, detail: 'Una proposta del programma del partito che non hai ancora promesso: coerente, ma senza una tua parola data.' });
   options.push({ id: 'attacco', kind: 'attacco', area: null, label: 'Attacca chi governa il territorio', detail: 'Tono duro: la piazza si scalda, ma il rischio di polemica sale.' });
   // what was said in the last rallies weighs less, and the topic of this scene's first speech is not proposed again
   const recent = new Set((ctx.rallyMemory ?? []).slice(-3).flatMap(item => item.topics ?? []));
@@ -151,11 +153,11 @@ function speechOptions(scene, nodeId) {
 }
 // The sentence the player says: many variants, filled with the situation, avoiding the ones used in the last rallies.
 const LINES = {
-  promessa: ['«Vi avevo promesso {intervention}: ve lo ripeto qui, in {place}, davanti a tutti.»', '«Su {area} ho dato la mia parola. Controllatemi: a ogni settimana il conto di cosa è stato fatto.»', '«{party} non cambia idea a seconda del vento: {intervention}, e ne rispondo a voi.»', '«Una promessa non è uno slogan. {intervention}: è scritto, e voi potete verificarlo.»', '«Mi chiedete cosa farò su {area}? Quello che ho già detto: {intervention}.»'],
+  promessa: ['«Vi avevo promesso {intervention}: ve lo ripeto qui, a {place}, davanti a tutti.»', '«Su {area} ho dato la mia parola. Controllatemi: a ogni settimana il conto di cosa è stato fatto.»', '«{party} non cambia idea a seconda del vento: {intervention}, e ne rispondo a voi.»', '«Una promessa non è uno slogan. {intervention}: è scritto, e voi potete verificarlo.»', '«Mi chiedete cosa farò su {area}? Quello che ho già detto: {intervention}.»'],
   territorio: ['«{place} ha un problema vero: {problem}. Non basta indignarsi, serve un piano, e io ne porto uno.»', '«Camminando per {place} ho sentito una cosa sola: {problem}. Da qui parte il mio lavoro.»', '«Chi vive qui lo sa meglio di Roma: {problem}. E non si risolve con un comunicato.»', '«Non vi racconto favole su {problem}: vi dico cosa si può fare, e in quanto tempo.»', '«{problem} non è una statistica, è la vita di chi è in questa piazza.»'],
   attualita: ['«Lo so, vi pesa: {topic}. Prima di tutto vi devo la verità sui numeri.»', '«Parliamo di {topic}: la politica che finge di non vedere è la stessa che poi chiede il voto.»', '«Su {topic} serve serietà, non propaganda: ecco cosa propongo.»', '«{topic}: è la domanda che mi fate di più. Provo a rispondere senza giri di parole.»'],
   governo: ['«Governare costa fatica. In questi mesi abbiamo fatto cose, e ne restano altre: ve le dico una per una.»', '«Non ho paura di rendere conto: ecco cosa ha fatto il Governo, e dove abbiamo sbagliato.»', '«Chi governa deve rispondere ai cittadini, non ai sondaggi. Rispondo qui, a voce.»'],
-  proposta: ['«{party} ha una proposta su {area}: la porto in piazza prima che nei palazzi.»', '«Nel nostro programma c’è {area}. Ora vi spiego perché conta per {place}.»', '«Una proposta semplice su {area}: e vi chiedo di giudicarla per ciò che è.»'],
+  proposta: ['«{Party} ha una proposta su {area}: la porto in piazza prima che nei palazzi.»', '«Nel nostro programma c’è {area}. Ora vi spiego perché conta per {place}.»', '«Una proposta semplice su {area}: e vi chiedo di giudicarla per ciò che è.»'],
   attacco: ['«Chi ha amministrato fin qui deve spiegare perché {place} è rimasta indietro.»', '«Non faccio sconti a chi ha avuto tutto il tempo e ha fatto poco.»', '«Basta con chi promette e poi sparisce: questa piazza merita di meglio.»']
 };
 function speechLine(scene, option, nodeId) {
@@ -165,7 +167,7 @@ function speechLine(scene, option, nodeId) {
   const order = bank.map((text, index) => ({ text, index })).sort((a, b) => hashOf(`${scene.seed}|${nodeId}|${option.id}|${a.index}`) - hashOf(`${scene.seed}|${nodeId}|${option.id}|${b.index}`));
   const chosen = order.find(item => !used.has(hashOf(item.text) % 100003)) ?? order[0];
   const fill = {
-    place: scene.place.label, party: scene.party.name, area: areaLabel(option.area) || 'questo tema', intervention: (option.promise?.intervention ?? option.promise?.label ?? 'un impegno preciso').replace(/\.$/, ''),
+    place: scene.place.label, party: scene.party.name, Party: capital(scene.party.name), area: areaLabel(option.area) || 'questo tema', intervention: (option.promise?.intervention ?? option.promise?.label ?? 'un impegno preciso').replace(/\.$/, ''),
     problem: (option.problem?.label ?? 'un problema che conosciamo').toLowerCase(), topic: option.kind === 'attualita' ? (option.label.replace(/^(Parla del |Parla di |Commenta )/i, '').toLowerCase()) : 'i problemi del Paese'
   };
   return { text: chosen.text.replace(/\{(\w+)\}/g, (_, key) => fill[key] ?? ''), variant: hashOf(chosen.text) % 100003 };
@@ -218,7 +220,7 @@ export function rallyNode(scene) {
       const size = scene.crowd.size;
       const crowdLine = size > 420 ? 'La piazza è piena, c’è gente anche nelle vie laterali.' : size > 220 ? 'Una bella folla ha riempito la piazza.' : 'La piazza non è affollata, ma chi c’è è venuto per ascoltarti.';
       const dusk = pick(['Il sole sta calando dietro i palazzi.', 'È il tardo pomeriggio e le luci del palco si accendono.', 'Il vento muove le bandiere appese ai lampioni.', 'Dagli altoparlanti parte la musica di apertura.'], `${scene.seed}|arrivo`);
-      return { ...base, speaker: null, camera: 'panorama', title: `Piazza di ${place}`, text: `${dusk} ${crowdLine} Bandiere e striscioni di ${scene.party.name} ovunque: ${scene.context.protestLevel > 0.55 ? 'qualcuno, però, guarda con sospetto' : 'l’aria è quella di una bella serata'}.`, choices: [['continua', 'Attraversa la piazza']] };
+      return { ...base, speaker: null, camera: 'panorama', title: `Piazza di ${place}`, text: `${dusk} ${crowdLine} Bandiere e striscioni con il nome «${scene.party.name}» ovunque: ${scene.context.protestLevel > 0.55 ? 'qualcuno, però, guarda con sospetto' : 'l’aria è quella di una bella serata'}.`, choices: [['continua', 'Attraversa la piazza']] };
     }
     case 'cammino': {
       const rel = scene.context.relations?.civic ?? 50;

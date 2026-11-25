@@ -1,6 +1,6 @@
 // What this module does and why: docs/architettura-ricompense.md (§ rewards-engine.js).
-import { AD_REWARD, COMMUNITY_REWARD, DAILY_REWARD, PLAY_REWARDS, REWARD_HISTORY_SIZE, REWARD_TIMEZONE } from '../data/simulation/reward-rules.js?v=20261125-7';
-import { book } from './finance-engine.js?v=20261125-7';
+import { AD_REWARD, COMMUNITY_REWARD, DAILY_REWARD, PLAY_REWARDS, REWARD_HISTORY_SIZE, REWARD_TIMEZONE } from '../data/simulation/reward-rules.js?v=20261125-10';
+import { book } from './finance-engine.js?v=20261125-10';
 
 const SIM = 'simulation';
 const MINUTE = 60000;

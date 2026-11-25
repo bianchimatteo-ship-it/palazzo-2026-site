@@ -82,5 +82,23 @@ for (const [kind, list] of Object.entries(met)) {
   want(repeats === 0, `Varietà: la stessa frase (${kind}) in due scene di fila (${repeats}).`);
   want(new Set(shown).size >= Math.min(8, shown.length), `Varietà: almeno 8 formulazioni diverse di ${kind} in 36 scene (${new Set(shown).size}).`);
 }
+// grammar of the places and names put into a sentence (causes found in games): a region takes its article and preposition («dalla Lombardia», «dal Veneto», «dall’Abruzzo», «nelle Marche»), a name that carries its
+// article never follows «di» («di la mia lista»), and a municipality is «a Siena», not «in Siena»
+{
+  const { ITALIAN_REGIONS } = await load('src/data/regions.js');
+  const R = await load('src/core/rally-scene.js');
+  const REGION = ITALIAN_REGIONS.join('|');
+  const bad = text => [new RegExp(`\\b(a|da|di) (?:${REGION})\\b`), /\b(di|a|da|su|in) (il|lo|la|le|i|gli) /i, new RegExp(`\\bnelle? (?!Marche)(?:${REGION})\\b`), /\bin Marche\b/].find(re => re.test(text));
+  const texts = [];
+  for (const region of ITALIAN_REGIONS) for (const key of S.SCENE_KEYS) { const ref = S.pickRef(key, 'x', { region }); if (ref?.type === 'region') texts.push(ref.text); }
+  for (const name of ['la mia lista', 'il partito', 'Lega per Salvini Premier', 'Partito Democratico', 'l’Alleanza civica']) for (const mode of ['settimana', 'campagna']) {
+    const scene = R.createRallyScene({ id: 'r', seed: `grammatica|${name}|${mode}`, player: { name: 'Elena Prova' }, playerAvatar: null, party: { id: null, name }, place: { municipality: 'Siena', region: 'Toscana' }, mode, context: {} });
+    for (let step = 0; step < 6; step++) { const node = R.rallyNode(scene); texts.push(node.text, ...(node.lines ?? []), ...(node.choices ?? []).map(choice => choice[1])); if (node.final || !node.choices?.length) break; try { R.rallyChoose?.(scene, node.choices[0][0]); } catch { break; } }
+  }
+  assert.ok(texts.length >= 100, `Frasi controllate: ${texts.length}.`);
+  for (const text of texts.filter(Boolean)) want(!bad(text), `Grammatica di luoghi e nomi: «${text.slice(0, 120)}».`);
+  want(S.pickRef('cantiere', 'x', { region: 'Marche' }).text.includes('nelle Marche'), 'Le Marche sono plurali: «nelle Marche».');
+  want(S.pickRef('associazioni', 'x', { region: 'Abruzzo' }).text.includes('dall’Abruzzo'), 'Davanti a vocale: «dall’Abruzzo».');
+}
 assert.deepEqual(problems.slice(0, 15), [], `Continuità dei dialoghi:\n${problems.slice(0, 15).join('\n')}`);
 console.log(`Dialoghi verificati per intero: ${conversations} conversazioni (${ids.length} attività × 3 semi × 4 situazioni × 3 modi di rispondere, più 36 scene di una carriera), ${beats} momenti. Domanda → risposta → replica di chi ha chiesto, sul tema e sul tipo di risposta → seconda voce che riprende il tema → decisione e garanzie sul tema; riga sul ruolo solo quando è vera. In 36 scene di fila: repliche ${new Set(met.reply.filter(Boolean)).size}, raccordi ${new Set(met.bridge.filter(Boolean)).size}, decisioni ${new Set(met.decide.filter(Boolean)).size} formulazioni diverse, nessuna ripetuta in due scene consecutive.`);

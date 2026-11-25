@@ -3,7 +3,7 @@
 // illustrated avatar (core/avatar.js AVATAR_OPTIONS): carnagione, colore e lunghezza dei capelli, occhiali, barba e baffi, larghezza del volto. Every trait comes with how sure the reading is
 // ('alta', 'media', 'bassa') or 'non-visibile': the editor shows it and the player corrects what is wrong. The gender is NEVER read from the photo: the face of the avatar follows the gender chosen
 // in the wizard, and beard and moustache are proposed only for a masculine face. Pure functions on RGBA arrays: the same code runs in the tests (Node) and in the page.
-import { AVATAR_OPTIONS } from '../core/avatar.js?v=20261125-7';
+import { AVATAR_OPTIONS } from '../core/avatar.js?v=20261125-10';
 
 // The guide drawn over the crop (fractions of the side): the oval of the face. The zones below are placed on it.
 export const GUIDE = Object.freeze({ cx: 0.5, cy: 0.52, rx: 0.25, ry: 0.33 });
@@ -58,7 +58,7 @@ export function hairColourOf(rgb) {
 // The reading. `data`: RGBA of a size × size square (the crop aligned to GUIDE). Returns { traits, readings, measures }: `traits` only for what could be read, `readings[field]` = { value, confidence, note }.
 export function analyzeFace(data, size = ANALYSIS_SIZE, { masculine = true } = {}) {
   const readings = {}, traits = {}, measures = {};
-  const put = (field, value, confidence, note = '') => { readings[field] = { value, confidence, note }; if (value != null && confidence !== 'non-visibile') traits[field] = value; };
+  const put = (field, value, confidence, note = '') => { readings[field] = { value, confidence, note }; if (value != null && confidence !== 'non-visibile' && confidence !== 'bassa') traits[field] = value; };
   // the skin: the two cheeks and the nose bridge (the forehead may be under a fringe)
   const cheeks = [...zone(data, size, 0.37, 0.53, 0.44, 0.59), ...zone(data, size, 0.56, 0.53, 0.63, 0.59), ...zone(data, size, 0.47, 0.51, 0.53, 0.60)];
   const skin = medianColour(cheeks);
@@ -103,15 +103,62 @@ export function analyzeFace(data, size = ANALYSIS_SIZE, { masculine = true } = {
   else if (h.crown > 0.3 || h.temples > 0.3) style = 'corto';
   if (style && !masculine && style === 'stempiato') style = 'corto';
   put('hairstyle', style, style ? styleConfidence : 'non-visibile', style ? '' : 'Lunghezza dei capelli non leggibile: allarga l’inquadratura.');
-  // the glasses: horizontal outlines above and below the eyes and over the bridge of the nose, much stronger than on the cheeks
-  const eyeBand = edges(data, size, 0.30, 0.38, 0.70, 0.52), cheek = edges(data, size, 0.34, 0.53, 0.66, 0.60);
-  const bridgeZone = zone(data, size, 0.47, 0.42, 0.53, 0.47);
-  const bridgeDark = bridgeZone.filter(p => !isSkin(p) && toLab(p)[0] < skinLab[0] - 12).length / Math.max(1, bridgeZone.length);
-  const score = eyeBand.horizontal * 2 + bridgeDark;
-  measures.glasses = { eyeBand, cheek, bridgeDark, score };
+  // the glasses: a FRAME, i.e. a closed dark outline round each eye (a line above, one below, one at each side) with the eye inside it. Eyebrows give only the upper line, the lashes a short one, a fringe or
+  // long hair a filled dark area (the inside of the outline is dark too), a shadow or a reflection is not dark enough or not an outline: none of them closes a ring. A ring on both eyes, at the same height,
+  // is a pair of glasses; no trace of a ring is no glasses; anything in between is NOT decided (the editor asks the player).
+  const lum = new Float32Array(size * size);
+  for (let i = 0; i < size * size; i++) lum[i] = toLab([data[i * 4], data[i * 4 + 1], data[i * 4 + 2]])[0];
+  // «dark» is relative to the skin of the SAME side of the face (light from one side makes one cheek darker than the other)
+  const sideSkin = zones => median(zones.map(p => toLab(p)[0]));
+  const inkLeft = Math.min(sideSkin(zone(data, size, 0.37, 0.53, 0.44, 0.59)) * 0.68, 62), inkRight = Math.min(sideSkin(zone(data, size, 0.56, 0.53, 0.63, 0.59)) * 0.68, 62);
+  const ink = (x, y) => { x = Math.round(x); y = Math.round(y); return x >= 0 && y >= 0 && x < size && y < size && lum[y * size + x] < (x < size / 2 ? inkLeft : inkRight); };
+  const near = (x, y, r = 1) => { for (let dy = -r; dy <= r; dy += 1) for (let dx = -r; dx <= r; dx += 1) if (ink(x + dx, y + dy)) return true; return false; };
+  // the outline of a frame (rectangular, or round) round the point (cx, cy): how much of each of its four sides (top, bottom, left, right) is dark, how dark the inside and the margin just outside are
+  const ring = (cx, cy, hw, hh, round) => {
+    const X = cx * size, Y = cy * size, W = hw * size, H = hh * size, n = 14;
+    const pointOn = (side, t) => {
+      if (!round) return side === 0 ? [X + t * W, Y - H] : side === 1 ? [X + t * W, Y + H] : side === 2 ? [X - W, Y + t * H] : [X + W, Y + t * H];
+      const a = (side === 0 ? -90 : side === 1 ? 90 : side === 2 ? 180 : 0) * Math.PI / 180 + t * 0.9;
+      return [X + Math.cos(a) * W, Y + Math.sin(a) * H];
+    };
+    const sides = [0, 1, 2, 3].map(side => { let hit = 0; for (let k = 0; k < n; k++) { const [x, y] = pointOn(side, -0.7 + 1.4 * k / (n - 1)); if (near(x, y)) hit++; } return hit / n; });
+    let inside = 0, total = 0;
+    for (let yy = Y - H * 0.7; yy <= Y + H * 0.7; yy += 1) for (let xx = X - W * 0.7; xx <= X + W * 0.7; xx += 1) { total++; if (ink(xx, yy)) inside++; }
+    const filled = total ? inside / total : 1;
+    // a frame is a thin line on the skin: right outside it there is skin, not more dark (a band of shadow, a mass of hair or a fringe is dark on both sides of the line)
+    let outsideInk = 0, outsideTotal = 0;
+    for (let side = 0; side < 4; side++) for (let k = 0; k < n; k++) {
+      const [x, y] = pointOn(side, -0.7 + 1.4 * k / (n - 1)); outsideTotal++;
+      const dx = side === 2 ? -3.2 : side === 3 ? 3.2 : 0, dy = side === 0 ? -3.2 : side === 1 ? 3.2 : 0; if (ink(x + dx, y + dy)) outsideInk++;
+    }
+    const outside = outsideInk / outsideTotal;
+    const corners = round ? 0 : [[-1, -1], [1, -1], [-1, 1], [1, 1]].filter(([fx, fy]) => near(X + fx * W * 0.92, Y + fy * H * 0.92, 1)).length / 4;
+    return { score: Math.min(...sides) * (1 - Math.min(1, Math.max(0, filled - 0.25) * 2)) * (1 - Math.min(1, Math.max(0, outside - 0.1) * 2)), corners, cy, round };
+  };
+  const bestRing = side => {
+    let best = { score: 0, corners: 0, cy: 0, round: false };
+    for (let d = 0.08; d <= 0.17 + 1e-9; d += 0.01) for (let cy = 0.40; cy <= 0.54; cy += 0.01) for (const hw of [0.06, 0.07, 0.08, 0.09]) for (const hh of [0.035, 0.045, 0.055]) for (const round of [false, true]) {
+      const r = ring(0.5 + side * d, cy, hw, hh, round); if (r.score > best.score) best = r;
+    }
+    return best;
+  };
+  const ringL = bestRing(-1), ringR = bestRing(1);
+  const level = Math.abs(ringL.cy - ringR.cy) <= 0.035;
+  const pair = level ? Math.min(ringL.score, ringR.score) : Math.min(ringL.score, ringR.score) * 0.6, strongest = Math.max(ringL.score, ringR.score);
+  // the eyes under hair or a band of shadow: nothing can be told about the glasses
+  const eyeZone = [...zone(data, size, 0.35, 0.455, 0.455, 0.48), ...zone(data, size, 0.545, 0.455, 0.65, 0.48)];
+  const covered = eyeZone.filter(p => toLab(p)[0] < skinLab[0] * 0.68).length / eyeZone.length;
+  // the whole eye band darker than the cheeks (a cap, a strong light from above): the outline would hide in it
+  const cheekL = zones => median(zones.map(p => toLab(p)[0])), bandL = (x0, x1) => median(zone(data, size, x0, 0.40, x1, 0.50).map(p => toLab(p)[0]));
+  const shaded = bandL(0.30, 0.50) < cheekL(zone(data, size, 0.37, 0.53, 0.44, 0.59)) * 0.86 || bandL(0.50, 0.70) < cheekL(zone(data, size, 0.56, 0.53, 0.63, 0.59)) * 0.86;
+  measures.glasses = { covered, left: ringL.score, right: ringR.score, pair, strongest, corners: (ringL.corners + ringR.corners) / 2 };
   if (!skinVisible) put('glasses', null, 'non-visibile');
-  else if (score > 0.55) put('glasses', 'rettangolari', score > 0.85 ? 'alta' : 'media', 'Forma della montatura da verificare (tonda o rettangolare).');
-  else put('glasses', 'nessuno', score < 0.35 ? 'alta' : 'bassa');
+  else if (covered > 0.55) put('glasses', null, 'bassa', 'Gli occhi sono coperti da capelli o ombra: scegli tu se porti gli occhiali.');
+  else if (shaded) put('glasses', null, 'bassa', 'La zona degli occhi è in ombra: scegli tu se porti gli occhiali.');
+  else if (pair >= 0.62) put('glasses', (ringL.round || ringR.round) && measures.glasses.corners < 0.5 ? 'tondi' : 'rettangolari', pair > 0.8 ? 'alta' : 'media', (ringL.round || ringR.round) && measures.glasses.corners < 0.5 ? '' : 'Forma della montatura da verificare (tonda o rettangolare).');
+  else if (strongest < 0.3) put('glasses', 'nessuno', 'alta');
+  else if (strongest < 0.45 && pair < 0.3) put('glasses', 'nessuno', 'media');
+  else put('glasses', null, 'bassa', 'Non è chiaro se porti gli occhiali: scegli tu.');
   // beard and moustache: darker than the skin and close to the hair on the chin, the jaw and the upper lip (only for a masculine face)
   if (!masculine) { put('beard', 'nessuna', 'alta', 'Segue il genere scelto.'); put('moustache', 'nessuno', 'alta', 'Segue il genere scelto.'); }
   else if (!skinVisible) { put('beard', null, 'non-visibile'); put('moustache', null, 'non-visibile'); }

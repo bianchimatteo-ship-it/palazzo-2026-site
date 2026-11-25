@@ -7,7 +7,7 @@ import { GUIDE_FUNCTIONS, GUIDE_SCENARIOS } from '../src/data/guide-manual.js';
 import { chromeAvailable, createCareerInPage, openCareer, withBrowser } from './lib/browser.mjs';
 
 const PAGES = new Set(['panoramica', 'carriera', 'calendario', 'eventi', 'ricompense', 'partito', 'finanze', 'partiti-lista', 'elezioni', 'sondaggi', 'parlamento', 'governo', 'diplomazia', 'quirinale', 'leggi', 'iniziative', 'referendum', 'risultati', 'territori', 'notizie', 'archivio', 'politici', 'profilo', 'impostazioni']);
-const PARTS = ['how', 'use', 'needs', 'costs', 'effects', 'example'];
+const PARTS = ['where', 'how', 'use', 'needs', 'costs', 'effects', 'risks', 'mistakes', 'example'];
 // ---------- 1. the data ----------
 const ids = GUIDE_FUNCTIONS.map(item => item.id);
 assert.equal(new Set(ids).size, ids.length, 'Identificativi unici.');
@@ -16,6 +16,31 @@ for (const item of GUIDE_FUNCTIONS) {
   for (const part of PARTS) assert.ok(typeof item[part] === 'string' && item[part].length >= 6, `${item.id}: «${part}» scritto.`);
 }
 for (const needed of ['carriera', 'partito', 'risorse', 'tempo', 'sondaggi', 'candidature', 'voto', 'alleanze', 'assemblee', 'leggi', 'iniziative', 'referendum', 'risultati', 'governo', 'quirinale', 'richieste', 'attivita', 'campagna', 'dimissioni', 'salvataggi', 'territori', 'notizie']) assert.ok(ids.includes(needed), `Il manuale tratta: ${needed}.`);
+// depth: where it is, how it is used, what it costs, the risks and the common mistakes, each a real sentence (the first chapters were one line each)
+for (const item of GUIDE_FUNCTIONS) {
+  for (const [part, min] of [['where', 25], ['use', 70], ['risks', 70], ['mistakes', 60]]) assert.ok(item[part]?.length >= min, `${item.id}: «${part}» approfondito (${item[part]?.length ?? 0} caratteri, minimo ${min}).`);
+  assert.ok(PARTS.every(part => item[part].trim().endsWith('.') || item[part].trim().endsWith('»')), `${item.id}: ogni parte è una frase compiuta.`);
+}
+// the numbers of the manual are the ones of the rules (never invented): each statement below is read from the engines
+{
+  const text = id => Object.values(GUIDE_FUNCTIONS.find(item => item.id === id)).join(' ');
+  const fmt = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const [career, fin, org, party, reward, staff, ops, opsCost, merge] = await Promise.all(['src/data/simulation/career-rules.js', 'src/data/simulation/finance-rules.js', 'src/data/simulation/organization-rules.js', 'src/data/simulation/party-life-rules.js', 'src/data/simulation/reward-rules.js', 'src/data/simulation/staff-rules.js'].map(path => import(new URL(`../${path}`, import.meta.url).href)).concat([import('../src/core/party-ops-engine.js'), import('../src/core/party-ops-engine.js'), import('../src/core/merger-dissolution.js')]));
+  const act = id => career.WEEKLY_ACTIVITIES.find(item => item.id === id).cost;
+  const must = (id, needle, why) => assert.ok(text(id).includes(needle), `Manuale «${id}»: ${why} («${needle}»).`);
+  must('tempo', `${career.WEEKLY_ACTION_POINTS} giorni di lavoro`, 'giorni a settimana');
+  must('tempo', `${act('ascolto').ap} giorno e ${act('ascolto').funds} €`, 'giro di ascolto'); must('tempo', `${act('comizio-piazza').ap} giorni e ${act('comizio-piazza').funds} €`, 'comizio'); must('tempo', `${act('tour-regione').ap} giorni, ${act('tour-regione').funds} € e ${act('tour-regione').capital} 1 di capitale`.replace(`${act('tour-regione').capital} 1`, `${act('tour-regione').capital}`), 'tour');
+  must('attivita', `talk show ${act('talk').ap} giorni, ${act('talk').funds} € e ${act('talk').capital} di capitale`, 'talk show'); must('attivita', `${act('sezione').ap} giorni, ${act('sezione').funds} € e ${act('sezione').capital} di capitale`, 'sezione');
+  must('candidature', `${act('preparazione').ap} giorni e ${act('preparazione').funds} €`, 'preparazione'); must('candidature', `${act('squadra').ap} giorni e ${act('squadra').funds} €`, 'squadra'); must('candidature', `${career.ELECTION_SCHEDULE.politiche.windowDays} giorni`, 'finestra');
+  must('organizzazione', `${org.SECTION_WEEKLY_COST} € a settimana`, 'costo sezione'); must('organizzazione', `${org.MEMBERSHIP_FEE} € l’anno`, 'quota'); must('organizzazione', `da ${org.MEMBERSHIP.min} a ${org.MEMBERSHIP.max} € l’anno, a passi di ${org.MEMBERSHIP.step}`, 'intervallo quota'); must('organizzazione', `ogni ${org.MEMBERSHIP.cooldownWeeks} settimane`, 'cambio quota'); must('organizzazione', `il ${Math.round(org.ELECTED_CONTRIBUTION * 100)}% della loro indennità`, 'contributo eletti');
+  must('finanze', `${Math.round(fin.DEBT_WEEKLY_INTEREST * 100)}% a settimana`, 'interessi'); must('finanze', fmt(fin.DEBT_CRISIS_THRESHOLD), 'soglia di crisi'); for (const deposit of fin.RESERVE.deposits) assert.ok(text('finanze').includes(fmt(deposit)), `Manuale finanze: deposito ${deposit}.`); must('finanze', fmt(fin.RESERVE.cap), 'tetto della riserva'); must('finanze', `${fin.TRANSFERS.cooldownWeeks} settimane`, 'attesa tra le richieste'); must('finanze', fmt(fin.TRANSFERS.floor), 'minimo del partito'); must('finanze', fmt(fin.TRANSFERS.ranks[5].cap), 'tetto del segretario'); must('finanze', fmt(fin.TRANSFERS.ranks[4].cap), 'tetto del quarto grado'); must('finanze', fmt(fin.TRANSFERS.ranks[1].cap), 'tetto del primo grado');
+  must('risorse', `${fin.BUDGET_LINES.find(line => line.id === 'personale').levels[1].cost} €`, 'collaboratore'); must('risorse', `${fin.BUDGET_LINES.find(line => line.id === 'personale').levels[2].cost} €`, 'segreteria');
+  must('fondazione', `${opsCost.OP_COSTS.found.capital} di capitale politico e ${fmt(opsCost.OP_COSTS.found.funds)} €`, 'costo fondazione'); must('fondazione', `${opsCost.OP_COOLDOWNS.found} settimane`, 'attesa tra fondazioni'); must('fondazione', `${opsCost.OP_COSTS.rename.capital} di capitale (di nuovo dopo ${opsCost.OP_COOLDOWNS.rename} settimane)`, 'cambio nome');
+  must('fusioni', `${opsCost.OP_COSTS.merge.capital} di capitale politico (di nuovo dopo ${opsCost.OP_COOLDOWNS.merge} settimane)`, 'costo fusione'); must('fusioni', `sciogliere una fusione costa ${merge.DISSOLVE_COST.capital} di capitale`, 'costo scioglimento');
+  must('ricompense', `${reward.DAILY_REWARD.amount} € una volta al giorno dopo ${reward.DAILY_REWARD.minutes} minuti`, 'premio giornaliero'); must('ricompense', `+${reward.PLAY_REWARDS.capital.amount} di capitale ogni ${reward.PLAY_REWARDS.capital.everyMinutes} minuti`, 'capitale a tempo'); must('ricompense', `+${reward.PLAY_REWARDS.preparation.amount} di preparazione elettorale ogni ${reward.PLAY_REWARDS.preparation.everyMinutes} minuti`, 'preparazione a tempo'); must('ricompense', `+${String(reward.AD_REWARD.points).replace('.', ',')} punti`, 'video sondaggi');
+  must('avanzamento', `fino a ${staff.STAFF_MAX_MANDATES}`, 'mandati'); must('avanzamento', `da ${staff.STAFF_DURATIONS[0][0]} a ${staff.STAFF_DURATIONS.at(-1)[0]} settimane`, 'durata dei mandati');
+  must('leggi', `${career.AMENDMENT_CAPITAL_COST} di capitale`, 'emendamento');
+}
 assert.ok(GUIDE_SCENARIOS.length >= 6, 'Almeno sei scenari guidati.');
 for (const needed of ['fondare', 'sindaco', 'parlamento', 'coalizione', 'ministro', 'premier']) assert.ok(GUIDE_SCENARIOS.some(item => item.id === needed), `Scenario: ${needed}.`);
 for (const scenario of GUIDE_SCENARIOS) { assert.ok(scenario.title && scenario.goal && scenario.steps.length >= 4, `${scenario.id}: obiettivo e passi.`); for (const [text, page] of scenario.steps) assert.ok(text.length > 10 && PAGES.has(page), `${scenario.id}: «${text}» porta a una pagina esistente.`); }

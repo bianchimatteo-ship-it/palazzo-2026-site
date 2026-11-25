@@ -75,6 +75,17 @@ export const HEADINGS = Object.freeze({
 });
 // What the career holds that a scene can mention: one sentence per scene kind (the free part is the real text: the name of the party, the title of a promise, the region, a rival, a headline). A scene
 // uses at most one, picked by the seed among those the career can fill; with none, the scene stays as it was.
+
+// The article of each region (the masculine ones, the ones before a vowel, the plural «le Marche»; all the others take «la»), for the sentences that put a region in a place of a sentence.
+const REGION_FORMS = Object.freeze({
+  f: { da: 'dalla ', di: 'della ', in: 'in ', art: 'la ' }, m: { da: 'dal ', di: 'del ', in: 'in ', art: 'il ' },
+  v: { da: 'dall’', di: 'dell’', in: 'in ', art: 'l’' }, p: { da: 'dalle ', di: 'delle ', in: 'nelle ', art: 'le ' }
+});
+const REGION_GENDER = Object.freeze({ Abruzzo: 'v', 'Emilia-Romagna': 'v', Umbria: 'v', Lazio: 'm', Molise: 'm', Piemonte: 'm', Veneto: 'm', 'Friuli-Venezia Giulia': 'm', 'Trentino-Alto Adige': 'm', Marche: 'p' });
+export const regionClassOf = name => REGION_GENDER[String(name ?? '').trim()] ?? 'f';
+export const regionSentence = (template, name) => { const form = REGION_FORMS[regionClassOf(name)]; return template.replace(/\{(da|di|in|art)\}/g, (_, token) => form[token]); };
+const regionVariants = pair => Object.keys(REGION_FORMS).map(kind => [pair[0].replace(/\{(da|di|in|art)\}/g, (_, token) => REGION_FORMS[kind][token]), pair[1]]);
+
 export const REFS = Object.freeze({
   party: {
     sede: Q(['Sulla parete, sotto il simbolo di {}, qualcuno ha appeso il calendario delle assemblee.', 'On the wall, under the symbol of {1}, someone has pinned the calendar of the assemblies.']),
@@ -92,13 +103,14 @@ export const REFS = Object.freeze({
     redazione: Q(['Sul tavolo della redazione c’è una tua promessa sottolineata: «{}».', 'On the newsroom desk one of your promises is underlined: “{}”.']),
     consiglio: Q(['In cartella c’è anche l’impegno «{}», che il governo dovrebbe mantenere.', 'In the file there is also the commitment “{1}”, which the government should keep.'])
   },
+  // the region comes with its article and preposition («dalla Lombardia», «dal Veneto», «dall’Abruzzo», «nelle Marche»): the tokens {da} {di} {in} {art} are replaced by regionForm() before the name goes in
   region: {
-    sede: Q(['Le sezioni di {} aspettano da te un segnale.', 'The branches in {1} are waiting for a signal from you.']),
-    associazioni: Q(['Vengono da {} e raccontano quello che vedono ogni giorno.', 'They come from {1} and tell what they see every day.']),
-    cantiere: Q(['Il cantiere è in {}: i residenti guardano ogni giorno cosa succede.', 'The site is in {1}: residents watch every day what happens.']),
-    commissione: Q(['Gli ospiti arrivano da {} e portano dati del territorio.', 'The guests come from {1} and bring data from the territory.']),
-    redazione: Q(['La cronaca locale di {} ha già pubblicato due articoli sul tema.', 'The local news pages of {1} have already run two articles on the subject.']),
-    consiglio: Q(['Sul tavolo c’è un dossier che riguarda {}.', 'On the table is a dossier concerning {1}.'])
+    sede: Q(['Le sezioni {di}{} aspettano da te un segnale.', 'The branches in {1} are waiting for a signal from you.']),
+    associazioni: Q(['Vengono {da}{} e raccontano quello che vedono ogni giorno.', 'They come from {1} and tell what they see every day.']),
+    cantiere: Q(['Il cantiere è {in}{}: i residenti guardano ogni giorno cosa succede.', 'The site is in {1}: residents watch every day what happens.']),
+    commissione: Q(['Gli ospiti arrivano {da}{} e portano dati del territorio.', 'The guests come from {1} and bring data from the territory.']),
+    redazione: Q(['La cronaca locale {di}{} ha già pubblicato due articoli sul tema.', 'The local news pages of {1} have already run two articles on the subject.']),
+    consiglio: Q(['Sul tavolo c’è un dossier che riguarda {art}{}.', 'On the table is a dossier concerning {1}.'])
   },
   rival: {
     sede: Q(['Tra i presenti qualcuno cita {} e ciò che sta facendo.', 'Among those present someone mentions {1} and what is being done.']),
@@ -152,5 +164,5 @@ export const ALL_PAIRS = [
   ...Object.values(HEADINGS).flatMap(item => [item.kicker, item.title, item.banner, item.body]),
   CITIZENS.place, CITIZENS.intro, ...Object.values(CITIZENS.families).flatMap(item => [item.open, item.follow]), ...Object.values(CITIZENS.reactions).flat(), ...Object.values(CITIZENS.closings),
   ...Object.values(GUESTS).flatMap(kind => Object.values(kind).flat()),
-  ...Object.values(REFS).flatMap(group => Object.values(group))
+  ...Object.entries(REFS).flatMap(([type, group]) => Object.values(group).flatMap(pair => type === 'region' ? regionVariants(pair) : [pair]))
 ].filter((pair, index, all) => all.findIndex(other => other[0] === pair[0]) === index);

@@ -37,6 +37,31 @@ for (const item of cases) for (const light of [0.92, 1, 1.1]) for (const seed of
   if (!item.masculine) assert.ok(got.beard === 'nessuna' && got.moustache === 'nessuno', `${item.name}: un volto femminile non riceve barba o baffi.`);
   if (light === 1 && seed === 7) table.push(`${item.name}: ${['skin', 'hair', 'hairstyle', 'glasses', 'beard', 'moustache'].map(field => got[field] ?? '—').join(' · ')}`);
 }
+// the glasses, on many synthetic portraits: a decided reading is NEVER wrong (no glasses invented on a bare face, none missed on a framed one); what cannot be told (eyes under a fringe, a band of shadow) is left to the player
+{
+  const variants = { chiara: {}, 'sopracciglia folte': { heavyBrows: true }, 'riflesso sulle lenti': { glare: true }, 'montatura tonda': { round: true }, 'montatura sottile': { thinRims: true }, 'frangia sugli occhi': { eyeFringe: true }, 'ombra sugli occhi': { shadow: 0.3 }, 'luce da un lato': { sideLight: 0.25 } };
+  const mustDecide = new Set(['chiara', 'sopracciglia folte', 'riflesso sulle lenti', 'montatura tonda', 'montatura sottile']);
+  const stats = {}; let wrong = 0, decided = 0, total = 0;
+  for (const [variant, extra] of Object.entries(variants)) for (const skin of SKIN_ORDER) for (const hair of ['nero', 'castano', 'biondo', 'grigio']) for (const light of [0.75, 1, 1.15]) for (const glasses of [false, true]) {
+    if (glasses === false && (extra.glare || extra.round || extra.thinRims)) continue;
+    const reading = T.analyzeFace(downscale(paintFace({ size: 256, skin, hair, length: 'corto', glasses, light, seed: 3, ...extra }), 256, T.ANALYSIS_SIZE), T.ANALYSIS_SIZE, { masculine: true });
+    const r = reading.readings.glasses, key = `${variant}/${glasses ? 'con' : 'senza'}`; total++;
+    stats[key] ??= { deciso: 0, incerto: 0 };
+    if (r.value == null) { stats[key].incerto++; assert.ok(!('glasses' in reading.traits), `${key}: una lettura incerta non assegna gli occhiali.`); assert.ok(!mustDecide.has(variant), `${key} (${skin}, ${hair}, luce ${light}): caso chiaro lasciato incerto.`); continue; }
+    stats[key].deciso++; decided++;
+    if (glasses !== (r.value !== 'nessuno')) { wrong++; assert.fail(`${key} (${skin}, ${hair}, luce ${light}): occhiali ${r.value} ${glasses ? 'non riconosciuti' : 'assegnati a chi non li porta'}.`); }
+  }
+  assert.equal(wrong, 0); assert.ok(decided / total > 0.7, `Casi decisi: ${decided}/${total}.`);
+  // eyebrows, a fringe and a shadow alone never make glasses: the same portrait without glasses stays «nessuno» or uncertain
+  const bare = T.analyzeFace(downscale(paintFace({ size: 256, skin: 'chiara', hair: 'nero', glasses: false, heavyBrows: true, eyeFringe: true, seed: 3 }), 256, T.ANALYSIS_SIZE), T.ANALYSIS_SIZE, { masculine: true });
+  assert.notEqual(bare.traits.glasses, 'rettangolari'); assert.notEqual(bare.traits.glasses, 'tondi');
+  // the gender chosen in the wizard is not touched by the reading, and the beards of different cut are not confused with shadow
+  for (const [beard, light] of [['nessuna', 0.75], ['nessuna', 1.15], ['completa', 0.85], ['pizzetto', 1]]) {
+    const reading = T.analyzeFace(downscale(paintFace({ size: 256, skin: 'oliva', hair: 'nero', beard, light, seed: 5 }), 256, T.ANALYSIS_SIZE), T.ANALYSIS_SIZE, { masculine: true });
+    const value = reading.traits.beard; assert.ok(value == null || (beard === 'nessuna' ? value === 'nessuna' : value !== 'nessuna'), `Barba ${beard} (luce ${light}) letta come «${value}».`);
+  }
+  console.log('Occhiali su ritratti sintetici:', JSON.stringify(stats), `${wrong} errori su ${decided} letture decise.`);
+}
 // a photo with no face in the guide: nothing is invented
 { const px = new Uint8ClampedArray(T.ANALYSIS_SIZE * T.ANALYSIS_SIZE * 4).map((_, i) => i % 4 === 3 ? 255 : 90 + (i % 7) * 20); const r = T.analyzeFace(px, T.ANALYSIS_SIZE); assert.equal(r.readings.skin.confidence, 'non-visibile', 'Senza un volto nella guida la carnagione è «non visibile».'); assert.ok(!r.traits.glasses && !r.traits.beard, 'Senza un volto non si inventano occhiali o barba.'); }
 // the corrections of the player survive a new reading; the gender decides the face
@@ -78,7 +103,9 @@ try {
     await setField('.career-wizard [name="firstName"]', 'Marta'); await setField('.career-wizard [name="lastName"]', 'Foto'); await setField('.career-wizard [name="birthDate"]', '1988-03-02', 'change'); await setField('.career-wizard [name="previousProfession"]', 'Architetta');
     await setField('.career-wizard [name="gender"]', 'donna', 'change'); await pause(200);
     // the editor
+    assert.ok(await has('[data-avatar-photo] [data-beta-tag]'), 'Accanto al pulsante per creare l’avatar dalla foto c’è l’etichetta BETA.');
     await click('[data-avatar-photo]', 400); await waitFor(() => has('.photo-avatar .pa-panel'));
+    assert.equal((await evaluate(`document.querySelector('.photo-avatar .pa-head [data-beta-tag]')?.textContent ?? ''`)), 'BETA', 'Nella funzione di creazione c’è l’etichetta BETA.');
     // a file that is not a photo: refused with the reason, nothing read
     await setFile(notPhoto); await waitFor(() => evaluate(`!document.querySelector('.photo-avatar [data-pa-error]').hidden`), 8000);
     log.refused = await evaluate(`document.querySelector('.photo-avatar [data-pa-error]').textContent`);
@@ -129,6 +156,7 @@ try {
     assert.ok((await evaluate(`document.querySelector('.hq-identity .hero-avatar svg').getAttribute('data-avatar')`)).startsWith(signature), 'Home: l’avatar illustrato dalla foto.');
     await evaluate(`location.hash = '#profilo'`); await waitFor(() => has('.profile-page-lead .hero-avatar svg'));
     assert.ok((await evaluate(`document.querySelector('.profile-page-lead .hero-avatar svg').getAttribute('data-avatar')`)).startsWith(signature), 'Profilo: lo stesso avatar.');
+    assert.ok(!(await has('.hq-identity [data-beta-tag], .profile-page-lead [data-beta-tag], .avatar-svg [data-beta-tag]')), 'L’etichetta BETA non compare su avatar finale, Home o profilo.');
     await screenshot(`${OUT}avatar-foto-profilo-1280.png`);
     // an animated scene draws the player with it
     const scene = await evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); const { WEEKLY_ACTIVITIES } = await import('/src/data/simulation/career-rules.js?v=${version}'); const S = await import('/src/core/activity-scenes.js?v=${version}'); for (const a of WEEKLY_ACTIVITIES.filter(x => S.activityHasScene(x.id))) { try { await store.startActivityScene(a.id, { quick: false }); return a.id; } catch { /* not open to this role */ } } return null; })()`);
@@ -139,7 +167,7 @@ try {
     const traitsOf = code => code.split('.').slice(0, 10).filter((_, index) => index !== 8).join('.'), mine = signature.split('.');
     assert.ok(actor && traitsOf(actor.code) === traitsOf(signature), `Nella scena il giocatore ha l’avatar dalla foto (${actor?.code} / ${signature}).`);
     assert.ok(actor.code.split('.')[8] === mine[8] || actor.speaking, `Nella scena l’espressione cambia solo quando il giocatore parla (${actor.code.split('.')[8]} / ${mine[8]}).`);
-    assert.ok(!(await has('.scene [data-photo-face]')), 'Nella scena nessuna testa fotografica.');
+    assert.ok(!(await has('.scene [data-photo-face]')), 'Nella scena nessuna testa fotografica.'); assert.ok(!(await has('.scene [data-beta-tag]')), 'Nelle scene nessuna etichetta BETA.');
     await screenshot(`${OUT}avatar-foto-scena-1280.png`);
     await evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); store.sceneAbandon(); return true; })()`).catch(() => {});
     // close and reopen the game

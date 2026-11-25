@@ -4,19 +4,19 @@ const NOT_KNOWN = 'Non lo so: nel gioco non trovo una funzione che risponda a qu
 const NOT_KNOWN_EN = 'I do not know: I cannot find a feature in the game that answers this. Try other words (candidacy, alliance, promise, staff, polls, laws, referendum…) or open the manual below.';
 const CLARIFY = 'Non ho capito bene: intendevi una di queste funzioni?', CLARIFY_EN = 'I did not quite get that: did you mean one of these?';
 const AMBIGUOUS = 'La domanda può riguardare due funzioni: ecco entrambe.', AMBIGUOUS_EN = 'The question can be about two features: here are both.';
-import { renderTutorialInvite } from './tutorial.js?v=20261125-7';
-import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261125-7';
-import { guideManual, LOADING_HTML } from './lazy-views.js?v=20261125-7';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261125-7';
-import { formatDate } from '../core/time.js?v=20261125-7';
-import { illustration } from './illustrations.js?v=20261125-7';
-import { glyph } from './visuals.js?v=20261125-7';
-import { identityMark, identityVars } from './party-identity.js?v=20261125-7';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261125-7';
-import { hallView } from './hall-view.js?v=20261125-7';
-import { renderLogoCatalog } from './logo-catalog.js?v=20261125-7';
-import { esc, signed } from './charts.js?v=20261125-7';
-import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261125-7';
+import { renderTutorialInvite } from './tutorial.js?v=20261125-10';
+import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261125-10';
+import { guideManual, LOADING_HTML } from './lazy-views.js?v=20261125-10';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261125-10';
+import { formatDate } from '../core/time.js?v=20261125-10';
+import { illustration } from './illustrations.js?v=20261125-10';
+import { glyph } from './visuals.js?v=20261125-10';
+import { identityMark, identityVars } from './party-identity.js?v=20261125-10';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261125-10';
+import { hallView } from './hall-view.js?v=20261125-10';
+import { renderLogoCatalog } from './logo-catalog.js?v=20261125-10';
+import { esc, signed } from './charts.js?v=20261125-10';
+import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261125-10';
 
 const when = iso => { try { return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); } catch { return ''; } };
 // The actions of the opening screen, in order of importance: starting a career and resuming one are the two main ones (drawn apart, below); then what concerns the
@@ -225,7 +225,7 @@ function accountView(account = {}) {
 
 // The manual: one card per function (how it works, how to use it, requirements, costs, consequences, example, and a link to the page) and the guided scenarios (steps with links). Every card takes part
 // in the search of the guide (data-guide-card) and in the index (data-guide-index).
-const GUIDE_PARTS = [['how', 'Come funziona'], ['use', 'Come si usa'], ['needs', 'Requisiti'], ['costs', 'Costi'], ['effects', 'Conseguenze'], ['example', 'Esempio']];
+const GUIDE_PARTS = [['where', 'Dove si trova'], ['how', 'Come funziona'], ['use', 'Come si usa'], ['needs', 'Requisiti'], ['costs', 'Costi'], ['effects', 'Conseguenze'], ['risks', 'Vantaggi e rischi'], ['mistakes', 'Errori comuni'], ['example', 'Esempio']];
 // A card of the guide that opens on demand (less scrolling on a phone): the summary is the title and the first sentence; the details are inside. The cards stay `data-guide-card` for the search and the index.
 const teaserOf = text => String(text ?? '');   // the summary shows the whole sentence, cut to two lines by the style (so the translation of the text stays whole); the open card shows it in full below
 const guideFold = (icon, title, teaser, body) => `<details class="guide-fold" data-guide-fold><summary>${glyph(icon, 20)}<span class="guide-sum"><strong>${esc(title)}</strong>${teaser ? `<small>${esc(teaser)}</small>` : ''}</span></summary><div class="guide-body">${body}</div></details>`;
@@ -233,7 +233,7 @@ const guideTarget = page => `data-nav="${esc(page)}" data-guide-close`;
 function manualCards(offset, { GUIDE_FUNCTIONS, GUIDE_SCENARIOS }) {
   const functions = GUIDE_FUNCTIONS.map((item, i) => {
     const index = offset + i;
-    return `<article class="guide-card guide-manual" id="guida-${index}" data-guide-card="${index}" data-guide-kind="funzione" data-guide-topic="${esc(item.id)}" data-guide-keywords="${esc(item.keywords ?? '')}">${guideFold(item.icon, item.title, teaserOf(item.how), `<dl class="guide-parts">${GUIDE_PARTS.map(([key, label]) => `<div><dt>${esc(label)}</dt><dd>${esc(item[key])}</dd></div>`).join('')}</dl><p><button type="button" class="go-button" ${guideTarget(item.page)}><span>Apri la pagina</span><i class="go-arrow" aria-hidden="true"></i></button></p>`)}</article>`;
+    return `<article class="guide-card guide-manual" id="guida-${index}" data-guide-card="${index}" data-guide-kind="funzione" data-guide-topic="${esc(item.id)}" data-guide-keywords="${esc(item.keywords ?? '')}">${guideFold(item.icon, item.title, teaserOf(item.how), `<dl class="guide-parts">${GUIDE_PARTS.filter(([key]) => item[key]).map(([key, label]) => `<div><dt>${esc(label)}</dt><dd>${esc(item[key])}</dd></div>`).join('')}</dl><p><button type="button" class="go-button" ${guideTarget(item.page)}><span>Apri la pagina</span><i class="go-arrow" aria-hidden="true"></i></button></p>`)}</article>`;
   });
   const scenarios = GUIDE_SCENARIOS.map((item, i) => {
     const index = offset + GUIDE_FUNCTIONS.length + i;
