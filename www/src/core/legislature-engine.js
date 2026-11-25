@@ -3,16 +3,16 @@
 // Chambers and their groups, the formation of the Government. Everything that happens is simulation: the real data are
 // the geography, the seats and the 2022 results the vote starts from; parties, coalitions, votes and seats of the game
 // are estimates of the game and never presented as real results.
-import { isElectoral, isElectoralFor } from './alliance-rules.js?v=20261125-1';
-import { populationReferenceDate, residentsOfItaly } from './municipal-rules.js?v=20261125-1';
-import { actualTurnout } from './electorate.js?v=20261125-1';
-import { uniqueId } from './ids.js?v=20261125-1';
-import { advanceDays, formatDate } from './time.js?v=20261125-1';
-import { axisOf, nationalShares } from './world-engine.js?v=20261125-1';
-import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20261125-1';
-import { archiveGovernment, confidenceBallotMissing, voteGovernmentConfidence } from './parliament-engine.js?v=20261125-1';
-import { seededRandom } from './vote-engine.js?v=20261125-1';
-import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20261125-1';
+import { isElectoral, isElectoralFor } from './alliance-rules.js?v=20261125-7';
+import { populationReferenceDate, residentsOfItaly } from './municipal-rules.js?v=20261125-7';
+import { actualTurnout } from './electorate.js?v=20261125-7';
+import { uniqueId } from './ids.js?v=20261125-7';
+import { advanceDays, formatDate } from './time.js?v=20261125-7';
+import { axisOf, nationalShares } from './world-engine.js?v=20261125-7';
+import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20261125-7';
+import { archiveGovernment, confidenceBallotMissing, voteGovernmentConfidence } from './parliament-engine.js?v=20261125-7';
+import { seededRandom } from './vote-engine.js?v=20261125-7';
+import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20261125-7';
 
 const SIM = 'simulation';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -1001,6 +1001,12 @@ export function formationStep({ formation, parliament, result, world = null, dat
   const find = () => majorityAfterVote(chambers, next.attempts ? { ...result, winner: null } : result, world, { exclude: next.excluded ?? [], include: next.included ?? [], consent: { granted: next.consentedParties ?? [], external: next.externalSupport ?? [] }, crisis: Boolean(next.crisis || next.attempts), previous: next.previous ?? null, prefer: ['main', 'alt', 'tech'].includes(next.presidentChoice) ? next.presidentChoice : null, rand: seededRandom(`${next.resultId}|${next.firstSitting}|${next.attempts ?? 0}|${(next.excluded ?? []).join(',')}|${(next.included ?? []).join(',')}`) });
   // When the player is the President of the Republic the consultations end with the player's decision on the mandate.
   const askPresident = majority => {
+    // no political majority at all: the President who is the player still decides (a Government of the President, or the dissolution), never the simulation in the player's place
+    if (presidential?.player && !majority?.options?.length && next.presidentAsked !== `nessuna-${next.attempts ?? 0}`) {
+      next.presidentAsked = `nessuna-${next.attempts ?? 0}`;
+      events.push({ id: 'quirinale-nessuna-maggioranza', params: { situation: next.crisis ? 'Il governo è caduto e le Camere restano le stesse.' : 'Le nuove Camere sono insediate.', whiteSemester: presidential.canDissolve ? '' : ' (non puoi: sei nel semestre bianco)', holdUntil: next.consultationsEnd ?? advanceDays(date, LEGISLATURE_RULES.consultationDays) } });
+      return;
+    }
     if (!presidential?.player || !majority?.options?.length || next.presidentAsked === `${next.attempts ?? 0}`) return;
     next.presidentAsked = `${next.attempts ?? 0}`;
     const labels = majority.options.map(item => item.label ?? (item.kind === 'governo-del-presidente' ? 'Governo del Presidente' : 'una maggioranza'));
@@ -1040,6 +1046,8 @@ export function formationStep({ formation, parliament, result, world = null, dat
     // The player's answer at the consultations (support or opposition) is part of the count.
     if (next.presidentChoice === 'dissolve') { step('fallita', 'Hai deciso di sciogliere le Camere: si torna al voto.'); return done({ dissolve: true }); }
     const majority = find();
+    // the President is the player and has not decided yet: no exploratory mandate and no dissolution in the player's place — the decision is asked (and taken by default when it falls due)
+    if (!majority && presidential?.player && !next.presidentChoice) { askPresident(null); next.consultationsEnd = advanceDays(date, 7); return done(); }
     if (!majority && !next.exploratory) {
       // before dissolving, an exploratory mandate: the President of a Chamber (a simulated figure) checks for a week whether a majority exists
       next.exploratory = true;

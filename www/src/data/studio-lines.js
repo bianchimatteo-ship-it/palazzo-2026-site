@@ -12,11 +12,11 @@ export const LINES = Object.freeze({
     talk: [
       ['«{}» ti vuole ospite in studio per parlare di «{}»: con te ci sarà {}. Accetti l’invito?', '“{1}” wants you as a guest in the studio to talk about “{2}”: {3} will be there too. Do you accept?'],
       ['La redazione di «{}» ti propone una serata sul tema «{}», con {} come altro ospite. Ci vai?', 'The “{1}” team offers you an evening on “{2}”, with {3} as the other guest. Will you go?'],
-      ['Squilla il telefono: è «{}». Vorrebbero un tuo intervento sul tema «{}» davanti al pubblico in studio, insieme a {}. Accetti?', 'The phone rings: it is “{1}”. They would like you on “{2}” in front of the studio audience, together with {3}. Do you accept?']
+      ['Squilla il telefono: è «{}». Vorrebbero un tuo intervento sul tema «{}» davanti al pubblico in studio, con {}. Accetti?', 'The phone rings: it is “{1}”. They would like you on “{2}” in front of the studio audience, together with {3}. Do you accept?']
     ],
     intervista: [
       ['«{}» ti propone un’intervista in diretta sul tema «{}»; nello stesso servizio sarà ascoltato anche {}. Accetti?', '“{1}” offers you a live interview on “{2}”; {3} will also be heard in the same report. Do you accept?'],
-      ['Dalla redazione di «{}» chiedono un tuo commento in diretta su «{}», insieme a {}. Vai in studio?', 'The “{1}” newsroom asks for your live comment on “{2}”, together with {3}. Will you go to the studio?'],
+      ['Dalla redazione di «{}» chiedono un tuo commento in diretta su «{}», con {}. Vai in studio?', 'The “{1}” newsroom asks for your live comment on “{2}”, together with {3}. Will you go to the studio?'],
       ['«{}» apre l’edizione con il tema «{}» e vorrebbe te e {} in studio per un’intervista. Accetti?', '“{1}” opens its edition with the topic “{2}” and would like you and {3} in the studio for an interview. Do you accept?']
     ]
   },
@@ -39,7 +39,7 @@ export const LINES = Object.freeze({
   },
   q1: {
     faccia: [
-      ['Prima domanda, a {}: {} è la priorità del momento. Che cosa propone concretamente?', 'First question, to {1}: {2} is the priority of the moment. What do you concretely propose?'],
+      ['Prima domanda per {}: {} è la priorità del momento. Che cosa propone concretamente?', 'First question, to {1}: {2} is the priority of the moment. What do you concretely propose?'],
       ['{}, cominciamo da {}: in una frase, che cosa cambierebbe subito?', '{1}, let us start with {2}: in one sentence, what would you change immediately?'],
       ['{}, il Paese chiede risposte su {}. Che cosa direbbe a chi ci guarda da casa?', '{1}, the country wants answers on {2}. What would you say to those watching from home?']
     ],
@@ -56,12 +56,12 @@ export const LINES = Object.freeze({
   },
   q2: {
     topic: [
-      ['Seconda domanda, a {}: parliamo di {}. Come risponde?', 'Second question, to {1}: let us talk about {2}. How do you answer?'],
+      ['Seconda domanda per {}: parliamo di {}. Come risponde?', 'Second question, to {1}: let us talk about {2}. How do you answer?'],
       ['{}, cambiamo argomento: {}. Qui c’è chi l’aspetta al varco.', '{1}, let us change topic: {2}. There are people waiting for you here.'],
       ['{}, un’altra questione molto sentita: {}. Che cosa risponde?', '{1}, another very felt issue: {2}. What is your reply?']
     ],
     money: [
-      ['Seconda domanda, a {}: le persone vogliono sapere come pagherà tutto questo. Come risponde?', 'Second question, to {1}: people want to know how you will pay for all this. How do you answer?'],
+      ['Seconda domanda per {}: le persone vogliono sapere come pagherà tutto questo. Come risponde?', 'Second question, to {1}: people want to know how you will pay for all this. How do you answer?'],
       ['{}, i conti: dove si trovano i soldi per quello che promette?', '{1}, the accounts: where does the money for what you promise come from?'],
       ['{}, ogni promessa ha un costo. Qual è il suo, e chi lo paga?', '{1}, every promise has a cost. What is yours, and who pays for it?']
     ],
@@ -84,9 +84,9 @@ export const LINES = Object.freeze({
   },
   domanda: {
     any: [
-      ['Hai la possibilità di rivolgere una domanda a {}.', 'You have the chance to put a question to {1}.'],
+      ['Hai la possibilità di fare una domanda diretta: {} ascolta.', 'You can ask a direct question: {1} is listening.'],
       ['Il conduttore ti passa la parola: puoi interpellare direttamente {}.', 'The host gives you the floor: you can address {1} directly.'],
-      ['Tocca a te: una domanda diretta a {}, davanti a tutti.', 'Your turn: one direct question to {1}, in front of everyone.']
+      ['Tocca a te: {} aspetta la tua domanda, davanti a tutti.', 'Your turn: {1} is waiting for your question, in front of everyone.']
     ]
   },
   attacco: {

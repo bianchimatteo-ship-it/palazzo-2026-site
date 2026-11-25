@@ -319,16 +319,19 @@ let president;
   game.presidentActivity('visita', 'Toscana');
   assert.throws(() => game.presidentActivity('visita', 'Atlantide'), /./, 'La visita chiede una regione vera');
   // Semestre bianco: non si sciolgono le Camere negli ultimi sei mesi.
-  assert.throws(() => game.presidentDissolve(), /./, 'Senza una crisi di governo non si sciolgono le Camere');
+  // The Chambers are dissolved only with a crisis that has no solution AND a calendar that can give the country a vote soon (the same rule the simulated President follows). Depending on the
+  // world the career has lived, here there is either no crisis, or a crisis inherited from the previous President whose calendar cannot yet hold a vote: either way the act is refused, for its reason.
+  assert.throws(() => game.presidentDissolve(), /maggioranza che governa|calendario elettorale|semestre bianco/, 'Lo scioglimento è rifiutato per una ragione delle regole (nessuna crisi, calendario o semestre bianco)');
   // Consultazioni: alla caduta del governo il Presidente decide a chi affidare l'incarico.
   const state = game.getState();
   state.parliament.government = { ...state.parliament.government, status: 'fallen', fallenAt: state.clock.currentDate };
   let consultations = null;
-  for (let week = 0; week < 5 && !consultations; week++) { game.advance(7); consultations = game.getState().game.inbox.find(item => item.templateId === 'quirinale-consultazioni') ?? null; }
+  // (the decision is «quirinale-consultazioni» when the consultations find a majority, «quirinale-nessuna-maggioranza» when they find none: in both the President who is the player decides)
+  for (let week = 0; week < 5 && !consultations; week++) { game.advance(7); consultations = game.getState().game.inbox.find(item => ['quirinale-consultazioni', 'quirinale-nessuna-maggioranza'].includes(item.templateId)) ?? null; }
   s = game.getState();
   assert.ok(s.national.formation && consultations, `Alla caduta del governo il Presidente apre le consultazioni e decide lui (${JSON.stringify(s.national.formation)?.slice(0, 300)})`);
   assert.ok(consultations.choices.some(choice => choice.id === 'sciogli') && consultations.choices.some(choice => choice.id === 'tecnico'), 'Può scegliere la maggioranza, un’alternativa, un governo del Presidente o lo scioglimento');
-  assert.ok(consultations.body.includes('Dopo le consultazioni tocca a te decidere'), 'Il Presidente è chiamato a decidere a chi affidare l’incarico');
+  assert.ok(/tocca a te decidere/.test(consultations.body), 'Il Presidente è chiamato a decidere (a chi affidare l’incarico, o come uscire da una crisi senza maggioranza)');
   game.resolveAgendaItem(consultations.id, 'tecnico');
   assert.equal(game.getState().national.formation.presidentChoice, 'tech', 'La scelta del Presidente entra nella formazione del governo');
   for (let week = 0; week < 6 && !['completata', 'fallita'].includes(game.getState().national.formation.phase); week++) game.advance(7);

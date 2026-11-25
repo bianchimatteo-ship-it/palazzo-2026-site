@@ -7,7 +7,7 @@ import { readFile } from 'node:fs/promises';
 import { startCareer, playWeek, seeded } from './lib/long-run.mjs';
 const build = (await readFile(new URL('../index.html', import.meta.url), 'utf8')).match(/main\.js\?v=([^"']+)/)?.[1];
 const { WEEKLY_ACTIVITIES, CAREER_EVENTS } = await import(`../src/data/simulation/career-rules.js?v=${build}`);
-const NEW_ACTIVITIES = ['volontariato', 'diretta-domande', 'studio-bilancio'], NEW_EVENTS = ['profilo-falso', 'fuori-onda', 'patrocinio-conteso'];
+const NEW_ACTIVITIES = ['volontariato', 'diretta-domande', 'studio-bilancio', 'visita-azienda'], NEW_EVENTS = ['profilo-falso', 'fuori-onda', 'patrocinio-conteso', 'pronto-soccorso-notte'];
 for (const id of NEW_ACTIVITIES) assert.ok(WEEKLY_ACTIVITIES.some(item => item.id === id), `Attività ${id} presente.`);
 for (const id of NEW_EVENTS) { const event = CAREER_EVENTS.find(item => item.id === id); assert.ok(event && event.choices.length >= 3 && event.choices.some(choice => choice.later), `Evento ${id}: tre scelte e uno sviluppo successivo.`); }
 
@@ -50,7 +50,8 @@ for (const run of runs) {
 }
 assert.ok(runs.some(run => run.important > 0), 'Gli eventi importanti (urgenti e situazioni) restano possibili.');
 const newSeen = NEW_EVENTS.filter(id => seen.has(id));
-assert.ok(newSeen.length >= 2, `I nuovi eventi arrivano nel gioco: ${newSeen.join(', ') || 'nessuno'}.`);
+assert.ok(newSeen.length >= 3, `I nuovi eventi arrivano nel gioco (almeno 3 dei 4): ${newSeen.join(', ') || 'nessuno'}.`);
+for (const id of NEW_EVENTS) { const event = CAREER_EVENTS.find(item => item.id === id); const fallback = event.choices.find(choice => choice.id === event.defaultChoice); assert.ok(fallback && !fallback.cost?.ap, `Evento ${id}: la scelta senza decisione non consuma giorni.`); }
 
 // the new activities: open to the roles they are meant for, closed to the others (the conditions of the engine, not a guess)
 // (the harness has one store: each career is checked before the next one is started)
@@ -63,8 +64,10 @@ assert.match(String(studyMember), /seggio o un incarico/, 'Lo studio del bilanci
 const { store: deputy } = await startCareer({ seed: 'varieta-attivita-deputato', level: 'deputato', fast: true });
 assert.equal(tries(deputy, 'studio-bilancio'), true, 'Lo studio del bilancio è possibile a chi siede in un’assemblea.');
 assert.equal(volunteerMember, true, 'Il volontariato è possibile a tutti.');
+assert.equal(tries(member, 'visita-azienda'), true, 'La visita a un’azienda è possibile anche a un semplice iscritto.');
+assert.equal(tries(deputy, 'visita-azienda'), true, 'La visita a un’azienda è possibile a un deputato.');
 const req = id => WEEKLY_ACTIVITIES.find(item => item.id === id).requires;
 assert.equal(req('diretta-domande')({ stats: { notoriety: 5 } }), false); assert.equal(req('diretta-domande')({ stats: { notoriety: 12 } }), true);
 console.log(`Varietà delle settimane verificata su ${runs.length} carriere × 40 settimane:`);
 for (const run of runs) console.log(`  ${run.career.padEnd(22)} eventi ${String(run.events).padStart(3)} · diversi ${String(run.distinct).padStart(2)} · ripetuti di fila ${run.repeats} · categoria più lunga ${run.categoryStreak} · importanti ${run.important}`);
-console.log(`Nuovi eventi visti: ${newSeen.join(', ')}; nuove attività con le loro condizioni (studio del bilancio solo con un seggio o un incarico, diretta con notorietà ≥ 10, volontariato per tutti).`);
+console.log(`Nuovi eventi visti: ${newSeen.join(', ')}; nuove attività con le loro condizioni (studio del bilancio solo con un seggio o un incarico, diretta con notorietà ≥ 10, volontariato e visita a un’azienda per tutti).`);

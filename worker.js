@@ -181,8 +181,8 @@ const SCHEMA = [
   // Rewarded videos (migrations/0008_reward_ads.sql has the same text): one row per account and completion id, so the same completion is never credited twice, and the day (Europe/Rome) for the daily limit.
   'CREATE TABLE IF NOT EXISTS reward_ads (user_id TEXT NOT NULL, ad_id TEXT NOT NULL, day TEXT NOT NULL, claimed_at TEXT NOT NULL, career_id TEXT, device_id TEXT, PRIMARY KEY (user_id, ad_id))',
   'CREATE INDEX IF NOT EXISTS reward_ads_day ON reward_ads (user_id, day)',
-  // Rewarded videos of personal funds (migrations/0010_reward_ad_funds.sql has the same text): one row per account (or guest device) and completion id, no daily limit — a table of its own, so these videos
-  // never count against the limit of the poll-bonus videos above.
+  // Rewarded videos of personal funds (migrations/0010_reward_ad_funds.sql has the same text; same Appodeal placement `default` as the poll bonus): one row per account (or guest device) and completion id,
+  // no daily limit — a table of its own, so these videos never count against the limit of the poll bonus; a completion id is accepted in only one of the two tables (bookAdReward).
   'CREATE TABLE IF NOT EXISTS reward_ad_funds (user_id TEXT NOT NULL, ad_id TEXT NOT NULL, claimed_at TEXT NOT NULL, career_id TEXT, device_id TEXT, PRIMARY KEY (user_id, ad_id))',
   // The migrations applied by the code (the ones that cannot be written as CREATE ... IF NOT EXISTS, such as a column added to a table that already exists).
   'CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, applied_at TEXT NOT NULL)',
@@ -790,16 +790,21 @@ async function bookAdReward(request, env, db, userId, body) {
   const config = live.find(item => item.rewarded.enabled);
   if (!config) return json(request, { error: 'I video con premio non sono al momento attivi.', code: 'disabled' }, 403);
   const careerId = typeof body?.careerId === 'string' && REWARD_ID.test(body.careerId) ? body.careerId : null, device = typeof body?.device === 'string' && REWARD_ID.test(body.device) ? body.device : null;
-  // The video of 1.000 € of personal funds (Appodeal placement `personal_funds_1000`, Android only): booked once for each completion id, with no daily limit (the game has none), in its own table.
-  if (body?.reward !== undefined) {
-    if (body.reward !== 'fondi' || platform !== 'android') return json(request, { error: 'Questa ricompensa non è attiva su questa piattaforma.', code: 'disabled' }, 403);
-    const funds = await db.prepare('INSERT OR IGNORE INTO reward_ad_funds (user_id, ad_id, claimed_at, career_id, device_id) VALUES (?, ?, ?, ?, ?)').bind(userId, id, new Date().toISOString(), careerId, device).run();
-    return funds?.meta?.changes > 0 ? json(request, { ok: true, credited: true, reward: 'fondi' }) : json(request, { ok: true, credited: false, duplicate: true, reward: 'fondi' });
+  // Two rewards, ONE Appodeal placement (`default`): the kind is the one the game's button asked for (`reward`: 'sondaggi', the default for the clients that do not send it, or 'fondi', Android only) and
+  // the completion id is ONE claim, whatever the kind: each insert below runs only if the id is in neither table (a statement of D1 is atomic and the writes are serialised), so an id taken as a poll
+  // bonus can never be taken again as personal funds, nor the other way round. Poll bonus: the daily limit of reward_ads, unchanged. Personal funds: no daily limit (reward_ad_funds, its own table).
+  const reward = body?.reward === undefined ? 'sondaggi' : body.reward;
+  if (!['sondaggi', 'fondi'].includes(reward) || (reward === 'fondi' && platform !== 'android')) return json(request, { error: 'Questa ricompensa non è attiva su questa piattaforma.', code: 'disabled' }, 403);
+  const claimed = async () => Boolean(await db.prepare('SELECT 1 AS found FROM reward_ads WHERE user_id = ? AND ad_id = ? UNION ALL SELECT 1 FROM reward_ad_funds WHERE user_id = ? AND ad_id = ?').bind(userId, id, userId, id).first());
+  const at = new Date().toISOString();
+  if (reward === 'fondi') {
+    const funds = await db.prepare('INSERT OR IGNORE INTO reward_ad_funds (user_id, ad_id, claimed_at, career_id, device_id) SELECT ?, ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM reward_ads WHERE user_id = ? AND ad_id = ?)').bind(userId, id, at, careerId, device, userId, id).run();
+    return funds?.meta?.changes > 0 ? json(request, { ok: true, credited: true, reward }) : json(request, { ok: true, credited: false, duplicate: true, reward });
   }
   const day = romeDay();
-  const written = await db.prepare('INSERT OR IGNORE INTO reward_ads (user_id, ad_id, day, claimed_at, career_id, device_id) SELECT ?, ?, ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM reward_ads WHERE user_id = ? AND day = ?) < ?').bind(userId, id, day, new Date().toISOString(), careerId, device, userId, day, AD_DAILY_MAX).run();
-  if (written?.meta?.changes > 0) return json(request, { ok: true, credited: true, points: config.rewardPoints });
-  if (await db.prepare('SELECT 1 AS found FROM reward_ads WHERE user_id = ? AND ad_id = ?').bind(userId, id).first()) return json(request, { ok: true, credited: false, duplicate: true, points: config.rewardPoints });
+  const written = await db.prepare('INSERT OR IGNORE INTO reward_ads (user_id, ad_id, day, claimed_at, career_id, device_id) SELECT ?, ?, ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM reward_ads WHERE user_id = ? AND day = ?) < ? AND NOT EXISTS (SELECT 1 FROM reward_ad_funds WHERE user_id = ? AND ad_id = ?)').bind(userId, id, day, at, careerId, device, userId, day, AD_DAILY_MAX, userId, id).run();
+  if (written?.meta?.changes > 0) return json(request, { ok: true, credited: true, reward, points: config.rewardPoints });
+  if (await claimed()) return json(request, { ok: true, credited: false, duplicate: true, reward, points: config.rewardPoints });
   return json(request, { error: 'Hai raggiunto il limite giornaliero di video con premio.', code: 'limit' }, 429);
 }
 async function handleAccounts(request, env, url) {

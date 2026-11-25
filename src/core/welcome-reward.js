@@ -1,12 +1,16 @@
 // The thank-you reward of the November 2026 update: 2,500 € of FUNDS OF THE CAREER (not political capital, not funds of the party, not real money), once for each pair device + user, and only
-// in the release of the stores this promotion belongs to (Android 1.0.6 build 7, iOS 1.0.2 build 3). Not on the web (the TEST site included), not in a Debug build, not in an older or a newer
-// version. No tracking: the device is a random id of this installation kept in its own storage (never a fingerprint); the user is the account signed in, or «ospite».
+// in the releases of the stores this promotion belongs to: the builds of the native projects when it was made (Android 1.0.6 build 7, iOS 1.0.2 build 3, android/app/build.gradle and
+// ios/App/App.xcodeproj) and, since 25/11/2026, the next build of each (Android 1.0.7 build 8, iOS 1.0.3 build 4), so that the update that follows keeps it. The same promotion, the same id and key:
+// a player who already received it never gets it again. Not on the web (the TEST site included), not in a Debug build, not in an older version or a later one than these. No tracking: the device is a random id of this installation kept in its own storage (never a fingerprint); the user is the account signed in, or «ospite».
 // The record is idempotent at two levels: the ledger of this installation (pending → credited, keyed by promotion + installation + user) and the flag the credit leaves in the career
 // (game.flags.welcomeRewards). The credit is atomic in the store (funds, entry in the books, flag, in one state change) and the ledger is marked credited only after it.
 export const WELCOME_PROMO = Object.freeze({
   id: 'grazie-aggiornamento-2026-11',
   amount: 2500,
-  targets: Object.freeze({ android: Object.freeze({ version: '1.0.6', build: '7' }), ios: Object.freeze({ version: '1.0.2', build: '3' }) }),
+  targets: Object.freeze({
+    android: Object.freeze([Object.freeze({ version: '1.0.6', build: '7' }), Object.freeze({ version: '1.0.7', build: '8' })]),
+    ios: Object.freeze([Object.freeze({ version: '1.0.2', build: '3' }), Object.freeze({ version: '1.0.3', build: '4' })])
+  }),
   title: 'GRAZIE PER GIOCARE A POLITICANDO 2026!',
   subtitle: 'Grazie per aver scelto di giocare a Politicando 2026. Per ringraziarti della tua partecipazione, abbiamo aggiunto 2.500 € ai fondi della tua carriera. Continua a costruire il tuo percorso nella politica italiana!',
   badge: '+2.500 €'
@@ -20,11 +24,11 @@ export function buildInfoFromUserAgent(userAgent = '') {
   const match = String(userAgent).match(/PolitikandoApp\/(android|ios)\/([\w.]+)\/(\w+)\/(release|debug)/);
   return match ? { platform: match[1], version: match[2], build: match[3], debug: match[4] === 'debug' } : null;
 }
-// Whether this build is the one of the promotion (exact version and build, a release, a native app).
+// Whether this build is one of the promotion (exact version AND build of one of its targets, a release, a native app).
 export function promoEligible(info, promo = WELCOME_PROMO) {
   if (!info || info.debug !== false) return false;
-  const target = promo.targets[info.platform];
-  return Boolean(target) && String(info.version) === target.version && String(info.build) === target.build;
+  const targets = [promo.targets[info.platform] ?? []].flat();   // (one target or the list of the builds of the promotion)
+  return targets.some(target => String(info.version) === target.version && String(info.build) === target.build);
 }
 const safe = fn => { try { return fn(); } catch { return null; } };
 // The id of this installation: random, made once, kept in this installation's storage (a reinstall is a new installation).

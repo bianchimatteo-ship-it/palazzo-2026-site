@@ -245,3 +245,5 @@ html[data-scene-motion="full"] .scene-stance { animation: st-stance-in .4s ease-
 @keyframes st-stance-in { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .scene-stage .st-room-front, .scene-reaction, .scene-stance { animation: none !important; } }
 .scene-quote { margin: 4px 0 6px; font-weight: 700; color: var(--ink-hi); font-style: italic; }
+/* the reply of the guest on the subject of the encounter, after the reaction to the move (core/activity-scenes.js, data/activity-scene-threads.js) */
+.scene-dialogue .scene-reply { margin-top: 6px; padding-left: 10px; border-left: 2px solid color-mix(in srgb, var(--gold) 60%, transparent); font-style: italic; }

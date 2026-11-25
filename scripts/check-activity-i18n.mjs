@@ -31,7 +31,7 @@ for (const key of [...SCENE_KEYS, 'cittadini']) {
     for (let guard = 0; guard < 16 && scene.status === 'active'; guard++) {
       const node = sceneNode(scene);
       const here = `${key}/${scene.nodeId}`;
-      for (const text of [node.title, node.text, node.kind, node.said, ...(node.preface ?? []), ...(node.lines ?? []), ...(node.why ?? []), ...(node.exchange ?? []).map(item => item.text), ...node.choices.flatMap(choice => [choice[1], choice[3]])]) { check(text, here, names); texts++; }
+      for (const text of [node.title, node.text, node.reply, node.kind, node.said, ...(node.preface ?? []), ...(node.lines ?? []), ...(node.why ?? []), ...(node.exchange ?? []).map(item => item.text), ...node.choices.flatMap(choice => [choice[1], choice[3]])]) { check(text, here, names); texts++; }
       const options = node.choices.filter(choice => !choice[2]);
       scene = chooseInScene(scene, node.choices.length === 1 ? node.choices[0][0] : options[(pickOffset + step++ + seed) % options.length][0]);
     }

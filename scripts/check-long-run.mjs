@@ -131,7 +131,8 @@ for (const { options, checkpoints: reports } of results) {
     check(Math.abs(health.week - weeksByDate) <= 2, `${label}: settimana ${health.week} ma il calendario è alla ${weeksByDate}`);
     check(health.week >= Math.round(report.years * 52.18) - 2, `${label}: settimana ${health.week}, meno di ${report.years} anni di gioco`);
     check(health.elections >= Math.floor(report.years * 0.6), `${label}: solo ${health.elections} elezioni svolte`);
-    for (const type of ['politiche', 'europee']) check(health.upcoming.some(item => item.startsWith(`${type}:`)), `${label}: nessuna elezione ${type} in calendario`);
+    // the calendar of the country (health.scheduled): a general or European vote the player does not run in («missed») is still in the calendar and held on its date; only a vote really absent fails
+    for (const type of ['politiche', 'europee']) check((health.scheduled ?? health.upcoming).some(item => item.startsWith(`${type}:`)), `${label}: nessuna elezione ${type} in calendario`);
     check(health.legislature >= 19 + Math.floor(report.years / 5.5), `${label}: legislatura ${health.legislature} (le politiche non si rinnovano)`);
     // 3. Government, budgets, parties and polls stay coherent.
     // A Government in office or being formed; a crisis never lasts forever.

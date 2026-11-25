@@ -185,6 +185,8 @@ export function health(state) {
     size: JSON.stringify(state).length,
     elections: (game.elections ?? []).filter(item => item.status === 'held').length,
     upcoming: (game.elections ?? []).filter(item => ['upcoming', 'open', 'running'].includes(item.status)).map(item => `${item.type}:${item.electionDate}`),
+    // the votes the country still has to hold, whatever the player does: «missed» is the player's candidacy (window closed without running), not the vote — it is held on its date all the same
+    scheduled: (game.elections ?? []).filter(item => item.status !== 'held' && item.electionDate >= state.clock.currentDate).map(item => `${item.type}:${item.electionDate}`),
     campaigns: (state.career.electionHistory ?? []).length,
     legislature: state.national?.legislature?.number ?? null,
     government: state.parliament?.government ? `${state.parliament.government.status}` : null,

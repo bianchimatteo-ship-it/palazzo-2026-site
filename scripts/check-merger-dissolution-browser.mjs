@@ -53,17 +53,18 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, scree
 
   // ---- the offer of the video of 1.000 €: the same markup in its three places (a scripted placement, as on Android)
   await S(`Object.assign(store.getState().game.resources, { funds: 300 }); store.getState().game.finance.debt = 2000; return true;`);
-  const offer = state => evaluate(`(async () => { const m = await import('/src/ui/funds-ad.js?v=${version}'); const plugin = { rewardedPlacement: async () => ({ canShow: true, amount: ${state === 'placement' ? 0.15 : 1000}, currency: ${state === 'placement' ? "'punti'" : "'Fondi personali'"} }), showAd: async () => ({ shown: false }) };
-    const service = m.createFundsAds({ store: { getState: () => ({}) }, ads: { config: () => ({ rewarded: { enabled: true } }), native: { plugin, load: async () => true, used: () => {} } }, journal: { deviceId: () => 'x' } });
+  // (the shared rewarded service of rewards-service.js, scripted: the same placement `default` for both rewards; 'no-ad' = no video loaded yet)
+  const offer = state => evaluate(`(async () => { const m = await import('/src/ui/funds-ad.js?v=${version}'); const rewarded = { busy: false, availability: async () => (${JSON.stringify(state)} === 'ready' ? { ok: true, code: 'ready' } : { ok: false, code: 'no-ad' }), watch: async () => ({ status: 'unavailable' }) };
+    const service = m.createFundsAds({ store: { getState: () => ({}) }, rewarded });
     await service.refresh(); return service.status().code; })()`);
-  for (const state of ['ready', 'placement']) {
+  for (const state of ['ready', 'no-ad']) {
     assert.equal(await offer(state), state, `Stato «${state}» del video.`);
     for (const [w, h, mobile] of [[390, 844, true], [1280, 900, false]]) {
       await viewport(w, h, mobile);
       await evaluate(`location.hash = '#panoramica'; true`); await pause(300); await evaluate(`location.hash = '#ricompense'; true`); await pause(900);
       const card = await evaluate(`document.querySelector('[data-funds-offer="ricompense"]')?.closest('.reward-card')?.innerText ?? ''`);
       assert.match(card, /1\.000 € di fondi personali/); assert.match(card, /GUARDA IL VIDEO/i); assert.equal((card.match(/1\.000 € di fondi personali/g) ?? []).length, 1, "Il titolo della scheda non si ripete.");
-      assert.match(card, state === 'ready' ? /Video disponibile/ : /Non ancora disponibile/, 'La scheda dice se il video è disponibile.');
+      assert.match(card, state === 'ready' ? /Video disponibile/ : /non ancora caricato/, 'La scheda dice se il video è disponibile.');
       const wide = await evaluate(`document.documentElement.scrollWidth <= innerWidth + 1`); assert.ok(wide, `${w}px: nessuno scorrimento orizzontale (Ricompense).`);
       await evaluate(`document.querySelector('[data-funds-offer]').scrollIntoView({ block: 'center' }); true`); await pause(300); await screenshot(`${OUT}video-fondi-ricompense-${state}-${w}.png`);
     }

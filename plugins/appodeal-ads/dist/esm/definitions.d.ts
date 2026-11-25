@@ -29,28 +29,13 @@ export interface AppodealAdsPlugin {
         ready: boolean;
         code?: string;
     }>;
-    /** Shows the loaded ad (placement `default`, or `personal_funds_1000` for a rewarded video) and resolves when it is closed. `rewarded` is true ONLY when the SDK reported `onRewardedVideoFinished` (viewed to the end); `completionId` is made natively, once for each video. For a placement other than `default` the answer also carries `placement`, `amount` and `currency` reported by the SDK at the completion. */
+    /** Shows the loaded ad (placement `default`) and resolves when it is closed. `rewarded` is true ONLY when the SDK reported `onRewardedVideoFinished` (viewed to the end); `completionId` is made natively, once for each video. */
     showAd(options: {
         format: AdFormat;
-        placement?: string;
     }): Promise<{
         shown: boolean;
         rewarded?: boolean;
         completionId?: string;
-        placement?: string;
-        amount?: number;
-        currency?: string;
-        code?: string;
-    }>;
-    /** Whether a rewarded placement of its own is configured and usable now: `canShow` and the reward set for it in the Appodeal dashboard (an unknown placement answers with the reward of `default`). */
-    rewardedPlacement(options: {
-        placement: string;
-    }): Promise<{
-        canShow: boolean;
-        loaded: boolean;
-        placement?: string;
-        amount?: number;
-        currency?: string;
         code?: string;
     }>;
     showBanner(options: {

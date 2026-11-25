@@ -1,7 +1,7 @@
 // What this module does and why: docs/architettura-ricompense.md (§ party-ops-engine.js).
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261125-1';
-import { RENAME_STYLES } from '../data/simulation/party-life-rules.js?v=20261125-1';
-import { normalizeLife, strengthShare } from './party-life-engine.js?v=20261125-1';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261125-7';
+import { RENAME_STYLES } from '../data/simulation/party-life-rules.js?v=20261125-7';
+import { normalizeLife, strengthShare } from './party-life-engine.js?v=20261125-7';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));

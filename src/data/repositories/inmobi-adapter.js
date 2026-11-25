@@ -4,7 +4,7 @@
 // The reward is counted ONLY when the native side reports the SDK's own confirmation (Android `onRewardsUnlocked`, iOS `rewardActionCompletedWithRewards`, both turned into `rewarded: true` by the plugin);
 // a video closed early, a failed show, a missing plugin or any error gives nothing, and one completion id is made natively for each video (so it can never be credited twice).
 // No data of the player (position, birth date, gender, career) is ever sent: the only things passed to the plugin are the Account ID, the placement ids and the test flag.
-import { FORMATS, defaultAds } from '../ads-config.js?v=20261125-1';
+import { FORMATS, defaultAds } from '../ads-config.js?v=20261125-7';
 
 export function createInMobiAdapter({ plugin = globalThis.Capacitor?.Plugins?.InMobiAds ?? null, platform = 'android', config = null } = {}) {
   let ids = config ?? defaultAds(platform);

@@ -1,5 +1,5 @@
 // What this module does and why: docs/architettura-ricompense.md (§ appodeal-adapter.js).
-import { FORMATS, resolveAppodeal } from '../ads-config.js?v=20261125-1';
+import { FORMATS, resolveAppodeal } from '../ads-config.js?v=20261125-7';
 
 export function createAppodealAdapter({ plugin = globalThis.Capacitor?.Plugins?.AppodealAds ?? null, config = null } = {}) {
   let ids = config ?? resolveAppodeal(null, 'off');

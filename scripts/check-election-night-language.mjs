@@ -1,3 +1,4 @@
+// (the party's nomination is approved at once, as check-election-night-ui does: whether the party picks the player is not what this test is about, and a refusal would mean no night to read)
 // The election night in English, in Chrome: the twelve hours, every tab and the summary, with the language switched while the night is on screen. No Italian is left (the independent detector of the
 // audit decides), and going back to Italian gives the same texts. A vote for lists (politiche) and a municipal one are both walked.  NIGHT_OUT=file writes the leftovers.
 import assert from 'node:assert/strict';
@@ -13,7 +14,7 @@ const surnames = [...(readFileSync(new URL('../src/core/campaign-engine.js', imp
 assert.ok(surnames.length > 20, 'cognomi dei candidati simulati letti dal motore');
 const detector = createIndependentDetector(surnames);
 const problems = []; let texts = 0, screens = 0;
-for (const [label, level, extra] of [['politiche', 'deputato', `store.fastForwardToElection('politiche'); store.startCampaign({ electionType: 'politiche', role: 'deputato', objective: 'seat' }, real.parties ?? []);`], ['comunale', 'comunale', `store.fastForwardToElection('comunale'); store.startCampaign({ electionType: 'comunale', role: 'sindaco', objective: 'win', municipalityBand: 'fino-15000' }, real.parties ?? []);`]]) {
+for (const [label, level, extra] of [['politiche', 'deputato', `store.fastForwardToElection('politiche'); store.startCampaign({ electionType: 'politiche', role: 'deputato', objective: 'seat' }, real.parties ?? []);`], ['comunale', 'comunale', `store.fastForwardToElection('comunale'); store.startCampaign({ electionType: 'comunale', role: 'sindaco', objective: 'win', municipalityBand: 'fino-15000' }, real.parties ?? []); if (store.getState().campaign?.nomination?.status === 'pending') { store.getState().campaign.nomination.status = 'approved'; store.loadGame(JSON.parse(store.exportSave())); }`]]) {
   await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, version }) => {
     await viewport(1280, 900, false);
     await createCareerInPage({ evaluate, version }, { level, onboarding: true, extra });

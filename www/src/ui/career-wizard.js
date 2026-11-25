@@ -1,19 +1,19 @@
-import { residentsText } from '../core/municipal-rules.js?v=20261125-1';
-import { MONTHS, parseBirth, splitBirth } from '../core/birth-date.js?v=20261125-1';
-import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261125-1';
-import { DEFAULT_LOGO_SECONDARY, LOGO_SECONDARY_PALETTE, LOGO_SHAPES, LOGO_SYMBOLS, isLogoColor, partyLogoDataUrl } from './party-logo.js?v=20261125-1';
-import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261125-1';
-import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261125-1';
-import { AVATAR_GROUPS, AVATAR_LABELS, AVATAR_OPTIONS, DEFAULT_AVATAR, SHAPE_FIELDS, SHAPE_LABELS, SHAPE_LIMIT, normalizeAvatar, avatarForGender } from '../core/avatar.js?v=20261125-1';
-import { avatarSvg } from './avatar-svg.js?v=20261125-1';
-import { DATA_SOURCES, isPendingReal, isSelectableParty } from '../data/schema.js?v=20261125-1';
-import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261125-1';
-import { POLL_SCENARIOS, SCENARIO_LIMITS } from '../core/poll-scenario.js?v=20261125-1';
-import { startStep, startSummary } from './start-wizard.js?v=20261125-1';
-import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261125-1';
-import { normalizeStart } from '../core/start-engine.js?v=20261125-1';
-import { legacyBanner } from './hall-view.js?v=20261125-1';
-import { formatDate } from '../core/time.js?v=20261125-1';
+import { residentsText } from '../core/municipal-rules.js?v=20261125-7';
+import { MONTHS, parseBirth, splitBirth } from '../core/birth-date.js?v=20261125-7';
+import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261125-7';
+import { DEFAULT_LOGO_SECONDARY, LOGO_SECONDARY_PALETTE, LOGO_SHAPES, LOGO_SYMBOLS, isLogoColor, partyLogoDataUrl } from './party-logo.js?v=20261125-7';
+import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261125-7';
+import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261125-7';
+import { AVATAR_GROUPS, AVATAR_LABELS, AVATAR_OPTIONS, DEFAULT_AVATAR, SHAPE_FIELDS, SHAPE_LABELS, SHAPE_LIMIT, normalizeAvatar, avatarForGender } from '../core/avatar.js?v=20261125-7';
+import { avatarSvg } from './avatar-svg.js?v=20261125-7';
+import { DATA_SOURCES, isPendingReal, isSelectableParty } from '../data/schema.js?v=20261125-7';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261125-7';
+import { POLL_SCENARIOS, SCENARIO_LIMITS } from '../core/poll-scenario.js?v=20261125-7';
+import { startStep, startSummary } from './start-wizard.js?v=20261125-7';
+import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261125-7';
+import { normalizeStart } from '../core/start-engine.js?v=20261125-7';
+import { legacyBanner } from './hall-view.js?v=20261125-7';
+import { formatDate } from '../core/time.js?v=20261125-7';
 
 const POSITIONS = ['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra'];
 
@@ -231,7 +231,7 @@ function profileStep(state, d) {
     ${birthField(d, d.currentDate ?? state.clock.currentDate)}
     <label>Genere<select name="gender"><option value="uomo" ${d.gender === 'uomo' ? 'selected' : ''}>Uomo</option><option value="donna" ${d.gender === 'donna' ? 'selected' : ''}>Donna</option></select></label>
     ${professionField(d)}
-  </div><small class="wizard-hint">Sono i dati del tuo personaggio, non i tuoi: puoi inventarli. Servono solo a questa carriera. La data di nascita è quella del personaggio.</small></section>${avatarEditor(d, d.photoPortrait?.image ?? null)}`;
+  </div><small class="wizard-hint">Sono i dati del tuo personaggio, non i tuoi: puoi inventarli. Servono solo a questa carriera. La data di nascita è quella del personaggio.</small></section>${avatarEditor(d, d.photoSource?.photo ?? null)}`;
 }
 // The visual editor of the avatar: a live preview and one group of choices per trait. Each choice is a button (data-avatar-field / data-avatar-value) that changes the draft's `avatar` at once;
 // the gender gives the avatar its base: the face of that gender, and for a woman no beard or moustache (core/avatar.js avatarForGender); skin, hair, eyes, glasses, jacket, expression and proportions
@@ -260,7 +260,7 @@ function avatarEditor(d, photo = null) {
     }).join('');
     return `<fieldset class="avatar-group" data-avatar-group="${field}"><legend>${esc(AVATAR_LABELS[field])}</legend><div class="avatar-choices ${swatches ? '' : 'is-minis'}">${choices}</div></fieldset>`;
   }).join('');
-  return `<section class="summary-section avatar-editor" aria-labelledby="avatar-title" data-avatar-editor><div class="summary-section-heading"><div><span>AVATAR</span><strong id="avatar-title">Il tuo volto</strong></div></div><div class="avatar-editor-body"><div class="avatar-preview" data-avatar-preview>${photo ? `<img class="avatar-photo avatar-photo-preview" src="${esc(photo)}" width="200" height="200" alt="Anteprima dell’avatar da foto" data-avatar-photo-preview />` : avatarSvg(avatar, { size: 200, label: 'Anteprima dell’avatar' })}</div><div class="avatar-controls"><div class="avatar-random"><button type="button" class="secondary-button" data-avatar-random>Avatar casuale</button><button type="button" class="secondary-button" data-avatar-photo>${photo ? 'Modifica l’avatar da foto' : 'Crea l’avatar da una foto'}</button>${photo ? '<button type="button" class="ghost-button" data-avatar-photo-remove>Torna all’avatar illustrato</button>' : ''}<small class="wizard-hint">Genera un aspetto a caso o trasforma una tua foto in un ritratto illustrato: la foto resta su questo dispositivo, non viene inviata a nessun server e non entra nel salvataggio. Il corpo e le scene restano illustrati.</small></div>${groups}${shapeSliders(avatar)}</div></div><small class="wizard-hint">L’avatar è disegnato sul tuo dispositivo e compare in Profilo, in Home, in Parlamento e nelle scene. Il volto segue il genere scelto.</small></section>`;
+  return `<section class="summary-section avatar-editor" aria-labelledby="avatar-title" data-avatar-editor><div class="summary-section-heading"><div><span>AVATAR</span><strong id="avatar-title">Il tuo volto</strong></div></div><div class="avatar-editor-body"><div class="avatar-preview" data-avatar-preview>${avatarSvg(avatar, { size: 200, label: 'Anteprima dell’avatar' })}${photo ? '<small class="avatar-from-photo" data-avatar-from-photo>Creato dalla tua foto</small>' : ''}</div><div class="avatar-controls"><div class="avatar-random"><button type="button" class="secondary-button" data-avatar-random>Avatar casuale</button><button type="button" class="secondary-button" data-avatar-photo>${photo ? 'Modifica dalla foto' : 'Crea l’avatar da una foto'}</button>${photo ? '<button type="button" class="ghost-button" data-avatar-photo-remove>Elimina la foto</button>' : ''}<small class="wizard-hint">Genera un aspetto a caso o crealo da una tua foto: il gioco ne legge capelli, occhiali, barba e carnagione e li disegna nel suo stile; poi correggi tu. La foto si legge sul dispositivo, non viene inviata a nessun server e non entra nel salvataggio.</small></div>${groups}${shapeSliders(avatar)}</div></div><small class="wizard-hint">L’avatar è disegnato sul tuo dispositivo e compare in Profilo, in Home, in Parlamento e nelle scene. Il volto segue il genere scelto.</small></section>`;
 }
 function levelStep(d, parliamentaryGroups, realPoliticians, place = null) {
   const details = {

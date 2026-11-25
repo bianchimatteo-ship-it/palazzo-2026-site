@@ -1,9 +1,9 @@
-import { campaignScope } from '../core/campaign-engine.js?v=20261125-1';
-import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261125-1';
-import { formatDate } from '../core/time.js?v=20261125-1';
-import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261125-1';
-import { distinctSeries, sparkline } from './charts.js?v=20261125-1';
-import { documentedProgramOf, programTexts } from '../data/party-program-values.js?v=20261125-1';
+import { campaignScope } from '../core/campaign-engine.js?v=20261125-7';
+import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261125-7';
+import { formatDate } from '../core/time.js?v=20261125-7';
+import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261125-7';
+import { distinctSeries, sparkline } from './charts.js?v=20261125-7';
+import { documentedProgramOf, programTexts } from '../data/party-program-values.js?v=20261125-7';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const pctFormats = new Map();
@@ -44,6 +44,13 @@ function statTile(label, value, delta, series, note = '', emphasis = true) {
   return `<div class="poll-stat"><span class="poll-stat-label">${esc(label)}</span><strong>${value}</strong>${delta === null ? '' : deltaChip(delta, emphasis)}${sparkline(series)}${note ? `<small>${esc(note)}</small>` : ''}</div>`;
 }
 
+// The rewarded video of the poll bonus, offered where the polls are (the same video and button as the page of the rewards: data-reward-video, kind 'sondaggi'; the rules are AD_REWARD's, unchanged).
+// `ads`: the snapshot of rewards-service.js (available, code, reason). Nothing where the videos are not active (iOS, the web, ads off).
+export function pollAdOffer(ads, points = null) {
+  if (!ads || ads.code === 'not-configured') return '';
+  const ready = ads.available === true;
+  return `<section class="poll-ad-offer" data-poll-ad-offer data-ads-state="${esc(ready ? 'ready' : ads.code ?? 'no-ad')}"><div class="poll-ad-copy"><span class="section-kicker">VIDEO PREMIATO · SONDAGGI</span><strong>${points ? `+${esc(String(points).replace('.', ','))} punti nei prossimi sondaggi nazionali` : 'Bonus nei sondaggi nazionali'}</strong><small>Guarda un video fino alla fine: il vantaggio vale per i sondaggi delle prossime settimane.</small></div><button type="button" class="primary-button" data-reward-video ${ready ? '' : 'disabled aria-disabled="true"'}>GUARDA IL VIDEO</button>${ready ? '' : `<small class="quiet-copy">${esc(ads.reason ?? 'Nessun video disponibile in questo momento.')}</small>`}</section>`;
+}
 export function barometer(state, world, poll, parties) {
   // An executive exists in the simulation when the Government is in office or, outside Parliament, the scenario has one.
   const inOffice = ['active', 'crisis'].includes(state.parliament?.government?.status) || (!state.parliament?.government && Boolean(state.society?.executive));
@@ -579,4 +586,4 @@ export function renderBarometerPanel(state) {
 }
 
 // the tooltips of the charts live in chart-tips.js (loaded with the first screen); re-exported here for the pages and tests that import them from this module
-export { attachChartInteractions, hideChartTip, isChartTipVisible } from './chart-tips.js?v=20261125-1';
+export { attachChartInteractions, hideChartTip, isChartTipVisible } from './chart-tips.js?v=20261125-7';

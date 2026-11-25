@@ -11,6 +11,19 @@ const YEARS = Number(process.env.YEARS ?? 5);
 const CASES = (process.env.ONLY ? process.env.ONLY.split(',').map(item => item.split(':')) : [['comunale', 'a'], ['comunale', 'b'], ['provinciale', 'a'], ['provinciale', 'b'], ['regionale', 'a'], ['regionale', 'b'], ['deputato', 'a'], ['deputato', 'b'], ['senatore', 'a'], ['europeo', 'a'], ['europeo', 'b']]);
 const MIN_GAP = 90; // the floor; the target of the calendar is 180 (checked on the calendar itself by check-calendar-gap)
 
+// A day counts once only when it is the declared join: exactly a general election marked `coincides` (with its reason) and the European election of that day. Two votes on the same day in any
+// other combination (two local votes, a general election without the flag, three votes) keep both dates, so the gap of 0 days fails as before.
+export function declaredJoin(dates, byDay) {
+  const out = [];
+  const once = new Set();
+  for (const date of dates) {
+    const votes = [...(byDay.get(date)?.values() ?? [])];
+    const declared = votes.length === 2 && votes.some(vote => vote.type === 'politiche' && vote.coincides && /Coincide/.test(vote.reason ?? '')) && votes.some(vote => vote.type === 'europee');
+    if (declared) { if (once.has(date)) continue; once.add(date); }
+    out.push(date);
+  }
+  return out;
+}
 if (process.argv[2] === 'worker') {
   const { startCareer, playWeek } = await import('./lib/long-run.mjs');
   const { distinctRounds } = await import('../src/core/calendar-planner.js');
@@ -21,12 +34,15 @@ if (process.argv[2] === 'worker') {
   const start = store.getState().clock.currentDate;
   const yearOf = date => Math.floor(days(start, date) / 365.25) + 1;
   const seen = new Map();
+  // the votes of each day, to recognise the one same-day case the calendar planner declares on purpose: a general election joined to the European one, fixed by EU law, when no other date keeps
+  // the distances (calendar-planner.js harmonizeOnce, last pass `join`: the general election gets `coincides` and its reason). Every other overlap stays a failure.
+  const byDay = new Map();
   const blocked = [];
   let cap = 0;
   for (let week = 0; week < Math.ceil(52.18 * YEARS) && store.getState().game?.status !== 'ended'; week++) {
     const now = store.getState();
     // the dates of the votes as they stood when they opened or were held (a date still ahead may be moved by the calendar planner): the last one seen for each vote
-    for (const entry of [...(now.game.elections ?? []), ...(now.game.rounds ?? [])]) if (entry.status !== 'upcoming' && entry.status !== 'missed') seen.set(entry.id, entry.electionDate);
+    for (const entry of [...(now.game.elections ?? []), ...(now.game.rounds ?? [])]) if (entry.status !== 'upcoming' && entry.status !== 'missed') { seen.set(entry.id, entry.electionDate); (byDay.get(entry.electionDate) ?? byDay.set(entry.electionDate, new Map()).get(entry.electionDate)).set(entry.id, { type: entry.type, coincides: Boolean(entry.coincides), reason: entry.deferralReason ?? null }); }
     // The player always takes the vote that is in front of him (what is checked is that there is one he can play, not how often a player decides to): the open election of
     // his calendar, else the race of the round of the amministrative, which any career can stand in (Elezioni → Candidatura).
     if (now.campaign?.status !== 'active') {
@@ -50,7 +66,7 @@ if (process.argv[2] === 'worker') {
   const state = store.getState();
   const history = (state.career.electionHistory ?? []).map(item => ({ campaignId: item.campaignId, type: item.electionType, date: item.date, label: item.electionLabel ?? null, outcome: item.outcome ?? null }));
   const races = store.races().concat(state.races?.archive ?? []).filter(race => race.round).map(race => ({ id: race.id, status: race.status, date: race.electionDate, won: race.result?.won ?? null }));
-  process.stdout.write(`RESULT ${JSON.stringify({ level, seed, start, weeks: cap, ended: state.game?.status === 'ended', history, races, blocked, calendar: [...seen.values()].sort(), years: Array.from({ length: YEARS }, (_, index) => history.filter(item => yearOf(item.date) === index + 1).length), solar: Object.fromEntries(history.reduce((map, item) => map.set(item.date.slice(0, 4), (map.get(item.date.slice(0, 4)) ?? 0) + 1), new Map())), closest: distinctRounds([...seen.values()]).closest })}\n`);
+  process.stdout.write(`RESULT ${JSON.stringify({ level, seed, start, weeks: cap, ended: state.game?.status === 'ended', history, races, blocked, calendar: [...seen.values()].sort(), years: Array.from({ length: YEARS }, (_, index) => history.filter(item => yearOf(item.date) === index + 1).length), solar: Object.fromEntries(history.reduce((map, item) => map.set(item.date.slice(0, 4), (map.get(item.date.slice(0, 4)) ?? 0) + 1), new Map())), closest: distinctRounds(declaredJoin([...seen.values()], byDay)).closest, joined: [...byDay].filter(([, votes]) => votes.size > 1).map(([day, votes]) => ({ day, votes: [...votes.values()] })) })}\n`);
   process.exit(0);
 }
 

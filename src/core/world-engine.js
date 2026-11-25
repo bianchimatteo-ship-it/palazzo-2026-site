@@ -1,11 +1,11 @@
-import { uniqueId } from './ids.js?v=20261125-1';
-import { HARD_GAP, THEMES, THEME_BY_ID, compare as compareProgram, compromise as compromiseOn, positionOf as programPositionOf, refusalBlock, refusalKey, recordRefusal, coalitionBlock, registrationsOf, pairKey as programPairKey } from './alliance-rules.js?v=20261125-1';
-import { AD_REWARD } from '../data/simulation/reward-rules.js?v=20261125-1';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261125-1';
-import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261125-1';
-import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261125-1';
-import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261125-1';
-import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261125-1';
+import { uniqueId } from './ids.js?v=20261125-7';
+import { HARD_GAP, THEMES, THEME_BY_ID, compare as compareProgram, compromise as compromiseOn, positionOf as programPositionOf, refusalBlock, refusalKey, recordRefusal, coalitionBlock, registrationsOf, pairKey as programPairKey } from './alliance-rules.js?v=20261125-7';
+import { AD_REWARD } from '../data/simulation/reward-rules.js?v=20261125-7';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261125-7';
+import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261125-7';
+import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261125-7';
+import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261125-7';
+import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261125-7';
 export { houseEffect };
 
 // The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.
@@ -1804,7 +1804,7 @@ function localVotes(world, date) {
     const won = Object.fromEntries(Object.entries(byCamp).map(([camp, value]) => [camp, Math.round(count * clamp(value / total + gaussian(world) * 0.04, 0, 1) * 0.8)]));
     const lead = Object.entries(won).sort((a, b) => b[1] - a[1])[0][0];
     for (const party of world.parties.filter(item => item.active && !item.isPlayer && campOfForce(item) === lead && item.baseline >= 1)) addEffect(world, { partyId: party.id, delta: 0.08, remaining: 2, cause: 'elezioni-locali', label: 'Amministrative' });
-    logEvent(world, date, { kind: 'elezioni', icon: 'ballot', scope: 'locale', title: `Amministrative: si vota in ${count} comuni`, body: `Il ${CAMP_LABELS[lead]} conquista più comuni (${Object.entries(won).map(([camp, value]) => `${CAMP_LABELS[camp]} ${value}`).join(', ')}; gli altri vanno a liste civiche). Risultati simulati, calendario reale dei comuni al voto.`, tone: 'neutral' });
+    logEvent(world, date, { kind: 'elezioni', icon: 'ballot', scope: 'locale', title: `Amministrative: si vota in ${count} comuni`, body: `Il ${CAMP_LABELS[lead]} conquista più comuni: ${['destra', 'sinistra', 'centro'].map(camp => `${CAMP_LABELS[camp]} ${won[camp] ?? 0}`).join(', ')}. Gli altri vanno a liste civiche. Risultati simulati, calendario reale dei comuni al voto.`, tone: 'neutral' });
   }
 }
 

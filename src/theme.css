@@ -1743,19 +1743,33 @@ button:focus-visible, a:focus-visible { outline-color: var(--gold); }
 .avatar-photo { display: block; width: 100%; height: 100%; max-width: 100%; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 2px var(--gold-deep); }
 .profile-photo-actions { margin-top: 8px; }
 .photo-avatar { position: fixed; inset: 0; z-index: 125; display: grid; place-items: center; padding: 16px; background: rgba(8, 10, 8, .66); backdrop-filter: blur(3px); }
-.pa-panel { width: min(480px, 100%); max-height: calc(100dvh - 32px); overflow: auto; padding: 18px; border: 1px solid var(--gold-deep); border-radius: 16px; background: var(--panel); color: var(--ink); box-shadow: 0 24px 60px rgba(0,0,0,.45); position: relative; }
+.pa-panel { position: relative; width: min(820px, 100%); max-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); overflow: auto; padding: 18px; border: 1px solid var(--gold-deep); border-radius: 16px; background: var(--panel); color: var(--ink); box-shadow: 0 24px 60px rgba(0,0,0,.45); }
 .pa-head { display: grid; gap: 2px; padding-right: 40px; } .pa-head small { color: var(--gold); letter-spacing: .14em; font-size: 11px; font-weight: 700; } .pa-head h2 { margin: 0; font-size: 20px; }
-.pa-close { position: absolute; top: 12px; right: 12px; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line-strong); background: transparent; color: var(--ink-2); font-size: 20px; cursor: pointer; }
+.pa-close { position: absolute; top: 12px; right: 12px; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line-strong); background: transparent; color: var(--ink-2); font-size: 20px; cursor: pointer; }
 .pa-privacy { margin: 10px 0; font-size: 12.5px; line-height: 1.45; color: var(--ink-3); }
-.pa-sources { display: flex; gap: 8px; flex-wrap: wrap; } .pa-pick { position: relative; display: inline-flex; align-items: center; cursor: pointer; }
-.pa-stage { display: grid; place-items: center; gap: 8px; margin: 14px 0 8px; }
-.pa-preview { width: min(220px, 70vw); height: auto; aspect-ratio: 1; border-radius: 50%; background: var(--panel-2); box-shadow: 0 0 0 3px var(--gold-deep), 0 10px 30px rgba(0,0,0,.35); touch-action: none; cursor: grab; }
-.pa-empty { margin: 0; text-align: center; font-size: 13px; color: var(--ink-3); }
+.pa-sources { display: flex; gap: 8px; flex-wrap: wrap; } .pa-pick { position: relative; display: inline-flex; align-items: center; min-height: 44px; cursor: pointer; }
+.pa-grid { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 18px; align-items: start; margin-top: 12px; }
+.pa-stage { display: grid; gap: 10px; }
+.pa-frame { position: relative; width: 100%; max-width: 300px; aspect-ratio: 1; border-radius: 14px; overflow: hidden; background: var(--panel-2); box-shadow: 0 0 0 1px var(--gold-deep); }
+.pa-view { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+.pa-guide { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.pa-frame .pa-empty { position: absolute; inset: auto 12px 12px; margin: 0; text-align: center; font-size: 13px; color: var(--ink-2); }
+.pa-frame-tools { display: grid; gap: 6px; } .pa-frame-tools > small { color: var(--ink-3); font-size: 12px; } .pa-row { display: flex; gap: 8px; flex-wrap: wrap; } .pa-row button { min-height: 40px; }
+.pa-slider { display: grid; grid-template-columns: minmax(100px, 36%) minmax(0, 1fr); gap: 10px; align-items: center; font-size: 13px; color: var(--ink-2); } .pa-slider input { width: 100%; accent-color: var(--gold); min-height: 32px; }
+.pa-result { display: grid; gap: 8px; align-content: start; }
+.pa-avatar { justify-self: center; width: 168px; height: 168px; border-radius: 50%; background: radial-gradient(circle at 50% 35%, #233a2f, #0f1a15); box-shadow: 0 0 0 3px var(--gold-deep); overflow: hidden; }
+.pa-avatar svg { width: 100%; height: 100%; display: block; }
+.pa-reading-summary { margin: 0; font-size: 13px; line-height: 1.45; color: var(--ink-2); } .pa-gender { margin: 0; font-size: 12px; color: var(--ink-3); }
+.pa-traits { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; }
+.pa-trait { display: grid; gap: 3px; font-size: 12.5px; color: var(--ink-2); } .pa-trait select { width: 100%; min-height: 40px; }
+.pa-trait i { font-style: normal; font-size: 11.5px; color: var(--ink-3); } .pa-trait i.is-alta { color: var(--gold); } .pa-trait i.is-media { color: #d8c48f; } .pa-trait i.is-manual { color: #9fd4b4; }
+.pa-trait.is-read select { box-shadow: 0 0 0 1px color-mix(in srgb, var(--gold) 55%, transparent); }
 .pa-error { margin: 6px 0; padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(220,86,80,.6); color: #ffb3ad; font-size: 13px; }
-.pa-controls { display: grid; gap: 8px; margin: 8px 0; } .pa-slider { display: grid; grid-template-columns: minmax(110px, 40%) minmax(0, 1fr); gap: 10px; align-items: center; font-size: 13px; color: var(--ink-2); }
-.pa-slider input { width: 100%; accent-color: var(--gold); min-height: 32px; }
-.pa-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin-top: 12px; } .pa-actions button { min-height: 44px; }
-@media (max-width: 420px) { .pa-slider { grid-template-columns: minmax(0, 1fr); gap: 2px; } .pa-actions button { flex: 1 1 auto; } }
+.photo-avatar.is-busy .pa-panel { cursor: progress; } .photo-avatar.is-busy .pa-frame::after { content: 'Lettura della foto…'; position: absolute; inset: 0; display: grid; place-items: center; background: rgba(8,12,10,.55); color: var(--ink); font-size: 13px; }
+.pa-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin-top: 14px; } .pa-actions button { min-height: 44px; }
+.avatar-from-photo { display: block; margin-top: 6px; text-align: center; font-size: 11.5px; color: #f0cf85; }
+@media (max-width: 680px) { .pa-grid { grid-template-columns: minmax(0, 1fr) 96px; gap: 10px; } .pa-stage { grid-column: 1; grid-row: 1; } .pa-frame { max-width: none; } .pa-result { display: contents; } .pa-avatar { grid-column: 2; grid-row: 1; width: 96px; height: 96px; } .pa-reading-summary, .pa-gender, .pa-traits { grid-column: 1 / -1; } .pa-row button { flex: 1 1 auto; } }
+@media (max-width: 420px) { .pa-panel { padding: 14px; } .pa-slider { grid-template-columns: minmax(0, 1fr); gap: 2px; } .pa-actions button { flex: 1 1 auto; } .pa-traits { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; } }
 /* the reward window: one gold accent (the blue, violet and pink tones competed with the rest; the kind of reward is said by its words and its icon) */
 .reward-popup.is-blue, .reward-popup.is-violet, .reward-popup.is-rose { --tone: #c4a66a; }
 
@@ -1813,3 +1827,8 @@ html[data-ui-motion="off"] .pl-found-toggle { transition: none; }
 .cta-hero { max-width: 100%; }
 .cta-hero { height: auto; }   /* the hero style grows with its label (the general primary button has a fixed 40px height) */
 @media (max-width: 480px) { .cta-hero { white-space: normal; text-align: center; min-width: 0; line-height: 1.25; } }
+/* the rewarded video of the poll bonus on the page of the polls (polls-mode.js pollAdOffer) */
+.poll-ad-offer{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px 14px;margin:12px 0;padding:12px 14px;border:1px solid color-mix(in srgb,var(--gold) 45%,var(--line));border-radius:var(--radius);background:color-mix(in srgb,var(--gold) 7%,var(--panel))}
+.poll-ad-copy{display:grid;gap:2px;min-width:0}.poll-ad-copy small,.poll-ad-offer>.quiet-copy{color:var(--muted)}.poll-ad-offer>.quiet-copy{grid-column:1/-1}
+@media (max-width:600px){.poll-ad-offer{grid-template-columns:1fr}.poll-ad-offer .primary-button{justify-self:stretch}}
+.pa-reading-summary { display: grid; gap: 4px; } .pa-found { display: flex; flex-wrap: wrap; gap: 4px 6px; margin: 0; padding: 0; list-style: none; } .pa-found li { padding: 3px 8px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--gold) 45%, transparent); font-size: 12px; } .pa-found li b { font-weight: 600; color: var(--gold); } .pa-found li.is-missing { opacity: .7; border-style: dashed; }

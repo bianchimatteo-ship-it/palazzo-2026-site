@@ -6,11 +6,11 @@
 // made, the answers are judged on competence, charisma, preparation and political coherence (the credibility of the programme), the rivals attack where the player is weak and answer as their
 // personality and their programme say. Nothing is drawn from the random sequence of the campaign: the little variation of a beat comes from a hash of the scene's seed, so a scene resumed or
 // replayed from the same choices is the same scene. The player's avatar is always the one chosen at the start of the career: the scene may change the face for a moment (expression), never the person.
-import { avatarForGender, defaultAvatarFor, genderOf, normalizeAvatar } from './avatar.js?v=20261125-1';
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261125-1';
-import { line, formatOf } from './studio-lines.js?v=20261125-1';
-import { EXTRA_TOPICS, topicOfText } from './topic-of-text.js?v=20261125-1';
-import { createRallyScene, createVoteScene, rallyChoose, rallyOdds, rallyEffects, rallyNode, rallyProgress, voteChoose, voteNode, voteProgress } from './rally-scene.js?v=20261125-1';
+import { avatarForGender, defaultAvatarFor, genderOf, normalizeAvatar } from './avatar.js?v=20261125-7';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261125-7';
+import { line, formatOf } from './studio-lines.js?v=20261125-7';
+import { EXTRA_TOPICS, topicOfText } from './topic-of-text.js?v=20261125-7';
+import { createRallyScene, createVoteScene, rallyChoose, rallyOdds, rallyEffects, rallyNode, rallyProgress, voteChoose, voteNode, voteProgress } from './rally-scene.js?v=20261125-7';
 export { createRallyScene, createVoteScene, formatOf };
 
 // Scenes of other kinds (the optional scenes of the weekly activities, core/activity-scenes.js) are loaded on demand and register here: { node, choose, effects, progress }. Nothing of them is in the first screen.
@@ -157,8 +157,10 @@ function sceneNodeBase(scene) {
 function reactionNode(scene, base, title) {
   const last = scene.history.at(-1);
   const lines = last?.reactions ?? {};
-  const speaker = lines.rival && /^.+: «/.test(lines.rival) ? cast(scene, 'rivale').id : cast(scene, 'conduttore').id;
-  return { ...base, title, speaker, expression: last && last.score >= 62 ? 'serena' : 'determinata', gesture: 'ascolta', camera: speaker === cast(scene, 'rivale').id ? 'rival' : 'host', text: lines.host ?? '', lines: [lines.rival].filter(Boolean), audience: lines.audience, why: last?.why ?? [], score: last?.score ?? null, choices: [['continua', 'Continua']] };
+  // who is highlighted is who says the FIRST line: when the rival answers (a line «Name: «…»»), the rival's line comes first and the host's comment after it; otherwise the host speaks
+  const rivalSpeaks = Boolean(lines.rival && /^.+: «/.test(lines.rival));
+  const speaker = rivalSpeaks ? cast(scene, 'rivale').id : cast(scene, 'conduttore').id;
+  return { ...base, title, speaker, expression: last && last.score >= 62 ? 'serena' : 'determinata', gesture: 'ascolta', camera: rivalSpeaks ? 'rival' : 'host', text: rivalSpeaks ? lines.rival : lines.host ?? '', lines: rivalSpeaks ? [lines.host].filter(Boolean) : [lines.rival].filter(Boolean), audience: lines.audience, why: last?.why ?? [], score: last?.score ?? null, choices: [['continua', 'Continua']] };
 }
 
 // ---------- moving the scene on ----------
@@ -265,7 +267,8 @@ function chooseDebate(input, choiceId) {
     log({}); next = NEXT.invito;
   } else if (scene.nodeId === 'preparazione') { scene.prepFocus = choiceId; log({ focus: choiceId }); next = NEXT.preparazione; }
   else if (['q1', 'q2'].includes(scene.nodeId)) {
-    const topic = scene.nodeId === 'q1' ? scene.topic : q2Topic(scene);
+    // the reaction speaks of what was asked: the second question about the money has no subject of its own, its reaction is about the accounts
+    const topic = scene.nodeId === 'q1' ? scene.topic : scene.q2?.source === 'q2.money' && !scene.q2?.topicId ? { ...q2Topic(scene), label: 'Conti e coperture' } : q2Topic(scene);
     const result = judge(scene, choiceId, { topicId: topic.id, nodeId: scene.nodeId });
     scene.scores.push({ node: scene.nodeId, kind: 'risposta', style: choiceId, score: result.score });
     mood((result.score - 50) / 3);
@@ -332,6 +335,10 @@ const DEBATE_TOPIC_LABELS = Object.freeze({ lavoro: 'Lavoro e sviluppo', servizi
 // The topic the second answer is judged on: the one of the question asked, else the debate's.
 export const q2Topic = scene => topicRef(scene, scene.q2?.topicId) ?? scene.secondTopic ?? scene.topic;
 // The second question: where it comes from is the situation (a broken promise, the opponent's programme, a fact of the days, the money, the other topic); the choice among the ones that apply is by the seed.
+// A «fact of the days» the host or the rival may quote: any public matter of the week (with a clear subject or not: a vague one gets the generic replies), never an entry of the player's own diary —
+// an invitation to a TV debate or an interview, a request of a committee of the party — which is not something «people discuss».
+const OWN_DIARY = /\b(TV|tv|televisiv|intervista|talk|dibattito|ospitata|diretta|chiede mezzi|comitato|tesseramento|corrente)\b/i;
+export const publicFact = text => Boolean(text) && !OWN_DIARY.test(text);
 export function secondQuestion(scene, name) {
   const ctx = scene.context, rival = cast(scene, 'rivale').name;
   const broken = ctx.promises.find(item => item.status === 'non-mantenuta'), open = ctx.promises.find(item => item.status !== 'non-mantenuta');
@@ -340,7 +347,8 @@ export function secondQuestion(scene, name) {
   if (broken) options.push(['q2.broken', [name, broken.label], broken.topic ?? topicOfText(broken.label)]);
   if (open) options.push(['q2.promise', [name, open.label], open.topic ?? topicOfText(open.label)]);
   if (ctx.rivalProgramLabels?.length) options.push(['q2.rival', [name, rival, ctx.rivalProgramLabels[0]], topicOfText(ctx.rivalProgramLabels[0])]);
-  if (ctx.events?.length) options.push(['q2.event', [name, ctx.events[0]], topicOfText(ctx.events[0])]);
+  const event = (ctx.events ?? []).find(publicFact);
+  if (event) options.push(['q2.event', [name, event], topicOfText(event)]);
   const [key, args, topicId] = options[Math.floor(unit(`${scene.seed}|q2`) * options.length)];
   return { text: line(scene, key, args), topicId: topicId ?? null, source: key };
 }
@@ -355,7 +363,8 @@ export function attackLine(scene) {
   if (ctx.crisis) options.push(['attacco.crisis', [rival], own]);
   if (scene.provoked) options.push(['attacco.provoked', [rival], own]);
   if (ctx.weakProposal) options.push(['attacco.coverage', [rival, ctx.weakProposal], topicOfText(ctx.weakProposal)]);
-  if (ctx.events?.length) options.push(['attacco.event', [rival, ctx.events[0]], topicOfText(ctx.events[0])]);
+  const event = (ctx.events ?? []).find(publicFact);
+  if (event) options.push(['attacco.event', [rival, event], topicOfText(event)]);
   if (!options.length) options.push(['attacco.any', [rival], own]);
   const [key, args, topicId] = options[Math.floor(unit(`${scene.seed}|attacco-line`) * options.length)];
   return { text: line(scene, key, args), topicId: topicId ?? null, source: key };

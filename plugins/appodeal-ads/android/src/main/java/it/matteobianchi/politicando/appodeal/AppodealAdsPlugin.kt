@@ -36,9 +36,7 @@ import java.util.UUID
  *
  *  - Consent first: Appodeal's ConsentManager (GDPR). No ad request is made until `ConsentManager.canShowAds()` is true; the SDK is initialised afterwards and reads the consent state itself.
  *  - Appodeal's automatic network connection is kept: only the app key is given, never a network id. No AdMob, Meta or InMobi SDK is wired by this code.
- *  - Placement `default` for every show, except the rewarded video of personal funds (`personal_funds_1000`, asked by the game with `placement`): it is shown ONLY when Appodeal reports for that
- *    placement its own reward (rewardedPlacement: canShow + getReward), because an unknown placement falls back to the settings of `default`; its completion carries placement, amount and currency.
- *    Test mode (`Appodeal.setTesting`) comes from the game's configuration, TEST by default; nothing here can switch production on by itself.
+ *  - Placement `default` for every show, the two rewarded videos of the game included (poll bonus and personal funds): which reward a video gives is decided by the game from the button that asked for it, never by the placement. Test mode (`Appodeal.setTesting`) comes from the game's configuration, TEST by default; nothing here can switch production on by itself.
  *  - Nothing about the player (position, birth date, gender, simulated political choices) is ever passed to the SDK: no setUserId, no custom rules, no segments.
  *  - A rewarded video is "rewarded" ONLY after `onRewardedVideoFinished`, once for each show; a video closed early, failed or expired is never rewarded.
  *  - Every SDK call is wrapped: an exception, a missing activity or a refused request answers "not shown / not ready" and never crashes or blocks the game; every load has a timeout.
@@ -48,8 +46,6 @@ class AppodealAdsPlugin : Plugin() {
     private companion object {
         const val TAG = "PolitAppodeal"
         const val PLACEMENT = "default"
-        const val FUNDS_PLACEMENT = "personal_funds_1000"
-        val PLACEMENTS = setOf(PLACEMENT, FUNDS_PLACEMENT)
         const val LOAD_TIMEOUT_MS = 20_000L
     }
 
@@ -70,10 +66,6 @@ class AppodealAdsPlugin : Plugin() {
     private val loadTimeouts = HashMap<String, Runnable>()
     private val showCalls = HashMap<String, PluginCall>()
     private var rewardEarned = false
-    // the placement of the rewarded video on screen, and the reward the SDK reported at its official completion (onRewardedVideoFinished)
-    private var showPlacement = PLACEMENT
-    private var finishedAmount = 0.0
-    private var finishedCurrency = ""
 
     private fun activityOrNull(): Activity? = try { activity } catch (e: Throwable) { null }
     private fun type(format: String): Int? = when (format) { "interstitial" -> Appodeal.INTERSTITIAL; "rewarded" -> Appodeal.REWARDED_VIDEO; else -> null }
@@ -238,14 +230,11 @@ class AppodealAdsPlugin : Plugin() {
         val call = showCalls.remove(format) ?: return
         loaded[format] = false   // an ad is shown once; the SDK caches the next one by itself
         val earned = format == "rewarded" && shown && rewarded && rewardEarned
-        val placement = if (format == "rewarded") showPlacement else PLACEMENT
-        if (format == "rewarded") { rewardEarned = false; showPlacement = PLACEMENT }
+        if (format == "rewarded") rewardEarned = false
         call.resolve(JSObject().apply {
             put("shown", shown)
             if (format == "rewarded") put("rewarded", earned)
             if (earned) put("completionId", "apd-" + UUID.randomUUID().toString().replace("-", ""))
-            // only for a placement other than `default`: the game checks that the completion is of THAT placement with ITS reward (the `default` answer is unchanged)
-            if (earned && placement != PLACEMENT) { put("placement", placement); put("amount", finishedAmount); put("currency", finishedCurrency) }
             if (code != null) put("code", code)
         })
     }
@@ -265,11 +254,11 @@ class AppodealAdsPlugin : Plugin() {
         Appodeal.setRewardedVideoCallbacks(object : RewardedVideoCallbacks {
             override fun onRewardedVideoLoaded(isPrecache: Boolean) { Log.d(TAG, "rewarded loaded"); finishLoad("rewarded", true) }
             override fun onRewardedVideoFailedToLoad() { Log.d(TAG, "rewarded failed to load"); finishLoad("rewarded", false, "no-fill") }
-            override fun onRewardedVideoShown() { Log.d(TAG, "rewarded shown"); rewardEarned = false; finishedAmount = 0.0; finishedCurrency = "" }
+            override fun onRewardedVideoShown() { Log.d(TAG, "rewarded shown"); rewardEarned = false }
             override fun onRewardedVideoShowFailed() { Log.d(TAG, "rewarded show failed"); finishShow("rewarded", false, false, "show-failed") }
             override fun onRewardedVideoClicked() {}
             // The ONLY place that rewards: the SDK says the video was viewed to the end.
-            override fun onRewardedVideoFinished(amount: Double, currency: String) { Log.d(TAG, "rewarded finished (official completion)"); rewardEarned = true; finishedAmount = amount; finishedCurrency = currency }
+            override fun onRewardedVideoFinished(amount: Double, currency: String) { Log.d(TAG, "rewarded finished (official completion)"); rewardEarned = true }
             override fun onRewardedVideoClosed(finished: Boolean) { Log.d(TAG, "rewarded closed, finished=$finished"); finishShow("rewarded", true, finished) }
             override fun onRewardedVideoExpired() { loaded["rewarded"] = false }
         })
@@ -311,39 +300,17 @@ class AppodealAdsPlugin : Plugin() {
         val a = activityOrNull()
         val format = call.getString("format") ?: ""
         val t = type(format)
-        val placement = call.getString("placement") ?: PLACEMENT
-        if (placement !in PLACEMENTS || (placement != PLACEMENT && format != "rewarded")) { call.resolve(obj("shown" to false, "rewarded" to false, "code" to "bad-placement")); return }
         if (!sdkReady || a == null || t == null || showCalls.containsKey(format)) { call.resolve(obj("shown" to false, "rewarded" to false, "code" to "not-ready")); return }
         try {
             a.runOnUiThread {
                 try {
                     if (!Appodeal.isLoaded(t)) { loaded[format] = false; call.resolve(obj("shown" to false, "rewarded" to false, "code" to "not-ready")); return@runOnUiThread }
-                    // a placement of its own is shown only if the SDK can show it now (its settings, its caps); `default` keeps the exact path it always had
-                    if (placement != PLACEMENT && !Appodeal.canShow(t, placement)) { call.resolve(obj("shown" to false, "rewarded" to false, "code" to "placement")); return@runOnUiThread }
                     showCalls[format] = call
                     rewardEarned = false
-                    if (format == "rewarded") showPlacement = placement
-                    if (!Appodeal.show(a, t, placement)) finishShow(format, false, false, "refused")
+                    if (!Appodeal.show(a, t, PLACEMENT)) finishShow(format, false, false, "refused")
                 } catch (e: Throwable) { Log.e(TAG, "show", e); showCalls.remove(format); call.resolve(obj("shown" to false, "rewarded" to false, "code" to "error")) }
             }
         } catch (e: Throwable) { call.resolve(obj("shown" to false, "rewarded" to false, "code" to "error")) }
-    }
-
-    // Whether a rewarded placement of its own is configured and usable now: what the SDK reports for it (canShow, and the reward set in the Appodeal dashboard). The game shows the video only when
-    // amount and currency are exactly the ones it expects (an unknown placement answers with the reward of `default`).
-    @PluginMethod
-    fun rewardedPlacement(call: PluginCall) {
-        val a = activityOrNull()
-        val placement = call.getString("placement") ?: ""
-        if (!sdkReady || a == null || placement !in PLACEMENTS || placement == PLACEMENT) { call.resolve(obj("canShow" to false, "loaded" to false, "code" to if (!sdkReady) "not-initialized" else "bad-request")); return }
-        try {
-            a.runOnUiThread {
-                try {
-                    val reward = Appodeal.getReward(placement)
-                    call.resolve(obj("placement" to placement, "loaded" to Appodeal.isLoaded(Appodeal.REWARDED_VIDEO), "canShow" to Appodeal.canShow(Appodeal.REWARDED_VIDEO, placement), "amount" to reward.amount, "currency" to reward.currency))
-                } catch (e: Throwable) { Log.e(TAG, "rewardedPlacement", e); call.resolve(obj("canShow" to false, "loaded" to false, "code" to "error")) }
-            }
-        } catch (e: Throwable) { call.resolve(obj("canShow" to false, "loaded" to false, "code" to "error")) }
     }
 
     // ---------------------------------------------------------------- banner
