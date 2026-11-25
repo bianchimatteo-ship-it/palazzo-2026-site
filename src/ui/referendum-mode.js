@@ -1,11 +1,11 @@
 // The page «Referendum»: the abrogative one (art. 75) and the constitutional confirmatory one (art. 138), kept apart in rules, phases, quorum and effects. Every button calls the store: nothing is decorative.
 // Figures of the votes are a simulation of the game (never a real result).
-import { REVISION_TOPICS, ABROGATIVE, CONSTITUTIONAL, CAMPAIGN_ACTIONS, COUNCIL_ROUTE, EXCLUDED, PHASES, pathOf, isActive } from '../core/referendum-engine.js?v=20261124-3';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261124-3';
-import { badge, card, empty, esc, foldPanel, kpi, sectionTabs } from './sections-kit.js?v=20261124-3';
-import { glyph } from './visuals.js?v=20261124-3';
-import { abrogativeSuggestions, CUSTOM_DRAFT, revisionDrafts } from '../data/referendum-drafts.js?v=20261124-3';
-import { formatDate } from '../core/time.js?v=20261124-3';
+import { REVISION_TOPICS, ABROGATIVE, CONSTITUTIONAL, CAMPAIGN_ACTIONS, COUNCIL_ROUTE, EXCLUDED, PHASES, pathOf, isActive } from '../core/referendum-engine.js?v=20261125-1';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261125-1';
+import { badge, card, empty, esc, foldPanel, kpi, sectionTabs } from './sections-kit.js?v=20261125-1';
+import { glyph } from './visuals.js?v=20261125-1';
+import { abrogativeSuggestions, CUSTOM_DRAFT, revisionDrafts } from '../data/referendum-drafts.js?v=20261125-1';
+import { formatDate } from '../core/time.js?v=20261125-1';
 
 const number = value => Math.round(Number(value) || 0).toLocaleString('it-IT');
 const pct = value => `${(Math.round(value * 10) / 10).toLocaleString('it-IT')}%`;
@@ -142,7 +142,7 @@ function formOf(state, targets, check = null) {
       <label data-ref-part>Parti da abrogare (solo per la parziale; una finalità sola, il quesito deve restare omogeneo)<textarea name="partText" rows="3" placeholder="articoli o commi da abrogare"></textarea></label></li>
     <li><b>3 · Il quesito</b>${suggestionsBox(first ? targetData(first) : null, 'totale', '')}<label>Quesito (facoltativo: se lo lasci vuoto lo scrive il gioco)<textarea name="question" rows="3" placeholder="Volete voi che sia abrogata…"></textarea></label>${checkBox(check)}</li>
     <li><fieldset class="ref-scope"><legend><b>4 · Come si chiede</b></legend><label><input type="radio" name="route" value="firme" checked> ${number(ABROGATIVE.signatures)} firme di elettori (raccolta dalla pagina «Iniziative»; apertura ${number(4000)} €)</label> <label><input type="radio" name="route" value="consigli"> ${ABROGATIVE.councils} Consigli regionali (${number(COUNCIL_ROUTE.cost.funds)} € e ${COUNCIL_ROUTE.cost.capital} di capitale politico)</label></fieldset></li></ol>
-    <button type="submit" class="primary-button">Presenta la richiesta</button><small>Fondi disponibili: ${number(state.game.resources?.funds ?? 0)} €. La richiesta si presenta solo con la tua conferma: l’ammissibilità la decidono poi l’Ufficio centrale e la Corte.</small></form>` });
+    <button type="submit" class="primary-button cta-hero">Presenta la richiesta</button><small>Fondi disponibili: ${number(state.game.resources?.funds ?? 0)} €. La richiesta si presenta solo con la tua conferma: l’ammissibilità la decidono poi l’Ufficio centrale e la Corte.</small></form>` });
 }
 // ---------- the constitutional revision, guided ----------
 export function revisionDraftBox(topic) {

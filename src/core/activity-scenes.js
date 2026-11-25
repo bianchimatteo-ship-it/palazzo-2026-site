@@ -6,17 +6,18 @@
 // activity is applied ONCE, by the store, when the scene ends.
 // Deterministic: the family of topics, the names and the small variations come from the seed of the scene (and from what the player met lately: the same family is not drawn again in a row).
 // Loaded on demand (it is not in the first screen): it registers itself in scene-engine.js and stage-script.js when imported.
-import { AVATAR_OPTIONS, EXTRA_NAMES, F, M, avatarForGender, defaultAvatarFor, genderOf, normalizeAvatar, roleGender } from './avatar.js?v=20261124-3';
-import { personName, registerSceneKind } from './scene-engine.js?v=20261124-3';
-import { SPEAK_GESTURES, LISTEN_GESTURES, pickGesture, registerStageScript, stagePose } from './stage-script.js?v=20261124-3';
-import { ACTIVITY_SCENES, ACTIVITY_SCENE_UI } from '../data/activity-scene-lines.js?v=20261124-3';
-import { ACTIVITY_CONTEXT } from '../data/activity-scene-context.js?v=20261124-3';
-import { STAKES } from '../data/activity-scene-stakes.js?v=20261124-3';
-import { BODIES, CITIZEN_GUESTS, CITIZENS, GUESTS, HEADINGS, REFS } from '../data/activity-scene-guests.js?v=20261124-3';
-import { ATMOSPHERE, BYSTANDERS, LEADIN } from '../data/activity-scene-variety.js?v=20261124-3';
-import { APPROACH_LABELS } from '../data/activity-scene-approaches.js?v=20261124-3';
-import { ONLY, TOPIC_KIND, TOPIC_MOVES, areasOf, newsFits } from '../data/activity-scene-topics.js?v=20261124-3';
-import { APPROACH_FUNCTIONS, COMMITMENTS, COMMITMENT_TEXT, CONSEQUENCE_LINES, EXTRA_Q1, FUNCTIONS, FUND_COST, GUARANTEE_MOVES, MOVES, OUTCOME_KINDS, REACTION_ALT, REACTION_LINES, REACTION_TYPES, STAGE_TEXT, WHY_LINES } from '../data/activity-scene-moves.js?v=20261124-3';
+import { AVATAR_OPTIONS, EXTRA_NAMES, F, M, avatarForGender, defaultAvatarFor, genderOf, normalizeAvatar, roleGender } from './avatar.js?v=20261125-1';
+import { personName, registerSceneKind } from './scene-engine.js?v=20261125-1';
+import { SPEAK_GESTURES, LISTEN_GESTURES, pickGesture, registerStageScript, stagePose } from './stage-script.js?v=20261125-1';
+import { ACTIVITY_SCENES, ACTIVITY_SCENE_UI } from '../data/activity-scene-lines.js?v=20261125-1';
+import { ACTIVITY_CONTEXT } from '../data/activity-scene-context.js?v=20261125-1';
+import { STAKES } from '../data/activity-scene-stakes.js?v=20261125-1';
+import { BODIES, CITIZEN_GUESTS, CITIZENS, GUESTS, HEADINGS, REFS } from '../data/activity-scene-guests.js?v=20261125-1';
+import { ATMOSPHERE, BYSTANDERS, LEADIN } from '../data/activity-scene-variety.js?v=20261125-1';
+import { APPROACH_LABELS } from '../data/activity-scene-approaches.js?v=20261125-1';
+import { ONLY, TOPIC_KIND, TOPIC_MOVES, areasOf, newsFits } from '../data/activity-scene-topics.js?v=20261125-1';
+import { ACTIVITY_FAMILIES, ACTIVITY_PROFILE, ACTIVITY_ROLES, FAMILY_NEEDS, PROFILES, PROFILE_PEOPLE, PROFILE_TEXT, QUESTION_VARIANTS, STANCES, STANCE_LABELS, STANCE_LINES } from '../data/activity-scene-dialogue.js?v=20261125-1';
+import { APPROACH_FUNCTIONS, COMMITMENTS, COMMITMENT_TEXT, CONSEQUENCE_LINES, EXTRA_Q1, FUNCTIONS, FUND_COST, GUARANTEE_MOVES, MOVES, OUTCOME_KINDS, REACTION_ALT, REACTION_LINES, REACTION_TYPES, STAGE_TEXT, WHY_LINES } from '../data/activity-scene-moves.js?v=20261125-1';
 
 export { ACTIVITY_SCENES, ACTIVITY_SCENE_UI };
 export const SCENE_KIND = 'attivita';
@@ -35,13 +36,40 @@ export const SCENE_KEYS = Object.freeze(Object.keys(ACTIVITY_SCENES));
 export const sceneKeyOf = activityId => SCENE_KEYS.find(key => ACTIVITY_SCENES[key].activityIds.includes(activityId)) ?? ACTIVITY_CONTEXT[activityId]?.scene ?? null;
 export const activityHasScene = activityId => Boolean(sceneKeyOf(activityId));
 // «Incontra i cittadini» is a scene of its own: the market square with passers-by and a daily problem each, not the civic hall with delegates (data/activity-scene-guests.js CITIZENS). The rest of the engine is the same.
-const isCitizens = scene => scene.sceneKey === 'associazioni' && scene.activityId === 'cittadini';
+// The profile of an activity that is not its room (data/activity-scene-dialogue.js): the rally is played as the citizens' square, a talk with another force has its own people, questions and moves.
+export const profileIdOf = activityId => PROFILES[ACTIVITY_PROFILE[activityId]] ? ACTIVITY_PROFILE[activityId] : null;
+const profileOf = scene => PROFILES[profileIdOf(scene?.activityId)] ?? null;
+const citizensLike = (sceneKey, activityId) => sceneKey === 'associazioni' && (activityId === 'cittadini' || PROFILES[ACTIVITY_PROFILE[activityId]]?.like === 'cittadini');
+const isCitizens = scene => citizensLike(scene.sceneKey, scene.activityId);
+// A profile whose people are not those of the room (another force, the press office, Brussels) speaks only of what the activity is about: no extras, colour lines or references of the kind.
+const ownRoom = scene => { const profile = profileOf(scene); return !profile || profile.like || !profile.affiliation; };
+// The topics of a scene: the profile's own when it has them (a talk with another force is about agreements and candidacies, not about the membership of one's branch), else the kind's.
+const familiesOf = scene => PROFILE_PEOPLE[scene?.profile]?.families ?? ACTIVITY_SCENES[scene.sceneKey].families;
 export const CITIZENS_SETTING = 'mercato';
 // What the player says for an approach in a family of topics: the words of the family (APPROACH_LABELS) with the id and the stat of the approach of the kind of scene; the generic wording where a family has none.
-const approachText = (spec, sceneKey, familyId, approach) => {
+const approachText = (spec, sceneKey, familyId, approach, profile = null) => {
   const index = spec.approaches.findIndex(item => item.id === approach.id);
-  return APPROACH_LABELS[sceneKey]?.[familyId]?.[index] ?? approach.label;
+  return profile?.approaches?.[index] ?? APPROACH_LABELS[sceneKey]?.[familyId]?.[index] ?? approach.label;
 };
+// ---------- variety: the wording met least recently in the career first ----------
+// `memory` (built by the store from the scenes already played): { lines: { key: [indices used, oldest first] }, names: [names met lately], stances: [stance of the first guest, oldest first] }.
+// Among the wordings of a moment, the ones never used come first, then the one used longest ago; the seed orders the ties. The same career does not hear the same question twice in a row.
+// a 32-bit finaliser over the hash: the choices of a scene (question, attitude, line) must not move together when the seeds differ only at the end
+const mixed = text => { let h = hashOf(text); h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16; return h >>> 0; };
+export function freshIndex(count, key, seed, memory = null) {
+  const used = memory?.lines?.[key] ?? [];
+  const rank = index => { const at = used.lastIndexOf(index); return at < 0 ? -1 : at; };
+  return Array.from({ length: count }, (_, index) => index).sort((a, b) => rank(a) - rank(b) || mixed(`${key}|${a}|${seed}`) - mixed(`${key}|${b}|${seed}`))[0] ?? 0;
+}
+// The attitude of a guest: favourable, neutral or against. Drawn by the seed, never the same for the first guest three scenes in a row; a guest of the player's own party leans favourable,
+// a journalist or a guest of another force never starts favourable more often than the others.
+function stanceFor(seed, index, memory, lean = null) {
+  const recent = (memory?.stances ?? []).slice(-2);
+  let stance = STANCES[mixed(`posizione|${index}|${seed}`) % STANCES.length];
+  if (lean && mixed(`inclinazione|${index}|${seed}`) % 3 === 0) stance = lean;
+  if (index === 1 && recent.length === 2 && recent.every(item => item === stance)) stance = STANCES[(STANCES.indexOf(stance) + 1) % STANCES.length];
+  return stance;
+}
 const STAT_LABELS = Object.freeze({ competence: 'competenza', charisma: 'carisma', reputation: 'reputazione' });
 
 // The family of topics: the ones not met in the last scenes of this kind first; among them by the seed (and a preference, e.g. the segment of the citizens).
@@ -114,16 +142,27 @@ export function pickRef(sceneKey, seed, refs = {}) {
   const type = available[hashOf(`${seed}|riferimento`) % available.length];
   return { type, value: String(refs[type]).trim(), text: REFS[type][sceneKey][0].replace('{}', String(refs[type]).trim()) };
 }
-export function createActivityScene({ id, seed, sceneKey, activityId, target = null, variant = 'default', player, playerAvatar, stats = {}, recent = [], prefer = null, date = null, party = null, refs = {}, pool = [], cabinet = [], situation = {}, promises = null, news = null, priorFamilies = null }) {
+export function createActivityScene({ id, seed, sceneKey, activityId, target = null, variant = 'default', player, playerAvatar, stats = {}, recent = [], prefer = null, date = null, party = null, refs = {}, pool = [], cabinet = [], situation = {}, promises = null, news = null, priorFamilies = null, memory = null }) {
   const spec = ACTIVITY_SCENES[sceneKey];
   if (!spec) throw new Error('Scena non riconosciuta.');
   const context = ACTIVITY_CONTEXT[activityId] ?? null;
-  const family = pickFamily(spec, seed, recent, prefer, context?.prefer ?? null);
-  const used = new Set();
-  const roles = (activityId === 'cittadini' ? CITIZEN_GUESTS[family.id] : null) ?? GUESTS[sceneKey]?.[family.id] ?? [spec.cast[0].tag, spec.cast[1].tag];
-  const heading = sceneKey === 'associazioni' ? HEADINGS[activityId === 'cittadini' ? 'cittadini' : 'associazioni'] : null;
-  const ministerOf = index => AFFILIATION[sceneKey] === 'cabinet' ? ministerForRole(roles[index - 1]?.[0] ?? null, cabinet) : null;
-  const partyOf = index => AFFILIATION[sceneKey] === 'party' ? (party?.label ?? '') : AFFILIATION[sceneKey] === 'cabinet' ? membershipLabel(ministerOf(index)) : '';
+  const profileId = profileIdOf(activityId), profile = PROFILES[profileId] ?? null;
+  const citizens = citizensLike(sceneKey, activityId);
+  // the topics the activity can be about, without those that speak of «your party» for a player with no party (situation.party is false only when the store says so)
+  const allowed = ACTIVITY_FAMILIES[activityId] ?? null, needs = FAMILY_NEEDS[sceneKey] ?? {};
+  const fits = item => (!allowed || allowed.includes(item.id)) && !(situation?.party === false && needs[item.id] === 'party');
+  const families = (PROFILE_PEOPLE[profileId]?.families ?? spec.families).filter(fits);
+  const lean = context?.prefer && families.some(item => item.id === context.prefer) ? context.prefer : null;
+  const family = pickFamily(families.length ? { ...spec, families } : { ...spec, families: PROFILE_PEOPLE[profileId]?.families ?? spec.families }, seed, recent, families.some(item => item.id === prefer) || !families.length ? prefer : null, lean);
+  // the people met lately are not met again (a name of the last scenes is never drawn for a new guest)
+  const used = new Set((memory?.names ?? []).slice(-16));
+  const genderPick = (options, index) => options.length > 1 ? options[hashOf(`${seed}|ospite${index}|genere`) % options.length] : options[0];
+  const ownRoles = ACTIVITY_ROLES[activityId] ?? PROFILE_PEOPLE[profileId]?.roles ?? null;
+  const roles = ownRoles ? ownRoles.map((options, index) => genderPick(options, index + 1)) : (citizens ? CITIZEN_GUESTS[family.id] : null) ?? GUESTS[sceneKey]?.[family.id] ?? [spec.cast[0].tag, spec.cast[1].tag];
+  const heading = profile?.heading ?? (sceneKey === 'associazioni' ? HEADINGS[citizens ? 'cittadini' : 'associazioni'] : null);
+  const affiliation = profile?.affiliation ?? AFFILIATION[sceneKey];
+  const ministerOf = index => affiliation === 'cabinet' ? ministerForRole(roles[index - 1]?.[0] ?? null, cabinet) : null;
+  const partyOf = index => affiliation === 'party' ? (party?.label ?? '') : affiliation === 'cabinet' ? membershipLabel(ministerOf(index)) : '';
   // the record of who sits there: the portfolio, the group and whether the minister is a technician (null when the game holds none for that person)
   const recordOf = index => { const minister = ministerOf(index); return minister ? { portfolio: minister.portfolio, groupId: minister.groupId ?? null, groupName: minister.groupId ? minister.groupName ?? null : null, technical: !minister.groupId, playerAppointed: Boolean(minister.playerAppointed) } : null; };
   const cast = [
@@ -132,21 +171,33 @@ export function createActivityScene({ id, seed, sceneKey, activityId, target = n
     { ...character('ospite2', 'ospite', spec.cast[1], seed, used, { roleLabel: roles[1]?.[0] ?? null, partyLabel: partyOf(2) }), member: recordOf(2) }
   ];
   void pool;
-  // A person in the room who does not speak (an usher, a photographer, a foreman…): drawn behind the others, it reacts to what is said.
-  const bystanders = BYSTANDERS[activityId === 'cittadini' ? 'mercato' : sceneKey] ?? [];
+  // how each guest stands: favourable, neutral, against (a guest of the player's own party leans favourable)
+  cast[1].stance = stanceFor(seed, 1, memory, affiliation === 'party' ? 'favorevole' : null);
+  cast[2].stance = stanceFor(seed, 2, memory, affiliation === 'party' ? 'favorevole' : null);
+  // A person in the room who does not speak (an usher, a photographer, a foreman…): drawn behind the others, it reacts to what is said. A profile with people of its own has none of the kind's.
+  const bystanders = PROFILE_PEOPLE[profileId]?.bystanders ?? (profile && !profile.like && profile.affiliation ? [] : BYSTANDERS[citizens ? 'mercato' : sceneKey] ?? []);
   const bystander = bystanders.length ? bystanders[hashOf(`${seed}|comparsa`) % bystanders.length] : null;
   const extras = bystander ? [character('comparsa1', 'comparsa', { names: [], tag: bystander }, seed, used, { roleLabel: bystander[0] })] : [];
-  const bodyLabel = AFFILIATION[sceneKey] === 'party' && party?.label ? party.label : heading?.body[0] ?? BODIES[sceneKey]?.[0] ?? '';
+  const bodyLabel = profile?.body?.[0] ?? (affiliation === 'party' && party?.label ? party.label : heading?.body[0] ?? BODIES[sceneKey]?.[0] ?? '');
   // What the career holds is quoted only when it is about the subject of the encounter: a promise of the programme whose policy area is the family's, a headline of the diary that speaks of it. A scene made
   // without the lists (a test, an old call) keeps the plain values it is given.
-  const kindName = sceneKey === 'associazioni' && activityId === 'cittadini' ? 'cittadini' : sceneKey;
+  const kindName = citizens ? 'cittadini' : sceneKey;
   const areas = areasOf(kindName, family.id);
   const promiseRef = Array.isArray(promises) ? promises.find(item => areas.includes('*') || areas.includes(item.area))?.label ?? '' : refs.promise ?? '';
   const newsRef = Array.isArray(news) ? news.find(item => newsFits(family.id, item)) ?? '' : refs.news ?? '';
-  const ref = pickRef(sceneKey, seed, { ...refs, promise: promiseRef, news: newsRef, party: AFFILIATION[sceneKey] === 'party' || refs.party ? (refs.party ?? party?.label ?? '') : '' });
+  const ownPeople = profile && !profile.like && profile.affiliation;
+  const ref = pickRef(sceneKey, seed, ownPeople ? { news: newsRef } : { ...refs, promise: promiseRef, news: newsRef, party: affiliation === 'party' || refs.party ? (refs.party ?? party?.label ?? '') : '' });
+  // the wording of the two questions: the profile's own or the family's (the first wording and its variants), the one met least recently in this career
+  const voice = profile?.voice ?? kindName;
+  const baseOf = stage => { const own = citizens ? CITIZENS.families[family.id]?.[stage === 'q1' ? 'open' : 'follow'] : null; return own ?? family[stage === 'q1' ? 'open' : 'follow']; };
+  const optionsOf = stage => profile?.lines?.[stage] ?? [baseOf(stage), ...(QUESTION_VARIANTS[kindName]?.[family.id]?.[stage] ?? [])];
+  const lineKey = stage => profile?.lines ? `${profileId}|${stage}` : `${kindName}|${family.id}|${stage}`;
+  const lines = {};
+  for (const stage of ['q1', 'q2']) lines[stage] = { key: lineKey(stage), index: freshIndex(optionsOf(stage).length, lineKey(stage), seed, memory) };
+  for (const [stage, guestIndex] of [['s1', 1], ['s2', 2]]) { const stance = cast[guestIndex].stance, key = `posizione|${voice}|${stance}`; lines[stage] = { key, index: freshIndex(STANCE_LINES[voice]?.[stance]?.length ?? 1, key, seed, memory) }; }
   return {
-    id, kind: SCENE_KIND, sceneKey, activityId, target, variant: spec.intro[variant] ? variant : 'default', setting: sceneKey === 'associazioni' && activityId === 'cittadini' ? CITIZENS_SETTING : spec.setting, seed, date, status: 'active', nodeId: 'apertura', cast, extras,
-    topic: { id: family.id, label: family.label[0] }, place: { label: (sceneKey === 'associazioni' && activityId === 'cittadini' ? CITIZENS.place : spec.place)[0] }, familyId: family.id, bodyLabel, heading: heading ? { kicker: heading.kicker[0], title: heading.title[0], banner: heading.banner[0] } : null, partyLabel: party?.label ?? '', ref: ref ? { type: ref.type, text: ref.text } : null,
+    id, kind: SCENE_KIND, sceneKey, activityId, target, variant: spec.intro[variant] ? variant : 'default', setting: profile?.setting ?? (citizens ? CITIZENS_SETTING : spec.setting), profile: profileId, voice, lines, seed, date, status: 'active', nodeId: 'apertura', cast, extras,
+    topic: { id: family.id, label: family.label[0] }, place: { label: (profile?.place ?? (citizens ? CITIZENS.place : spec.place))[0] }, familyId: family.id, bodyLabel, heading: heading ? { kicker: heading.kicker[0], title: heading.title[0], banner: heading.banner[0] } : null, partyLabel: party?.label ?? '', ref: ref ? { type: ref.type, text: ref.text } : null,
     context: { stats: { competence: stats.competence ?? 50, charisma: stats.charisma ?? 50, reputation: stats.reputation ?? 50 } },
     // what the encounter knows of the situation of the player when it starts (kept in the scene: a saved scene resumed later offers the same moves) and what has happened in it so far
     flags: { promise: Boolean(promiseRef), prior: Array.isArray(priorFamilies) ? priorFamilies.includes(family.id) : Boolean(situation.prior), govern: Boolean(situation.govern), opp: Boolean(situation.opp), funds: situation.funds !== false, capital: situation.capital !== false, party: Boolean(situation.party), local: Boolean(situation.local) },
@@ -176,15 +227,16 @@ function movesAt(scene, stage) {
   const spec = ACTIVITY_SCENES[scene.sceneKey], flags = scene.flags ?? {}, used = scene.history.map(item => item.fn);
   const wrap = move => ({ ...move, disabled: Boolean(move.when?.includes('funds') && !flags.funds) || Boolean(move.when?.includes('capital') && !flags.capital), reason: move.when?.includes('funds') && !flags.funds ? STAGE_TEXT.notes.funds : move.when?.includes('capital') && !flags.capital ? STAGE_TEXT.notes.capital : null });
   if (stage === 'q1') {
-    const base = spec.approaches.map(item => ({ id: item.id, fn: APPROACH_FUNCTIONS[scene.sceneKey]?.[item.id] ?? 'listen', stat: item.stat, label: approachText(spec, scene.sceneKey, scene.familyId, item), approach: true }));
+    const base = spec.approaches.map(item => ({ id: item.id, fn: APPROACH_FUNCTIONS[scene.sceneKey]?.[item.id] ?? 'listen', stat: item.stat, label: approachText(spec, scene.sceneKey, scene.familyId, item, profileOf(scene)), approach: true }));
     const wanted = EXTRA_Q1.filter(move => move.when && tagsOk(move, flags)), always = EXTRA_Q1.filter(move => !move.when);
     return [...base, ...(wanted.length ? wanted.slice(0, 2) : always.slice(0, 1))].map(wrap);
   }
   // the moments of decision are about the subject: the moves of the topic first (the state of the building, the survey, the works diary, the amendment, the headline…), then the moves of the kind of
   // encounter that fit any subject (the ones bound to another subject are never offered)
   const topicOf = (list, family) => list?.[family]?.[stage] ?? [];
-  const specific = stage === 'q4' ? [] : topicOf(TOPIC_MOVES[TOPIC_KIND[kindOf(scene)]], scene.familyId).map((move, index) => ({ ...move, id: `t-${kindOf(scene)}-${scene.familyId}-${stage}-${index}` })).filter(move => tagsOk(move, flags));
-  const general = (stage === 'q4' ? GUARANTEE_MOVES : MOVES[kindOf(scene)]?.[stage] ?? []).filter(move => tagsOk(move, flags) && (!ONLY[move.id] || ONLY[move.id].includes(scene.familyId)));
+  const profile = profileOf(scene);
+  const specific = stage === 'q4' || profile?.noTopicMoves ? [] : topicOf(TOPIC_MOVES[TOPIC_KIND[kindOf(scene)]], scene.familyId).map((move, index) => ({ ...move, id: `t-${kindOf(scene)}-${scene.familyId}-${stage}-${index}` })).filter(move => tagsOk(move, flags));
+  const general = (stage === 'q4' ? GUARANTEE_MOVES : profile?.moves?.[stage] ?? MOVES[kindOf(scene)]?.[stage] ?? []).filter(move => tagsOk(move, flags) && (!ONLY[move.id] || ONLY[move.id].includes(scene.familyId)));
   const order = list => [...list].sort((a, b) => hashOf(`${scene.seed}|${stage}|${a.id}`) - hashOf(`${scene.seed}|${stage}|${b.id}`));
   const fresh = list => list.filter(move => !used.includes(move.fn));
   const out = [];
@@ -214,6 +266,9 @@ function sequence(scene, move) {
   if (['vote', 'assign', 'priority'].includes(fn) && flags.opp) add(-3, 'noAuthority');
   if (scene.history.some(item => item.fn === fn)) add(-4, 'repeated');
   if (move.id === 'x-impegno') add(6, 'prior');
+  // who is asked: a guest who came in favour is easier to persuade, one who came against is harder (the three attitudes are drawn evenly: the balance of the scenes does not move)
+  const asker = scene.cast?.filter(item => item.role === 'ospite')[['q2', 'q4'].includes(scene.nodeId) ? 1 : 0]?.stance;
+  if (asker === 'favorevole') add(3, 'friendly'); else if (asker === 'contrario') add(-3, 'hostile');
   return { delta, reasons, terms };
 }
 function judge(scene, move, stage) {
@@ -254,20 +309,33 @@ const choicesOf = (scene, stage) => movesAt(scene, stage).map(move => [move.id, 
 // The stage the reaction beat belongs to.
 const STAGE_OF = Object.freeze({ r1: 'q1', r2: 'q2', r3: 'q3', r4: 'q4' });
 // The colour of the encounter: the moment of the room before the situation, and a line of the room before each of the first two questions (the same scene always gets the same ones).
-const roomKey = scene => isCitizens(scene) ? 'mercato' : scene.sceneKey;
-const atmosphereOf = scene => { const list = ATMOSPHERE[roomKey(scene)] ?? []; return list.length ? list[hashOf(`${scene.seed}|atmosfera`) % list.length][0] : ''; };
+const roomKey = scene => isCitizens(scene) ? 'mercato' : ownRoom(scene) ? scene.sceneKey : null;
+const atmosphereOf = scene => { const list = PROFILE_PEOPLE[scene.profile]?.atmosphere ?? ATMOSPHERE[roomKey(scene)] ?? []; return list.length ? list[hashOf(`${scene.seed}|atmosfera`) % list.length][0] : ''; };
 const leadinOf = (scene, node) => { const list = LEADIN[roomKey(scene)]?.[node] ?? []; return list.length ? list[hashOf(`${scene.seed}|${node}|intermezzo`) % list.length][0] : ''; };
+// The question of a moment: the wording chosen when the scene was made (scene.lines), from the profile or the family; a scene saved before the variants asks the first wording.
+function questionOf(scene, stage, family, citizens) {
+  const profile = profileOf(scene);
+  const base = (citizens ? CITIZENS.families[family.id]?.[stage === 'q1' ? 'open' : 'follow'] : null) ?? family[stage === 'q1' ? 'open' : 'follow'];
+  const options = profile?.lines?.[stage] ?? [base, ...(QUESTION_VARIANTS[citizens ? 'cittadini' : scene.sceneKey]?.[family.id]?.[stage] ?? [])];
+  return (options[scene.lines?.[stage]?.index ?? 0] ?? base)[0];
+}
+// The attitude of the guest who asks, and the line that says it (none for a scene saved before the attitudes).
+const stanceOf = (scene, n) => { const stance = guest(scene, n)?.stance; return stance ? { id: stance, label: STANCE_LABELS[stance][0] } : null; };
+function stanceLineOf(scene, n) {
+  const stance = guest(scene, n)?.stance, list = STANCE_LINES[scene.voice ?? (isCitizens(scene) ? 'cittadini' : scene.sceneKey)]?.[stance];
+  return stance && list?.length ? list[(scene.lines?.[`s${n}`]?.index ?? 0) % list.length][0] : '';
+}
 export function activityNode(scene) {
   upgrade(scene);
   const spec = ACTIVITY_SCENES[scene.sceneKey];
-  const family = spec.families.find(item => item.id === scene.familyId) ?? spec.families[0];
+  const family = familiesOf(scene).find(item => item.id === scene.familyId) ?? familiesOf(scene)[0];
   const last = scene.history.at(-1) ?? null;
   const base = { id: scene.nodeId, setting: scene.setting };
   const citizens = isCitizens(scene);
   switch (scene.nodeId) {
-    case 'apertura': return { ...base, speaker: me(scene).id, expression: pickGesture(scene, 'apertura', 'espressione', ['serena', 'sorridente', 'serena']), gesture: pickGesture(scene, 'apertura', 'giocatore', ['saluta', 'apre', 'saluta', 'palmi']), camera: 'wide', title: ACTIVITY_CONTEXT[scene.activityId]?.title[0] ?? scene.heading?.title ?? spec.title[0], text: (ACTIVITY_CONTEXT[scene.activityId]?.intro ?? (citizens ? CITIZENS.intro : (spec.intro[scene.variant] ?? spec.intro.default)))[0], lines: [atmosphereOf(scene), ...(scene.ref?.text ? [scene.ref.text] : [])], choices: [['continua', 'Continua']] };
-    case 'q1': return { ...base, speaker: guest(scene, 1).id, expression: 'determinata', gesture: pickGesture(scene, 'q1', 'ospite1', SPEAK_GESTURES), camera: 'wide', title: family.label[0], preface: [leadinOf(scene, 'q1')], text: (citizens ? CITIZENS.families[family.id]?.open ?? family.open : family.open)[0], choices: choicesOf(scene, 'q1') };
-    case 'q2': return { ...base, speaker: guest(scene, 2).id, expression: 'determinata', gesture: pickGesture(scene, 'q2', 'ospite2', SPEAK_GESTURES), camera: 'wide', title: family.label[0], preface: [leadinOf(scene, 'q2')], text: (citizens ? CITIZENS.families[family.id]?.follow ?? family.follow : family.follow)[0], choices: choicesOf(scene, 'q2') };
+    case 'apertura': return { ...base, speaker: me(scene).id, expression: pickGesture(scene, 'apertura', 'espressione', ['serena', 'sorridente', 'serena']), gesture: pickGesture(scene, 'apertura', 'giocatore', ['saluta', 'apre', 'saluta', 'palmi']), camera: 'wide', title: ACTIVITY_CONTEXT[scene.activityId]?.title[0] ?? scene.heading?.title ?? spec.title[0], text: (ACTIVITY_CONTEXT[scene.activityId]?.intro ?? (citizens ? CITIZENS.intro : (spec.intro[scene.variant] ?? spec.intro.default)))[0], lines: [atmosphereOf(scene), ...(scene.ref?.text ? [scene.ref.text] : [])].filter(Boolean), choices: [['continua', 'Continua']] };
+    case 'q1': return { ...base, speaker: guest(scene, 1).id, expression: 'determinata', gesture: pickGesture(scene, 'q1', 'ospite1', SPEAK_GESTURES), camera: 'wide', title: family.label[0], stance: stanceOf(scene, 1), preface: [stanceLineOf(scene, 1), leadinOf(scene, 'q1')].filter(Boolean), text: questionOf(scene, 'q1', family, citizens), choices: choicesOf(scene, 'q1') };
+    case 'q2': return { ...base, speaker: guest(scene, 2).id, expression: 'determinata', gesture: pickGesture(scene, 'q2', 'ospite2', SPEAK_GESTURES), camera: 'wide', title: family.label[0], stance: stanceOf(scene, 2), preface: [stanceLineOf(scene, 2), leadinOf(scene, 'q2')].filter(Boolean), text: questionOf(scene, 'q2', family, citizens), choices: choicesOf(scene, 'q2') };
     case 'q3': {
       const text = scene.tally.tension >= 2 ? STAGE_TEXT.q3.tense : STAGE_TEXT.q3[last?.band ?? 'mid'];
       return { ...base, speaker: guest(scene, 1).id, expression: last?.band === 'bad' || scene.tally.tension >= 2 ? 'determinata' : 'serena', gesture: 'sottolinea', camera: 'wide', title: STAGE_TEXT.titles.q3[0], text: text[0], choices: choicesOf(scene, 'q3') };
@@ -305,7 +373,7 @@ export function activityChoose(scene, choiceId) {
   const result = judge(scene, move, stage);
   const b = band(result.score);
   const type = reactionType(move.fn, b, `${scene.seed}|${stage}`);
-  const reaction = pickBy((isCitizens(scene) ? CITIZENS.reactions : spec.reactions)[b], `${scene.seed}|${stage}|${b}|reazione`)[0];
+  const reaction = pickBy((isCitizens(scene) ? CITIZENS.reactions : PROFILE_TEXT[scene.profile]?.reactions ?? spec.reactions)[b], `${scene.seed}|${stage}|${b}|reazione`)[0];
   const stakePair = STAKES[scene.sceneKey]?.[scene.familyId]?.[b === 'good' ? 0 : b === 'bad' ? 1 : -1];
   scene.history.push({ node: stage, choice: choiceId, fn: move.fn, type, score: result.score, band: b, why: result.why, k: scene.tally.k, said: move.label[0], reaction, ...(stakePair ? { stake: stakePair[0] } : {}) });
   // what the move did to the meeting itself
@@ -405,7 +473,7 @@ function finish(scene, spec) {
   const kind = outcomeKindOf(scene, b);
   const after = sceneAftermath(scene);
   scene.status = 'done';
-  scene.outcome = { performance, band: b, kind, edge: round1(clamp((performance - 55) / 4.5, -6, 6)), summary: OUTCOME_KINDS[kind].text[0], flavor: (isCitizens(scene) ? CITIZENS.closings : spec.closings)[b][0], consequences: [...after.consequences, ...after.commitmentKinds.map(item => COMMITMENTS[item].line[0])].slice(0, 7), audience: scene.audience.mood };
+  scene.outcome = { performance, band: b, kind, edge: round1(clamp((performance - 55) / 4.5, -6, 6)), summary: OUTCOME_KINDS[kind].text[0], flavor: (isCitizens(scene) ? CITIZENS.closings : PROFILE_TEXT[scene.profile]?.closings ?? spec.closings)[b][0], consequences: [...after.consequences, ...after.commitmentKinds.map(item => COMMITMENTS[item].line[0])].slice(0, 7), audience: scene.audience.mood };
 }
 // The effects the store applies when the scene ends: the verdict (`edge`) scales the plain activity (career-engine `sceneEdge`) and the decisions made add their own (`extras`, `society`, `commitments`).
 export function activityEffects(scene) {
@@ -457,10 +525,22 @@ const LAYOUT = {
   sede: { posture: 'sit', giocatore: [150, 300, 1], ospite1: [460, 292, -1], ospite2: [556, 296, -1] },
   commissione: { posture: 'sit', giocatore: [150, 300, 1], ospite1: [460, 292, -1], ospite2: [556, 296, -1] },
   redazione: { posture: 'sit', giocatore: [150, 300, 1], ospite1: [460, 292, -1], ospite2: [556, 296, -1] },
-  consiglio: { posture: 'sit', giocatore: [150, 300, 1], ospite1: [460, 292, -1], ospite2: [556, 296, -1] }
+  consiglio: { posture: 'sit', giocatore: [150, 300, 1], ospite1: [460, 292, -1], ospite2: [556, 296, -1] },
+  // the rooms of the profiles: each its own composition (a fourth value is the posture of that person when it differs from the room's)
+  'piazza-comizio': { posture: 'stand', giocatore: [320, 240, 1], ospite1: [112, 324, 1], ospite2: [530, 326, -1] },
+  'sala-stampa': { posture: 'stand', giocatore: [212, 292, 1], ospite1: [450, 312, -1, 'sit'], ospite2: [566, 316, -1, 'sit'] },
+  trattativa: { posture: 'sit', giocatore: [168, 302, 1], ospite1: [462, 298, -1], ospite2: [566, 302, -1] },
+  bruxelles: { posture: 'sit', giocatore: [176, 300, 1], ospite1: [440, 292, -1], ospite2: [548, 298, -1] },
+  social: { posture: 'stand', giocatore: [196, 302, 1], ospite1: [430, 300, -1], ospite2: [548, 306, -1, 'sit'] },
+  'aula-corso': { posture: 'sit', giocatore: [164, 312, 1], ospite1: [468, 290, -1, 'stand'], ospite2: [576, 314, -1] },
+  giunta: { posture: 'sit', giocatore: [150, 302, 1], ospite1: [444, 294, -1], ospite2: [560, 298, -1] },
+  raccolta: { posture: 'stand', giocatore: [160, 304, 1], ospite1: [432, 300, -1], ospite2: [544, 304, -1] },
+  'ufficio-tecnico': { posture: 'stand', giocatore: [168, 302, 1], ospite1: [440, 298, -1], ospite2: [562, 302, -1] },
+  municipio: { posture: 'stand', giocatore: [150, 302, 1], ospite1: [450, 300, -1, 'sit'], ospite2: [556, 304, -1, 'sit'] },
+  'aula-camera': { posture: 'stand', giocatore: [170, 304, 1], ospite1: [320, 222, 1], ospite2: [548, 306, -1, 'sit'] }
 };
 // where the bystander stands (behind the table, between the player and the guests)
-const EXTRA_SPOT = Object.freeze({ sala: [300, 262, -1], mercato: [240, 258, 1], cantiere: [300, 262, -1], sede: [300, 258, -1], commissione: [300, 258, -1], redazione: [300, 258, -1], consiglio: [300, 258, -1] });
+const EXTRA_SPOT = Object.freeze({ sala: [300, 262, -1], mercato: [240, 258, 1], cantiere: [300, 262, -1], sede: [300, 258, -1], commissione: [300, 258, -1], redazione: [300, 258, -1], consiglio: [300, 258, -1], 'piazza-comizio': [430, 236, -1], 'sala-stampa': [606, 262, -1], trattativa: [316, 256, -1], bruxelles: [300, 254, -1], social: [312, 262, 1], 'aula-corso': [300, 262, 1], giunta: [306, 256, -1], raccolta: [300, 262, 1], 'ufficio-tecnico': [302, 258, -1], municipio: [310, 260, -1], 'aula-camera': [430, 250, -1] });
 export const ROOM_SETTINGS = Object.freeze(Object.keys(LAYOUT));
 // How far the player steps toward the others for a move (the standing rooms only): a challenge or a mediation brings him into the middle, a handshake brings the two closer.
 const STEP = Object.freeze({ contest: 110, mediate: 70, compromise: 90, announce: 60, propose: 45, assign: 50, vote: 0, involve: 40, fund: 70, story: 40 });
@@ -474,20 +554,26 @@ export function activityStage(scene, node) {
   // Variety of the composition, deterministic from the scene: the guests may swap places, stand a little nearer or farther, and the light of the room changes (day, evening, bright). A scene is the same each time it is shown.
   const variation = hashOf(`${scene.seed ?? scene.id}|composizione`);
   const swapped = (variation & 1) === 1;
-  const nudge = { ospite1: ((variation >> 1) % 31) - 15, ospite2: ((variation >> 6) % 31) - 15, giocatore: ((variation >> 11) % 17) - 8 };
+  const nudge = { ospite1: ((variation >>> 1) % 31) - 15, ospite2: ((variation >>> 6) % 31) - 15, giocatore: ((variation >>> 11) % 17) - 8 };
   for (const member of scene.cast) {
     const slot = swapped && (member.id === 'ospite1' || member.id === 'ospite2') ? (member.id === 'ospite1' ? 'ospite2' : 'ospite1') : member.id;
-    let [x, y, facing] = layout[member.id === 'giocatore' ? 'giocatore' : slot];
+    let [x, y, facing, own] = layout[member.id === 'giocatore' ? 'giocatore' : slot];
+    const posture = own ?? layout.posture;
     x += nudge[member.id] ?? 0;
     const speaking = node?.speaker === member.id;
     let gesture;
     if (nodeId === 'esito') gesture = 'saluta';
-    else if (reacting && member.id === 'giocatore') { gesture = node.move?.gesture ?? 'apre'; if (layout.posture === 'stand') x += STEP[node.move?.fn] ?? 0; }
+    else if (reacting && member.id === 'giocatore') { gesture = node.move?.gesture ?? 'apre'; if (posture === 'stand') x += STEP[node.move?.fn] ?? 0; }
     else if (reacting && !speaking) gesture = SIDE_GESTURE[node.reaction] ?? 'ascolta';
     else if (speaking) gesture = node.gesture && node.gesture !== 'sottolinea' ? node.gesture : pickGesture(scene, nodeId, member.id, SPEAK_GESTURES);
+    // who listens shows how they stand: arms folded or a doubtful hand for whoever came against, a nod or notes for whoever came in favour
+    else if (node?.speaker && member.stance === 'contrario') gesture = pickGesture(scene, nodeId, member.id, ['dissenso', 'esita', 'dissenso', 'scuote']);
+    else if (node?.speaker && member.stance === 'favorevole') gesture = pickGesture(scene, nodeId, member.id, ['ascolta', 'appunti', 'ascolta', 'palmi']);
     else gesture = node?.speaker ? pickGesture(scene, nodeId, member.id, LISTEN_GESTURES) : null;
-    if (member.id === 'giocatore' && nodeId === 'apertura') out[member.id] = stagePose(x, y, { facing, posture: layout.posture, gesture: speaking ? 'saluta' : null, path: [{ x: -70, y: 304 }, { x, y }] });
-    else out[member.id] = stagePose(x, y, { facing, posture: nodeId === 'esito' ? 'stand' : layout.posture, gesture });
+    if (member.id === 'giocatore' && nodeId === 'apertura') { out[member.id] = stagePose(x, y, { facing, posture, gesture: speaking ? 'saluta' : null, path: [{ x: -70, y: 304 }, { x, y }] }); continue; }
+    // the face of whoever listens: the reaction of the moment, else how they came in (a guest who came against does not smile at the first words)
+    const face = member.role !== 'ospite' || speaking ? null : reacting ? ({ approvazione: 'sorridente', soddisfazione: 'sorridente', dissenso: 'determinata', protesta: 'determinata' })[node.reaction] ?? null : member.stance === 'contrario' ? 'determinata' : member.stance === 'favorevole' ? 'sorridente' : null;
+    out[member.id] = stagePose(x, y, { facing, posture: nodeId === 'esito' ? 'stand' : posture, gesture, ...(face ? { expression: face } : {}) });
   }
   // the bystander: standing behind, turned to the room, and doing what the room does while the others speak (a clap, a note, a nod)
   for (const extra of scene.extras ?? []) {
@@ -501,6 +587,6 @@ export function activityStage(scene, node) {
   const camera = nodeId === 'apertura' || nodeId === 'esito' ? 'wide'
     : reacting ? (node?.reaction === 'protesta' ? 'protest' : frame(['giocatore', node?.speaker].filter(Boolean), 620) ?? 'stage')
       : frame([node?.speaker].filter(Boolean), 330) ?? (node?.speaker === 'giocatore' ? 'left' : 'right');
-  return { setting: scene.setting, poses: out, camera: ['q1', 'q2', 'q3', 'q4', 'r1', 'r2', 'r3', 'r4'].includes(nodeId) ? camera : 'wide', crowd: 'quiet', props: { room: scene.setting, mood: scene.audience.mood >= 58 ? 'warm' : scene.audience.mood < 45 ? 'cold' : 'mixed', light: ['day', 'evening', 'bright'][(variation >> 16) % 3] } };
+  return { setting: scene.setting, poses: out, camera: ['q1', 'q2', 'q3', 'q4', 'r1', 'r2', 'r3', 'r4'].includes(nodeId) ? camera : 'wide', crowd: 'quiet', props: { room: scene.setting, mood: scene.audience.mood >= 58 ? 'warm' : scene.audience.mood < 45 ? 'cold' : 'mixed', light: ['day', 'evening', 'bright'][(variation >>> 16) % 3] } };
 }
 for (const setting of ROOM_SETTINGS) registerStageScript(setting, activityStage);

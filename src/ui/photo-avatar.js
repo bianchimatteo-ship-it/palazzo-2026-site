@@ -2,7 +2,7 @@
 // decoded with its orientation, cropped and centred (zoom, position, drag), adjusted (light, contrast, colour) and turned into an illustration — the shapes smoothed, the colours reduced to a few
 // flat tones graded on the palette of the game, the outlines inked — then re-encoded by the canvas (no metadata of the camera survives). The original photograph is never kept: only the portrait,
 // on this device (core/photo-avatar-store.js). Loaded only when the editor is opened.
-import { PHOTO_AVATAR_MAX } from '../core/photo-avatar-store.js?v=20261124-3';
+import { PHOTO_AVATAR_MAX } from '../core/photo-avatar-store.js?v=20261125-1';
 
 export const MAX_INPUT_BYTES = 15 * 1024 * 1024;
 export const OUTPUT_SIZE = 256;

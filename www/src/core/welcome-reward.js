@@ -36,8 +36,8 @@ export function installationId(storage = globalThis.localStorage, makeId = () =>
   return id;
 }
 export const rewardKey = (promoId, installId, user) => `${promoId}|${installId}|${user || 'ospite'}`;
-const readLedger = storage => safe(() => JSON.parse(storage?.getItem(LEDGER_KEY) ?? '{}')) ?? {};
-const writeLedger = (storage, ledger) => safe(() => storage?.setItem(LEDGER_KEY, JSON.stringify(ledger)));
+export const readLedger = storage => safe(() => JSON.parse(storage?.getItem(LEDGER_KEY) ?? '{}')) ?? {};
+export const writeLedger = (storage, ledger) => safe(() => storage?.setItem(LEDGER_KEY, JSON.stringify(ledger)));
 // The entry of this pair: created «pending» the first time an eligible build runs; null when the build is not the one of the promotion.
 export function welcomeEntry({ info, user = null, storage = globalThis.localStorage, promo = WELCOME_PROMO, now = new Date().toISOString() } = {}) {
   if (!promoEligible(info, promo)) return null;
@@ -63,3 +63,4 @@ export function creditGame(game, { key, date, book, promo = WELCOME_PROMO }) {
   next.flags = { ...(next.flags ?? {}), welcomeRewards: { ...flags, [promo.id]: { key, date, amount: promo.amount } } };
   return next;
 }
+

@@ -8,7 +8,7 @@
 import { readFile } from 'node:fs/promises';
 import { startCareer } from './lib/long-run.mjs';
 const build = (await readFile(new URL('../index.html', import.meta.url), 'utf8')).match(/main\.js\?v=([^"']+)/)?.[1];
-const W = await import(new URL(`../src/core/welcome-reward.js?v=${build}`, import.meta.url).href);
+const W = { ...(await import(new URL(`../src/core/welcome-reward.js?v=${build}`, import.meta.url).href)), ...(await import(new URL(`../src/core/welcome-account.js?v=${build}`, import.meta.url).href)) };
 const problems = [];
 const check = (ok, text) => { if (!ok) problems.push(text); };
 const memory = () => { const map = new Map(); return { getItem: key => map.get(key) ?? null, setItem: (key, value) => map.set(key, String(value)), removeItem: key => map.delete(key), map }; };
@@ -24,11 +24,18 @@ check(W.buildInfoFromUserAgent('Mozilla/5.0 (iPhone) PolitikandoApp/ios/1.0.2/3/
 check(W.buildInfoFromUserAgent('Mozilla/5.0 (Macintosh) Chrome/131') === null, 'Un browser non ha marcatore: niente premio.');
 check(W.WELCOME_PROMO.title === 'GRAZIE PER GIOCARE A POLITICANDO 2026!' && W.WELCOME_PROMO.amount === 2500 && W.WELCOME_PROMO.badge === '+2.500 €', 'Titolo, importo e cifra mostrata sono quelli richiesti.');
 check(W.WELCOME_PROMO.subtitle === 'Grazie per aver scelto di giocare a Politicando 2026. Per ringraziarti della tua partecipazione, abbiamo aggiunto 2.500 € ai fondi della tua carriera. Continua a costruire il tuo percorso nella politica italiana!', 'Il sottotitolo è il testo esatto.');
-// the flow of the app: entry, credit when a career is open, ledger after
+// the flow of the app: entry, credit when a career is open, ledger after; a signed-in user asks the Worker first (the claim of the account: worker.js reward_community «benvenuto», here a stand-in
+// with the same rule: the first claim of an account is { claimed: true }, the next ones { claimed: false, already: true }; `down` = no answer)
+const server = { accounts: new Set(), down: false, claim(user) { if (this.down) return null; const first = !this.accounts.has(user); this.accounts.add(user); return { ok: true, claimed: first, already: !first }; } };
 const flow = (store, device, info, user = null) => {
   const entry = W.welcomeEntry({ info, user, storage: device });
   if (!entry || entry.status === 'credited') return { entry, credited: false };
   if (!store.hasCareer()) return { entry, credited: false };
+  if (user) {
+    const step = W.accountStep({ key: entry.key, user, storage: device });
+    const verdict = W.settleAccountAnswer({ key: entry.key, answer: server.claim(user), guestKey: step.action === 'bind' ? step.guestKey : null, user, storage: device });
+    if (verdict !== 'credit') return { entry: { ...entry, status: W.welcomeEntry({ info, user, storage: device })?.status }, credited: false, verdict };
+  }
   const out = store.creditWelcomeReward(entry.key);
   if (out) W.markCredited({ key: entry.key, careerId: out.careerId, storage: device });
   return { entry, credited: Boolean(out) };
@@ -94,11 +101,45 @@ check(!flow(store, phone, ANDROID).credited && fundsOf() === before + 2500, 'Dop
   const funds = synced.store.getState().game.resources.funds;
   const out = flow(synced.store, laptop, ANDROID, 'luca.verdi');
   check(!out.credited && synced.store.getState().game.resources.funds === funds, 'Cambio di dispositivo: la carriera sincronizzata, che ha già il premio, non lo riceve due volte.');
-  check(out.entry?.status === 'pending', 'La nuova coppia dispositivo + utente resta in attesa di una carriera che non lo abbia avuto.');
+  check(out.entry?.status === 'credited', 'Sul nuovo dispositivo lo stesso account risulta già premiato (il Worker ha la sua richiesta): nessuna attesa di un secondo accredito.');
+  // since 24/11/2026 the reward of a signed-in player belongs to the ACCOUNT (the Worker): a second device of the same account does not get it again (a device cannot be told from a reinstallation
+  // without identifying the hardware, which the game never does)
   const fresh = await startCareer({ seed: 'premio-h', level: 'comunale', fast: true });
-  check(flow(fresh.store, laptop, ANDROID, 'luca.verdi').credited && !flow(fresh.store, laptop, ANDROID, 'luca.verdi').credited, 'Sul nuovo dispositivo il premio arriva una sola volta, in una carriera che non lo aveva.');
+  const fundsFresh = fresh.store.getState().game.resources.funds;
+  check(!flow(fresh.store, laptop, ANDROID, 'luca.verdi').credited && fresh.store.getState().game.resources.funds === fundsFresh, 'Stesso account su un secondo dispositivo: nessun secondo premio (il premio è dell’account).');
   const id1 = W.installationId(laptop), id2 = W.installationId(laptop);
   check(id1 === id2 && id1 !== W.installationId(phone), 'L’identificativo dell’installazione è stabile e diverso per ogni installazione (nessuna impronta del dispositivo).');
 }
+// reinstallation and cleared data
+{
+  const { store: s5 } = await startCareer({ seed: 'premio-i', level: 'comunale', fast: true });
+  const before5 = s5.getState().game.resources.funds;
+  const phoneA = memory();
+  check(flow(s5, phoneA, ANDROID, 'anna.neri').credited, 'Account: primo premio.');
+  const reinstalled = memory();   // the app removed and installed again: storage empty, a new installation id
+  const { store: s6 } = await startCareer({ seed: 'premio-j', level: 'comunale', fast: true });
+  const funds6 = s6.getState().game.resources.funds;
+  check(!flow(s6, reinstalled, ANDROID, 'anna.neri').credited && s6.getState().game.resources.funds === funds6, 'Reinstallazione con lo stesso account: nessun secondo premio (il Worker ha già il premio dell’account).');
+  check(W.welcomeEntry({ info: ANDROID, user: 'anna.neri', storage: reinstalled })?.status === 'credited', '…e il dispositivo reinstallato lo segna come già ricevuto.');
+  void before5;
+  // a guest who gets it, then signs in on the same installation: the claim goes to the account, nothing is credited again; the account on another device gets nothing either
+  const tabletG = memory();
+  const { store: s7 } = await startCareer({ seed: 'premio-k', level: 'comunale', fast: true });
+  check(flow(s7, tabletG, IOS).credited, 'Ospite: premio sul dispositivo.');
+  const funds7 = s7.getState().game.resources.funds;
+  check(!flow(s7, tabletG, IOS, 'paolo.gialli').credited && s7.getState().game.resources.funds === funds7, 'L’ospite accede con il suo account sulla stessa installazione: il premio passa all’account, nessun secondo accredito.');
+  const otherPhone = memory(); const { store: s8 } = await startCareer({ seed: 'premio-l', level: 'comunale', fast: true });
+  check(!flow(s8, otherPhone, IOS, 'paolo.gialli').credited, '…e lo stesso account su un altro dispositivo non lo riceve di nuovo.');
+  // the Worker does not answer: nothing credited, the entry stays pending and is tried again
+  const offline = memory(); const { store: s9 } = await startCareer({ seed: 'premio-m', level: 'comunale', fast: true });
+  server.down = true;
+  const out9 = flow(s9, offline, ANDROID, 'marta.blu');
+  check(!out9.credited && out9.verdict === 'retry' && W.welcomeEntry({ info: ANDROID, user: 'marta.blu', storage: offline })?.status === 'pending', 'Senza risposta del server: nessun accredito, il premio resta in sospeso.');
+  server.down = false;
+  check(flow(s9, offline, ANDROID, 'marta.blu').credited, '…e arriva una volta quando il server risponde.');
+  // the declared limit: a GUEST with cleared data is, for the game, a new installation (no fingerprint, no hardware id): the premio can come again for that guest
+  const cleared = memory(); const { store: s10 } = await startCareer({ seed: 'premio-n', level: 'comunale', fast: true });
+  check(flow(s10, cleared, ANDROID).credited, 'Limite dichiarato: un ospite che cancella i dati è una nuova installazione (nessuna impronta del dispositivo).');
+}
 if (problems.length) { console.error(`Premio di ringraziamento — problemi:\n- ${problems.join('\n- ')}`); process.exit(1); }
-console.log('Premio di ringraziamento verificato: attivo solo su Android 1.0.6 (7) e iOS 1.0.2 (3) release, mai in Debug, su versioni precedenti o successive, sul web o sul sito TEST; primo avvio, ospite, account, logout/login, altro utente, più carriere, salvataggio e ricaricamento, ripristino di un salvataggio, cambio di dispositivo e premio in sospeso senza carriera: una sola volta per coppia dispositivo + utente, +2.500 € ai fondi della carriera con voce nel registro; titolo, sottotitolo e importo esatti.');
+console.log('Premio di ringraziamento verificato (con il premio dell’account sul Worker: reinstallazione, ospite che accede, secondo dispositivo, server assente; limite dichiarato per gli ospiti che cancellano i dati): attivo solo su Android 1.0.6 (7) e iOS 1.0.2 (3) release, mai in Debug, su versioni precedenti o successive, sul web o sul sito TEST; primo avvio, ospite, account, logout/login, altro utente, più carriere, salvataggio e ricaricamento, ripristino di un salvataggio, cambio di dispositivo e premio in sospeso senza carriera: una sola volta per coppia dispositivo + utente, +2.500 € ai fondi della carriera con voce nel registro; titolo, sottotitolo e importo esatti.');

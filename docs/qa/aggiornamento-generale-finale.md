@@ -1,5 +1,8 @@
 # Aggiornamento generale — rapporto finale (23/11/2026)
 
+> **Documento storico (23/11/2026), superato.** Lo stato attuale delle attività è nel rapporto canonico [`aggiornamento-ufficiale-2026-11-24.md`](aggiornamento-ufficiale-2026-11-24.md); dove questo testo differisce, vale il rapporto canonico. Lo storico delle verifiche resta qui invariato.
+
+
 Branch `feature/inmobi-integrazione`, partenza da `fedd4b30`. Nessun commit, push, merge, deploy o pubblicazione in questa fase. Stash e file non tracciati conservati.
 
 Legenda: 🟢 completata e verificata · 🟡 parziale o non verificata del tutto · 🔴 non completata.

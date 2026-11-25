@@ -1,18 +1,18 @@
 // The election night: the screen of the twelve hours (night-engine.js decides what is known at each hour; this file only draws it).
 // A television special in the colours, type and components of the rest of the game (cards, tabs, badges, tables): the clock and the hours, the ticker, the live feed, the count, the results with
 // their bars, the territories, the map, the polls and projections (always apart from the official partial result), the seats, the statements and, at the twelfth hour, the summary.
-import { NIGHT_HOURS, exitPoll, nightClock, nightView, pendingPrompts, projection, statementPromptFor } from '../core/night-engine.js?v=20261124-3';
-import { forceColor, stableColor } from './political-colors.js?v=20261124-3';
-import { MAP_SCOPES, italyMapSvg } from './italy-map.js?v=20261124-3';
-import { badge, card, esc, kpi, num, pct, sectionTabs } from './sections-kit.js?v=20261124-3';
-import { glyph } from './visuals.js?v=20261124-3';
+import { NIGHT_HOURS, exitPoll, nightClock, nightView, pendingPrompts, projection, statementPromptFor } from '../core/night-engine.js?v=20261125-1';
+import { forceColor, stableColor } from './political-colors.js?v=20261125-1';
+import { MAP_SCOPES, italyMapSvg } from './italy-map.js?v=20261125-1';
+import { badge, card, esc, kpi, num, pct, sectionTabs } from './sections-kit.js?v=20261125-1';
+import { glyph } from './visuals.js?v=20261125-1';
 
 export const NIGHT_TABS = Object.freeze([['diretta', 'Diretta'], ['scrutinio', 'Scrutinio'], ['risultati', 'Risultati'], ['territorio', 'Territorio'], ['mappa', 'Mappa'], ['previsioni', 'Sondaggi e previsioni'], ['parlamento', 'Parlamento'], ['dichiarazioni', 'Dichiarazioni']]);
 const TAG_TONE = Object.freeze({ 'EXIT POLL': 'info', PROIEZIONE: 'info', SONDAGGI: 'info', SCRUTINIO: 'good', RISULTATO: 'good', SORPASSO: 'warning', SORPRESA: 'warning', SOGLIA: 'warning', RIMONTA: 'warning', RIBALTAMENTO: 'warning', BALLOTTAGGIO: 'warning', MAGGIORANZA: 'good', DICHIARAZIONE: 'neutral', TU: 'good' });
 const STAGE_LABEL = Object.freeze({ finale: 'Esito della consultazione', 'primo-turno': 'Primo turno: verso il ballottaggio' });
 const colorOfGroup = (group, snapshot) => {
   if (!group) return '#8d9791';
-  if (group.id === 'altri') return '#8d9791';
+  if (group.others || group.id === 'altri') return '#8d9791';
   const source = snapshot.groups.find(item => item.id === group.id);
   return forceColor(source?.partyIds?.[0] ?? group.id) ?? stableColor(group.id);
 };
@@ -24,7 +24,7 @@ const deltaTag = (row, prev) => {
   const d = Math.round((row.percent - before.percent) * 100) / 100;
   return Math.abs(d) < 0.05 ? '' : `<span class="night-delta ${d > 0 ? 'up' : 'down'}" aria-label="${esc(d > 0 ? 'in crescita' : 'in calo')}">${d > 0 ? '▲' : '▼'} ${num(Math.abs(d), 1)}</span>`;
 };
-const gapOf = view => { const [a, b] = view.rows.filter(row => row.id !== 'altri'); return a && b ? Math.round((a.percent - b.percent) * 100) / 100 : null; };
+const gapOf = view => { const [a, b] = view.rows.filter(row => !row.others && row.id !== 'altri'); return a && b ? Math.round((a.percent - b.percent) * 100) / 100 : null; };
 const hourLabel = (night, hour) => { const clock = nightClock(night, hour); return `${clock.label}${clock.dayOffset ? ' (+1)' : ''}`; };
 
 // ---------- the frame ----------
@@ -185,7 +185,7 @@ function tabDichiarazioni(night) {
 }
 function summary(night, view, proj) {
   const { snapshot } = night;
-  const final = view.rows.filter(row => row.id !== 'altri');
+  const final = view.rows.filter(row => !row.others && row.id !== 'altri');
   const winner = final[0];
   const lines = [];
   if (night.stage === 'primo-turno') {
@@ -219,6 +219,6 @@ export function renderElectionNight(state, { tab = 'diretta', area = null, bound
     ${footer(night)}
   </section>`;
 }
-import { nightTally } from '../core/night-engine.js?v=20261124-3';
+import { nightTally } from '../core/night-engine.js?v=20261125-1';
 const nightTallyOf = night => nightTally(night);
 export { statementPromptFor };

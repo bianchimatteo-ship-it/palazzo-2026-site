@@ -92,8 +92,8 @@ html[data-scene-motion="full"] .cm-protest .cm-arm { animation: st-arms .45s eas
 .generated-tag { font: 600 11px var(--font-ui); color: var(--ink-3); border: 1px solid var(--line); border-radius: 99px; padding: 1px 7px; margin-left: 6px; }
 
 /* The Aula (ui/aula-view.js): a vote replayed seat by seat in a window over the page. */
-.aula-enter { background: linear-gradient(#e0bd6e, #c4a05a); color: #1d1a12; border: 1px solid #f0d68a; font-weight: 900; letter-spacing: .08em; min-height: 42px; padding: 8px 18px; border-radius: var(--radius); }
-.aula-enter:hover { background: linear-gradient(#f0d68a, #d4b068); color: #14110b; }
+.aula-enter { background: var(--accent); color: var(--accent-ink); border: 1px solid var(--gold-deep); font-weight: 900; letter-spacing: .08em; min-height: 42px; padding: 8px 18px; border-radius: var(--radius); }
+.aula-enter:hover { background: var(--gold-soft); color: var(--accent-ink); }
 .aula-enter-small { margin-left: 8px; min-height: 34px; padding: 4px 10px; font-size: 12px; }
 .hemi-head .aula-enter { margin-left: auto; align-self: center; }
 .aula-overlay { position: fixed; inset: 0; z-index: 90; display: flex; align-items: flex-start; justify-content: center; padding: 16px; background: rgba(4, 9, 8, .82); overflow-y: auto; }

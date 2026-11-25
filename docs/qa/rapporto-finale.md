@@ -1,5 +1,8 @@
 # Rapporto finale — completamento Politicando 2026
 
+> **Documento storico (17/11/2026), superato.** Lo stato attuale delle attività è nel rapporto canonico [`aggiornamento-ufficiale-2026-11-24.md`](aggiornamento-ufficiale-2026-11-24.md); dove questo testo differisce, vale il rapporto canonico. Lo storico delle verifiche resta qui invariato.
+
+
 Branch `feature/qa-completamento` (81 commit sopra `main` e302c45). Versione di build `20261117-1`. Data: 17/11/2026.
 Stati usati: **Completato · In lavorazione · Bloccato · Non iniziato**. Il dettaglio punto per punto è in `docs/qa/master-checklist.md`; qui sono i risultati reali.
 

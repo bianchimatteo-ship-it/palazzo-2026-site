@@ -1,10 +1,7 @@
-// Founding, splitting, merging and renaming the player's party, in the career state (game.party): what an area takes
-// with it when it leaves — sections, committees, members, volunteers, money — what a merger adds, what a new name costs.
-// The functions work on a copy of the game owned by the caller and return a description of what the store still has to
-// apply to the political world, the Parliament and the records of the user's party. Simulated: no real party changes.
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261124-3';
-import { RENAME_STYLES } from '../data/simulation/party-life-rules.js?v=20261124-3';
-import { normalizeLife, strengthShare } from './party-life-engine.js?v=20261124-3';
+// What this module does and why: docs/architettura-ricompense.md (§ party-ops-engine.js).
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261125-1';
+import { RENAME_STYLES } from '../data/simulation/party-life-rules.js?v=20261125-1';
+import { normalizeLife, strengthShare } from './party-life-engine.js?v=20261125-1';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -148,7 +145,7 @@ export function mergeParties(game, api, { forceId, label, share, ownShare, newLa
   const org = party.org;
   const life = normalizeLife(party, { seed: game.seed ?? 1, week });
   const ratio = clamp((share ?? 1) / Math.max(0.6, ownShare ?? 3), 0.1, 1.5);
-  const added = Math.round(org.members * ratio * 0.8);
+  const added = Math.round(org.members * ratio * 0.8), m0 = org.militants, c0 = org.cadres ?? 0, cash = Math.round(added * 7), regions = [];
   const short = String(label).replace(/\s*\(.*\)\s*$/, '').split(/\s+/).slice(0, 3).join(' ');
   const areaId = `area-${slug(short) || forceId}`.slice(0, 40);
   const strength = Math.round(clamp(ratio / (1 + ratio) * 100, 8, 45));
@@ -161,13 +158,15 @@ export function mergeParties(game, api, { forceId, label, share, ownShare, newLa
   for (const { region, w } of weights.filter((item, index) => index % 3 !== 0 || org.sections.some(section => section.region === item.region))) {
     const members = Math.max(5, Math.round(added * w / total * 1.4));
     const section = org.sections.find(item => item.region === region);
+    regions.push([region, members, section ? 0 : 1]);
     if (section) { section.members += members; section.vitality = Math.round(clamp(section.vitality + 3)); }
     else org.sections.push({ id: `sezione-${region}`, region, label: org.founder ? `Sezione ${region}` : `Federazione ${region}`, members, vitality: 45, openedWeek: week, source: SIM });
   }
   recount(org);
+  const arrived = regions.reduce((sum, row) => sum + row[1], 0);
   org.militants = Math.min(org.members, Math.round(org.militants + added * 0.12));
   org.cadres = (org.cadres ?? 0) + Math.round(added / 700) + 2;
-  api.book(game, org, Math.round(added * 7), 'donazioni', `Cassa di ${short}`);
+  api.book(game, org, cash, 'donazioni', `Cassa di ${short}`);
   org.cohesion = Math.round(clamp(org.cohesion - 6));
   const ruling = party.currents.find(item => item.id === party.leaderCurrentId) ?? party.currents[0];
   org.conflicts.push({ id: `conflitto-${week}-fusione`, title: `L’integrazione di ${short}: posti, simboli e liste`, currents: [ruling.id, areaId], intensity: 42, since: week, source: SIM });
@@ -178,7 +177,8 @@ export function mergeParties(game, api, { forceId, label, share, ownShare, newLa
   api.remember(game, { date, kind: 'fusione', text: `Fusione con ${label}`, weight: 1.2 });
   party.history.push({ week, date, text: `Fusione con ${label}`, source: SIM });
   life.history = [{ week, kind: 'fusione', text: `Fusione con ${label}: +${added.toLocaleString('it-IT')} iscritti`, source: SIM }, ...life.history].slice(0, 40);
-  return { descriptor: { forceId, label, previousLabel, newLabel: party.label, ratio: round1(ratio * 100), members: added, areaId, source: SIM }, lines: [`${label} confluisce nel partito: +${added.toLocaleString('it-IT')} iscritti, nasce l’${area.label.toLowerCase()} (${strength}% delle aree)`, 'Coesione −6: le prime settimane sono tese'] };
+  return { descriptor: { forceId, label, previousLabel, newLabel: party.label, ratio: round1(ratio * 100), members: added, areaId, source: SIM,
+    snap: { before: org.members - arrived, added: arrived, militants: org.militants - m0, cadres: org.cadres - c0, cash, regions, area: areaId, conflict: `conflitto-${week}-fusione`, previousLabel } }, lines: [`${label} confluisce nel partito: +${added.toLocaleString('it-IT')} iscritti, nasce l’${area.label.toLowerCase()} (${strength}% delle aree)`, 'Coesione −6: le prime settimane sono tese'] };
 }
 
 // ---------- renaming ----------

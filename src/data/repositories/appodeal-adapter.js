@@ -1,10 +1,5 @@
-// The adapter of the Appodeal bridge (the Capacitor plugin `AppodealAds`, plugins/appodeal-ads: Kotlin, Android only). It is the advertising provider of the ANDROID app (iOS keeps inmobi-adapter.js). It knows nothing about
-// polls, saves or accounts: it asks for the consent (Appodeal's consent manager, GDPR) BEFORE anything else, initialises the SDK only with the Android app key of data/ads-config.js (Appodeal's automatic connection of the
-// networks is kept: no network id is ever given), and offers a banner, an interstitial and the rewarded video of data/repositories/ads-rewarded.js ({ kind: 'appodeal', isReady(), show() }). Placement: `default`.
-// The reward is counted ONLY when the native side reports the SDK's own completion (`onRewardedVideoFinished`, turned into `rewarded: true` by the plugin); a video closed early, a failed show, a missing plugin or any
-// error gives nothing, and one completion id is made natively for each video (so it can never be credited twice).
-// No data of the player (position, birth date, gender, career, simulated political choices) is ever passed to the SDK: the only things sent to the plugin are the app key, the format and the test flag.
-import { FORMATS, resolveAppodeal } from '../ads-config.js?v=20261124-3';
+// What this module does and why: docs/architettura-ricompense.md (§ appodeal-adapter.js).
+import { FORMATS, resolveAppodeal } from '../ads-config.js?v=20261125-1';
 
 export function createAppodealAdapter({ plugin = globalThis.Capacitor?.Plugins?.AppodealAds ?? null, config = null } = {}) {
   let ids = config ?? resolveAppodeal(null, 'off');
@@ -85,6 +80,8 @@ export function createAppodealAdapter({ plugin = globalThis.Capacitor?.Plugins?.
         return true;
       } catch { return false; }
     },
-    formats: FORMATS
+    formats: FORMATS,
+    // ui/funds-ad.js
+    native: { plugin, load, used: () => ready.delete('rewarded') }
   };
 }

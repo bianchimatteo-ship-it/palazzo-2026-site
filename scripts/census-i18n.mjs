@@ -69,6 +69,7 @@ for (const file of files) {
   if (file === 'src/boot-guard.js') continue; // the start-up guard runs BEFORE the game and its phrase-book: it carries its own Italian/English table (checked by check-boot-failure in Chrome)
   if (file === 'src/data/release-pairs.js') continue; // the phrase book itself: its Italian side is the key of an entry, not a text of a screen
   if (file === 'src/core/topic-of-text.js') continue; // the keyword tables that recognise the subject of a headline (fragments of words, never shown)
+  if (file === 'src/data/party-programs.js') continue; // the programmes: their [Italian, English] summaries go to the phrase book from ALL_PAIRS (sync-release-pairs); the metadata of the documents (Italian titles, kinds, states) are shown only in the Italian interface — the English one shows kind, date and address
   if (file === 'src/core/avatar.js') continue; // the role/first-name tables are lookup keys for the gender of a character, never shown (the labels themselves are shown, and translated, by the scene data that owns them)
   for (const whole of literalsOf(readFileSync(join(root, file), 'utf8'))) {
     // a template with markup is several texts (one for each element): they are read one by one, as the page shows them

@@ -176,7 +176,9 @@ Un contadino della zona
 Un artigiano con la bottega in difficoltà`)
 });
 // The gender a role asks for: 'maschile' | 'femminile' | null (anyone). A role the table does not know is anyone's.
-export const roleGender = label => ROLE_GENDER[String(label ?? '').trim()] ?? null;
+const EXTRA_ROLE_GENDER = new Map();
+export const registerRoleGenders = map => { for (const [label, gender] of Object.entries(map)) EXTRA_ROLE_GENDER.set(label, gender); };
+export const roleGender = label => { const text = String(label ?? '').trim(); return ROLE_GENDER[text] ?? EXTRA_ROLE_GENDER.get(text) ?? (/^(Il|Lo|Uno)\s|^Un\s/.test(text) ? M : /^(La|Una)\s|^Un’/.test(text) ? F : null); };
 
 // Names to fall back on when the pool of a scene has no one of the gender the role asks for: complete names, each with its gender.
 export const EXTRA_NAMES = Object.freeze({

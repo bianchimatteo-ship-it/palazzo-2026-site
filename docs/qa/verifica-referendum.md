@@ -1,29 +1,31 @@
-# Verifica normativa di iniziative e referendum (23/11/2026)
+# Verifica normativa di iniziative e referendum (aggiornata il 24/11/2026)
 
-**Esito: i testi ufficiali non sono stati leggibili da questo ambiente, quindi la verifica è NON completata (⚫ bloccata da una fonte).** Nessuna regola del motore è stata cambiata sulla base di ricordi non verificati.
+**Esito: verifica completata sui testi ufficiali.** Il 24/11/2026 sono stati letti su **Normattiva** (portale ufficiale, esportazione dell'atto completo, nel browser integrato) il testo vigente della **Costituzione** (artt. 71, 75, 132, 138) e della **L. 25 maggio 1970, n. 352** («Norme sui referendum previsti dalla Costituzione e sulla iniziativa legislativa del popolo», ultimo aggiornamento all'atto del 30/09/2021). Il 23/11 erano bloccati senza browser.
 
-## Cosa si è provato
-| Fonte | Esito |
-|---|---|
-| senato.it (Costituzione) | HTTP 403 |
-| quirinale.it (Costituzione) | HTTP 403 |
-| Normattiva, Costituzione e L. 352/1970 | pagina raggiungibile ma mostra solo l'art. 1; gli altri articoli si caricano con un controllo non seguibile |
-| Normattiva, esportazione dell'atto completo | pagina di errore |
-| Gazzetta Ufficiale n. 147 del 15/06/1970 (PDF) | scaricato, ma è una scansione senza testo: serve OCR |
-| Wikisource, Altalex, camera.it | non disponibile / accesso con login / testo assente |
+## Confronto punto per punto
 
-Dall'albero degli articoli di Normattiva risulta soltanto la struttura della L. 352/1970: Titolo I referendum dell'art. 138 (artt. 1-26), Titolo II referendum dell'art. 75 (artt. 27-40), Titolo III referendum territoriale dell'art. 132 (artt. 41-47), Titolo IV iniziativa del popolo (artt. 48-49), Titolo V disposizioni finali (artt. 50-53).
+| Regola (fonte) | Testo ufficiale, in sintesi | Motore prima | Ora |
+|---|---|---|---|
+| Iniziativa popolare (art. 71 Cost.; artt. 48-49 L. 352) | Almeno 50.000 elettori; progetto redatto in articoli con relazione; fogli vidimati non oltre sei mesi prima della presentazione; firme presentate al Presidente di una Camera | 50.000 firme, testo in articoli, 26 settimane | ✅ conforme (26 settimane = sei mesi) |
+| Referendum abrogativo: chi lo chiede (art. 75 Cost.) | 500.000 elettori o cinque Consigli regionali | Uguale | ✅ |
+| Materie escluse (art. 75, c. 2) | Leggi tributarie e di bilancio, amnistia e indulto, autorizzazione a ratificare trattati | Uguale | ✅ |
+| Quorum e maggioranza (art. 75, c. 4) | Partecipa la maggioranza degli aventi diritto e prevale la maggioranza dei voti validi | Uguale | ✅ |
+| Termine per depositare le firme (art. 28) | Entro tre mesi dal timbro sui fogli | Raccolta di 13 settimane | ✅ conforme; ora applicato anche al deposito differito |
+| Finestra di deposito (art. 32) | Dal 1° gennaio al 30 settembre di ogni anno | Deposito in qualunque momento | ❗ **corretto**: fuori finestra il deposito attende il 1° gennaio se le firme sono ancora valide, altrimenti la richiesta decade |
+| Cassazione (art. 32) | Esamina dopo il 30 settembre; ordinanza definitiva entro il 15 dicembre | Cinque settimane dopo il deposito | ❗ **corretto**: decisione al 15 dicembre dell'anno del deposito |
+| Corte costituzionale (art. 33) | Camera di consiglio entro il 20 gennaio; sentenza pubblicata entro il 10 febbraio | Otto settimane dopo la Cassazione | ❗ **corretto**: sentenza al 10 febbraio dell'anno successivo |
+| Data del voto (art. 34) | Una domenica tra il 15 aprile e il 15 giugno | Uguale | ✅ |
+| Blocchi elettorali (art. 31) | Nessun deposito nell'anno prima della scadenza delle Camere e nei sei mesi dalla convocazione dei comizi | Non applicati | ❗ **corretto**: applicati con la scadenza naturale della legislatura del gioco e l'apertura della finestra delle politiche (approssimazione della convocazione dei comizi) |
+| Sospensione per scioglimento anticipato (art. 34, cc. 2-3) | Il referendum già indetto è sospeso; i termini riprendono 365 giorni dopo l'elezione | Non applicata | 🟡 **non ancora simulata**: documentata qui |
+| Effetti (art. 37) | Decreto del Presidente della Repubblica; abrogazione dal giorno dopo la pubblicazione, differibile fino a 60 giorni | Abrogazione al voto | 🟡 semplificazione dichiarata: il gioco applica l'abrogazione all'esito del voto |
+| Esito contrario (art. 38) | Nessuna nuova richiesta sulla stessa legge per cinque anni | Non applicato | ❗ **corretto**: divieto di cinque anni quando, con il quorum, prevale il NO |
+| Legge abrogata prima del voto (art. 39) | Le operazioni non hanno più corso | Non applicato | 🟡 non simulato: nel gioco una legge oggetto di richiesta non viene abrogata da altri durante la procedura |
+| Referendum costituzionale (art. 138 Cost.; artt. 3-5 L. 352) | Due deliberazioni a distanza di almeno tre mesi; richiesta entro tre mesi dalla pubblicazione da un quinto dei membri di una Camera, 500.000 elettori o cinque Consigli regionali; nessun quorum, maggioranza dei voti validi; nessun referendum se si raggiungono i due terzi in seconda votazione; promulgazione se nessuno lo chiede | Uguale | ✅ |
+| Data del referendum costituzionale (art. 15) | Indetto entro 60 giorni dall'ordinanza; si vota una domenica tra il 50° e il 70° giorno dopo il decreto | Campagna di 10 settimane dopo la richiesta | ✅ compatibile (70 giorni) |
+| Referendum territoriale (art. 132 Cost.; artt. 41-47 L. 352) | Fusione o creazione di Regioni (almeno un milione di abitanti) e passaggio di Province o Comuni tra Regioni | Non implementato | ⚫ **non simulato di proposito**: il gioco non gestisce il cambio di Regione di Province e Comuni; non viene inventata una procedura |
+| Petizione (art. 50 Cost.) | Non è un referendum né un'iniziativa legislativa | Non presentata come tale | ✅ |
 
-## Cosa fa il motore oggi (da riconfrontare con il testo quando disponibile)
-- Iniziativa legislativa popolare: 50.000 firme, progetto redatto in articoli (art. 71); passa poi al Parlamento. Distinta da referendum e da petizione.
-- Referendum abrogativo: 500.000 firme o 5 Consigli regionali; quorum della metà più uno degli aventi diritto; esclusi tributi e bilancio, amnistia e indulto, ratifica dei trattati (art. 75); Cassazione → Corte costituzionale → campagna → voto in una domenica tra il 15 aprile e il 15 giugno.
-- Referendum costituzionale: richiesta entro tre mesi dalla pubblicazione, da un quinto dei membri di una Camera, 500.000 elettori o 5 Consigli regionali; nessun quorum; niente referendum se la seconda votazione raggiunge i due terzi (art. 138); intervallo di almeno tre mesi tra le due deliberazioni.
-- Una raccolta firme referendaria aperta dalla pagina Iniziative va collegata a una legge in vigore (`store.linkReferendumCollection`, `check-referendum-link`).
-
-## Cosa NON c'è e perché
-- **Referendum territoriale (art. 132)**: non implementato. Il gioco non simula fusioni di Regioni né passaggi di Province o Comuni tra Regioni, quindi non esiste una procedura applicabile da simulare. Non è stato inventato.
-- **Finestre di deposito e blocchi della L. 352/1970** (periodo dell'anno per depositare, blocco nell'anno prima della scadenza delle Camere e nei sei mesi dopo le elezioni, termine della Corte): non implementati perché non verificati sul testo.
-- **Petizione (art. 50)**: non è una procedura del gioco; la pagina Iniziative non la presenta come iniziativa legislativa.
-
-## Per chiudere
-Fornire un testo leggibile (Normattiva in browser, o la scansione della Gazzetta passata con OCR) di: Costituzione artt. 71, 75, 132, 138; L. 352/1970 artt. 28-34, 41-47, 48-49. Con quello si potrà confrontare punto per punto e correggere solo le parti difformi.
+## Codice e test
+- `src/core/referendum-engine.js`: `ABROGATIVE_CALENDAR`, `inDepositWindow`, `cassationDateFor`, `courtDateFor`, `electionBlock` e `fileRequest` con la finestra di deposito; il divieto dell'art. 38 (`banUntil`) è applicato in `store.startReferendum` e in `store.linkReferendumCollection`.
+- Test: `check-referendum` (calendario dell'art. 32-34, blocchi dell'art. 31, firme scadute dell'art. 28 e procedura completa sul calendario reale), `check-referendum-link`, `check-referendum-ui`.
+- Corte costituzionale: per l'ammissibilità il gioco usa i criteri di chiarezza, omogeneità e materie escluse dell'art. 75. Le sentenze non sono state lette una per una: è una simulazione dichiarata, non una riproduzione della giurisprudenza.

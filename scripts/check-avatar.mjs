@@ -546,7 +546,7 @@ await withBrowser(async browser => {
   // an old career: no avatar in the save → the stable default, nothing else touched
   const oldLook = await evaluate(`(async () => {
     const { store } = await import('/src/core/store.js?v=${browser.version}');
-    const { defaultAvatarFor } = await import('/src/core/avatar.js?v=${browser.version}');
+    const { defaultAvatarFor, avatarForGender, statedGender } = await import('/src/core/avatar.js?v=${browser.version}');
     const file = JSON.parse(store.exportSave());
     const p = file.dataset.politicians.find(item => item.id === file.career.playerId);
     const before = JSON.stringify({ ...p, avatar: undefined });
@@ -554,7 +554,8 @@ await withBrowser(async browser => {
     store.loadGame(JSON.stringify(file));
     const s = store.getState();
     const q = s.dataset.politicians.find(item => item.id === s.career.playerId);
-    return { same: before === JSON.stringify({ ...q, avatar: undefined }), expected: Object.values(defaultAvatarFor(q.id)).join('.'), has: 'avatar' in q };
+    // the stable default of the id, with the face of the gender the player chose (since 24/11/2026 the face follows the stated gender everywhere, old saves included)
+    return { same: before === JSON.stringify({ ...q, avatar: undefined }), expected: Object.values(avatarForGender(defaultAvatarFor(q.id), statedGender(q))).join('.'), has: 'avatar' in q };
   })()`);
   assert.ok(oldLook.same, 'Vecchia carriera: nessun altro dato cambia.');
   await evaluate(`location.hash = '#panoramica'`); await pause(300); await evaluate(`location.hash = '#profilo'`); await waitFor(() => t.has('.profile-page-lead'));

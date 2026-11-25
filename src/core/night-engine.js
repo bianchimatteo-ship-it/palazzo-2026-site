@@ -8,9 +8,9 @@
 //   - the exit poll, the projections and the seat estimates are estimates and are never built from the units not yet counted (they use the exit poll as the prior of what is still to count);
 //   - the news of the night are derived from those figures, stored once when the hour is reached (so a reload or a save does not write them twice) and never touch the career.
 // The career is touched once, when the night is concluded (store.concludeElectionNight → the same closeCampaign as before).
-import { SEAT_RULES, EUROPEAN_THRESHOLD, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261124-3';
-import { allocateDHondt, allocateWithBonus } from './election-engine.js?v=20261124-3';
-import { distributeVotes } from './electorate.js?v=20261124-3';
+import { SEAT_RULES, EUROPEAN_THRESHOLD, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261125-1';
+import { allocateDHondt, allocateWithBonus } from './election-engine.js?v=20261125-1';
+import { distributeVotes, isOthersRow, OTHERS_ID } from './electorate.js?v=20261125-1';
 
 export const NIGHT_HOURS = 12;
 export const NIGHT_STAGES = Object.freeze({ finale: 'Esito della consultazione', 'primo-turno': 'Primo turno' });
@@ -81,15 +81,17 @@ export function nightSnapshot(campaign, stage) {
   const result = stage === 'finale' ? campaign.result : campaign.firstRoundResult;
   if (!result) return null;
   const playerId = campaign.playerCandidateId;
-  const groups = (result.groups ?? []).map(group => ({
-    id: group.id, label: group.label ?? group.id, percent: Number(group.percent) || 0, votes: Math.max(0, Math.round(Number(group.votes) || 0)), seats: Math.max(0, Math.round(Number(group.seats) || 0)),
-    coalitionId: group.coalitionId ?? null, partyIds: group.partyIds ?? [], isPlayer: group.id === playerId || group.candidateId === playerId || (group.memberCandidateIds ?? []).includes(playerId)
-  }));
+  const groups = (result.groups ?? []).map(group => isOthersRow(group)
+    ? { id: OTHERS_ID, label: 'Altri', percent: Number(group.percent) || 0, votes: Math.max(0, Math.round(Number(group.votes) || 0)), seats: 0, coalitionId: null, partyIds: [], isPlayer: false, others: true }
+    : {
+      id: group.id, label: group.label ?? group.id, percent: Number(group.percent) || 0, votes: Math.max(0, Math.round(Number(group.votes) || 0)), seats: Math.max(0, Math.round(Number(group.seats) || 0)),
+      coalitionId: group.coalitionId ?? null, partyIds: group.partyIds ?? [], isPlayer: group.id === playerId || group.candidateId === playerId || (group.memberCandidateIds ?? []).includes(playerId)
+    });
   // In a vote for lists the percentages of the engine are on all the valid votes, "Altri" included, while the votes of the rows add up to the listed lists only: the rest is told as «Altri»,
   // with the votes that make the percentages of the engine come out (so the partial and the final percentages are the engine's, not a different base).
   const sumPercent = groups.reduce((sum, group) => sum + group.percent, 0);
   const valid = Math.round(Number(result.electorate?.ballots ?? result.totalBallots) || 0);
-  if (sumPercent > 0 && 100 - sumPercent > 0.05 && sumPercent < 99.95) {
+  if (sumPercent > 0 && 100 - sumPercent > 0.05 && sumPercent < 99.95 && !groups.some(group => group.others)) {
     const rest = Math.round((100 - sumPercent) * 100) / 100;
     if (valid > 0) {
       // The valid ballots of the canonical result are the base: the lists get percent × valid and «Altri» the remainder (never a base rebuilt from the rows). A result saved by an older version has the rows stretched to
@@ -201,12 +203,12 @@ export function nightView(night, hour = night.hour) {
     unit.votes.forEach((value, index) => { sums[index] += value; areaSums[unit.areaIndex][index] += value; });
   }
   const complete = counted >= tally.units.length;
-  const rows = tally.groups.map((group, index) => ({ id: group.id, label: group.label, coalitionId: group.coalitionId, isPlayer: group.isPlayer, votes: sums[index], percent: ballots ? round2(sums[index] * 100 / ballots) : 0, final: complete }))
-    .sort((a, b) => b.votes - a.votes || a.label.localeCompare(b.label));
-  rows.forEach((row, index) => { row.position = index + 1; });
+  const rows = tally.groups.map((group, index) => ({ id: group.id, label: group.label, coalitionId: group.coalitionId, isPlayer: group.isPlayer, votes: sums[index], percent: ballots ? round2(sums[index] * 100 / ballots) : 0, final: complete, ...(group.others ? { others: true } : {}) }))
+    .sort((a, b) => Number(Boolean(a.others)) - Number(Boolean(b.others)) || b.votes - a.votes || a.label.localeCompare(b.label));
+  rows.forEach((row, index) => { row.position = row.others ? null : index + 1; });
   const areaRows = tally.areas.map((area, areaIndex) => {
     const total = areaSums[areaIndex].reduce((sum, value) => sum + value, 0);
-    const order = tally.groups.map((group, index) => ({ id: group.id, label: group.label, votes: areaSums[areaIndex][index] })).sort((a, b) => b.votes - a.votes || a.label.localeCompare(b.label));
+    const order = tally.groups.map((group, index) => ({ id: group.id, label: group.label, votes: areaSums[areaIndex][index], others: Boolean(group.others) })).filter(item => !item.others).sort((a, b) => b.votes - a.votes || a.label.localeCompare(b.label));
     const state = areaUnits[areaIndex].counted === 0 ? 'attesa' : areaUnits[areaIndex].counted >= areaUnits[areaIndex].total ? 'completo' : 'in-corso';
     const gap = total && order[1] ? round2((order[0].votes - order[1].votes) * 100 / total) : null;
     return { id: area.id, name: area.name, weight: area.weight, byGroup: areaSums[areaIndex], counted: areaUnits[areaIndex].counted, units: areaUnits[areaIndex].total, state, ballots: total, leaderId: total ? order[0].id : null, leaderLabel: total ? order[0].label : null, gap,
@@ -218,11 +220,11 @@ export function nightView(night, hour = night.hour) {
 // The exit poll: an estimate made on the day, with a margin; derived from the true shares by a hash (never from the count) and normalised to 100. It is shown at the first hour and stays on record.
 export function exitPoll(night) {
   const { snapshot, seed } = night;
-  const rows = snapshot.groups.filter(group => group.percent > 0).map(group => ({ id: group.id, label: group.label, isPlayer: group.isPlayer,
+  const rows = snapshot.groups.filter(group => group.percent > 0).map(group => ({ id: group.id, label: group.label, isPlayer: group.isPlayer, ...(group.others ? { others: true } : {}),
     percent: Math.max(0, group.percent + (hash01(`${seed}|exit|${group.id}`) - .5) * 2 * (.3 + .35 * Math.sqrt(group.percent))), margin: round1(.7 + .3 * Math.sqrt(group.percent)) }));
   const total = rows.reduce((sum, row) => sum + row.percent, 0) || 1;
   rows.forEach(row => { row.percent = round1(row.percent * 100 / total); });
-  return rows.sort((a, b) => b.percent - a.percent || a.label.localeCompare(b.label));
+  return rows.sort((a, b) => Number(Boolean(a.others)) - Number(Boolean(b.others)) || b.percent - a.percent || a.label.localeCompare(b.label));
 }
 
 // The projection: what the counted units say, completed with the exit poll where nothing is counted yet. It is an estimate, with a margin that shrinks with the count; it never reads

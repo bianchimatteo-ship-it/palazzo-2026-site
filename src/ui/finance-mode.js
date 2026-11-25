@@ -1,13 +1,14 @@
 // Money of the career and of the party: balance, flows, budget, reports and sustainability.
-import { BUDGET_LINES, FINANCE_CATEGORIES, financeOutlook, hasAsset, INVESTMENTS, operationProblem, operationRange, partyRequestRules, RESERVE, TREASURY_OPERATIONS } from '../core/finance-engine.js?v=20261124-3';
-import { TRANSFERS } from '../data/simulation/finance-rules.js?v=20261124-3';
-import { costProblem } from '../core/career-engine.js?v=20261124-3';
-import { costText, planAddButton } from './plan-view.js?v=20261124-3';
-import { isPartyLeader, PARTY_PRIORITIES, TREASURY_LABELS, treasuryOutlook } from '../core/organization-engine.js?v=20261124-3';
-import { artTile, glyph } from './visuals.js?v=20261124-3';
-import { illustration } from './illustrations.js?v=20261124-3';
-import { foldPanel } from './sections-kit.js?v=20261124-3';
-import { breakdown, esc, euro, EXPENSE_COLOR, flowChart, INCOME_COLOR, lineChart, num, SERIES, signed, sparkline, stateBadge } from './charts.js?v=20261124-3';
+import { BUDGET_LINES, FINANCE_CATEGORIES, financeOutlook, hasAsset, INVESTMENTS, operationProblem, operationRange, partyRequestRules, RESERVE, TREASURY_OPERATIONS } from '../core/finance-engine.js?v=20261125-1';
+import { TRANSFERS } from '../data/simulation/finance-rules.js?v=20261125-1';
+import { costProblem } from '../core/career-engine.js?v=20261125-1';
+import { costText, planAddButton } from './plan-view.js?v=20261125-1';
+import { isPartyLeader, PARTY_PRIORITIES, TREASURY_LABELS, treasuryOutlook } from '../core/organization-engine.js?v=20261125-1';
+import { artTile, glyph } from './visuals.js?v=20261125-1';
+import { illustration } from './illustrations.js?v=20261125-1';
+import { foldPanel } from './sections-kit.js?v=20261125-1';
+import { breakdown, esc, euro, EXPENSE_COLOR, flowChart, INCOME_COLOR, lineChart, num, SERIES, signed, sparkline, stateBadge } from './charts.js?v=20261125-1';
+import { fundsOffer } from './funds-ad.js?v=20261125-1';
 
 const STATUS_KIND = { solida: 'solida', calo: 'calo', rischio: 'rischio', crisi: 'crisi' };
 
@@ -143,7 +144,7 @@ export function renderFinancePage(state) {
   const weeks = history.map(item => ({ label: `Settimana ${item.week}`, short: `S${item.week}`, income: item.income, expense: item.expense }));
   return `<div class="finance-page">
     <section class="finance-hero">
-      ${illustration('tesoro', 'hero-art')}<div>${artTile('wallet', 'var(--party-accent)', 'lg')}<div><span class="section-kicker">LE TUE FINANZE POLITICHE · SIMULATE</span><h2>${euro(game.resources.funds)} in cassa</h2><p class="section-subtitle">Comitato, staff, comunicazione e campagne si pagano da qui. Le spese ricorrenti lavorano per te ogni settimana; il debito costa interessi.</p></div>${stateBadge(STATUS_KIND[outlook.status], outlook.statusLabel)}</div>
+      ${illustration('tesoro', 'hero-art')}<div>${artTile('wallet', 'var(--party-accent)', 'lg')}<div><span class="section-kicker">LE TUE FINANZE POLITICHE · SIMULATE</span><h2>${euro(game.resources.funds)} in cassa</h2><p class="section-subtitle">Comitato, staff, comunicazione e campagne si pagano da qui. Le spese ricorrenti lavorano per te ogni settimana; il debito costa interessi.</p></div>${stateBadge(STATUS_KIND[outlook.status], outlook.statusLabel)}${['rischio', 'crisi'].includes(outlook.status) ? fundsOffer('alert') : ''}</div>
       <div class="finance-kpis"><div><small>Entrate medie</small><strong>${euro(outlook.income)}</strong><span>a settimana</span></div><div><small>Uscite medie</small><strong>${euro(outlook.expense)}</strong><span>a settimana</span></div><div><small>Risultato medio</small><strong class="${outlook.net >= 0 ? 'in' : 'out'}">${signed(outlook.net, 0)} €</strong><span>ultime 6 settimane</span></div><div><small>Spese fisse</small><strong>${euro(outlook.recurring)}</strong><span>budget settimanale</span></div><div><small>Autonomia</small><strong>${outlook.runway === null ? '—' : `${outlook.runway} sett.`}</strong><span>al ritmo attuale</span></div><div><small>Debito</small><strong class="${outlook.debt ? 'out' : ''}">${euro(outlook.debt)}</strong><span>${outlook.debt ? 'interessi 1% a settimana' : 'nessun debito'}</span></div></div>
     </section>
     ${foldPanel({ id: 'fin-andamento', tone: 'azzurro', icon: 'chart', title: 'Bilancio e andamento', summary: `${esc(euro(game.resources.funds))} in cassa · ${esc(signed(outlook.net, 0))} €/sett.`, body: `<div class="society-grid">

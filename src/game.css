@@ -230,3 +230,18 @@
   .party-current { grid-template-columns:1fr; }
   .party-join label { min-width:0; width:100%; }
 }
+/* the attitude of the guest who asks (core/activity-scenes.js): a small neutral label, the colour only on the dot */
+.scene-stance { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 6px 8px; padding: 1px 8px; border: 1px solid var(--line); border-radius: 999px; font-size: 11.5px; color: var(--ink-2); }
+.scene-stance::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3, #8a8a8a); }
+.scene-stance[data-stance="favorevole"]::before { background: #6f9f6a; }
+.scene-stance[data-stance="contrario"]::before { background: #b5624f; }
+.scene-stance { align-self: flex-start; justify-self: start; width: max-content; max-width: 100%; }
+/* the beats of an encounter: the front of the room settles, the reaction label pops, the attitude of the speaker slides in (only with complete motion: scene.css data-scene-motion) */
+html[data-scene-motion="full"] .scene-stage .st-room-front { animation: st-front-in .6s ease-out both; }
+html[data-scene-motion="full"] .scene-reaction { animation: st-pop .35s ease-out both; }
+html[data-scene-motion="full"] .scene-stance { animation: st-stance-in .4s ease-out both; }
+@keyframes st-front-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes st-pop { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: none; } }
+@keyframes st-stance-in { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .scene-stage .st-room-front, .scene-reaction, .scene-stance { animation: none !important; } }
+.scene-quote { margin: 4px 0 6px; font-weight: 700; color: var(--ink-hi); font-style: italic; }

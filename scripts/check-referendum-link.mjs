@@ -17,10 +17,12 @@ assert.equal(ref.initiativeId, ini.id); assert.equal(ref.phase, 'raccolta'); ass
 assert.throws(() => store.linkReferendumCollection(ini.id, { statuteId: 'statuto-scuola' }), /già collegata/, 'Non si collega due volte.');
 assert.equal(store.referendums().filter(item => item.initiativeId === ini.id).length, 1, 'Un solo referendum per raccolta.');
 // the collection deposits: the referendum goes to the Cassazione and on
+// (fixture: a legislature far from its end: art. 31 of L. 352/1970 does not apply; the filing window of art. 32 does)
+state().national = { ...(state().national ?? {}), legislature: { ...(state().national?.legislature ?? {}), naturalEnd: '2031-10-13' } };
 state().game.initiatives = state().game.initiatives.map(item => item.id === ini.id ? { ...item, status: 'depositata', verification: { valid: 520000, share: 0.93 }, signatures: { ...item.signatures, total: 560000 } } : item);
 for (let week = 0; week < 2; week++) playWeek({ store, db, decide });
 let current = store.referendums().find(item => item.id === ref.id);
-assert.ok(['cassazione', 'corte', 'campagna'].includes(current.phase), `Dopo il deposito la richiesta va avanti (${current.phase}).`);
+assert.ok(['deposito', 'cassazione', 'corte', 'campagna'].includes(current.phase), `Dopo il deposito la richiesta va avanti (${current.phase}).`);
 // saved, closed and reloaded: the procedure is the same, not duplicated
 const saved = JSON.parse(store.exportSave()); store.loadGame(saved);
 assert.equal(store.referendums().filter(item => item.initiativeId === ini.id).length, 1, 'Dopo il ricaricamento un solo referendum.');

@@ -297,7 +297,9 @@ export const WHY_LINES = Object.freeze({
   noAuthority: P('il tuo ruolo non ti permette di decidere da solo', 'your role does not let you decide alone'),
   repeated: P('lo avevi già fatto: ripeterlo rende meno', 'you had already done it: repeating it gives less'),
   recovering: P('dopo un passo falso chiarire aiuta', 'after a misstep, setting things straight helps'),
-  prior: P('rendi conto di un impegno già preso', 'you are accounting for a commitment already made')
+  prior: P('rendi conto di un impegno già preso', 'you are accounting for a commitment already made'),
+  friendly: P('chi ti ascoltava era già ben disposto', 'the person listening was already well disposed'),
+  hostile: P('chi ti ascoltava partiva contrario', 'the person listening started out against you')
 });
 
 // The words that lead from one moment to the next: they depend on how the last move went (the encounter develops, it is not a fixed list of questions).

@@ -8,9 +8,9 @@
 // of the game: the variation comes from a hash of the seed of the scene, so a scene resumed or played again from the same choices is the same scene.
 //
 // VOTE ('voto'): the player votes in his polling station — entrance, desk, booth, ballot folded, urn, exit. It decides nothing: the result of the election is the one of election-engine.js.
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261124-3';
-import { defaultAvatarFor, genderOf, normalizeAvatar } from './avatar.js?v=20261124-3';
-import { RALLY_CROWD_EXTRA, RALLY_EXTRA } from '../data/studio-lines.js?v=20261124-3';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261125-1';
+import { defaultAvatarFor, genderOf, normalizeAvatar } from './avatar.js?v=20261125-1';
+import { RALLY_CROWD_EXTRA, RALLY_EXTRA } from '../data/studio-lines.js?v=20261125-1';
 
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 const round1 = value => Math.round(value * 10) / 10;
@@ -88,6 +88,21 @@ export function protestEvidence(reason, ctx) {
   };
   const base = (kinds[reason.kind] ?? kinds.evento)();
   return { who: group, problem: reason.label, where, indicator: base.indicator, why: base.why };
+}
+// the protesters' line: their slogan and the documented reason, addressed to what the player answers for
+export function protestQuote(reason, responsibility = 'nessuna') {
+  if (!reason) return null;
+  const slogan = reason.slogans?.[0] ? `${reason.slogans[0].charAt(0)}${reason.slogans[0].slice(1).toLowerCase()}!` : '';
+  const topic = String(reason.label ?? '').replace(/^la promessa tradita su /, '');
+  const lines = {
+    promessa: 'Avevi promesso, ora dicci dov’è finita la parola data!',
+    territorio: responsibility === 'amministrazione' || responsibility === 'governo' ? `Amministrate voi: ${topic} è ancora lì!` : responsibility === 'eletto' ? `Sei stato eletto anche per questo: che cosa fai per ${topic}?` : `Chi chiede il nostro voto deve dirci che cosa farà per ${topic}!`,
+    memoria: 'Prima le polemiche, adesso i comizi? Rispondi!',
+    governo: 'Il Governo di cui fai parte ci ha dimenticati!',
+    economia: responsibility === 'governo' ? 'Al Governo ci siete voi: i prezzi salgono e gli stipendi no!' : 'I prezzi salgono: qual è la vostra proposta, oltre ai discorsi?'
+  };
+  const line = lines[reason.kind] ?? `Vogliamo risposte su ${topic}!`;
+  return `«${slogan ? `${slogan} ` : ''}${line}»`;
 }
 function protestReason(seed, ctx) {
   const reasons = [...(ctx.triggers ?? [])];
@@ -216,7 +231,8 @@ export function rallyNode(scene) {
     }
     case 'contestazione': {
       const reason = scene.protest.reason;
-      return { ...base, speaker: me.id, expression: 'sorpresa', gesture: 'ascolta', camera: 'protest', title: 'Una contestazione', text: `Dal fondo arriva un gruppo di contestatori con cartelli e striscioni: protestano per ${reason?.label ?? 'un motivo che la situazione documenta'}. Cori, fischi, il discorso si ferma. Come reagisci?`, facts: reason?.evidence ? [['Chi protesta', reason.evidence.who], ['Per quale problema', reason.evidence.problem], ['Dove', reason.evidence.where], ['Indicatore o promessa', reason.evidence.indicator], ['Perché adesso', reason.evidence.why]] : [], choices: [['ascolta', 'Invita un contestatore a parlare', false, 'Mostri rispetto: funziona se hai reputazione e la protesta è motivata.'], ['rispondi', 'Rispondi nel merito dal palco', false, 'Dati e fatti: serve competenza, e nessuna promessa tradita su quel tema.'], ['prosegui', 'Alza la voce e prosegui', false, 'Carisma e nervi saldi: rischi che la situazione degeneri.'], ['interrompi', 'Interrompi il comizio e lascia il palco', false, 'Eviti lo scontro, ma il comizio finisce qui.']] };
+      const voice = scene.cast.find(item => item.role === 'contestatore');
+      return { ...base, speaker: voice?.id ?? me.id, quote: protestQuote(reason, scene.context.responsibility ?? 'nessuna'), expression: 'sorpresa', gesture: 'ascolta', camera: 'protest', title: 'Una contestazione', text: `Dal fondo arriva un gruppo di contestatori con cartelli e striscioni: protestano per ${reason?.label ?? 'un motivo che la situazione documenta'}. Cori, fischi, il discorso si ferma. Come reagisci?`, facts: reason?.evidence ? [['Chi protesta', reason.evidence.who], ['Per quale problema', reason.evidence.problem], ['Dove', reason.evidence.where], ['Indicatore o promessa', reason.evidence.indicator], ['Perché adesso', reason.evidence.why]] : [], choices: [['ascolta', 'Invita un contestatore a parlare', false, 'Mostri rispetto: funziona se hai reputazione e la protesta è motivata.'], ['rispondi', 'Rispondi nel merito dal palco', false, 'Dati e fatti: serve competenza, e nessuna promessa tradita su quel tema.'], ['prosegui', 'Alza la voce e prosegui', false, 'Carisma e nervi saldi: rischi che la situazione degeneri.'], ['interrompi', 'Interrompi il comizio e lascia il palco', false, 'Eviti lo scontro, ma il comizio finisce qui.']] };
     }
     case 'chiusura': {
       const topicBest = bestTopic(scene);

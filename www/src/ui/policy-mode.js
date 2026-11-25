@@ -1,16 +1,16 @@
 // Public policy in the interface: designing a measure, its projected bill, the Government's desk,
 // the budget law and the state of the country's policy areas, security and accounts.
-import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, FINANCING, GOVERNMENT_LINES, INSTRUMENT_KINDS, INTENSITY, MINISTRIES, POLICY_AREAS, SOCIAL_TABLE, SPENDING_REVIEW, TERRITORIAL_TARGETS } from '../data/simulation/policy-rules.js?v=20261124-3';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261124-3';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261124-3';
-import { areaTable, budgetImpact, measureDesign, normalizeBudgetPlan, projectMeasure } from '../core/society-engine.js?v=20261124-3';
-import { BUDGET_SECTORS, EU_CALLS, FISCAL_LEVERS, PROJECT_RULES, PROJECT_TYPES } from '../data/simulation/project-rules.js?v=20261124-3';
-import { callRequirement, euView, isActive, projectQuote, projectView } from '../core/project-engine.js?v=20261124-3';
-import { accordCriterion, accordKindLabel, activeMinisters, budgetReactions, groupProfile, partnerSatisfaction, stageWait } from '../core/parliament-engine.js?v=20261124-3';
-import { GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20261124-3';
-import { glyph } from './visuals.js?v=20261124-3';
-import { renderCabinetLife } from './cabinet-life-view.js?v=20261124-3';
-import { esc, stateBadge } from './charts.js?v=20261124-3';
+import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, FINANCING, GOVERNMENT_LINES, INSTRUMENT_KINDS, INTENSITY, MINISTRIES, POLICY_AREAS, SOCIAL_TABLE, SPENDING_REVIEW, TERRITORIAL_TARGETS } from '../data/simulation/policy-rules.js?v=20261125-1';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261125-1';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261125-1';
+import { areaTable, budgetImpact, measureDesign, normalizeBudgetPlan, projectMeasure } from '../core/society-engine.js?v=20261125-1';
+import { BUDGET_SECTORS, EU_CALLS, FISCAL_LEVERS, PROJECT_RULES, PROJECT_TYPES } from '../data/simulation/project-rules.js?v=20261125-1';
+import { callRequirement, euView, isActive, projectQuote, projectView } from '../core/project-engine.js?v=20261125-1';
+import { accordCriterion, accordKindLabel, activeMinisters, budgetReactions, groupProfile, partnerSatisfaction, stageWait } from '../core/parliament-engine.js?v=20261125-1';
+import { GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20261125-1';
+import { glyph } from './visuals.js?v=20261125-1';
+import { renderCabinetLife } from './cabinet-life-view.js?v=20261125-1';
+import { esc, stateBadge } from './charts.js?v=20261125-1';
 
 const numFormats = new Map();
 const num = (value, digits = 1) => { let nf = numFormats.get(digits); if (!nf) { nf = new Intl.NumberFormat('it-IT', { maximumFractionDigits: digits }); numFormats.set(digits, nf); } return nf.format(Number(value ?? 0)); };
@@ -395,7 +395,7 @@ export function governmentDesk(state, extras = {}) {
     ${govSectionOpen('provvedimenti', 'Disegni di legge, decreti, revisione della spesa e tavoli con le parti sociali.')}    <div class="pm-grid">${government.status === 'active' ? reviewPanel(state, government) : `<p class="parliament-note" data-review-locked role="status">${glyph('alert', 14)} La revisione della spesa si decide con un governo pienamente in carica: oggi il governo è in crisi (il motore la rifiuterebbe).</p>`}${tablePanel(state, government)}</div>
     ${pmFold('gov-measure', 'law', 'Nuovo provvedimento del governo', `disegno di legge ${PARLIAMENT_TIME_COSTS.governmentBill} giorni · ${GOVERNMENT_CAPITAL_COSTS.governmentBill} cap. · decreto ${PARLIAMENT_TIME_COSTS.decree} giorni · ${GOVERNMENT_CAPITAL_COSTS.decree} cap. · decreti in attesa ${decrees.length}/2`, `<p class="parliament-note">Disegno di legge: segue l’iter completo alle Camere (almeno 5 settimane). Decreto-legge: in vigore subito, solo con un’emergenza aperta${emergencies.length || issues.length ? ` (oggi: ${[...new Set([...emergencies, ...issues])].slice(0, 5).map(esc).join(', ')})` : ' (oggi nessuna)'}, da convertire entro 60 giorni o decade. Decreti in attesa: ${decrees.length}/2.</p><form data-policy-form data-policy-mode="government" class="policy-form"><label>Titolo<input name="title" maxlength="90" placeholder="Lascia vuoto per usare il nome dello strumento" /></label>${policyFields({ area: program?.priorities?.[0] ?? 'sanita' })}<div data-policy-preview>${policyPreview(society, measureDesign({ area: program?.priorities?.[0] ?? 'sanita' }))}</div><div class="policy-submit"><button class="primary-button" type="submit" name="submitKind" value="bill">Disegno di legge del governo · 2 giorni · 3 cap.</button><button class="secondary-button" type="submit" name="submitKind" value="decree">Decreto-legge · 2 giorni · 5 cap.</button></div></form>`)}
     ${extras.dossier ?? ''}${govSectionClose}
-    ${govSectionOpen('bilancio', 'La legge di bilancio, i margini di spesa e i fondi europei.')}    ${pmFold('gov-budget', 'money', `Legge di bilancio ${year}`, (government.budgetYear ?? 0) >= year ? 'approvata' : budgetLaw ? 'all’esame delle Camere' : `da presentare entro il 31 dicembre · ${PARLIAMENT_TIME_COSTS.budget} giorni · ${GOVERNMENT_CAPITAL_COSTS.budget} cap.`, `${budgetStatus}${!budgetLaw && (government.budgetYear ?? 0) < year ? `<form data-budget-form class="budget-form">${budgetFields({})}<div data-budget-preview>${budgetPreview(society, {}, parliament)}</div><button class="primary-button" type="submit">Presenta la manovra · 2 giorni · 4 cap.</button><small class="parliament-note">Senza approvazione entro il 31 dicembre scatta l’esercizio provvisorio: spesa congelata, spread in aumento, stabilità in calo.</small></form>` : ''}`)}
+    ${govSectionOpen('bilancio', 'La legge di bilancio, i margini di spesa e i fondi europei.')}    ${pmFold('gov-budget', 'money', `Legge di bilancio ${year}`, (government.budgetYear ?? 0) >= year ? 'approvata' : budgetLaw ? 'all’esame delle Camere' : `da presentare entro il 31 dicembre · ${PARLIAMENT_TIME_COSTS.budget} giorni · ${GOVERNMENT_CAPITAL_COSTS.budget} cap.`, `${budgetStatus}${!budgetLaw && (government.budgetYear ?? 0) < year ? `<form data-budget-form class="budget-form">${budgetFields({})}<div data-budget-preview>${budgetPreview(society, {}, parliament)}</div><button class="primary-button cta-hero" type="submit">Presenta la manovra · 2 giorni · 4 cap.</button><small class="parliament-note">Senza approvazione entro il 31 dicembre scatta l’esercizio provvisorio: spesa congelata, spread in aumento, stabilità in calo.</small></form>` : ''}`)}
     ${euPanel(state)}${govSectionClose}
     ${govSectionOpen('avanzamento', 'Le opere in corso e ciò che rischia di fermarsi.')}${projectsPanel(state)}${govSectionClose}
   </section>`;

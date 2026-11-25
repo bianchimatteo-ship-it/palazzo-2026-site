@@ -25,7 +25,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, send, errors, v
   // five Councils through the form of the page
   await evaluate(`[...document.querySelectorAll('[data-ref-councils-form] input[name=region]')].slice(0, 12).forEach(i => { i.checked = true; }); document.querySelector('[data-ref-councils-form]').requestSubmit(); true`); await pause(900);
   const phase = await S(`return store.referendums()[0].phase;`);
-  assert.ok(['consigli', 'cassazione'].includes(phase), `i Consigli rispondono (fase: ${phase})`);
+  assert.ok(['consigli', 'deposito', 'cassazione'].includes(phase), `i Consigli rispondono (fase: ${phase}; fuori dai termini del deposito si attende il 1° gennaio, art. 32 L. 352/1970)`);
   // the campaign
   await S(`const s = store.getState(); const r = s.game.referendums[0]; Object.assign(r, { phase: 'campagna', voteDate: '2099-06-06', campaign: { support: 55, turnout: 41, stances: { si: ['a'], no: ['b'], free: [] }, actions: {}, events: [], polls: [{ week: 1, date: s.clock.currentDate, yes: 56, turnout: 42 }], effortWeek: -1, used: 0 } }); return true;`);
   await open();

@@ -96,7 +96,14 @@ lines.push('interstitial: ogni 2 settimane, mai entro 180 s, mai in notte/scena/
 // ---- the native sources
 const kt = await read('plugins/appodeal-ads/android/src/main/java/it/matteobianchi/politicando/appodeal/AppodealAdsPlugin.kt');
 assert.match(kt, /Appodeal\.setTesting\(test\)/); assert.match(kt, /call\.getBoolean\("testMode", true\) != false/, 'TEST è il predefinito anche nel nativo.');
-assert.match(kt, /PLACEMENT = "default"/); assert.match(kt, /Appodeal\.show\(a, t, PLACEMENT\)/); assert.match(kt, /Appodeal\.show\(a, Appodeal\.BANNER_VIEW, PLACEMENT\)/);
+assert.match(kt, /PLACEMENT = "default"/);
+// 24/11/2026: the full-screen show takes the placement asked by the game, `default` unless said otherwise; only `default` and `personal_funds_1000` exist, the second only for the rewarded video and only when
+// the SDK can show it (the video of 1.000 € of personal funds, docs/qa/appodeal-placement-fondi.md). The interstitial and the poll bonus stay on `default`; the banner below is unchanged.
+assert.match(kt, /val placement = call\.getString\("placement"\) \?: PLACEMENT/, 'Senza placement si usa `default`, come prima.');
+assert.match(kt, /PLACEMENTS = setOf\(PLACEMENT, FUNDS_PLACEMENT\)/); assert.match(kt, /FUNDS_PLACEMENT = "personal_funds_1000"/);
+assert.match(kt, /placement !in PLACEMENTS \|\| \(placement != PLACEMENT && format != "rewarded"\)/, 'Un placement sconosciuto, o diverso da `default` per l’interstitial, è rifiutato.');
+assert.match(kt, /placement != PLACEMENT && !Appodeal\.canShow\(t, placement\)/, 'Il placement dei fondi si mostra solo se l’SDK può mostrarlo.');
+assert.match(kt, /Appodeal\.show\(a, t, placement\)/); assert.match(kt, /Appodeal\.show\(a, Appodeal\.BANNER_VIEW, PLACEMENT\)/);
 assert.ok(kt.indexOf('ConsentManager.canShowAds()') < kt.indexOf('Appodeal.initialize('), 'Il consenso precede l’inizializzazione.');
 assert.match(kt, /ConsentManager\.requestConsentInfoUpdate/); assert.match(kt, /loadAndShowConsentFormIfRequired/); assert.match(kt, /showPrivacyOptionsForm/);
 assert.equal((kt.match(/rewardEarned = true/g) ?? []).length, 1, 'Il premio nasce in un solo punto.'); assert.match(kt, /onRewardedVideoFinished\(amount: Double, currency: String\) \{[^}]*rewardEarned = true/);

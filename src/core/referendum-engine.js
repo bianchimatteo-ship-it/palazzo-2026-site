@@ -7,8 +7,8 @@
 //     thirds of the members of both Chambers at the second deliberation the referendum is not possible; otherwise, within three months from the publication, a fifth of the members of a Chamber, 500,000
 //     voters or five Regional Councils can ask for it. NO quorum: YES wins if it has the majority of the valid votes; if the reform is rejected it does not come into force.
 // Every figure is a simulation of the game (the electorate, the polls, the votes): nothing here is a real result.
-import { seededRandom } from './vote-engine.js?v=20261124-3';
-import { formatDate } from './time.js?v=20261124-3';
+import { seededRandom } from './vote-engine.js?v=20261125-1';
+import { formatDate } from './time.js?v=20261125-1';
 
 export const ABROGATIVE = Object.freeze({
   id: 'abrogativo', label: 'Referendum abrogativo', basis: 'art. 75 Cost.', signatures: 500000, councils: 5, quorum: 0.5, cassationWeeks: 5, courtWeeks: 8, campaignWeeks: 9,
@@ -19,8 +19,18 @@ export const CONSTITUTIONAL = Object.freeze({
   note: 'Conferma o respinge una riforma costituzionale approvata senza i due terzi: nessun quorum, vince la maggioranza dei voti validi.'
 });
 export const COUNCIL_ROUTE = Object.freeze({ cost: { days: 2, capital: 3, funds: 600 }, chance: 0.42 });
+// L. 352/1970 (Normattiva, 24/11/2026): artt. 28, 31-34, 38 — docs/qa/verifica-referendum.md.
+export const ABROGATIVE_CALENDAR = Object.freeze({ depositUntil: '09-30', cassationBy: '12-15', courtBy: '02-10', signatureMonths: 3, banYears: 5 });
+export const inDepositWindow = date => String(date).slice(5) <= ABROGATIVE_CALENDAR.depositUntil;
+export const cassationDateFor = date => `${String(date).slice(0, 4)}-${ABROGATIVE_CALENDAR.cassationBy}`;
+export const courtDateFor = cassationDate => `${Number(String(cassationDate).slice(0, 4)) + 1}-${ABROGATIVE_CALENDAR.courtBy}`;
+export function electionBlock(date, { chambersEnd = null, electionsCalled = null } = {}) {
+  if (chambersEnd && date >= addMonths(chambersEnd, -12) && date <= chambersEnd) return 'è l’anno che precede la scadenza delle Camere (art. 31, L. 352/1970)';
+  if (electionsCalled && date >= electionsCalled && date <= addMonths(electionsCalled, 6)) return 'sono i sei mesi dopo la convocazione delle elezioni delle Camere (art. 31, L. 352/1970)';
+  return null;
+}
 export const PHASES = Object.freeze({
-  raccolta: 'Raccolta delle firme', consigli: 'Richiesta dei Consigli regionali', cassazione: 'Ufficio centrale per il referendum (Cassazione)', corte: 'Giudizio di ammissibilità (Corte costituzionale)',
+  raccolta: 'Raccolta delle firme', consigli: 'Richiesta dei Consigli regionali', deposito: 'In attesa del deposito (dal 1° gennaio)', cassazione: 'Ufficio centrale per il referendum (Cassazione)', corte: 'Giudizio di ammissibilità (Corte costituzionale)',
   campagna: 'Campagna referendaria', voto: 'Voto', concluso: 'Concluso', prima: 'Prima deliberazione', pausa: 'Intervallo di tre mesi', seconda: 'Seconda deliberazione', richiesta: 'Termine per chiedere il referendum'
 });
 // What the Constitution does not allow to repeal by referendum.
@@ -97,14 +107,23 @@ export function askCouncils(input, { regions, weights = {}, date, week }) {
   ref.councils = { required: ABROGATIVE.councils, approved, refused };
   const done = approved.length >= ABROGATIVE.councils;
   let next = record(ref, date, `Consigli regionali: ${approved.length} su ${ABROGATIVE.councils} hanno approvato la richiesta${refused.length ? ` (${refused.length} hanno rifiutato)` : ''}.`);
-  if (done) { next.phase = 'cassazione'; next.cassationAt = addDays(date, ABROGATIVE.cassationWeeks * 7); next = record(next, date, 'Richiesta depositata alla Corte di cassazione: cinque Consigli regionali l’hanno deliberata.'); }
+  if (done) { if (inDepositWindow(date)) { next.phase = 'cassazione'; next.depositedAt = date; next.cassationAt = cassationDateFor(date); next = record(next, date, 'Cinque Consigli regionali hanno deliberato: richiesta depositata, la Cassazione decide entro il 15 dicembre.'); } else { next.phase = 'deposito'; next.depositAt = `${Number(date.slice(0, 4)) + 1}-01-01`; next = record(next, date, `Cinque Consigli regionali hanno deliberato: si deposita il ${next.depositAt} (art. 32, L. 352/1970).`); } }
   return { referendum: next, approved, refused, done };
 }
 // The signatures were checked and the request is filed: the Office of the Court of Cassation takes it.
-export function fileRequest(input, { date, valid }) {
+export function fileRequest(input, { date, valid, chambersEnd = null, electionsCalled = null }) {
   const ref = JSON.parse(JSON.stringify(input));
-  ref.phase = 'cassazione'; ref.cassationAt = addDays(date, ABROGATIVE.cassationWeeks * 7); ref.signaturesValid = valid;
-  return record(ref, date, `Depositata la richiesta con ${Number(valid).toLocaleString('it-IT')} firme valide: la verifica passa all’Ufficio centrale per il referendum presso la Cassazione.`);
+  ref.signaturesValid = valid;
+  const blocked = electionBlock(date, { chambersEnd, electionsCalled });
+  if (blocked) return close(ref, date, 'respinto', `La richiesta non può essere depositata: ${blocked}. Le firme raccolte decadono.`);
+  if (!inDepositWindow(date)) {
+    const reopen = `${Number(date.slice(0, 4)) + 1}-01-01`;
+    if (reopen > addMonths(ref.createdAt ?? date, ABROGATIVE_CALENDAR.signatureMonths)) return close(ref, date, 'respinto', 'Fuori dai termini di deposito (1° gennaio – 30 settembre, art. 32 L. 352/1970) e con le firme scadute (tre mesi, art. 28): il referendum non si fa.');
+    ref.phase = 'deposito'; ref.depositAt = reopen;
+    return record(ref, date, `Firme valide: ${Number(valid).toLocaleString('it-IT')}. Deposito dal 1° gennaio al 30 settembre (art. 32, L. 352/1970): si deposita il ${reopen}.`);
+  }
+  ref.phase = 'cassazione'; ref.depositedAt = date; ref.cassationAt = cassationDateFor(date);
+  return record(ref, date, `Depositata la richiesta con ${Number(valid).toLocaleString('it-IT')} firme valide: la Cassazione decide entro il 15 dicembre (art. 32, L. 352/1970).`);
 }
 
 // ---------- the weeks of the procedure ----------
@@ -116,14 +135,19 @@ export function advanceReferendum(input, ctx) {
   if (ref.status !== 'in-corso') return { referendum: ref, lines, effects, changed };
   const rand = seededRandom(`${ref.id}|${ctx.week}|referendum`);
   if (ref.kind === 'abrogativo') {
-    if (ref.phase === 'cassazione' && ctx.date >= ref.cassationAt) {
+    if (ref.phase === 'deposito' && ctx.date >= ref.depositAt) {
+      changed = true;
+      ref.phase = 'cassazione'; ref.depositedAt = ref.depositAt; ref.cassationAt = cassationDateFor(ref.depositAt);
+      ref = record(ref, ctx.date, 'Richiesta depositata il 1° gennaio: la Cassazione decide entro il 15 dicembre.');
+      lines.push(`Referendum su «${ref.target.title}»: richiesta depositata in Cassazione.`);
+    } else if (ref.phase === 'cassazione' && ctx.date >= ref.cassationAt) {
       // the Central Office: signatures, form, clarity of the question
       const ok = (ref.route === 'consigli' || (ref.signaturesValid ?? 0) >= ABROGATIVE.signatures) && ref.quality.clarity >= 0.35;
       changed = true;
       if (!ok) { ref = close(ref, ctx.date, 'respinto', 'L’Ufficio centrale per il referendum ha dichiarato la richiesta illegittima (firme insufficienti o quesito non chiaro): il referendum non si fa.'); lines.push(`«${ref.target.title}»: richiesta di referendum respinta dall’Ufficio centrale.`); return { referendum: ref, lines, effects: { reputation: -1, popularity: -0.5 }, changed };
       }
-      ref.phase = 'corte'; ref.courtAt = addDays(ctx.date, ABROGATIVE.courtWeeks * 7);
-      ref = record(ref, ctx.date, 'L’Ufficio centrale per il referendum ha verificato la richiesta: è legittima. Ora il giudizio di ammissibilità della Corte costituzionale.');
+      ref.phase = 'corte'; ref.courtAt = courtDateFor(ref.cassationAt);
+      ref = record(ref, ctx.date, 'L’Ufficio centrale per il referendum ha verificato la richiesta: è legittima. Ora la Corte costituzionale, entro il 10 febbraio.');
       lines.push(`Referendum su «${ref.target.title}»: la Cassazione ha verificato la richiesta.`);
     } else if (ref.phase === 'corte' && ctx.date >= ref.courtAt) {
       changed = true;
@@ -241,6 +265,7 @@ function vote(input, ctx, rand) {
   else outcome = carried ? `Affluenza ${pct(turnout * 100)}, il SÌ ha il ${pct(yes * 100)}: la riforma costituzionale «${ref.title}» è confermata ed entra in vigore.` : `Affluenza ${pct(turnout * 100)}, il NO prevale (${pct((1 - yes) * 100)}): la riforma costituzionale «${ref.title}» è respinta e non entra in vigore.`;
   const done = close({ ...ref, phase: 'voto' }, ctx.date, 'concluso', outcome);
   done.outcome = outcome; done.carried = carried;
+  if (ref.kind === 'abrogativo' && quorumReached && !carried) done.banUntil = addMonths(ctx.date, ABROGATIVE_CALENDAR.banYears * 12);
   lines.push(outcome);
   // what it leaves: the side the player took wins or loses face; the parties that backed the winning side gain a little consensus; a repeal is recorded in the register of the laws
   const side = ref.side;

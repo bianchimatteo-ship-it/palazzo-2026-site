@@ -19,6 +19,11 @@ export declare class AppodealAdsWeb implements AppodealAdsPlugin {
         rewarded: boolean;
         code: string;
     }>;
+    rewardedPlacement(): Promise<{
+        canShow: boolean;
+        loaded: boolean;
+        code: string;
+    }>;
     showBanner(): Promise<{
         shown: boolean;
         code: string;

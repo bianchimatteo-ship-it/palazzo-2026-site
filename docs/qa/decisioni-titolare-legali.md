@@ -55,3 +55,23 @@ Fatti ora confermati (non da richiedere di nuovo): Ramona Bianchi è titolare de
 9. Android SDK e upload keystore (la stessa chiave già associata a Google Play) per generare l'AAB: sempre da fornire fuori dal repository.
 10. InMobi: conferma dell'Account ID e del testo di consenso; AdMob App ID già nel manifest solo per UMP.
 11. Dichiarazioni Data safety / pubblico di destinazione compilate da Ramona.
+
+## Riconciliazione del 24/11/2026 (stato attuale, da `node scripts/check-legal.mjs --release`)
+
+**Risolte: 4 su 13.** `titolare-trattamento`, `offerente-servizio`, `account-sviluppatore-play`, `account-apple-developer`.
+
+**Aperte: 9.** Ognuna richiede un atto o una decisione del titolare: nessun esito è stato scritto al suo posto e le raccolte che ne dipendono restano spente.
+
+| # | Voce | Dove pesa | Che cosa serve |
+|---|---|---|---|
+| 1 | `indirizzo-titolare` | privacy.html §1, termini.html §1 | Indirizzo (o PEC/recapito professionale) da pubblicare come recapito del titolare |
+| 2 | `cloudflare-dpa` | privacy.html §5 | Prova dell’accettazione del DPA Cloudflare (chi, quando, per conto di chi) e ruolo di Cloudflare |
+| 3 | `minori` | privacy.html §10, termini.html §6, docs/minori-e-privacy.md | Paesi di distribuzione e soglia d’età per il consenso in ciascuno (pubblico previsto 14+) |
+| 4 | `diritti-asset` | termini.html §4–5 | Dichiarazione di paternità di marchio, illustrazioni e testata; licenze; regole sui loghi caricati dagli utenti |
+| 5 | `email-fornitore` | privacy.html §5–6 | Ruolo di Google (Apps Script/Gmail) come fornitore dell’invio e-mail e account usato |
+| 6 | `trader-dsa` | Play Console, App Store Connect | Decisione sullo status di «trader» (DSA) e, se sì, dati pubblici |
+| 7 | `eta-pubblico-store` | Play Console, App Store Connect | Pubblico di destinazione, classificazione IARC/Apple, Data safety, esclusione da Famiglie/Kids |
+| 8 | `rappresentanza-capacita` | docs/audit-legale-conformita.md §2 | Rappresentanza dei genitori e capacità contrattuale verso fornitori e store |
+| 9 | `admob-futuro` | privacy.html §5, termini.html §9, schede store | Documenti pubblicitari prima di una build con SDK pubblicitario: **attenzione**, la voce parla di InMobi «unico provider», ma l’AAB Android in uscita usa **Appodeal 4.4.0** (InMobi non è nella build). Il titolare deve confermare che privacy, termini, Data safety e dichiarazione del permesso `AD_ID` descrivono Appodeal e i suoi partner prima della pubblicazione |
+
+Restano spente fino a una decisione: statistiche dell’amministrazione (`ADMIN_STATS`), import automatico delle installazioni (richiede le credenziali del titolare), TikTok tra le ricompense community.

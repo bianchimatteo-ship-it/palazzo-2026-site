@@ -7,7 +7,7 @@
 // The votes of the lists are the valid ballots shared among the lists, in whole numbers that add up to them exactly (largest remainder). Without demographic data (the file is not
 // loaded, or the territory is not in it) the count falls back to a declared scale of 100,000 ballots: percentages only, never presented as voters. A second-level vote (the province:
 // the mayors and the councillors vote, with weights) is also a scale, never the population.
-import { residentsOfItaly, residentsOfMunicipality, residentsOfRegion, populationReferenceDate } from './municipal-rules.js?v=20261124-3';
+import { residentsOfItaly, residentsOfMunicipality, residentsOfRegion, populationReferenceDate } from './municipal-rules.js?v=20261125-1';
 
 export const ELIGIBLE_SHARE = 0.82;
 export const SCALE = 100000;
@@ -66,11 +66,14 @@ export function distributeVotes(weights, total) {
   return votes;
 }
 
+// «Altri»: one canonical row (id `altri`, `others: true`), never a party; isOthersRow also reads the old `altre-liste`
+export const OTHERS_ID = 'altri';
+export const isOthersRow = row => Boolean(row) && (row.others === true || row.id === OTHERS_ID || row.id === 'altre-liste');
 // Gives the rows their votes: the valid ballots shared by percentage. Rows that do not reach 100% (the lists that are not shown) get a row of their own, «Altre liste».
 export function withVotes(rows, valid, { others = true, label = 'Altre liste' } = {}) {
   const shown = rows.reduce((acc, row) => acc + (Number(row.percent) || 0), 0);
   const rest = Math.round((100 - shown) * 100) / 100;
-  const list = others && rest >= 0.05 ? [...rows, { id: 'altre-liste', candidateId: null, partyIds: [], memberCandidateIds: [], label, percent: rest, seats: 0, source: 'simulation', others: true }] : rows;
+  const list = others && rest >= 0.05 ? [...rows, { id: OTHERS_ID, candidateId: null, partyIds: [], memberCandidateIds: [], label, percent: rest, seats: 0, source: 'simulation', others: true }] : rows;
   // `others: false` (the lists of a national vote): the shown percentages are already on ALL the valid votes, so the rows are NOT stretched to 100%: the unshown rest keeps its own share of the ballots
   // (a hidden weight in the largest-remainder split) and the rows get exactly percent × valid. A race whose rows reach 100% is split as before. The votes of the rest are `valid − Σ rows` (see countProblems, nightSnapshot).
   const hidden = !others && rest >= 0.05 && rows.length ? [rest] : [];

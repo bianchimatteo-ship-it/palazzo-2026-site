@@ -174,20 +174,24 @@ const linked = store.initiatives().find(item => item.id === made.initiativeId);
 assert.ok(linked && linked.kind === 'referendum' && linked.required === 500000, 'la raccolta è quella delle 500.000 firme della pagina Iniziative');
 assert.throws(() => store.startReferendum({ statuteId: 'statuto-gioco', scope: 'totale', route: 'consigli' }), /già una richiesta/, 'una richiesta alla volta per legge');
 // the collection is deposited and verified: the referendum moves to the Cassazione (the initiative engine runs)
+// (fixture: a legislature far from its end, so that art. 31 of L. 352/1970 — no filing in the year before the end of the Chambers — does not apply; the filing window of art. 32 does)
+state().national = { ...(state().national ?? {}), legislature: { ...(state().national?.legislature ?? {}), naturalEnd: '2031-10-13' } };
 state().game.initiatives = state().game.initiatives.map(item => item.id === made.initiativeId ? { ...item, status: 'depositata', verification: { valid: 520000, share: 0.93 }, signatures: { ...item.signatures, total: 560000 } } : item);
 for (let week = 0; week < 2; week++) playWeek({ store, db, decide });
 let current = store.referendums().find(item => item.id === made.id);
-assert.ok(['cassazione', 'corte', 'campagna'].includes(current.phase), `dopo il deposito la richiesta va avanti (fase: ${current.phase})`);
+assert.ok(['deposito', 'cassazione', 'corte', 'campagna'].includes(current.phase), `dopo il deposito la richiesta va avanti (fase: ${current.phase})`);
+if (current.phase === 'deposito') assert.match(current.depositAt, /-01-01$/, 'fuori dai termini (1 gennaio – 30 settembre) il deposito avviene il 1° gennaio');
 // play on until it is over: Cassazione, Court, campaign, vote — the law is repealed only with quorum and YES
 store.supportReferendum(made.id, 'si');
 let weeks = 0, acted = 0;
-while (store.referendums().find(item => item.id === made.id).status === 'in-corso' && weeks++ < 60) {
+// the legal calendar (deposit by 30 September, Cassation by 15 December, Court by 10 February, vote between 15 April and 15 June) can take more than a year
+while (store.referendums().find(item => item.id === made.id).status === 'in-corso' && weeks++ < 100) {
   const now = store.referendums().find(item => item.id === made.id);
   if (now.phase === 'campagna' && acted < 12) { try { store.referendumAction(made.id, ['spot', 'mobilitazione', 'comizio'][acted % 3]); acted++; } catch { /* no resources this week */ } }
   playWeek({ store, db, decide });
 }
 current = store.referendums().find(item => item.id === made.id);
-assert.notEqual(current.status, 'in-corso', `il referendum arriva a una conclusione (${weeks} settimane)`);
+assert.notEqual(current.status, 'in-corso', `il referendum arriva a una conclusione (${weeks} settimane; fase ${current.phase}, ${JSON.stringify({ d: current.depositAt, c: current.cassationAt, k: current.courtAt, v: current.voteDate, now: state().clock.currentDate })})`);
 assert.ok(current.outcome && current.steps.length >= 3, 'esito e cronologia');
 const law = store.statutes().find(item => item.id === 'statuto-gioco');
 if (current.carried) assert.equal(law.status, 'abrogata', 'abrogata dal referendum: nel registro delle leggi');
@@ -197,14 +201,35 @@ assert.ok(state().game.log.some(item => /Referendum/.test(item.title ?? '')), 'i
 if (current.carried) assert.equal(store.referendumTargets().find(item => item.statuteId === 'statuto-gioco'), undefined, 'una legge abrogata non è più tra quelle abrogabili');
 // the constitutional one: born from the Chambers, the player can request or collect, the calendar lists the dates
 {
-  const year = state().clock.currentDate;
-  state().game.referendums = [{ ...revision, id: 'riforma-gioco', phase: 'richiesta', requestUntil: new Date(Date.parse(year) + 60 * 86400000).toISOString().slice(0, 10), opposition: { camera: 41, senato: 38 }, deliberations: [] }, ...state().game.referendums];
-  const agenda = store.agendaCalendar?.() ?? null;
-  const asked = store.requestConstitutionalReferendum('riforma-gioco', 'quinto');
+  // (fixture: the legal calendar of the abrogative referendum above can carry the career past a general election; the request of a fifth of the members needs a sitting member, so this part uses a
+  // career that holds its seat)
+  const seated = store.getState().parliament?.player?.groupId ? { store } : await startCareer({ seed: 'referendum-costituzionale', level: 'deputato', fast: true });
+  const cs = seated.store, cstate = () => cs.getState();
+  const year = cstate().clock.currentDate;
+  cstate().game.referendums = [{ ...revision, id: 'riforma-gioco', phase: 'richiesta', requestUntil: new Date(Date.parse(year) + 60 * 86400000).toISOString().slice(0, 10), opposition: { camera: 41, senato: 38 }, deliberations: [] }, ...(cstate().game.referendums ?? [])];
+  const agenda = cs.agendaCalendar?.() ?? null;
+  const asked = cs.requestConstitutionalReferendum('riforma-gioco', 'quinto');
   assert.equal(asked.request.by, 'quinto', 'la richiesta di un quinto dei membri è registrata');
-  assert.throws(() => store.requestConstitutionalReferendum('riforma-gioco', 'quinto'), /già stato chiesto/);
+  assert.throws(() => cs.requestConstitutionalReferendum('riforma-gioco', 'quinto'), /già stato chiesto/);
 }
 // ---- deadlines in calendar months (art. 138): end of month, leap years, change of year ----
 for (const [from, months, expected] of [['2027-01-31', 3, '2027-04-30'], ['2026-11-30', 3, '2027-02-28'], ['2027-11-30', 3, '2028-02-29'], ['2026-12-15', 3, '2027-03-15'], ['2028-01-31', 1, '2028-02-29'], ['2027-01-31', 1, '2027-02-28'], ['2026-05-31', 3, '2026-08-31'], ['2026-08-31', 6, '2027-02-28'], ['2028-02-29', 12, '2029-02-28'], ['2026-10-01', 3, '2027-01-01']]) assert.equal(R.addMonths(from, months), expected, `${from} + ${months} mesi = ${expected}`);
 assert.equal(R.CONSTITUTIONAL?.deliberationGapMonths ?? 3, 3);
+
+// the calendar of L. 352/1970 (read on Normattiva, 24/11/2026)
+{
+  const RE = await import(new URL(`../src/core/referendum-engine.js?v=${build}`, import.meta.url).href);
+  assert.equal(RE.inDepositWindow('2027-09-30'), true, 'art. 32: si deposita fino al 30 settembre'); assert.equal(RE.inDepositWindow('2027-10-01'), false, '…non dal 1° ottobre');
+  assert.equal(RE.cassationDateFor('2027-03-10'), '2027-12-15', 'art. 32: la Cassazione decide entro il 15 dicembre');
+  assert.equal(RE.courtDateFor('2027-12-15'), '2028-02-10', 'art. 33: la Corte decide con sentenza entro il 10 febbraio');
+  const vote = RE.voteDateAfter('2028-02-10', 9); assert.ok(vote >= '2028-04-15' && vote <= '2028-06-15' && new Date(`${vote}T12:00:00Z`).getUTCDay() === 0, `art. 34: una domenica tra il 15 aprile e il 15 giugno (${vote})`);
+  assert.match(RE.electionBlock('2027-01-10', { chambersEnd: '2027-10-13' }) ?? '', /art\. 31/, 'art. 31: nell’anno prima della scadenza delle Camere non si deposita');
+  assert.match(RE.electionBlock('2028-01-10', { electionsCalled: '2027-08-01' }) ?? '', /art\. 31/, 'art. 31: né nei sei mesi dopo la convocazione dei comizi');
+  assert.equal(RE.electionBlock('2029-01-10', { chambersEnd: '2032-10-13', electionsCalled: '2027-08-01' }), null);
+  const base = RE.createAbrogative({ route: 'firme', scope: 'totale' }, { target: { statuteId: 'x', title: 'Legge di prova sul gioco', area: 'cultura' }, date: '2027-09-01', id: 'r-cal' });
+  const late = RE.fileRequest({ ...base, createdAt: '2027-08-01' }, { date: '2027-10-20', valid: 520000 });
+  assert.equal(late.status, 'respinto', 'art. 28 e 32: depositata in ottobre, al 1° gennaio le firme (tre mesi dalla vidimazione) sarebbero scadute');
+  const wait = RE.fileRequest({ ...base, createdAt: '2027-10-05' }, { date: '2027-12-20', valid: 520000 });
+  assert.equal(wait.phase, 'deposito', 'firme ancora valide: il deposito attende il 1° gennaio');
+}
 console.log('check-referendum: ok');

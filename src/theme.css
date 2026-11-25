@@ -1153,13 +1153,13 @@ html.platform-ios body select:not([multiple]), html.platform-ios body input:not(
 .hqc-resources .hqc-resource .hq-dots i.on { background: var(--ind); }
 
 /* ---------- New career, redesigned: one accent per step, clearer labels and fields, labelled progress on phones ---------- */
-.career-wizard { --wz: #e7c98f; }
-.career-wizard[data-step="1"] { --wz: #6ea8ff; }
-.career-wizard[data-step="2"] { --wz: #5fd39a; }
-.career-wizard[data-step="3"] { --wz: #f0a56e; }
-.career-wizard[data-step="4"] { --wz: #e7c98f; }
-.career-wizard[data-step="5"] { --wz: #c79bff; }
-.career-wizard[data-step="6"] { --wz: #5fd0d6; }
+.career-wizard { --wz: var(--gold); }   /* one classic gold for every step (they were blue, green, orange, violet, cyan) */
+.career-wizard[data-step="1"] { --wz: var(--gold); }
+.career-wizard[data-step="2"] { --wz: var(--gold); }
+.career-wizard[data-step="3"] { --wz: var(--gold); }
+.career-wizard[data-step="4"] { --wz: var(--gold); }
+.career-wizard[data-step="5"] { --wz: var(--gold); }
+.career-wizard[data-step="6"] { --wz: var(--gold); }
 .career-wizard .wizard-header { border-bottom: 2px solid color-mix(in srgb, var(--wz) 55%, var(--line)); }
 .career-wizard .wizard-kicker { color: var(--wz); }
 .career-wizard .wizard-header h1 { font-size: 30px; }
@@ -1175,7 +1175,7 @@ html.platform-ios body select:not([multiple]), html.platform-ios body input:not(
 .career-wizard input:not([type="radio"]):not([type="checkbox"]):not([type="range"]):not([type="file"]), .career-wizard select, .career-wizard textarea { min-height: 46px; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--panel-2); color: var(--ink-hi); font: 500 15px/1.3 Manrope, sans-serif; letter-spacing: 0; }
 .career-wizard input:focus-visible, .career-wizard select:focus-visible, .career-wizard textarea:focus-visible { outline: 3px solid color-mix(in srgb, var(--wz) 70%, transparent); outline-offset: 1px; border-color: var(--wz); }
 .career-wizard .wizard-hint { display: block; margin-top: 10px; color: var(--muted); }
-.career-wizard .wizard-footer .primary-button { background: var(--wz); color: #0c1210; }
+.career-wizard .wizard-footer .primary-button { background: var(--accent); color: var(--accent-ink); }
 .career-wizard .wizard-footer .primary-button:hover { filter: brightness(1.08); }
 .career-wizard .wizard-footer .primary-button:focus-visible, .career-wizard .wizard-back:focus-visible, .career-wizard .wizard-cancel:focus-visible { outline: 3px solid var(--wz); outline-offset: 2px; }
 .career-wizard .difficulty-card.selected, .career-wizard .party-card.selected { border-color: var(--wz); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--wz) 60%, transparent); }
@@ -1312,6 +1312,13 @@ html[data-ui-motion="off"] .language-gate-button { transition: none; }
 .reward-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:stretch}
 .reward-card{--tone:#d6a54c;position:relative;display:grid;align-content:start;gap:14px;padding:18px 18px 18px 22px;border-radius:var(--radius);border:1px solid var(--line);background:var(--panel);overflow:hidden}
 .reward-card::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:var(--tone)}
+/* the video of 1.000 € of personal funds (ui/funds-ad.js): the same offer on the rewards page, in the funds of the activities and in the notices of financial trouble */
+.funds-ad{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px 14px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel)}
+.funds-ad-copy{display:grid;gap:2px;min-width:0}.funds-ad-copy small{color:var(--muted)}
+.funds-ad .primary-button{grid-column:1/-1;justify-self:start}.funds-ad-last{grid-column:1/-1;color:var(--muted)}
+.reward-card .funds-ad{border:0;padding:0;background:none}
+.funds-ad-alert{margin-left:8px}
+@media (max-width:600px){.funds-ad{grid-template-columns:1fr}.funds-ad .primary-button{justify-self:stretch}.funds-ad-alert{margin:8px 0 0}}
 .reward-card.is-blue{--tone:#5aa0e6}.reward-card.is-violet{--tone:#a07be0}.reward-card.is-rose{--tone:#e0709a}.reward-card.is-neutral{--tone:var(--line-strong)}
 .reward-card-head h2{margin:2px 0 0;font-size:1.2rem}
 .reward-card-head .section-kicker{color:var(--tone)}
@@ -1663,8 +1670,8 @@ button:not(:disabled):active, a.primary-button:active, a.secondary-button:active
 .secondary-button.good, .primary-button.good { background: var(--good-fill); border-color: var(--good-line); color: #eafaf1; }
 .secondary-button.danger, .danger-card .secondary-button { background: rgba(122,34,34,.22); border: 1px solid rgba(220,86,80,.7); color: #ffb3ad; }
 .secondary-button.danger:hover:not(:disabled) { background: rgba(160,40,40,.34); border-color: #e8706a; color: #fff; }
-.ghost-button { background: transparent; color: var(--gold-soft, #e8c875); border: 1px solid transparent; font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
-.ghost-button:hover:not(:disabled) { background: rgba(217,180,90,.12); border-color: rgba(217,180,90,.4); color: var(--gold-soft, #e8c875); }
+.ghost-button { background: transparent; color: var(--gold-soft); border: 1px solid transparent; font-weight: 650; text-decoration: none; }
+.ghost-button:hover:not(:disabled) { background: var(--accent-soft); border-color: var(--gold-deep); color: var(--gold-light); }
 .compact.secondary-button, .secondary-button.compact, .primary-button.compact { min-height: 38px; padding: 6px 12px; font-size: 13px; }
 /* the buttons of the agenda choices and the news filters had no rule of their own (16px, regular): same voice as the others */
 .hq-choice { font-family: inherit; font-size: var(--ctl-font); border-radius: var(--ctl-radius); border: 1px solid var(--line-strong); background: var(--panel-2); color: var(--ink); }
@@ -1751,3 +1758,58 @@ button:focus-visible, a:focus-visible { outline-color: var(--gold); }
 @media (max-width: 420px) { .pa-slider { grid-template-columns: minmax(0, 1fr); gap: 2px; } .pa-actions button { flex: 1 1 auto; } }
 /* the reward window: one gold accent (the blue, violet and pink tones competed with the rest; the kind of reward is said by its words and its icon) */
 .reward-popup.is-blue, .reward-popup.is-violet, .reward-popup.is-rose { --tone: #c4a66a; }
+
+/* Buttons never underline their words (real text links keep their own underline where it is intended: support contacts, sources). */
+button, .primary-button, .secondary-button, .ghost-button, .text-link, .cta-hero, [role="button"] { text-decoration: none; }
+button:hover, .text-link:hover, [role="button"]:hover { text-decoration: none; }
+/* «Semplice iscritto»: the territory of reference, apart from the elected starts (it is not an office) */
+.wizard-member-scope { display: grid; gap: 6px; margin: 12px 0 0; padding: 12px 14px; border: 1px solid var(--line-strong); border-left: 3px solid var(--gold); border-radius: var(--radius); background: var(--panel-2); }
+.wizard-member-scope small { color: var(--ink-3); }
+/* «Fonda un nuovo partito»: a panel closed at first, with its state shown; the fields stay as typed when it is closed and opened again */
+.pl-found-fold { padding: 0; }
+.pl-found-fold > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 12px 16px; cursor: pointer; list-style: none; font: 750 16px/1.2 var(--font-head); color: var(--ink-hi); }
+.pl-found-fold > summary::-webkit-details-marker { display: none; }
+.pl-found-title { display: inline-flex; align-items: center; gap: 10px; color: var(--gold-light); }
+.pl-found-toggle { width: 10px; height: 10px; border-right: 2px solid var(--gold); border-bottom: 2px solid var(--gold); transform: rotate(45deg); transition: transform .2s ease; margin-right: 4px; }
+.pl-found-fold[open] > summary .pl-found-toggle { transform: rotate(-135deg); }
+.pl-found-fold[open] > summary { border-bottom: 1px solid var(--line); }
+.pl-found-body { padding: 14px 16px 16px; display: grid; gap: 12px; }
+html[data-ui-motion="off"] .pl-found-toggle { transition: none; }
+/* an action under way: the button says so at once and does not take a second click */
+.is-busy, [aria-busy="true"] { cursor: progress; opacity: .78; pointer-events: none; }
+.advance-button.is-busy::after { content: "…"; }
+/* ---- the start of a new game: territory and career (24/11/2026) ---- */
+.wizard-place-trail { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 12px; font-size: 13px; color: var(--ink-3); }
+.wizard-place-trail span { display: inline-flex; align-items: center; min-height: 28px; padding: 3px 10px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--panel-2); }
+.wizard-place-trail span + span::before { content: "›"; margin: 0 6px 0 -2px; color: var(--gold-deep); }
+.wizard-place-trail .is-current { border-color: var(--gold); color: var(--gold-light); font-weight: 700; }
+.wizard-place-trail .is-pending { border-style: dashed; color: var(--ink-3); }
+.wizard-where-grid select { width: 100%; }
+.wizard-place-selected { border-color: var(--gold-deep); border-left: 3px solid var(--gold); background: linear-gradient(90deg, var(--accent-soft), transparent 70%), var(--panel-2); }
+.municipality-option.selected { border-color: var(--gold) !important; box-shadow: inset 3px 0 0 var(--gold); background: var(--accent-soft); }
+.level-group { display: grid; gap: 10px; margin: 0 0 16px; }
+.level-group-head { display: grid; gap: 2px; padding: 0 0 6px; border-bottom: 1px solid var(--line); }
+.level-group-head strong { font: 750 13px/1.3 var(--font-head); letter-spacing: .08em; text-transform: uppercase; color: var(--gold-light); }
+.level-group-head small { color: var(--ink-3); font-size: 12.5px; }
+.level-group[data-level-group="percorsi"] .level-card { border-style: dashed; }
+.level-group[data-level-group="percorsi"] .level-card.selected { border-style: solid; }
+.level-card .radio-ring { border-color: var(--line-strong); }
+.level-card.selected .radio-ring { border-color: var(--gold); background: radial-gradient(circle, var(--gold) 0 40%, transparent 45%); box-shadow: none; }
+.level-card strong { color: var(--ink-hi); letter-spacing: .04em; }
+.level-card.selected strong { color: var(--gold-light); }
+@media (max-width: 600px) {
+  .level-group .level-cards { gap: 8px; }
+  .level-group .level-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; padding: 10px 12px; min-height: 0; }
+  .level-group .level-card .level-card-top { grid-column: 2; grid-row: 1; margin: 0; }
+  .level-group .level-card .level-index { display: none; }
+  .level-group .level-card > strong { grid-column: 1; grid-row: 1; align-self: center; font-size: 14px; }
+  .level-group .level-card > p { grid-column: 1 / -1; margin: 4px 0 0; font-size: 12.5px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .level-group .level-card.selected > p { -webkit-line-clamp: unset; display: block; }
+  .level-group .level-card > :not(.level-card-top):not(strong):not(p) { grid-column: 1 / -1; }
+}
+.level-scope-choice.selected, .level-scope-choice[aria-pressed="true"] { border-color: var(--gold) !important; background: var(--accent-soft) !important; color: var(--gold-light) !important; box-shadow: inset 3px 0 0 var(--gold); font-weight: 700; }
+@media (max-width: 600px) { .wizard-where-grid { grid-template-columns: 1fr; } .wizard-where-grid label, .wizard-where-grid select { width: 100%; } }
+/* the hero style on long labels: never clip the words on a narrow phone */
+.cta-hero { max-width: 100%; }
+.cta-hero { height: auto; }   /* the hero style grows with its label (the general primary button has a fixed 40px height) */
+@media (max-width: 480px) { .cta-hero { white-space: normal; text-align: center; min-width: 0; line-height: 1.25; } }

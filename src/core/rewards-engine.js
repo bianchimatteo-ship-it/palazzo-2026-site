@@ -1,8 +1,6 @@
-// Rewards of the game for time played and for rewarded videos (the rules are in data/simulation/reward-rules.js). Pure functions on the game state: the store gives them the game and the journal of the device
-// and keeps what they return. Nothing here has rules of its own about politics: the funds go through book() of the finance engine (the personal funds of the career, never the treasury of the party), the political
-// capital and the preparation are the resources the game already has (game.resources.politicalCapital, game.prep) with the limits it already has.
-import { AD_REWARD, COMMUNITY_REWARD, DAILY_REWARD, PLAY_REWARDS, REWARD_HISTORY_SIZE, REWARD_TIMEZONE } from '../data/simulation/reward-rules.js?v=20261124-3';
-import { book } from './finance-engine.js?v=20261124-3';
+// What this module does and why: docs/architettura-ricompense.md (§ rewards-engine.js).
+import { AD_REWARD, COMMUNITY_REWARD, DAILY_REWARD, PLAY_REWARDS, REWARD_HISTORY_SIZE, REWARD_TIMEZONE } from '../data/simulation/reward-rules.js?v=20261125-1';
+import { book } from './finance-engine.js?v=20261125-1';
 
 const SIM = 'simulation';
 const MINUTE = 60000;
@@ -27,6 +25,7 @@ export function normalizeRewards(input) {
     daily: Array.isArray(value.daily) ? value.daily.filter(item => typeof item === 'string').slice(-400) : [],
     community: Array.isArray(value.community) ? value.community.filter(item => typeof item === 'string').slice(-40) : [],
     ads: Array.isArray(value.ads) ? value.ads.filter(item => typeof item === 'string').slice(-AD_REWARD.keep) : [],
+    funds: Array.isArray(value.funds) ? value.funds.filter(item => typeof item === 'string').slice(-200) : [],
     history: Array.isArray(value.history) ? value.history.filter(item => item && typeof item.id === 'string').slice(0, REWARD_HISTORY_SIZE) : []
   };
 }

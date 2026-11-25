@@ -67,6 +67,13 @@ if (chromeAvailable) await withBrowser(async browser => {
   check(!(await S(`return store.exportSave().includes('data:image/');`)), 'Il ritratto non entra nel salvataggio della carriera (quindi non va online).');
   await S(`store.navigate('panoramica'); return true;`); await pause(900);
   check(await evaluate(`Boolean(document.querySelector('.hq-identity .avatar-photo'))`), 'La Panoramica mostra l’avatar da foto.');
+  // the scenes: the player keeps the drawn body, gestures and poses, with the round photo portrait over the head; nothing of the photo goes into the scene or the save
+  const sceneFace = await S(`const A = await import('/src/core/activity-scenes.js?v=${version}'); const s = store.getState(); const scene = A.createActivityScene({ id: 'foto-scena', seed: 'foto|scena', sceneKey: 'redazione', activityId: 'intervista', player: { name: 'Prova' }, playerAvatar: null }); const file = JSON.parse(store.exportSave()); file.scene = scene; store.loadGame(JSON.stringify(file)); return true;`);
+  await pause(1500);
+  check(sceneFace && await evaluate(`Boolean(document.querySelector('.scene-stage [data-actor="giocatore"] [data-photo-face]'))`), 'Nelle scene il giocatore ha il volto da foto sul corpo illustrato.');
+  check(await evaluate(`document.querySelectorAll('.scene-stage [data-photo-face]').length === 1`), 'Solo il giocatore ha il volto da foto (gli altri restano illustrati).');
+  check(!(await S(`return JSON.stringify(store.getState().scene ?? {}).includes('data:image/') || store.exportSave().includes('data:image/');`)), 'La scena e il salvataggio non contengono la foto.');
+  await S(`store.sceneAbandon(); return true;`).catch(() => true); await pause(600);
   await openCareer(browser); await pause(600);
   check(await evaluate(`Boolean(document.querySelector('.hq-identity .avatar-photo'))`), 'Dopo il ricaricamento l’avatar da foto resta.');
   await S(`store.navigate('profilo'); return true;`); await pause(800);
@@ -77,5 +84,18 @@ if (chromeAvailable) await withBrowser(async browser => {
   check(await evaluate(`!document.querySelector('.hq-identity .avatar-photo') && Boolean(document.querySelector('.hq-identity svg'))`), 'Torna l’avatar illustrato.');
 });
 await rm(dir, { recursive: true, force: true });
+// 3. the wizard: the photo can be chosen while the career is created (the portrait stays in memory until the career exists, then on the device only)
+{
+  const W = await import(new URL(`../src/ui/career-wizard.js?v=${build}`, import.meta.url).href);
+  const draft = W.makeCareerDraft('2026-11-24');
+  draft.step = 'identity'; draft.stepIndex = 1;
+  const plain = (() => { try { return W.renderCareerWizard({ clock: { currentDate: '2026-11-24' } }, { ...draft }); } catch { return ''; } })();
+  const withPhoto = (() => { try { return W.renderCareerWizard({ clock: { currentDate: '2026-11-24' } }, { ...draft, photoPortrait: { image: 'data:image/png;base64,AAAA' } }); } catch { return ''; } })();
+  const wizardSource = await readFile(new URL('../src/ui/career-wizard.js', import.meta.url), 'utf8'), appSource = await readFile(new URL('../src/ui/app.js', import.meta.url), 'utf8');
+  check(/data-avatar-photo>/.test(wizardSource) && /data-avatar-photo-remove/.test(wizardSource) && /data-avatar-photo-preview/.test(wizardSource), 'Il wizard offre «Crea l’avatar da una foto», l’anteprima e «Torna all’avatar illustrato».');
+  check(!plain || plain.includes('data-avatar-photo') || !plain.includes('data-avatar-editor'), 'Il passo dell’avatar del wizard ha il pulsante della foto.');
+  check(!withPhoto || !withPhoto.includes('data-avatar-editor') || withPhoto.includes('data-avatar-photo-preview'), 'Con una foto scelta il wizard mostra il ritratto.');
+  check(/delete wizard\.photoPortrait/.test(appSource) && /savePhotoAvatar\(player\.id, photoPortrait\)/.test(appSource), 'Alla creazione il ritratto esce dalla bozza e va solo nella memoria del dispositivo, sotto il nuovo giocatore.');
+}
 if (problems.length) { console.error(`Avatar da foto — problemi:\n- ${problems.join('\n- ')}`); process.exit(1); }
 console.log('Avatar da foto verificato: illustrazione locale deterministica (toni piatti, contorni), ritaglio dentro la foto; nel browser galleria e fotocamera, file non validi rifiutati con il motivo, anteprima e regolazioni, ritratto salvato solo sul dispositivo senza metadati né foto originale, fuori dal salvataggio online, mostrato in Panoramica, conservato al ricaricamento, cancellato con «Torna all’avatar illustrato».');

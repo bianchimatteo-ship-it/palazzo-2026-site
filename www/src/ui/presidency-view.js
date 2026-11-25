@@ -1,11 +1,11 @@
 // The Quirinale in the electoral centre (tab "Quirinale"): the election of the President of the Republic (the assembly
 // of the grand electors, the field of candidates, the negotiations, the secret ballots and their quorum) and, when the
 // player is the President, the powers of the office. Everything is simulation: the candidates are figures of the game.
-import { formatDate } from '../core/time.js?v=20261124-3';
-import { CAMP_LABELS, CANDIDATE_TYPES, LEDGER_RULES, PRESIDENCY_RULES, PRESIDENT_ACTIVITIES } from '../data/simulation/presidency-rules.js?v=20261124-3';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261124-3';
-import { termEndOf, electionPhaseLabel, lineText, politicalCrisis } from '../core/presidency-engine.js?v=20261124-3';
-import { arrow, badge, bar, card, empty, esc, kpi, num, table } from './sections-kit.js?v=20261124-3';
+import { formatDate } from '../core/time.js?v=20261125-1';
+import { CAMP_LABELS, CANDIDATE_TYPES, LEDGER_RULES, PRESIDENCY_RULES, PRESIDENT_ACTIVITIES } from '../data/simulation/presidency-rules.js?v=20261125-1';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261125-1';
+import { termEndOf, electionPhaseLabel, lineText, politicalCrisis } from '../core/presidency-engine.js?v=20261125-1';
+import { arrow, badge, bar, card, empty, esc, kpi, num, table } from './sections-kit.js?v=20261125-1';
 
 const day = date => date ? formatDate(date) : '—';
 const shortName = label => String(label ?? '').replace(/\s*\(figura simulata\)$/, '');
@@ -102,7 +102,7 @@ function movesCard(state, view) {
   const roleText = role?.leader ? `Guidi ${esc(election.blocs.find(item => item.id === election.player.blocId)?.label ?? 'il tuo gruppo')}: decidi la linea dei suoi grandi elettori.` : role?.delegate ? 'Sei delegato della tua Regione: il tuo voto è segreto.' : role?.elector ? 'Sei un grande elettore (deputato o senatore): il tuo voto è segreto.' : 'Non sei un grande elettore: puoi solo seguire la corsa (o candidarti, se hai i requisiti).';
   const candidacy = mine
     ? `<div class="qr-move"><span><strong>Sei in corsa</strong><small>${esc(shortName(mine.label))} · prestigio ${num(mine.prestige, 0)}, ampiezza ${num(mine.breadth, 0)}${mine.sponsors.length ? '' : ' · nessuno sponsor'}</small></span><button class="secondary-button" data-presidency-action="withdraw">Ritira la candidatura</button></div>`
-    : `<div class="qr-move"><span><strong>Candidarti</strong><small>${eligibility.eligible ? `Hai ${eligibility.age} anni. Il tuo profilo: prestigio ${num(standing?.prestige, 0)}, ampiezza ${num(standing?.breadth, 0)}, ${Math.round((standing?.partisan ?? 0) * 100)}% di parte. Se sei eletto lasci ogni altra carica.` : esc(eligibility.problems[0] ?? '')}</small></span><button class="primary-button" data-presidency-action="declare" ${eligibility.eligible ? '' : 'disabled'}>Candidati al Quirinale</button></div>`;
+    : `<div class="qr-move"><span><strong>Candidarti</strong><small>${eligibility.eligible ? `Hai ${eligibility.age} anni. Il tuo profilo: prestigio ${num(standing?.prestige, 0)}, ampiezza ${num(standing?.breadth, 0)}, ${Math.round((standing?.partisan ?? 0) * 100)}% di parte. Se sei eletto lasci ogni altra carica.` : esc(eligibility.problems[0] ?? '')}</small></span><button class="primary-button cta-hero" data-presidency-action="declare" ${eligibility.eligible ? '' : 'disabled'}>Candidati al Quirinale</button></div>`;
   const options = candidates.map(item => option(item.id, shortName(item.label))).join('');
   const blocOptions = election.blocs.filter(item => item.id !== election.player.blocId && !item.free).map(item => option(item.id, `${item.label} (${item.electors})`)).join('');
   const lineMoves = role?.leader ? `<div class="qr-move"><span><strong>Linea del tuo gruppo</strong><small>Sostieni un nome (2 capitale, 1 giorno): gli alleati dello stesso campo possono seguirti. Un veto (3 capitale) lo blocca.</small></span><span class="qr-fields"><select data-presidency-field="candidate" aria-label="Candidato">${options}</select><button class="secondary-button" data-presidency-action="sponsor">Sostieni</button><button class="secondary-button" data-presidency-action="veto">Veto</button><button class="text-link" data-presidency-action="line-blank">Scheda bianca</button></span></div>` : '';
