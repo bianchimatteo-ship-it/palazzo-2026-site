@@ -136,11 +136,17 @@ export const GUARANTEE = Object.freeze({
 });
 // who the player is, said before the first question (the flags the store gives the scene: governo, opposizione, nessun incarico)
 export const ROLE = Object.freeze({
-  governo: [P('Lei sta in maggioranza: su questo le decisioni passano anche dalle sue mani.', 'You are in the majority: on this the decisions also go through your hands.'),
+  // who governs: a mayor, an assessor, a minister (technical or not), the premier — no word about «the majority»: a technical minister does not sit in it
+  governo: [P('Lei ha un incarico di governo: su questo le decisioni passano anche dalle sue mani.', 'You hold a governing office: on this the decisions also go through your hands.'),
     P('Chi governa non può dire che non dipende da lui: per questo lo chiedo a lei.', 'Those who govern cannot say it does not depend on them: that is why I am asking you.'),
-    P('Lei ha voce in capitolo nella maggioranza, quindi la domanda è per lei.', 'You have a say in the majority, so the question is for you.'),
+    P('Lei guida o amministra: la domanda è per lei, non per altri.', 'You lead or administer: the question is for you, not for someone else.'),
     P("Lei fa parte di chi governa: le risposte di oggi le chiederemo poi in aula.", "You are among those who govern: we will ask for today’s answers again in the chamber."),
     P("Con il suo incarico questa decisione non la può delegare ad altri.", "With your office you cannot delegate this decision to others.")],
+  // a parliamentarian of the majority with no office in the government: it has a seat and a group, not the power to decide
+  maggioranza: [P('Lei siede nella maggioranza: che cosa porta al tavolo di chi decide?', 'You sit in the majority: what do you bring to the table of those who decide?'),
+    P('Non è lei a governare, ma la maggioranza conta anche sul suo voto: lo darà su questo?', 'You are not the one governing, but the majority counts on your vote too: will you give it on this?'),
+    P('Con un seggio nella maggioranza, che cosa può chiedere a chi governa?', 'With a seat in the majority, what can you ask of those who govern?'),
+    P('Lei è maggioranza ma non è al governo: dove porterà la questione?', 'You are in the majority but not in the government: where will you take the matter?')],
   opposizione: [P('Lei è all’opposizione: ci dica che cosa farebbe al posto di chi governa.', 'You are in opposition: tell us what you would do in the place of those who govern.'),
     P('Dall’opposizione si può incalzare chi decide: lo farà su questo?', 'From the opposition you can press those who decide: will you do it on this?'),
     P('Non governa, ma ha un seggio: che cosa può ottenere da lì?', 'You do not govern, but you have a seat: what can you obtain from there?'),

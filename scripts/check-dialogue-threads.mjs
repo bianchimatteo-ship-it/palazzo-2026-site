@@ -12,7 +12,7 @@ const S = await load('src/core/activity-scenes.js');
 const { WEEKLY_ACTIVITIES } = await load('src/data/simulation/career-rules.js');
 const T = await load('src/data/activity-scene-threads.js');
 const fill = (pair, label) => pair[0].replace('{}', label);
-const SITUATIONS = { governo: { govern: true, seat: true }, opposizione: { opp: true, seat: true, local: true }, seggio: { seat: true }, nessuno: { seat: false } };
+const SITUATIONS = { governo: { govern: true, seat: true }, opposizione: { opp: true, seat: true, local: true }, seggio: { seat: true }, maggioranza: { seat: true, majority: true }, opposizioneNazionale: { seat: true, oppNational: true }, ministroTecnico: { govern: true, seat: true }, nessuno: { seat: false } };
 const ids = WEEKLY_ACTIVITIES.map(item => item.id).filter(id => S.activityHasScene(id));
 const player = { name: 'Elena Prova', tag: 'Consigliera' };
 let conversations = 0, beats = 0;
@@ -46,7 +46,7 @@ function play(activityId, seed, situation, pick, memory = null) {
     if (node.id === 'q3') want(node.text.includes(`«${label}»`), `${where}: la decisione è chiesta sul tema.`);
     if (node.id === 'q4') want(node.text.includes(`«${label}»`), `${where}: le garanzie sono chieste sul tema.`);
     if (node.id === 'q1') {
-      const role = situation.govern ? 'governo' : situation.opp ? 'opposizione' : situation.seat === false ? 'nessuno' : null;
+      const role = situation.govern ? 'governo' : situation.opp || situation.oppNational ? 'opposizione' : situation.majority ? 'maggioranza' : situation.seat === false ? 'nessuno' : null;
       const lines = (node.preface ?? []);
       for (const [key, list] of Object.entries(T.ROLE)) {
         const present = list.some(pair => lines.includes(pair[0]));

@@ -203,7 +203,7 @@ export function createActivityScene({ id, seed, sceneKey, activityId, target = n
     topic: { id: family.id, label: family.label[0] }, place: { label: (profile?.place ?? (citizens ? CITIZENS.place : spec.place))[0] }, familyId: family.id, bodyLabel, heading: heading ? { kicker: heading.kicker[0], title: heading.title[0], banner: heading.banner[0] } : null, partyLabel: party?.label ?? '', ref: ref ? { type: ref.type, text: ref.text } : null,
     context: { stats: { competence: stats.competence ?? 50, charisma: stats.charisma ?? 50, reputation: stats.reputation ?? 50 } },
     // what the encounter knows of the situation of the player when it starts (kept in the scene: a saved scene resumed later offers the same moves) and what has happened in it so far
-    flags: { promise: Boolean(promiseRef), prior: Array.isArray(priorFamilies) ? priorFamilies.includes(family.id) : Boolean(situation.prior), govern: Boolean(situation.govern), opp: Boolean(situation.opp), funds: situation.funds !== false, capital: situation.capital !== false, party: Boolean(situation.party), local: Boolean(situation.local), seat: situation.seat === undefined ? null : Boolean(situation.seat) },
+    flags: { promise: Boolean(promiseRef), prior: Array.isArray(priorFamilies) ? priorFamilies.includes(family.id) : Boolean(situation.prior), govern: Boolean(situation.govern), opp: Boolean(situation.opp), majority: Boolean(situation.majority), oppNational: Boolean(situation.oppNational), funds: situation.funds !== false, capital: situation.capital !== false, party: Boolean(situation.party), local: Boolean(situation.local), seat: situation.seat === undefined ? null : Boolean(situation.seat) },
     tally: { k: 0, tension: 0, trust: 0, guarantee: false, asked: false },
     audience: { mood: 50, history: [] }, history: [], outcome: null
   };
@@ -222,6 +222,9 @@ export function sceneSituation({ sceneKey, activityId, sit, game, activity, refs
     govern: Boolean(sit?.role?.head || sit?.role?.assessor || sit?.premier || sit?.minister), opp: Boolean(sit?.oppositionLocal),
     funds: (game?.resources?.funds ?? 0) - (cost.funds ?? 0) >= (FUND_COST[key] ?? 0), capital: (game?.resources?.politicalCapital ?? 0) - (cost.capital ?? 0) >= 1,
     party: Boolean(game?.party), local: Boolean(sit?.role?.local),
+    // a national parliamentarian with no executive office is in the majority or in the opposition of the government (only the line «who you are» reads these two: the mechanics of `opp` stay the local ones)
+    majority: Boolean(sit?.role?.parliamentarian && sit?.inMajority && !(sit?.role?.head || sit?.role?.assessor || sit?.premier || sit?.minister)),
+    oppNational: Boolean(sit?.role?.parliamentarian && !sit?.inMajority && !(sit?.role?.head || sit?.role?.assessor || sit?.premier || sit?.minister)),
     // whether the player sits in an assembly or holds an office at all (the line «who you are» before the first question)
     seat: Boolean(sit?.role?.local || sit?.role?.regional || sit?.role?.provincial || sit?.role?.parliamentarian || sit?.role?.europarl || sit?.role?.head || sit?.role?.assessor || sit?.premier || sit?.minister)
   };
@@ -333,7 +336,7 @@ function stanceLineOf(scene, n) {
 // The thread (data/activity-scene-threads.js): the variant chosen for a moment, with the subject of the encounter in its place. A scene made before the thread (saved in the middle) has none.
 const threaded = scene => Boolean(scene.lines?.f1);
 const threadText = (scene, stage, list) => { const pick = scene.lines?.[stage]; const pair = pick && list?.length ? list[pick.index % list.length] : null; return pair ? pair[0].replace('{}', scene.topic?.label ?? '') : ''; };
-const roleKeyOf = scene => scene.flags?.govern ? 'governo' : scene.flags?.opp ? 'opposizione' : scene.flags?.seat === false ? 'nessuno' : null;
+const roleKeyOf = scene => scene.flags?.govern ? 'governo' : scene.flags?.opp || scene.flags?.oppNational ? 'opposizione' : scene.flags?.majority ? 'maggioranza' : scene.flags?.seat === false ? 'nessuno' : null;
 const followText = (scene, stageNumber, last) => { const group = FN_GROUP[last?.fn]; return threaded(scene) && group ? threadText(scene, `f${stageNumber}`, FOLLOW[group]?.[last.band ?? 'mid']) : ''; };
 export function activityNode(scene) {
   upgrade(scene);
