@@ -100,6 +100,12 @@ h1, h2, h3, h4 { color: var(--ink); }
      much on top of its own padding too: `max()`, not `+`, so the safe-area inset is never counted twice under the banner. */
   .main-area { margin: 0; padding-bottom: calc(82px + max(env(safe-area-inset-bottom), var(--appodeal-banner-height, 0px))); }
   .mobile-tabbar { position: fixed; inset: auto 0 0; bottom: var(--appodeal-banner-height, 0px); z-index: 30; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); height: calc(64px + env(safe-area-inset-bottom)); padding: 0 max(4px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom) max(4px, env(safe-area-inset-left, 0px)); background: rgba(10, 20, 16, .97); border-top: 1px solid var(--line-strong); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); transition: bottom .18s ease; }
+  /* With a banner under it, the tab bar has no safe-area strip of its own: the banner (and the margin of the system bar the plugin already folds into --appodeal-banner-height) IS what sits between the buttons and the
+     system bar. Without it, the tab bar keeps its own strip above the gesture area. The five buttons keep their 64px and stay above the banner, never under it. */
+  .has-ad-banner .mobile-tabbar { height: 64px; padding-bottom: 0; }
+  /* The strip under the tab bar belongs to the native banner (and the margin above the system bar): the page must not show through it (the banner is only 320dp wide, and where there is no ad yet it is empty): an opaque
+     backdrop, as tall as the reserved place, behind the native view. */
+  .has-ad-banner .mobile-tabbar::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: var(--appodeal-banner-height, 0px); background: #0a1410; pointer-events: none; }
   .mobile-tabbar::before { content: ""; position: absolute; inset: -1px 0 auto 0; height: 2px; background: linear-gradient(90deg, var(--tri-green) 0 33.34%, var(--tri-white) 33.34% 66.67%, var(--tri-red) 66.67% 100%); opacity: .75; }
   .mobile-tab { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-width: 0; min-height: 58px; border: 0; border-radius: var(--radius); background: none; color: var(--muted); font: 600 12px var(--font-ui); touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   .mobile-tabbar .mobile-tab span { max-width: none; white-space: nowrap; overflow-wrap: normal; word-break: keep-all; font-size: 11.5px; letter-spacing: -.02em; }

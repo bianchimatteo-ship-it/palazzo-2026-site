@@ -4,7 +4,7 @@
 //   · Credited only on the SDK's own completion (onRewardedVideoFinished, in the native bridge), after the Worker has booked the completion id once for the account (or the device of a guest) — an id
 //     booked as a poll bonus is refused here and the other way round; never on a close, a failure, a timeout or a missing answer. 1.000 € to the personal funds of the career, never to the party's treasury.
 //   · No daily limit, no total limit, no cooldown of the game: one video at a time (the shared busy guard and the native one), as many as the ad network gives.
-import { esc } from './sections-kit.js?v=20261125-12';
+import { esc } from './sections-kit.js?v=20261126-3';
 
 export const FUNDS_MESSAGES = Object.freeze({
   completed: 'Video completato: 1.000 € accreditati ai tuoi fondi personali.',

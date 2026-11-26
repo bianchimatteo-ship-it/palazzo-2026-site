@@ -1,5 +1,5 @@
 // What this module does and why: docs/architettura-ricompense.md (§ appodeal-adapter.js).
-import { FORMATS, resolveAppodeal } from '../ads-config.js?v=20261125-12';
+import { FORMATS, resolveAppodeal } from '../ads-config.js?v=20261126-3';
 
 export function createAppodealAdapter({ plugin = globalThis.Capacitor?.Plugins?.AppodealAds ?? null, config = null } = {}) {
   let ids = config ?? resolveAppodeal(null, 'off');
@@ -61,6 +61,8 @@ export function createAppodealAdapter({ plugin = globalThis.Capacitor?.Plugins?.
     // true when there is nothing (left) to hide, false when the native hide failed: the banner may still be up, so it stays «shown» and the manager retries. Never throws (callers just await it).
     async hideBanner() { if (!bannerShown) return true; bannerShown = false; try { await plugin.hideBanner(); return true; } catch { bannerShown = true; return false; } },
     isBannerShown: () => bannerShown,
+    // a line for logcat (tag PolitAppodeal): why the game does or does not ask for an ad; never throws, never waits
+    trace(message) { try { plugin?.diagnostic?.({ message: String(message).slice(0, 200) })?.catch?.(() => {}); } catch { /* no plugin */ } },
     async showInterstitial() {
       if (!(await load('interstitial'))) return false;
       ready.delete('interstitial');

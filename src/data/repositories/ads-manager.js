@@ -3,7 +3,7 @@
 //   · Interstitial: only when the player closes a week (a natural pause), at most one every INTERSTITIAL.everyWeeks closed weeks, never within minGapMs of another interstitial or of a rewarded video, at most perDay a day,
 //     and never while an election, a campaign, the night, a scene or a vote is going on.
 //   · Rewarded video: always the player's choice (the button of the rewards page); this module only records the time it ended, to keep the interstitials away from it.
-import { BANNER_PAGES, INTERSTITIAL } from '../ads-config.js?v=20261125-12';
+import { BANNER_PAGES, INTERSTITIAL } from '../ads-config.js?v=20261126-3';
 
 const KEY = 'politicando.ads.v1';
 const dayOf = ms => new Date(ms).toISOString().slice(0, 10);
@@ -66,23 +66,29 @@ export function createAdsManager({ adapter, storage = globalThis.localStorage, n
     const left = Math.max(0, bannerShownAt + bannerMaxSessionMs - now());
     try { timer = setTimer(() => { timer = null; enqueue(() => (bannerShown && now() - bannerShownAt < bannerMaxSessionMs ? (scheduleExpiry(), false) : syncBannerNow(lastOpts))); }, left); } catch { timer = null; }
   };
-  const syncBannerNow = async ({ page, blocked = false } = {}) => {
+  // The reason the banner is (not) asked for, written to the console (Capacitor forwards it to logcat: «Capacitor/Console») ONLY when it changes: a banner that never appears is explained by one line.
+  let lastReason = null;
+  const trace = reason => { if (reason === lastReason) return; lastReason = reason; try { globalThis.console?.info?.(`[ads] banner: ${reason}`); adapter?.trace?.(`banner: ${reason}`); } catch { /* no console */ } };
+  const syncBannerNow = async ({ page, blocked = false, why = '' } = {}) => {
     const t = now();
     // reconcile with the adapter: a banner hidden behind our back (the floor overlay hides it directly) ends the session; a stray one that a late answer left up is hidden
     if (bannerShown && adapter?.isBannerShown?.() === false) ended(t);
     if (!bannerShown && !hidePending && adapter?.isBannerShown?.() === true) hidePending = true;
     if (hidePending && !bannerShown) { if (!(await hideNow(t, { session: false }))) return false; if (!formatOn('banner')) return false; }
-    if (!formatOn('banner')) { if (bannerShown) await hideNow(t); return false; }
+    if (!formatOn('banner')) { trace('formato spento (configurazione)'); if (bannerShown) await hideNow(t); return false; }
     const wanted = Boolean(page && pages.includes(page) && !blocked);
+    if (!wanted) trace(`non richiesto: pagina «${page ?? ''}»${page && pages.includes(page) ? '' : ' fuori dall’elenco'}${blocked ? `, momento da non interrompere (${why || 'motivo non indicato'})` : ''}`);
     if (!wanted) { if (bannerShown) await hideNow(t); return false; }
     if (bannerShown) {
       if (t - bannerShownAt < bannerMaxSessionMs) return true;
       await hideNow(t); return false;   // the maximum length is over: hidden, the cooldown starts now
     }
-    if (hidePending) return false;   // never show again while a hide is still owed
-    if (bannerEndedAt && t - bannerEndedAt < bannerMinGapMs) return false;   // the cooldown since the last session is not over yet
-    if (failedAt && t - failedAt < bannerRetryMs) return false;   // the last attempt failed: no hammering
-    const out = await call(adapter.showBanner);   // the adapter resolves a plain boolean, not { shown }
+    if (hidePending) { trace('in attesa di togliere il banner precedente'); return false; }   // never show again while a hide is still owed
+    if (bannerEndedAt && t - bannerEndedAt < bannerMinGapMs) { trace(`pausa di ${Math.round(bannerMinGapMs / 1000)} s dopo l’ultima sessione`); return false; }   // the cooldown since the last session is not over yet
+    if (failedAt && t - failedAt < bannerRetryMs) { trace('pausa dopo un tentativo non riuscito'); return false; }   // the last attempt failed: no hammering
+    trace('richiesto al plugin');
+    const out = await call(adapter.showBanner);
+    trace(out.ok && out.value === true ? 'mostrato' : `non mostrato (${out.ok ? 'nessun annuncio pronto o rifiutato' : 'errore o timeout'})`);   // the adapter resolves a plain boolean, not { shown }
     const after = now();
     if (out.ok && out.value === true) { bannerShown = true; bannerShownAt = after; failedAt = 0; write({ bannerOpenAt: after }); scheduleExpiry(); return true; }
     failedAt = after;

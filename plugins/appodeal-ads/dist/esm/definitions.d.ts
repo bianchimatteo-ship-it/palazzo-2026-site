@@ -48,6 +48,10 @@ export interface AppodealAdsPlugin {
     /** The privacy options form, when `privacyOptionsRequired`. */
     showPrivacyOptions(): Promise<ConsentResult | void>;
     /** Not used on Android (no ATT): always `unavailable`. */
+    /** A line for logcat (tag PolitAppodeal): why the game does or does not ask for an ad. */
+    diagnostic(options: {
+        message: string;
+    }): Promise<void>;
     requestTracking(): Promise<{
         status: string;
     }>;

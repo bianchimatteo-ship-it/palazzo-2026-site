@@ -113,6 +113,23 @@ for (const d of deps) assert.ok(!/admob|meta|facebook|inmobi|bidmachine|gam|goog
 for (const adapter of ['applovin', 'unity_ads', 'vungle', 'iab']) assert.ok(deps.some(d => d.startsWith(`com.appodeal.ads.sdk.adapters:${adapter}:`)), `Adapter ${adapter} dichiarato.`);
 assert.ok(deps.every(d => !/^com\.appodeal\.ads\.sdk\.adapters:(admob|bidmachine|inmobi|facebook|meta)/.test(d)), 'Nessun adapter che richiede Google Mobile Ads, Meta o InMobi.');
 assert.match(gradle, /vungle:7\.7\.9\.0"\) \{\s*exclude group: 'com\.google\.android\.gms', module: 'play-services-ads'/, 'Vungle esclude play-services-ads (Google Mobile Ads).');
+// The banner, read in the Kotlin source (no device here: what is proved is the sequence the code follows, not a real impression): initialised as a BANNER, autocache never switched off, the show invoked
+// only with an ad loaded (or at the moment onBannerLoaded says so), one view and one wait at a time, the callbacks and the diagnostic logs of every step, the view dropped with its Activity.
+{
+  const kt = await read('plugins/appodeal-ads/android/src/main/java/it/matteobianchi/politicando/appodeal/AppodealAdsPlugin.kt');
+  assert.match(kt, /Appodeal\.initialize\([^)]*Appodeal\.BANNER,/, 'Appodeal.initialize include Appodeal.BANNER.');
+  assert.ok(!/setAutoCache\([^)]*false\)/.test(kt), 'La cache automatica del banner non viene mai disattivata.'); assert.match(kt, /setAutoCache\(Appodeal\.BANNER, true\)/, 'Autocache del banner dichiarata attiva.');
+  const show = kt.slice(kt.indexOf('fun showBanner'), kt.indexOf('fun hideBanner'));
+  assert.match(show, /isLoaded\(Appodeal\.BANNER\)/, 'Il banner si mostra solo con un annuncio caricato.'); assert.match(show, /Appodeal\.show\(a, Appodeal\.BANNER_VIEW, PLACEMENT\)/, 'Appodeal.show del banner è invocato.');
+  assert.match(show, /if \(banner != null\)[^\n]*shown" to true/, 'Con il banner già a schermo non si crea una seconda vista.'); assert.match(show, /if \(bannerCall != null\)/, 'Una sola attesa alla volta.');
+  assert.match(show, /removeView\(view\)/, 'Una vista con un genitore vecchio è tolta prima di aggiungerla.'); assert.match(show, /bringToFront\(\)/, 'La vista sta sopra la WebView.');
+  assert.match(kt, /override fun onBannerLoaded[\s\S]{0,400}attachAndShowBanner\(waiting\)/, 'onBannerLoaded mostra il banner che era in attesa.');
+  assert.match(kt, /override fun onBannerFailedToLoad[\s\S]{0,200}finishBannerWait\(false, "no-fill"\)/, 'onBannerFailedToLoad libera l’attesa.'); assert.match(kt, /override fun onBannerShowFailed[\s\S]{0,200}removeBannerView\(\)/, 'onBannerShowFailed toglie la vista.');
+  assert.match(kt, /override fun handleOnDestroy[\s\S]{0,200}removeBannerView\(\)/, 'La vista segue la sua Activity.');
+  const wait = Number(kt.match(/BANNER_WAIT_MS = ([\d_]+)L/)?.[1]?.replace(/_/g, '')); assert.ok(wait > 0 && wait < 8000, `L’attesa del banner (${wait} ms) è più corta del limite di 8 s del gioco.`);
+  for (const text of ['banner state after init', 'showBanner: requested', 'banner LOADED', 'banner LOAD FAILED', 'banner show INVOKED', 'banner SHOWN', 'banner SHOW FAILED', 'banner hidden']) assert.ok(kt.includes(text), `Log diagnostico: ${text}.`);
+  assert.ok(!/Appodeal\.cache\(a, Appodeal\.BANNER/.test(kt), 'Nessuna richiesta di cache manuale del banner (l’SDK la fa da solo: niente richieste doppie).');
+}
 // Registration of the plugin in Capacitor 8, link by link (a broken link gives a precise message, not just a missing string in a generated file):
 //  1. package.json depends on the local plugin; 2. the plugin declares itself as an Android Capacitor plugin; 3. `npm install` linked it in node_modules (without the link Capacitor finds NO plugin and the generated
 //  Gradle files only contain `:capacitor-android`); 4. capacitor.config.json lets Android include it; 5. Capacitor's own discovery (`cap ls android`) lists it; 6. the generated Gradle files register it (and no standalone InMobi).

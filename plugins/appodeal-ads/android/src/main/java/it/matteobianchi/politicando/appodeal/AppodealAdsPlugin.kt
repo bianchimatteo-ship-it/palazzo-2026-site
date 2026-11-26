@@ -47,6 +47,7 @@ class AppodealAdsPlugin : Plugin() {
         const val TAG = "PolitAppodeal"
         const val PLACEMENT = "default"
         const val LOAD_TIMEOUT_MS = 20_000L
+        const val BANNER_WAIT_MS = 6_000L
     }
 
     private val handler = Handler(Looper.getMainLooper())
@@ -205,11 +206,13 @@ class AppodealAdsPlugin : Plugin() {
                     Appodeal.setLogLevel(com.appodeal.ads.utils.Log.LogLevel.verbose)
                     Appodeal.set728x90Banners(false)
                     setCallbacks()
-                    Appodeal.initialize(a, key, Appodeal.INTERSTITIAL or Appodeal.REWARDED_VIDEO or Appodeal.BANNER_VIEW, object : ApdInitializationCallback {
+                    Appodeal.setAutoCache(Appodeal.BANNER, true)   // the default; stated so that nothing can switch the banner cache off by accident
+                    Appodeal.initialize(a, key, Appodeal.INTERSTITIAL or Appodeal.REWARDED_VIDEO or Appodeal.BANNER, object : ApdInitializationCallback {
                         override fun onInitializationFinished(errors: List<ApdInitializationError>?) {
                             initializing = false
                             sdkReady = true
                             if (debugBuild) Appodeal.setTesting(true)   // re-asserted once started: nothing can leave a Debug build in production
+                            Log.d(TAG, "banner state after init: initialized=${Appodeal.isInitialized(Appodeal.BANNER)} autoCache=${Appodeal.isAutoCacheEnabled(Appodeal.BANNER)} loaded=${Appodeal.isLoaded(Appodeal.BANNER)} testing=$test")
                             if (errors != null && errors.isNotEmpty()) Log.w(TAG, "initialisation finished with ${errors.size} non-blocking error(s): $errors")
                             call.resolve(obj("ok" to true, "testing" to test, "debugBuild" to debugBuild, "productionRefused" to (debugBuild && !requestedTest)))
                         }
@@ -263,10 +266,19 @@ class AppodealAdsPlugin : Plugin() {
             override fun onRewardedVideoExpired() { loaded["rewarded"] = false }
         })
         Appodeal.setBannerCallbacks(object : BannerCallbacks {
-            override fun onBannerLoaded(height: Int, isPrecache: Boolean) { Log.d(TAG, "banner loaded (height $height)"); if (banner != null) notifyBannerHeight(height) }
-            override fun onBannerFailedToLoad() { Log.d(TAG, "banner failed to load") }
-            override fun onBannerShown() { Log.d(TAG, "banner shown") }
-            override fun onBannerShowFailed() { Log.d(TAG, "banner show failed"); notifyBannerHeight(0) }
+            // «loaded» = the SDK has an ad for the banner. A show asked for earlier (showBanner waiting for it) is done NOW, on this callback: no waiting for the next retry of the game.
+            override fun onBannerLoaded(height: Int, isPrecache: Boolean) {
+                Log.d(TAG, "banner LOADED (height ${height}dp, precache=$isPrecache, waitingForIt=${bannerCall != null})")
+                bannerContentHeightDp = height
+                val waiting = bannerCall
+                if (waiting != null) attachAndShowBanner(waiting) else if (banner != null) notifyBannerHeight(height)
+            }
+            override fun onBannerFailedToLoad() {
+                Log.d(TAG, "banner LOAD FAILED (no ad from any network: the SDK asks again by itself; waitingForIt=${bannerCall != null})")
+                finishBannerWait(false, "no-fill")
+            }
+            override fun onBannerShown() { Log.d(TAG, "banner SHOWN (the SDK counts the impression)") }
+            override fun onBannerShowFailed() { Log.d(TAG, "banner SHOW FAILED (the SDK refused to show it)"); removeBannerView(); notifyBannerHeight(0) }
             override fun onBannerClicked() {}
             override fun onBannerExpired() { Log.d(TAG, "banner expired") }
         })
@@ -319,45 +331,92 @@ class AppodealAdsPlugin : Plugin() {
     // (never a fixed guess), so the banner sits flush above it; the game reserves its OWN bottom chrome (tab bar, content
     // padding) by listening to the "bannerHeight" event this plugin fires (0 when there is nothing to show), rather than
     // this native code guessing the height of web content it cannot see. No fixed margin is passed in from JS.
+    // The banner is shown ONLY when the SDK has an ad for it (the earlier version added the view and asked to show it at once, with nothing loaded: the SDK refused, the view was taken away, and the ad
+    // that loaded a moment later found nobody). Now: loaded → show at once; not loaded → wait for onBannerLoaded for at most BANNER_WAIT_MS (shorter than the 8 s of the game's own limit), then answer
+    // «not shown» and let the game ask again after its pause; a failure to load answers at once. One request at a time, one view at a time.
+    private var bannerCall: PluginCall? = null
+    private var bannerWait: Runnable? = null
+
+    private fun removeBannerView() {
+        val view = banner ?: return
+        banner = null
+        try { (view.parent as? android.view.ViewGroup)?.removeView(view) } catch (e: Throwable) { Log.w(TAG, "banner view removal", e) }
+    }
+
+    private fun finishBannerWait(shown: Boolean, code: String? = null) {
+        bannerWait?.let { handler.removeCallbacks(it) }; bannerWait = null
+        val call = bannerCall ?: return
+        bannerCall = null
+        call.resolve(obj("shown" to shown, "code" to code).also { if (code == null) it.remove("code") })
+    }
+
     @PluginMethod
     fun showBanner(call: PluginCall) {
         val a = activityOrNull()
-        if (!sdkReady || a == null) { call.resolve(obj("shown" to false, "code" to "not-initialized")); return }
-        if (banner != null) { call.resolve(obj("shown" to true)); return }
+        if (!sdkReady || a == null) { Log.d(TAG, "showBanner: not ready (sdkReady=$sdkReady, activity=${a != null})"); call.resolve(obj("shown" to false, "code" to "not-initialized")); return }
+        if (banner != null) { call.resolve(obj("shown" to true)); return }          // already on screen: never a second view
+        if (bannerCall != null) { call.resolve(obj("shown" to false, "code" to "loading")); return }   // already waiting: never a second request
         try {
             a.runOnUiThread {
                 try {
-                    val view = Appodeal.getBannerView(a)
-                    val params = FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
-                    ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
-                        val navBottomPx = insets.getInsets(WindowInsetsCompat.Type.navigationBars() or WindowInsetsCompat.Type.displayCutout()).bottom
-                        val density = a.resources.displayMetrics.density
-                        val navBottomDp = if (density > 0f) (navBottomPx / density).toInt() else navBottomPx
-                        (v.layoutParams as FrameLayout.LayoutParams).bottomMargin = navBottomPx
-                        v.requestLayout()
-                        if (navBottomDp != bannerMarginDp) { bannerMarginDp = navBottomDp; if (bannerContentHeightDp > 0) notifyBannerHeight(bannerContentHeightDp) }
-                        insets
-                    }
-                    a.addContentView(view, params)
-                    banner = view
-                    ViewCompat.requestApplyInsets(view)
-                    val accepted = Appodeal.show(a, Appodeal.BANNER_VIEW, PLACEMENT)
-                    if (!accepted) { (view.parent as? android.view.ViewGroup)?.removeView(view); banner = null; notifyBannerHeight(0) }
-                    call.resolve(obj("shown" to accepted))
-                } catch (e: Throwable) { Log.e(TAG, "banner", e); notifyBannerHeight(0); call.resolve(obj("shown" to false, "code" to "error")) }
+                    val loadedNow = Appodeal.isLoaded(Appodeal.BANNER)
+                    Log.d(TAG, "showBanner: requested (initialized=${Appodeal.isInitialized(Appodeal.BANNER)} autoCache=${Appodeal.isAutoCacheEnabled(Appodeal.BANNER)} loaded=$loadedNow)")
+                    if (!Appodeal.isAutoCacheEnabled(Appodeal.BANNER)) { Log.w(TAG, "banner autocache was OFF: switched on"); Appodeal.setAutoCache(Appodeal.BANNER, true) }
+                    if (loadedNow) { bannerCall = call; attachAndShowBanner(call); return@runOnUiThread }
+                    bannerCall = call
+                    val timeout = Runnable { Log.d(TAG, "banner: nothing loaded within ${BANNER_WAIT_MS} ms (the game asks again after its pause)"); finishBannerWait(false, "timeout") }
+                    bannerWait = timeout
+                    handler.postDelayed(timeout, BANNER_WAIT_MS)
+                } catch (e: Throwable) { Log.e(TAG, "banner", e); finishBannerWait(false, "error") }
             }
         } catch (e: Throwable) { call.resolve(obj("shown" to false, "code" to "error")) }
+    }
+
+    // On the UI thread, with an ad loaded: the view is created (once), added above the WebView, sits flush above the system bars, and the SDK is asked to show it.
+    private fun attachAndShowBanner(call: PluginCall) {
+        val a = activityOrNull()
+        if (a == null || banner != null) { finishBannerWait(banner != null); return }
+        try {
+            val view = Appodeal.getBannerView(a)
+            (view.parent as? android.view.ViewGroup)?.removeView(view)   // a view of a previous Activity (recreated) still has a parent: never add it twice
+            val params = FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
+            ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
+                val navBottomPx = insets.getInsets(WindowInsetsCompat.Type.navigationBars() or WindowInsetsCompat.Type.displayCutout()).bottom
+                val density = a.resources.displayMetrics.density
+                val navBottomDp = if (density > 0f) (navBottomPx / density).toInt() else navBottomPx
+                (v.layoutParams as FrameLayout.LayoutParams).bottomMargin = navBottomPx
+                v.requestLayout()
+                if (navBottomDp != bannerMarginDp) { bannerMarginDp = navBottomDp; if (bannerContentHeightDp > 0) notifyBannerHeight(bannerContentHeightDp) }
+                insets
+            }
+            a.addContentView(view, params)
+            view.bringToFront()   // above the WebView and whatever the game added later
+            banner = view
+            ViewCompat.requestApplyInsets(view)
+            val accepted = Appodeal.show(a, Appodeal.BANNER_VIEW, PLACEMENT)
+            Log.d(TAG, "banner show INVOKED: result=$accepted (view attached=${view.parent != null}, height=${bannerContentHeightDp}dp)")
+            if (!accepted) { removeBannerView(); notifyBannerHeight(0); finishBannerWait(false, "refused"); return }
+            notifyBannerHeight(bannerContentHeightDp)
+            finishBannerWait(true)
+        } catch (e: Throwable) { Log.e(TAG, "banner attach", e); removeBannerView(); notifyBannerHeight(0); finishBannerWait(false, "error") }
     }
 
     @PluginMethod
     fun hideBanner(call: PluginCall) {
         val a = activityOrNull()
-        val view = banner
-        banner = null
+        finishBannerWait(false, "hidden")
+        val had = banner != null
         notifyBannerHeight(0)
-        if (a == null || view == null) { call.resolve(); return }
-        try { a.runOnUiThread { try { Appodeal.hide(a, Appodeal.BANNER_VIEW); (view.parent as? android.view.ViewGroup)?.removeView(view) } catch (e: Throwable) { /* ignored */ }; call.resolve() } } catch (e: Throwable) { call.resolve() }
+        if (a == null || !had) { call.resolve(); return }
+        try { a.runOnUiThread { try { Appodeal.hide(a, Appodeal.BANNER_VIEW); Log.d(TAG, "banner hidden"); removeBannerView() } catch (e: Throwable) { /* ignored */ }; call.resolve() } } catch (e: Throwable) { call.resolve() }
     }
+
+    // The Activity is destroyed (a rotation, the system recreates it): the banner view belongs to it and is dropped; the game, which still wants it, asks again and the SDK's cached ad is shown at once.
+    override fun handleOnDestroy() { try { finishBannerWait(false, "destroyed"); removeBannerView(); notifyBannerHeight(0) } catch (e: Throwable) { /* the plugin is going away */ }; super.handleOnDestroy() }
+
+    // A line from the game's JavaScript (why a banner is or is not asked for): the WebView console does not reach logcat in a release build.
+    @PluginMethod
+    fun diagnostic(call: PluginCall) { Log.d(TAG, "js: ${call.getString("message") ?: ""}"); call.resolve() }
 
     @PluginMethod
     fun requestTracking(call: PluginCall) { call.resolve(obj("status" to "unavailable")) }   // iOS only

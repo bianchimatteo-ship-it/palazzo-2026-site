@@ -5,10 +5,10 @@
 // character (never read from the photo). What is kept: the avatar (choices only, in the career) and, ON THIS DEVICE ONLY, a reduced copy of the photo with the framing and the corrections, to
 // edit it again later (core/photo-avatar-store.js). Also the editor of an avatar already saved (the profile): it opens on the saved choices and on the kept photo, if any.
 // Loaded only when the editor is opened.
-import { AVATAR_GROUPS, AVATAR_LABELS, AVATAR_OPTIONS, avatarForGender, normalizeAvatar } from '../core/avatar.js?v=20261125-12';
-import { avatarSvg } from './avatar-svg.js?v=20261125-12';
-import { ANALYSIS_SIZE, CONFIDENCE_LABELS, GUIDE, READING_LABELS, analyzeFace } from './photo-traits.js?v=20261125-12';
-import { PHOTO_SOURCE_MAX } from '../core/photo-avatar-store.js?v=20261125-12';
+import { AVATAR_GROUPS, AVATAR_LABELS, AVATAR_OPTIONS, avatarForGender, normalizeAvatar } from '../core/avatar.js?v=20261126-3';
+import { avatarSvg } from './avatar-svg.js?v=20261126-3';
+import { ANALYSIS_SIZE, CONFIDENCE_LABELS, GUIDE, READING_LABELS, analyzeFace } from './photo-traits.js?v=20261126-3';
+import { PHOTO_SOURCE_MAX } from '../core/photo-avatar-store.js?v=20261126-3';
 
 export const MAX_INPUT_BYTES = 25 * 1024 * 1024;
 export const MAX_PIXELS = 60_000_000;

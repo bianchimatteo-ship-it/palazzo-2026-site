@@ -10,9 +10,9 @@
 // The split of what was built after the merger is deterministic and never duplicates anything: the members that leave are taken from the sections in proportion to what the partner brought there
 // (rounding by largest remainder, never below five members for a section that existed before), the cash returned is at most what the treasury holds, the consensus is divided in the proportion the two
 // forces had when they merged (the sum stays the same), the parliamentary groups go back to their party, nobody is counted twice.
-import { isSecretary, remember } from './career-engine.js?v=20261125-12';
-import { treasuryBook } from './organization-engine.js?v=20261125-12';
-import { allocateSeats, normalizeLife } from './party-life-engine.js?v=20261125-12';
+import { isSecretary, remember } from './career-engine.js?v=20261126-3';
+import { treasuryBook } from './organization-engine.js?v=20261126-3';
+import { allocateSeats, normalizeLife } from './party-life-engine.js?v=20261126-3';
 
 export const DISSOLVE_COST = Object.freeze({ capital: 5 });
 const SIM = 'simulation';

@@ -4,19 +4,19 @@ const NOT_KNOWN = 'Non lo so: nel gioco non trovo una funzione che risponda a qu
 const NOT_KNOWN_EN = 'I do not know: I cannot find a feature in the game that answers this. Try other words (candidacy, alliance, promise, staff, polls, laws, referendum…) or open the manual below.';
 const CLARIFY = 'Non ho capito bene: intendevi una di queste funzioni?', CLARIFY_EN = 'I did not quite get that: did you mean one of these?';
 const AMBIGUOUS = 'La domanda può riguardare due funzioni: ecco entrambe.', AMBIGUOUS_EN = 'The question can be about two features: here are both.';
-import { renderTutorialInvite } from './tutorial.js?v=20261125-12';
-import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261125-12';
-import { guideManual, LOADING_HTML } from './lazy-views.js?v=20261125-12';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261125-12';
-import { formatDate } from '../core/time.js?v=20261125-12';
-import { illustration } from './illustrations.js?v=20261125-12';
-import { glyph } from './visuals.js?v=20261125-12';
-import { identityMark, identityVars } from './party-identity.js?v=20261125-12';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261125-12';
-import { hallView } from './hall-view.js?v=20261125-12';
-import { renderLogoCatalog } from './logo-catalog.js?v=20261125-12';
-import { esc, signed } from './charts.js?v=20261125-12';
-import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261125-12';
+import { renderTutorialInvite } from './tutorial.js?v=20261126-3';
+import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261126-3';
+import { guideManual, LOADING_HTML } from './lazy-views.js?v=20261126-3';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261126-3';
+import { formatDate } from '../core/time.js?v=20261126-3';
+import { illustration } from './illustrations.js?v=20261126-3';
+import { glyph } from './visuals.js?v=20261126-3';
+import { identityMark, identityVars } from './party-identity.js?v=20261126-3';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261126-3';
+import { hallView } from './hall-view.js?v=20261126-3';
+import { renderLogoCatalog } from './logo-catalog.js?v=20261126-3';
+import { esc, signed } from './charts.js?v=20261126-3';
+import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261126-3';
 
 const when = iso => { try { return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); } catch { return ''; } };
 // The actions of the opening screen, in order of importance: starting a career and resuming one are the two main ones (drawn apart, below); then what concerns the

@@ -1,7 +1,7 @@
 // Reminders of the promises the player made: a short card (never a dialog that blocks) that brings back the open promises at the right moments — a deadline coming (eight, four and one weeks
 // before), a promise that has not started a while after it was made, one that is late — each reminder once (the log keeps the milestone), at most one card every three weeks, and only for the
 // promises still open. Pure: the store keeps the log (game.reminderLog) and the page shows the card only when nothing else is going on (a scene, a vote, the night, a dialog).
-import { PROMISE_SETTLED } from './program-engine.js?v=20261125-12';
+import { PROMISE_SETTLED } from './program-engine.js?v=20261126-3';
 
 export const REMINDER_RULES = Object.freeze({ milestones: [8, 4, 1], notStartedAfter: 6, every: 3, max: 3 });
 const open = promise => !PROMISE_SETTLED.includes(promise.status) && promise.kind === 'programma';
