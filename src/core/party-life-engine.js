@@ -4,17 +4,17 @@
 // rebuilding of a party in opposition. Everything lives in game.party.life and is simulated: no real person or
 // real organisation is described. The career engine owns the calendar and hands in the helpers it already has
 // (memory, relations, diary) through `api`, so nothing here imports the career engine.
-import { closeConflicts, reopenConflicts } from './organization-engine.js?v=20261117-3';
-import { announceOutcome, celebrate } from './celebration.js?v=20261117-3';
-import { uniqueId } from './ids.js?v=20261117-3';
+import { closeConflicts, reopenConflicts } from './organization-engine.js?v=20261126-3';
+import { announceOutcome, celebrate } from './celebration.js?v=20261126-3';
+import { uniqueId } from './ids.js?v=20261126-3';
 import {
   ACTOR_PERSONAS, CADRE_ACTIONS, CADRE_INTERESTS, CONGRESS_ACTIONS, CONGRESS_DELEGATES, CONGRESS_PHASES, EMERGING_AREAS, PACT_KINDS, PERSONAS_BY_CURRENT, PERSONA_FALLBACK,
   REBUILD_FOCUS, REBUILD_WEEKS, REQUEST_KINDS, SPLIT_RULES
-} from '../data/simulation/party-life-rules.js?v=20261117-3';
-import { CURRENT_AREAS, CURRENT_LINES, PARTY_LINES } from '../data/simulation/career-rules.js?v=20261117-3';
-import { LEADER_RULES } from '../data/simulation/committee-rules.js?v=20261117-3';
-import { leaderKeyOf, leaderStance, territorialControl } from './committee-engine.js?v=20261117-3';
-import { italianSeatName } from './seat-roster.js?v=20261117-3';
+} from '../data/simulation/party-life-rules.js?v=20261126-3';
+import { CURRENT_AREAS, CURRENT_LINES, PARTY_LINES } from '../data/simulation/career-rules.js?v=20261126-3';
+import { LEADER_RULES } from '../data/simulation/committee-rules.js?v=20261126-3';
+import { leaderKeyOf, leaderStance, territorialControl } from './committee-engine.js?v=20261126-3';
+import { italianSeatName } from './seat-roster.js?v=20261126-3';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -491,8 +491,12 @@ function buildRequest(kind, context) {
 function openRequest(life, game, { kind, from, refId, week, rand, api, cadre = null, committee = null, external = null, actor = null }) {
   const party = game.party;
   const current = from === 'actor' ? currentsOf(party).find(item => item.id === refId) : null;
+  // pacing: no ordinary request the week after another (ultimatums and outside offers exempt)
+  const paced = kind !== 'ultimatum' && from !== 'external';
+  if (paced && week - (life.lastRequestWeek ?? -99) < 2) return null;
   const built = buildRequest(kind, { game, party, life, actor: from === 'actor' ? life.actors[refId] : actor, current, week, date: api.date, cadre, committee, external });
   if (!built) return null;
+  if (paced) life.lastRequestWeek = week;
   life.counters.requests += 1;
   const request = { id: uniqueId(life.requests, `richiesta-${week}-${life.counters.requests}`), kind, from, refId, ...built, counter: null, stage: 'aperta', week, delays: 0, source: SIM };
   life.requests.push(request);

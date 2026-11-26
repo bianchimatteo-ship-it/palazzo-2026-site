@@ -28,6 +28,8 @@ export function floorBand(votes, modeOf = () => null) {
 }
 
 let current = null, previousFocus = null;
+// Whether the floor-vote overlay is on screen right now (app.js: the ad banner is never shown while it is).
+export function isFloorOpen() { return current !== null; }
 export function closeFloor() {
   if (!current) return;
   for (const id of current.timers) clearTimeout(id);
@@ -76,7 +78,7 @@ export function openFloor(vote, { mode = 'simulata', motion = 'full', cast, aula
   root.innerHTML = `<div class="aula-window floor-window"><header><div><span class="section-kicker"><span>${live ? 'In diretta' : vote.deferred ? 'Voto di fiducia' : 'Votazione simulata'}</span> · <span>${esc(vote.reading)}</span></span><p class="floor-assembly" data-floor-assembly-name>${esc(vote.assemblyName)}</p><small>${esc(vote.hall)}${vote.place ? ` · ${esc(vote.place)}` : ''}</small></div><button type="button" class="ghost-button" data-floor-close>Chiudi</button></header>
     <section class="floor-text"><span class="floor-kind">${esc(vote.kindLabel)}</span><h2 id="floor-title">${esc(vote.title)}</h2><p class="floor-summary">${esc(vote.summary)}</p>${content}${proposerBlock(vote)}</section>
     <ol class="aula-said floor-said" aria-live="polite"></ol>
-    <section class="floor-ballot" data-floor-ballot hidden><h3>IL TUO VOTO</h3><p>Voti di persona: scegli e conferma. L’astensione è un voto espresso, non un’assenza.</p><div class="floor-choices" role="group" aria-label="Il tuo voto">${choices}</div><p class="floor-hint" data-floor-hint>Il tuo gruppo è orientato a votare ${esc(LINE_LABELS[vote.line] ?? vote.line)}: la scelta resta tua.</p><div class="floor-confirm"><button type="button" class="primary-button" data-floor-confirm disabled>CONFERMA IL VOTO</button><small data-floor-picked>Nessun voto scelto.</small></div></section>
+    <section class="floor-ballot" data-floor-ballot hidden><h3>IL TUO VOTO</h3><p>Voti di persona: scegli e conferma. L’astensione è un voto espresso, non un’assenza.</p><div class="floor-choices" role="group" aria-label="Il tuo voto">${choices}</div><p class="floor-hint" data-floor-hint>Il tuo gruppo è orientato a votare ${esc(LINE_LABELS[vote.line] ?? vote.line)}: la scelta resta tua.</p><div class="floor-confirm"><button type="button" class="primary-button cta-hero" data-floor-confirm disabled>CONFERMA IL VOTO</button><small data-floor-picked>Nessun voto scelto.</small></div></section>
     <section class="floor-result" data-floor-result hidden></section></div>`;
   document.body.appendChild(root);
   document.addEventListener('keydown', onKey, true);

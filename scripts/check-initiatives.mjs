@@ -86,12 +86,13 @@ assert.throws(() => make({ kind: 'sconosciuto' }), /Tipo di iniziativa non valid
     if (out.initiative.status === 'respinta') { verdicts.refused++; assert.match(out.initiative.outcome, /Non basta/); assert.ok(out.events[0].ended === 'respinta'); }
     else { verdicts.ok++; assert.equal(out.initiative.status, 'in-parlamento'); assert.ok(['camera', 'senato'].includes(out.initiative.parliament.chamber)); }
   }
+  assert.equal(E.INITIATIVE_KINDS.popolare.depositMargin, 1.15); assert.ok(E.INITIATIVE_KINDS.popolare.depositMargin * 0.88 > 1, 'Il margine consigliato copre la verifica peggiore.');
   assert.ok(verdicts.ok > 0 && verdicts.refused > 0, `Depositando appena sopra la soglia la verifica può respingere (${verdicts.refused}) o accettare (${verdicts.ok}): serve un margine.`);
   // with the margin the check always passes
   for (let n = 0; n < 30; n++) {
-    const ready = collect({ ...organised, id: `iniziativa-margine-${n}` }, base, { stopAt: 50000 * 1.12 }).ini;
+    const ready = collect({ ...organised, id: `iniziativa-margine-${n}` }, base, { stopAt: 50000 * 1.15 }).ini;
     const out = E.settleVerification(E.depositInitiative(ready, { date: '2027-06-01' }), { date: '2027-06-15' });
-    assert.equal(out.initiative.status, 'in-parlamento', 'Con il 12% di margine la verifica passa.');
+    assert.equal(out.initiative.status, 'in-parlamento', 'Con il margine consigliato (15%) anche la peggiore verifica (88% di firme valide) passa.');
   }
   // the deadline with enough signatures files the text by itself
   const late = { ...organised, deadline: '2027-01-20', signatures: { ...organised.signatures, total: 52000 } };
@@ -104,7 +105,7 @@ assert.throws(() => make({ kind: 'sconosciuto' }), /Tipo di iniziativa non valid
   const ref = make({ kind: 'referendum', articles: [] });
   const done = { ...ref, signatures: { ...ref.signatures, total: 560000 } };
   const out = E.settleVerification({ ...E.depositInitiative(done, { date: '2027-03-01' }), verification: { share: 0.93, valid: 520000, until: '2027-03-15' } }, { date: '2027-03-15' });
-  assert.equal(out.initiative.status, 'depositata'); assert.match(out.initiative.outcome, /non è simulata/, 'Il referendum dichiara che la fase successiva non è simulata.');
+  assert.equal(out.initiative.status, 'depositata'); assert.match(out.initiative.outcome, /Cassazione.*Corte costituzionale.*voto/, 'Il referendum rimanda alla fase successiva (Cassazione, Corte costituzionale, voto) della pagina Referendum.');
   let phased = null; const ends = { approvata: 0, archiviata: 0 };
   for (let n = 0; n < 50; n++) {
     let ini = { ...make(), id: `iniziativa-aula-${n}`, status: 'in-parlamento', signatures: { total: 58000, byRegion: {}, byChannel: {} }, parliament: { chamber: 'camera', enteredAt: '2027-02-01', stage: 'assegnata', weeks: 0 } };
@@ -148,4 +149,22 @@ assert.throws(() => make({ kind: 'sconosciuto' }), /Tipo di iniziativa non valid
   const ret = store.withdrawInitiative(second.id); assert.equal(ret.status, 'ritirata');
   assert.throws(() => store.startInitiative({ title: 'Titolo valido ma senza fondi', area: 'sanita', articles: ['Un articolo abbastanza lungo'], kind: 'referendum' }) && (state().game.resources.funds = 0, store.startInitiative({ title: 'Altro referendum valido', area: 'sanita', kind: 'referendum' })), /servono 4000/);
 }
+// ---------- 5. the cost of the volunteers and the ordinary variation ----------
+{
+  assert.equal(E.CHANNELS.volontari.weekly, 2, 'Un volontario costa 2 € a settimana.');
+  const withVolunteers = E.organize(make(), 'volontari', 100, { date: D0, funds: 99999 }).initiative;
+  assert.equal(E.weeklyCost(withVolunteers), 200, '100 volontari costano 200 € a settimana.');
+  assert.equal(E.weeklyCost({ ...withVolunteers, status: 'verifica' }), 0, 'Chiusa la raccolta non si paga più.');
+  // the ordinary week varies by about ±5 %: the same organisation, many different weeks, signatures within the band (no event of the week)
+  const org = { ...make(), organization: { banchetti: 10, online: 0, volontari: 50, comuni: 0 }, boosts: [], opposition: 0 };
+  const expected = E.weeklyRate(org, base);
+  let low = Infinity, high = -Infinity;
+  for (let week = 1; week <= 300; week++) {
+    const run = E.advanceCollection({ ...org, id: `iniziativa-varianza-${week}` }, { ...base, week, date: '2027-02-01' });
+    if (run.events.length) continue;     // a recognisable event moved the week: not the ordinary variation
+    const ratio = run.gained / expected; low = Math.min(low, ratio); high = Math.max(high, ratio);
+  }
+  assert.ok(low >= 0.945 && high <= 1.055, `La variazione ordinaria è circa ±5% (da ${low.toFixed(3)} a ${high.toFixed(3)}).`);
+}
+
 console.log('Iniziative popolari verificate: popolare (50.000) e referendum (500.000) distinti dalla proposta parlamentare, testo in articoli, leve e costi, firme nazionali e per Regione, opposizione e sostegni, deposito rifiutato sotto soglia, verifica delle firme con margine, fase parlamentare simulata, fallimento e ritiro con effetti, carriera settimana per settimana.');

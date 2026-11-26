@@ -3,16 +3,16 @@
 // Chambers and their groups, the formation of the Government. Everything that happens is simulation: the real data are
 // the geography, the seats and the 2022 results the vote starts from; parties, coalitions, votes and seats of the game
 // are estimates of the game and never presented as real results.
-import { isElectoral } from './alliance-rules.js?v=20261117-3';
-import { populationReferenceDate, residentsOfItaly } from './municipal-rules.js?v=20261117-3';
-import { actualTurnout } from './electorate.js?v=20261117-3';
-import { uniqueId } from './ids.js?v=20261117-3';
-import { advanceDays, formatDate } from './time.js?v=20261117-3';
-import { axisOf, nationalShares } from './world-engine.js?v=20261117-3';
-import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20261117-3';
-import { archiveGovernment, confidenceBallotMissing, voteGovernmentConfidence } from './parliament-engine.js?v=20261117-3';
-import { seededRandom } from './vote-engine.js?v=20261117-3';
-import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20261117-3';
+import { isElectoral, isElectoralFor } from './alliance-rules.js?v=20261126-3';
+import { populationReferenceDate, residentsOfItaly } from './municipal-rules.js?v=20261126-3';
+import { actualTurnout } from './electorate.js?v=20261126-3';
+import { uniqueId } from './ids.js?v=20261126-3';
+import { advanceDays, formatDate } from './time.js?v=20261126-3';
+import { axisOf, nationalShares } from './world-engine.js?v=20261126-3';
+import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20261126-3';
+import { archiveGovernment, confidenceBallotMissing, voteGovernmentConfidence } from './parliament-engine.js?v=20261126-3';
+import { seededRandom } from './vote-engine.js?v=20261126-3';
+import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20261126-3';
 
 const SIM = 'simulation';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -139,15 +139,17 @@ export const COALITION_LABELS = Object.freeze({ destra: 'Centrodestra', sinistra
 // Which forces run together: around the largest force of the governing camp and of the opposite camp, the forces that
 // are close (collocazione), on good terms (relations, alliances, no recent rupture) and not set on running alone.
 // playerChoice: 'alone' or the id of the coalition the player's party joined (decided by its secretary).
-export function buildCoalitions(world, { playerChoice = null } = {}) {
+export function buildCoalitions(world, { playerChoice = null, election = null } = {}) {
   const { forces } = voteForces(world);
   if (!forces.length) return [];
+  // Registered for THIS vote when the vote is known (alliance-rules.js: isElectoralFor), else for the kind of vote (the older reading).
+  const electoral = alliance => election ? isElectoralFor(alliance, election) : isElectoral(alliance, 'politiche');
   // An alliance of the player's kind that is NOT registered as a coalition for this vote (alliance-rules.js: isElectoral) does not run as one: unless the player chose a coalition by hand, the party runs
   // on its own list. The alliances of old saves and the poles built for a vote have no list of coalitions and keep running as they did.
   const own = forces.find(force => force.isPlayer);
   const standing = own ? (world.alliances ?? []).find(item => item.status === 'active' && item.partyIds.includes(own.id)) : null;
-  if (!playerChoice && standing && Array.isArray(standing.coalitions) && !isElectoral(standing, 'politiche')) playerChoice = 'alone';
-  const allianceWith = id => (world.alliances ?? []).filter(item => isElectoral(item, 'politiche') && item.partyIds.includes(id)).flatMap(item => item.partyIds).filter(other => other !== id);
+  if (!playerChoice && standing && Array.isArray(standing.coalitions) && !electoral(standing)) playerChoice = 'alone';
+  const allianceWith = id => (world.alliances ?? []).filter(item => electoral(item) && item.partyIds.includes(id)).flatMap(item => item.partyIds).filter(other => other !== id);
   // The largest force of each camp leads its coalition, whoever governs.
   // A force that runs alone (the player who chose «Corri da solo», a party with an autonomous strategy) leads no coalition and joins none: it competes under its own ID, never as the only member of a made-up coalition.
   const runsAlone = force => (force.isPlayer && playerChoice === 'alone') || (!force.isPlayer && force.strategy === 'autonoma');
@@ -160,9 +162,9 @@ export function buildCoalitions(world, { playerChoice = null } = {}) {
   // The coalitions negotiated in the world run as they are: around an anchor they are its coalition, otherwise a pole
   // of their own (the player's party follows its secretary's choice).
   const inPlay = new Set(forces.map(force => force.id));
-  const worldCoalitions = (world.alliances ?? []).filter(item => isElectoral(item, 'politiche') && item.partyIds.filter(id => inPlay.has(id)).length >= 2).map(item => item.partyIds.filter(id => inPlay.has(id) && !(forces.find(force => force.id === id)?.isPlayer && playerChoice)));
+  const worldCoalitions = (world.alliances ?? []).filter(item => electoral(item) && item.partyIds.filter(id => inPlay.has(id)).length >= 2).map(item => item.partyIds.filter(id => inPlay.has(id) && !(forces.find(force => force.id === id)?.isPlayer && playerChoice)));
   // What the allies granted the player's party entering a coalition counts at the vote: the leadership it was given, a larger share of the candidacies.
-  const grants = (world.alliances ?? []).filter(item => isElectoral(item, 'politiche')).flatMap(item => (item.terms ?? []).filter(term => term.status === 'aperto'));
+  const grants = (world.alliances ?? []).filter(item => electoral(item)).flatMap(item => (item.terms ?? []).filter(term => term.status === 'aperto'));
   const grantedLead = members => grants.find(term => term.kind === 'guida' && members.includes(term.partyId) && inPlay.has(term.partyId))?.partyId ?? null;
   for (const members of worldCoalitions) {
     const lead = grantedLead(members);
@@ -204,6 +206,31 @@ export function buildCoalitions(world, { playerChoice = null } = {}) {
     const leader = forces.find(item => item.id === members[0]);
     coalitions.push({ id: `coalizione-${slug(leader.id)}`, label: `Intesa ${members.map(id => forces.find(item => item.id === id)?.abbreviation || forces.find(item => item.id === id)?.label).join(' – ')}`, leaderId: leader.id, camp: campOf(leader.axis), partyIds: members, simulated: true, source: SIM });
     members.forEach(id => placed.add(id));
+  }
+  // The coalition the player's party registered for THIS vote runs as one (alliance-rules.js: isElectoralFor): every member that stands is in the same coalition, never split between two, and none of
+  // them stays in another coalition. It joins the coalition of its largest member that already leads or sits in one, else it is a coalition of its own. An approval for another vote, a refused or
+  // expired one, or one granted to other members, does nothing here.
+  const registered = election && standing && Array.isArray(standing.coalitions) && playerChoice !== 'alone' && isElectoralFor(standing, election) ? standing.partyIds.filter(id => inPlay.has(id)) : [];
+  if (registered.length >= 2) {
+    const shareOf = id => forces.find(force => force.id === id)?.share ?? 0;
+    const hosts = coalitions.filter(coalition => coalition.partyIds.some(id => registered.includes(id))).sort((a, b) => shareOf(b.leaderId) - shareOf(a.leaderId));
+    let target = hosts.find(coalition => registered.includes(coalition.leaderId)) ?? hosts[0] ?? null;
+    if (!target) {
+      const leader = forces.find(force => force.id === [...registered].sort((a, b) => shareOf(b) - shareOf(a))[0]);
+      target = { id: `coalizione-${slug(leader.id)}`, label: `Coalizione ${leader.abbreviation || leader.label}`, leaderId: leader.id, camp: campOf(leader.axis), partyIds: [], negotiated: true, simulated: true, source: SIM };
+      coalitions.push(target);
+    }
+    for (const coalition of coalitions) {
+      if (coalition === target) continue;
+      const leaving = coalition.partyIds.filter(id => registered.includes(id));
+      if (!leaving.length) continue;
+      coalition.partyIds = coalition.partyIds.filter(id => !registered.includes(id));
+      if (registered.includes(coalition.leaderId)) coalition.leaderId = [...coalition.partyIds].sort((a, b) => shareOf(b) - shareOf(a))[0] ?? coalition.leaderId;
+    }
+    for (const id of registered) if (!target.partyIds.includes(id)) target.partyIds.push(id);
+    target.registered = true;
+    target.registrationElectionId = election.id;
+    for (let index = coalitions.length - 1; index >= 0; index--) if (!coalitions[index].partyIds.length) coalitions.splice(index, 1);
   }
   // A camp label shared by two coalitions takes the name of its leader.
   for (const coalition of coalitions) if (coalitions.filter(item => item.label === coalition.label).length > 1) coalition.label = `${coalition.label} (${forces.find(item => item.id === coalition.leaderId)?.label ?? ''})`;
@@ -545,7 +572,7 @@ export function runNationalVote({ geography = null, world, coalitions = [], date
     id: `politiche-${date}`, type: 'politiche', date, model: geography ? 'geografia-2022' : 'semplificato', turnout, electorate: nationalElectorate(geography, turnout),
     national: forces.map(force => ({ id: force.id, label: force.label, share: chambers.camera.shares[force.id] ?? force.share, coalitionId: coalitionIdOf.get(force.id) ?? null, isPlayer: force.isPlayer, color: force.color })).sort((a, b) => b.share - a.share),
     others: round2(chambers.camera.shares.altri ?? others),
-    coalitions: coalitions.map(coalition => ({ id: coalition.id, label: coalition.label, leaderId: coalition.leaderId, camp: coalition.camp, partyIds: coalition.partyIds.filter(id => labels.has(id)), share: chambers.camera.coalitions.find(row => row.id === coalition.id)?.share ?? 0 })),
+    coalitions: coalitions.map(coalition => ({ id: coalition.id, label: coalition.label, leaderId: coalition.leaderId, camp: coalition.camp, partyIds: [...coalition.partyIds], ranIds: coalition.partyIds.filter(id => labels.has(id)), share: chambers.camera.coalitions.find(row => row.id === coalition.id)?.share ?? 0 })),
     camera: chambers.camera, senato: chambers.senato, winner, largest, hung: !winner, source: SIM
   };
 }
@@ -974,6 +1001,12 @@ export function formationStep({ formation, parliament, result, world = null, dat
   const find = () => majorityAfterVote(chambers, next.attempts ? { ...result, winner: null } : result, world, { exclude: next.excluded ?? [], include: next.included ?? [], consent: { granted: next.consentedParties ?? [], external: next.externalSupport ?? [] }, crisis: Boolean(next.crisis || next.attempts), previous: next.previous ?? null, prefer: ['main', 'alt', 'tech'].includes(next.presidentChoice) ? next.presidentChoice : null, rand: seededRandom(`${next.resultId}|${next.firstSitting}|${next.attempts ?? 0}|${(next.excluded ?? []).join(',')}|${(next.included ?? []).join(',')}`) });
   // When the player is the President of the Republic the consultations end with the player's decision on the mandate.
   const askPresident = majority => {
+    // no political majority at all: the President who is the player still decides (a Government of the President, or the dissolution), never the simulation in the player's place
+    if (presidential?.player && !majority?.options?.length && next.presidentAsked !== `nessuna-${next.attempts ?? 0}`) {
+      next.presidentAsked = `nessuna-${next.attempts ?? 0}`;
+      events.push({ id: 'quirinale-nessuna-maggioranza', params: { situation: next.crisis ? 'Il governo è caduto e le Camere restano le stesse.' : 'Le nuove Camere sono insediate.', whiteSemester: presidential.canDissolve ? '' : ' (non puoi: sei nel semestre bianco)', holdUntil: next.consultationsEnd ?? advanceDays(date, LEGISLATURE_RULES.consultationDays) } });
+      return;
+    }
     if (!presidential?.player || !majority?.options?.length || next.presidentAsked === `${next.attempts ?? 0}`) return;
     next.presidentAsked = `${next.attempts ?? 0}`;
     const labels = majority.options.map(item => item.label ?? (item.kind === 'governo-del-presidente' ? 'Governo del Presidente' : 'una maggioranza'));
@@ -1013,6 +1046,8 @@ export function formationStep({ formation, parliament, result, world = null, dat
     // The player's answer at the consultations (support or opposition) is part of the count.
     if (next.presidentChoice === 'dissolve') { step('fallita', 'Hai deciso di sciogliere le Camere: si torna al voto.'); return done({ dissolve: true }); }
     const majority = find();
+    // the President is the player and has not decided yet: no exploratory mandate and no dissolution in the player's place — the decision is asked (and taken by default when it falls due)
+    if (!majority && presidential?.player && !next.presidentChoice) { askPresident(null); next.consultationsEnd = advanceDays(date, 7); return done(); }
     if (!majority && !next.exploratory) {
       // before dissolving, an exploratory mandate: the President of a Chamber (a simulated figure) checks for a week whether a majority exists
       next.exploratory = true;

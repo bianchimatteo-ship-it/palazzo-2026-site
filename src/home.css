@@ -343,7 +343,7 @@ html[data-ui-motion="reduced"] .hqc-drawer-toggle, html[data-ui-motion="reduced"
 @media (max-width: 700px) { .celebration { bottom: calc(76px + env(safe-area-inset-bottom)); } }
 
 /* The percentages of a campaign, each named for what it measures (consensus on the territory, poll, runoff projection, trend). */
-.campaign-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); align-items: start; gap: 10px 18px; }
+.campaign-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr)); align-items: start; gap: 10px 18px; }
 .campaign-metrics .campaign-metric { min-width: 0; }
 .campaign-metrics .campaign-metric small { display: block; color: var(--label, var(--muted)); font-size: 11.5px; letter-spacing: .06em; }
 .campaign-metrics .campaign-metric strong { display: block; font-size: 22px; }
@@ -372,7 +372,7 @@ html[data-ui-motion="reduced"] .hqc-drawer-toggle, html[data-ui-motion="reduced"
 .outcome-popup li { position: relative; padding: 9px 12px 9px 34px; border-radius: 10px; background: rgba(255, 255, 255, .06); }
 .outcome-popup li::before { content: ""; position: absolute; left: 13px; top: 1.05em; width: 9px; height: 9px; border-radius: 50%; background: var(--outcome-tone); box-shadow: 0 0 0 3px color-mix(in srgb, var(--outcome-tone) 25%, transparent); }
 .outcome-actions { display: flex; justify-content: center; width: 100%; margin-top: 4px; }
-.outcome-actions .primary-button { min-width: 170px; min-height: 46px; font-size: 16px; }
+.outcome-actions .primary-button { min-width: 170px; min-height: 46px; font-size: 16px; justify-content: center; text-align: center; }
 .outcome-confetti { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
 .outcome-confetti i { position: absolute; top: -6vh; left: var(--x); width: 9px; height: 15px; border-radius: 2px; opacity: 0; background: #e6c36b; transform: rotate(var(--r)); }
 .outcome-confetti i[style*="--c:1"] { background: #6fe0a6; } .outcome-confetti i[style*="--c:2"] { background: #ffffff; } .outcome-confetti i[style*="--c:3"] { background: #2fa877; } .outcome-confetti i[style*="--c:4"] { background: #f4dd9a; }
@@ -456,3 +456,81 @@ html[data-ui-motion="reduced"] .hqc-drawer-toggle, html[data-ui-motion="reduced"
   .hqc-who { padding-bottom: 8px; }
   .hqc-action { margin: 10px 10px 10px 0; padding: 12px 14px; }
 }
+
+
+/* ---------- touch targets of the top bar: at least 44 pt on iOS, 48 dp on Android (--touch-min, theme.css), on phones and on every touch screen; the icons stay small, the hit area is the button ---------- */
+@media (max-width: 600px), (pointer: coarse) {
+  .topbar .icon-button { display: inline-flex; align-items: center; justify-content: center; padding: 0; width: var(--touch-min); min-width: var(--touch-min); height: var(--touch-min); min-height: var(--touch-min); }
+  .topbar .advance-button { min-height: var(--touch-min); height: var(--touch-min); padding-inline: 14px; }
+  .topbar .top-tools { gap: 8px; }
+  .topbar .top-time { align-items: center; }
+  .topbar .date-chip { min-height: var(--touch-min); height: var(--touch-min); }
+}
+
+
+/* ---------- the editorial band above the top bar: it owns the safe area (status bar, notch) and turns it into a discreet line of context. Same dark surface as the bar (one continuous top), a fine gold hairline, serif italic text, one slow pulsing dot. ---------- */
+.top-band { z-index: 2; display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; box-sizing: border-box; height: calc(var(--safe-top, 0px) + 28px); padding: var(--safe-top, 0px) 46px 0; background: rgba(12, 18, 16, .86); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: var(--muted, #9aa3b2); font: italic 400 12.5px/1 var(--font-display, Georgia, serif); letter-spacing: .02em; border-bottom: 0; position: relative; }
+.top-band::after { content: ""; position: absolute; left: 46px; right: 46px; bottom: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(214, 178, 94, .45) 18%, rgba(214, 178, 94, .45) 82%, transparent); }
+.top-band span { display: inline-flex; align-items: center; gap: 8px; min-width: 0; height: 28px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.top-band-left { color: var(--ink-hi, #e9edf5); opacity: .8; flex: 1 1 auto; display: block !important; line-height: 28px; }
+.top-band-right { flex: 0 0 auto; }
+.top-band-dot { width: 5px; height: 5px; border-radius: 50%; background: #d6b25e; box-shadow: 0 0 0 0 rgba(214, 178, 94, .5); animation: top-band-pulse 3.2s ease-out infinite; }
+@keyframes top-band-pulse { 0% { box-shadow: 0 0 0 0 rgba(214, 178, 94, .45); } 70%, 100% { box-shadow: 0 0 0 6px rgba(214, 178, 94, 0); } }
+@media (prefers-reduced-motion: reduce) { .top-band-dot { animation: none; } }
+@media (max-width: 1023px) and (min-width: 601px) { .top-band { padding-left: 27px; padding-right: 27px; } .top-band::after { left: 27px; right: 27px; } }
+@media (max-width: 600px) { .top-band { padding-left: 14px; padding-right: 14px; height: calc(var(--safe-top, 0px) + 26px); font-size: 11.5px; } .top-band::after { left: 14px; right: 14px; } .top-band span { height: 26px; } .top-band-left { line-height: 26px; } }
+
+/* ---- «Avanza fino a…» from the date of the top bar (ui/date-jump.js) ---- */
+.topbar .date-chip[data-action="date-picker"] { cursor: pointer; }   /* the chip keeps its own type (redesign.css .date-chip), as when it was not a button */
+.topbar .date-chip[data-action="date-picker"]:hover:not(:disabled) { border-color: var(--gold-deep); color: var(--ink); }
+.topbar .date-chip[data-action="date-picker"]:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.date-jump { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 16px; background: rgba(8, 10, 8, .62); backdrop-filter: blur(3px); }
+.dj-panel { width: min(420px, 100%); max-height: calc(100dvh - 32px); overflow: auto; background: var(--panel); color: var(--ink); border: 1px solid var(--gold-deep); border-radius: 16px; box-shadow: 0 24px 60px rgba(0,0,0,.45); padding: 18px 18px 16px; position: relative; }
+.dj-panel::before { content: ''; position: absolute; left: 18px; right: 18px; top: 0; height: 3px; border-radius: 0 0 3px 3px; background: linear-gradient(90deg, #2e7d4f 0 33%, #f2efe6 33% 66%, #b8423a 66%); }
+.dj-head { display: grid; gap: 2px; padding-right: 36px; }
+.dj-head small { color: var(--gold); letter-spacing: .14em; font-size: 11px; font-weight: 700; }
+.dj-head h2 { margin: 0; font-size: 20px; }
+.dj-close { position: absolute; top: 12px; right: 12px; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line-strong); background: transparent; color: var(--ink-2); font-size: 20px; cursor: pointer; }
+.dj-quick { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 10px; }
+.dj-chip { min-height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--panel-2); color: var(--ink-2); font: inherit; font-size: 13px; cursor: pointer; }
+.dj-chip.is-on, .dj-chip:hover { border-color: var(--gold); color: var(--ink); }
+.dj-month { display: flex; align-items: center; justify-content: space-between; margin: 6px 0; }
+.dj-month strong { text-transform: capitalize; }
+.dj-nav { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--panel-2); color: var(--ink); font-size: 20px; cursor: pointer; }
+.dj-nav:disabled { opacity: .35; cursor: default; }
+.dj-week, .dj-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.dj-week span { text-align: center; font-size: 11px; color: var(--ink-3); padding: 4px 0; }
+.dj-cell { position: relative; aspect-ratio: 1; min-height: 38px; border-radius: 10px; border: 1px solid transparent; background: var(--panel-2); color: var(--ink); font: inherit; font-size: 14px; cursor: pointer; }
+.dj-cell.is-empty { background: none; }
+.dj-cell.is-off { color: var(--ink-3); opacity: .45; cursor: default; background: none; }
+.dj-cell.is-today { border-color: var(--line-strong); }
+.dj-cell.is-span { background: rgba(196, 166, 106, .12); }
+.dj-cell.is-picked { background: var(--gold); color: var(--accent-ink); font-weight: 700; }
+.dj-cell:not(.is-off):not(.is-picked):hover { border-color: var(--gold-deep); }
+.dj-cell i, .dj-legend i, .dj-crossed i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; }
+.dj-cell i { position: absolute; left: 50%; bottom: 5px; transform: translateX(-50%); }
+.has-vote i { background: var(--gold); } .has-deadline i { background: #c97a4a; } .has-event i { background: var(--ink-3); }
+.dj-cell.is-picked i { background: var(--accent-ink); }
+.dj-legend { display: flex; gap: 14px; flex-wrap: wrap; margin: 8px 0 4px; font-size: 12px; color: var(--ink-3); }
+.dj-legend span, .dj-crossed span { display: inline-flex; align-items: center; gap: 6px; }
+.dj-input { display: grid; gap: 4px; margin-top: 8px; font-size: 12px; color: var(--ink-3); }
+.dj-input input { min-height: 40px; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--panel-2); color: var(--ink); padding: 0 10px; font: inherit; color-scheme: dark; }
+.dj-summary { margin: 12px 0 4px; font-size: 15px; }
+.dj-summary strong { color: var(--gold-light); }
+.dj-summary.is-empty { color: var(--ink-3); font-size: 14px; }
+.dj-note { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--ink-3); }
+.dj-crossed { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 4px; font-size: 12.5px; color: var(--ink-2); }
+.dj-crossed li { display: flex; gap: 8px; align-items: center; }
+.dj-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+.dj-actions button { min-height: 44px; }
+@media (max-width: 420px) { .dj-panel { padding: 16px 12px 14px; } .dj-cell { min-height: 34px; font-size: 13px; } .dj-actions button { flex: 1 1 auto; } }
+
+/* «Chiedi al gioco» is a beta feature: a small label next to the title (ui/menu.js) */
+.beta-tag { display: inline-flex; align-items: center; margin-left: 8px; padding: 1px 7px; border: 1px solid var(--gold-deep); border-radius: 999px; color: var(--gold-light); background: rgba(196, 166, 106, .1); font-size: 10.5px; font-weight: 700; letter-spacing: .12em; vertical-align: middle; line-height: 1.6; }
+/* tablets (601–1180 px): the date of the top bar stays reachable as a compact calendar button (the full date is in its accessible name and in the calendar) */
+@media (min-width: 601px) and (max-width: 1180px) {
+  .top-time .date-chip[data-action="date-picker"] { display: inline-flex; align-items: center; justify-content: center; width: var(--touch-min, 48px); min-width: var(--touch-min, 48px); padding: 0; }
+  .top-time .date-chip[data-action="date-picker"] span { display: none; }
+}
+/* up to 1080 px the calendar button takes the place of the week counter (the date and the week are in the calendar), so the title of the page keeps its room */
+@media (min-width: 601px) and (max-width: 1080px) { .top-time .week-chip { display: none; } }

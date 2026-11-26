@@ -1,10 +1,10 @@
 // The political agenda: every dated commitment of the career in one calendar — votes and candidacy windows,
 // candidate selection, congresses, promises to verify, pending consequences, decrees to convert, allies' demands,
 // investments that expire and decisions held until a date. Read-only: it derives everything from the state.
-import { advanceDays, formatDate } from './time.js?v=20261117-3';
-import { isSecretary, upcomingElections, upcomingRounds } from './career-engine.js?v=20261117-3';
-import { SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20261117-3';
-import { presidencySchedule, termEndOf, whiteSemester } from './presidency-engine.js?v=20261117-3';
+import { advanceDays, formatDate } from './time.js?v=20261126-3';
+import { isSecretary, upcomingElections, upcomingRounds } from './career-engine.js?v=20261126-3';
+import { SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20261126-3';
+import { presidencySchedule, termEndOf, whiteSemester } from './presidency-engine.js?v=20261126-3';
 
 export const AGENDA_KINDS = Object.freeze({
   elezione: { label: 'Elezioni', icon: 'ballot' },
@@ -149,6 +149,18 @@ export function agendaCalendar(state, { horizonDays = 730 } = {}) {
   // Decisions on the desk: the ones held until a date (after a vote) and the ones due at the end of the week.
   const weekEnd = advanceDays(game.week.startedAt ?? today, 6);
   for (const item of game.inbox ?? []) add({ id: `decisione-${item.id}`, date: item.holdUntilDate && item.holdUntilDate > weekEnd ? item.holdUntilDate : Number.isInteger(item.day) ? (advanceDays(game.week.startedAt ?? today, item.day) > today ? advanceDays(game.week.startedAt ?? today, item.day) : today) : weekEnd > today ? weekEnd : today, kind: 'decisione', title: item.title, detail: item.holdUntilDate && item.holdUntilDate > weekEnd ? 'In attesa: la decisione si chiude dopo questa data.' : `Entro fine settimana, altrimenti: “${item.choices?.find(choice => choice.id === item.defaultChoice)?.label ?? 'scelta predefinita'}”.`, tone: ['urgente', 'situazione'].includes(item.kind) ? 'bad' : 'neutral', urgent: ['urgente', 'situazione'].includes(item.kind), action: { type: 'tab', section: 'agenda', tab: 'settimana' } });
+  // Referendums (referendum-engine.js): the dates the Constitution and the procedure set.
+  for (const ref of game.referendums ?? []) {
+    if (ref.status !== 'in-corso') continue;
+    const name = ref.kind === 'abrogativo' ? ref.target?.title : ref.title;
+    const go = { type: 'nav', page: 'referendum' };
+    if (ref.voteDate && ref.phase === 'campagna') add({ id: `${ref.id}-voto`, date: ref.voteDate, kind: 'referendum', title: `Si vota il referendum ${ref.kind === 'abrogativo' ? 'abrogativo' : 'costituzionale'}: ${name}`, detail: ref.kind === 'abrogativo' ? 'Serve più del 50% degli aventi diritto e la maggioranza dei SÌ.' : 'Nessun quorum: vince la maggioranza dei voti validi.', tone: 'warn', action: go });
+    if (ref.phase === 'cassazione' && ref.cassationAt) add({ id: `${ref.id}-cassazione`, date: ref.cassationAt, kind: 'referendum', title: `Cassazione: verifica del referendum su ${name}`, detail: 'L’Ufficio centrale controlla firme e quesito.', action: go });
+    if (ref.phase === 'corte' && ref.courtAt) add({ id: `${ref.id}-corte`, date: ref.courtAt, kind: 'referendum', title: `Corte costituzionale: ammissibilità del referendum su ${name}`, detail: 'Il giudizio sul quesito.', action: go });
+    if (ref.phase === 'prima' && ref.firstAt) add({ id: `${ref.id}-prima`, date: ref.firstAt, kind: 'referendum', title: `Prima deliberazione della riforma costituzionale: ${name}`, detail: 'Camera e Senato votano a maggioranza assoluta.', action: go });
+    if (ref.phase === 'pausa' && ref.secondAt) add({ id: `${ref.id}-seconda`, date: ref.secondAt, kind: 'referendum', title: `Seconda deliberazione della riforma costituzionale: ${name}`, detail: 'Con i due terzi non c’è referendum.', action: go });
+    if (ref.phase === 'richiesta' && ref.requestUntil && !ref.request) add({ id: `${ref.id}-richiesta`, date: ref.requestUntil, kind: 'referendum', title: `Ultimo giorno per chiedere il referendum: ${name}`, detail: 'Un quinto dei membri di una Camera, 500.000 elettori o cinque Consigli regionali; oltre la scadenza la riforma entra in vigore.', tone: 'warn', urgent: true, action: go });
+  }
   return items.sort((a, b) => a.date.localeCompare(b.date) || Number(b.urgent) - Number(a.urgent) || a.title.localeCompare(b.title));
 }
 

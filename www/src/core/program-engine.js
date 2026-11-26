@@ -9,8 +9,8 @@
 //   - the programme of the Government (government.program.priorities, dossier-engine.js settles it) is derived from the promises of the player and the programme of the party, so the
 //     Government does what was promised, not something else.
 // Everything here is pure: the store applies the effects (reputation, popularity, partners, memory, news) once, when a promise is settled.
-import { AREA_BY_ID, INSTRUMENT_KINDS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261117-3';
-import { LAW_PROGRESS } from '../data/simulation/dossier-rules.js?v=20261117-3';
+import { AREA_BY_ID, INSTRUMENT_KINDS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261126-3';
+import { LAW_PROGRESS } from '../data/simulation/dossier-rules.js?v=20261126-3';
 
 export const PROMISE_STATES = Object.freeze({
   'non-avviata': { label: 'Non avviata', tone: 'neutral' },
@@ -29,6 +29,25 @@ export const PROMISE_SCOPES = Object.freeze({
   governo: { label: 'Programma di governo', detail: 'Lo prendi da capo dell’esecutivo: pesa su fiducia e maggioranza.', weight: 1.3 }
 });
 export const AMBITIONS = Object.freeze({ prudente: { label: 'Prudente', goal: 'un miglioramento contenuto', cost: 0.6, lasting: 0.7, weeks: 20 }, media: { label: 'Media', goal: 'un miglioramento sensibile', cost: 1, lasting: 1, weeks: 32 }, ambiziosa: { label: 'Ambiziosa', goal: 'un miglioramento netto', cost: 1.8, lasting: 1.25, weeks: 52 } });
+// What the player can actually DO about a promise, from the power the role gives (never from the party label: an independent mayor governs, a member of the opposition in a council does not).
+//   power = { executive, seat, majority, independent, allies }: executive = leads (or sits in the executive of) a local government, is a minister or the Prime Minister; seat = a seat in a council or in Parliament;
+//   majority = in or supporting the majority; independent = no party; allies = at least one ally in an alliance.
+// Three commitments, told apart: «realizzazione» (I will make it happen), «proposta» (I will present a proposal), «sostegno» (I will back whoever carries it). A result is promised only if the role can deliver it.
+export const COMMITMENT_KINDS = Object.freeze({
+  realizzazione: { label: 'Realizzazione', detail: 'Mi impegno a realizzarla: serve il potere di farlo (un esecutivo, o la maggioranza).' },
+  proposta: { label: 'Proposta', detail: 'Mi impegno a presentare una proposta: serve un seggio. Non garantisce l’approvazione.' },
+  sostegno: { label: 'Sostegno politico', detail: 'Mi impegno a sostenere chi la porta avanti: nessuna garanzia di risultato.' }
+});
+export function promiseFeasibility(power = null, { scope = 'candidato' } = {}) {
+  if (!power) return { available: Object.keys(COMMITMENT_KINDS), default: 'realizzazione', difficulty: 1, label: 'Fattibilità non valutata', detail: 'Il ruolo non è noto: nessun limite applicato.', unknown: true };
+  const { executive, seat, majority, independent, allies } = power;
+  const needsExecutive = ['governo'].includes(scope);
+  if (executive) return { available: ['realizzazione', 'proposta', 'sostegno'], default: 'realizzazione', difficulty: 0, label: 'Hai il potere di realizzarla', detail: 'Guidi (o sei nell’esecutivo): la promessa dipende dal bilancio, dai tempi e dalla maggioranza, non dal tuo ruolo.' };
+  if (needsExecutive) return { available: ['sostegno'], default: 'sostegno', difficulty: 3, label: 'Non guidi un governo', detail: 'Un programma di governo si promette solo da capo dell’esecutivo.' };
+  if (seat && majority) return { available: ['realizzazione', 'proposta', 'sostegno'], default: 'proposta', difficulty: 1, label: 'Puoi proporla e votarla con la maggioranza', detail: 'Non decidi da solo: la realizzazione dipende dalla maggioranza e dal governo.' };
+  if (seat) return { available: ['proposta', 'sostegno'], default: 'proposta', difficulty: independent && !allies ? 3 : 2, label: independent && !allies ? 'Opposizione, indipendente e senza alleati' : 'Sei all’opposizione', detail: independent && !allies ? 'Puoi presentare una proposta o sostenere chi la porta avanti, non garantirne il risultato (senza alleati non hai neppure i numeri per farla discutere).' : 'Puoi presentare una proposta o sostenere chi la porta avanti, non garantirne il risultato.' };
+  return { available: ['sostegno'], default: 'sostegno', difficulty: 3, label: 'Nessun incarico istituzionale', detail: 'Senza un seggio o un esecutivo puoi solo fare campagna e sostenere chi ha il potere di decidere.' };
+}
 export const PROMISE_RULES = Object.freeze({ capacity: 4, grace: 12, improvement: 1.5, maxDue: 260, minDue: 8 });
 // Priority of a promise: the voters weigh a promise the player put first more, kept or broken (credibility and what settling it gives).
 export const PRIORITIES = Object.freeze({ alta: { label: 'Priorità alta', weight: 1.35 }, media: { label: 'Priorità media', weight: 1 }, bassa: { label: 'Priorità bassa', weight: 0.75 } });
@@ -101,20 +120,26 @@ function conflictsOf(list) {
 }
 
 // ---------- making, changing, withdrawing ----------
-export function makePromise(game, { area, scope = 'candidato', instrument = 'investimento', ambition = 'media', dueWeeks = null, region = null, campaignId = null, source = null, priority = 'media' } = {}, { week, date, society = null, reputation = 50 } = {}) {
+export function makePromise(game, { area, scope = 'candidato', instrument = 'investimento', ambition = 'media', dueWeeks = null, region = null, campaignId = null, source = null, priority = 'media', commitment = null } = {}, { week, date, society = null, reputation = 50, power = null } = {}) {
   const spec = AREA_BY_ID[area];
   if (!spec) throw new Error('Scegli un’area politica per la promessa.');
   if (!PROMISE_SCOPES[scope]) throw new Error('Scegli in nome di chi prendi l’impegno.');
   if (!INSTRUMENT_KINDS[instrument]) throw new Error('Scegli lo strumento con cui vuoi mantenerla.');
   if (!AMBITIONS[ambition]) throw new Error('Scegli quanto è ambiziosa.');
   if (promisesOf(game).some(item => open(item) && item.area === area && item.scope === scope)) throw new Error(`Hai già una promessa aperta su ${spec.label.toLowerCase()}: modificala invece di ripeterla.`);
+  // The power of the role decides what can be promised: an explicit commitment the role cannot honour is refused; without one the strongest the role allows is taken (or «realizzazione» when the role is unknown, as always).
+  const feasibility = promiseFeasibility(power, { scope });
+  if (commitment !== null && !COMMITMENT_KINDS[commitment]) throw new Error('Scegli che tipo di impegno prendi.');
+  if (commitment !== null && !feasibility.available.includes(commitment)) throw new Error(`Con il tuo ruolo non puoi prometterne la ${COMMITMENT_KINDS[commitment].label.toLowerCase()}: ${feasibility.detail}`);
+  if (commitment === null && power && scope === 'governo' && !feasibility.available.includes('realizzazione')) throw new Error(feasibility.detail);
+  const kind = commitment ?? (power ? feasibility.default : 'realizzazione');
   const quote = promiseQuote({ area, instrument, ambition });
   const due = clamp(Math.round(dueWeeks ?? quote.weeks), PROMISE_RULES.minDue, PROMISE_RULES.maxDue);
   const item = {
     id: `promessa-prog-${week}-${area}-${scope}`, kind: 'programma', scope, area, label: spec.label, instrument, ambition, region,
     problem: spec.problem ?? null, objective: `${spec.national}: ${AMBITIONS[ambition].goal}`, intervention: `${INSTRUMENT_KINDS[instrument].label} in ${spec.label.toLowerCase()}`,
     cost: quote.cost, madeWeek: week, madeDate: date, dueWeek: week + due, baseline: areaIndicator(society, area, region), status: 'non-avviata', progress: 0, impediments: [], history: [{ week, date, text: 'Promessa fatta.' }],
-    modified: 0, announced: [], campaignId, sourceRef: source, priority: ['alta', 'media', 'bassa'].includes(priority) ? priority : 'media', backedBy: [], source: 'simulation'
+    commitment: kind, feasibility: { label: feasibility.label, difficulty: feasibility.difficulty }, modified: 0, announced: [], campaignId, sourceRef: source, priority: ['alta', 'media', 'bassa'].includes(priority) ? priority : 'media', backedBy: [], source: 'simulation'
   };
   const quality = credibility({ promises: [...(game?.promises ?? []), item] }, { society, reputation });
   item.credibility = quality.score;
@@ -190,12 +215,36 @@ const bestBill = (parliament, promise) => {
   const laws = [...(parliament?.laws ?? []), ...(parliament?.lawArchive ?? [])].filter(law => (law.policy?.area ?? law.area) === promise.area && (law.introducedAt ?? '') >= (promise.madeDate ?? '') && !['rejected', 'lapsed'].includes(law.stage));
   return laws.map(law => ({ law, value: LAW_PROGRESS[law.stage] ?? 0 })).sort((a, b) => b.value - a.value)[0] ?? null;
 };
+// the bills the player presented himself on the subject, after the promise (what a «proposta» promises)
+const ownBill = (parliament, promise) => [...(parliament?.laws ?? []), ...(parliament?.lawArchive ?? [])].find(law => (law.policy?.area ?? law.area) === promise.area && (law.introducedAt ?? '') >= (promise.madeDate ?? '') && law.sponsor?.kind === 'giocatore') ?? null;
 const stuckBill = (parliament, promise) => (parliament?.laws ?? []).find(law => (law.policy?.area ?? law.area) === promise.area && (law.introducedAt ?? '') >= (promise.madeDate ?? '') && ['rejected', 'lapsed'].includes(law.stage)) ?? null;
 
-export function evaluatePromise(promise, { week, date, society = null, parliament = null, inMajority = false, instability = false }) {
-  const applied = (society?.lawsApplied ?? []).filter(item => item.area === promise.area && (item.week ?? 0) >= promise.madeWeek);
+// The agenda of a promise: what is left, how late it is, why it does not move and the next thing to do, from the role the player really has (power) — never invented: it reads the promise and the evaluation.
+// Returns null for a settled promise. { weeksLeft, late, blocked, next: { text, nav, tab } }.
+export function promiseAgenda(promise, { week = promise.currentWeek ?? 0, power = null } = {}) {
+  if (!promise || PROMISE_SETTLED.includes(promise.status)) return null;
+  const weeksLeft = promise.dueWeek - week, late = Math.max(0, week - promise.dueWeek);
+  const commitment = promise.commitment ?? 'realizzazione';
+  const blocked = promise.impediments?.[0] ?? null;
+  let next;
+  if (commitment === 'proposta') next = power?.seat ? { text: 'Presenta una tua proposta di legge sul tema.', nav: 'leggi' } : { text: 'Serve un seggio per presentare una proposta: l’impegno si può modificare in «sostegno» o riprendere dopo le elezioni.', nav: 'elezioni', tab: 'programma' };
+  else if (commitment === 'sostegno') next = power?.seat ? { text: 'Sostieni il provvedimento sul tema e votalo quando arriva in Aula.', nav: 'leggi' } : { text: 'Sostienilo con il tuo partito e con i gruppi che lo condividono.', nav: 'partito' };
+  else if (power?.executive) next = { text: 'Porta l’intervento nell’azione di governo: scegli costo, tempi e copertura.', nav: 'governo' };
+  else if (power?.seat && power?.majority) next = { text: 'Presenta o sostieni il disegno di legge che la realizza.', nav: 'leggi' };
+  else next = { text: 'Da solo non puoi realizzarla: trasformala in proposta o sostegno (Modifica) oppure cerca un alleato (trattativa).', nav: 'elezioni', tab: 'programma' };
+  if (blocked && /bilancio/i.test(blocked)) next = { text: 'Il bilancio non regge: riduci l’ambizione o trova la copertura prima di procedere.', nav: 'elezioni', tab: 'programma' };
+  if (late > 0) next = { ...next, text: `Scaduta da ${late} ${late === 1 ? 'settimana' : 'settimane'}: ${next.text.charAt(0).toLowerCase()}${next.text.slice(1)}` };
+  return { weeksLeft, late, blocked, next };
+}
+
+export function evaluatePromise(promise, { week, date, society = null, parliament = null, inMajority = false, instability = false, power = null }) {
+  // A promise is kept by the measure it promised, not by any law of the same subject: the area must match AND, when the law says which instrument it used, so must the instrument (a reform does not keep a promise of an investment).
+  const sameArea = (society?.lawsApplied ?? []).filter(item => item.area === promise.area && (item.week ?? 0) >= promise.madeWeek);
+  const applied = sameArea.filter(item => !item.instrument || !promise.instrument || item.instrument === promise.instrument);
+  const offTarget = sameArea.filter(item => !applied.includes(item));
   const bill = bestBill(parliament, promise);
-  const progress = applied.length ? 100 : Math.min(90, bill?.value ?? 0);
+  const commitment = promise.commitment ?? 'realizzazione';
+  const progress = applied.length ? 100 : Math.min(90, Math.max(bill?.value ?? 0, offTarget.length ? 35 : 0));
   const now = areaIndicator(society, promise.area, promise.region);
   const improved = promise.baseline === null || now === null ? true : now >= promise.baseline + PROMISE_RULES.improvement * (AMBITIONS[promise.ambition]?.lasting ?? 1);
   const impediments = [];
@@ -203,12 +252,16 @@ export function evaluatePromise(promise, { week, date, society = null, parliamen
   if (!bill && !applied.length && elapsed > span / 3) impediments.push('Nessun provvedimento presentato: la promessa non è diventata un testo.');
   if (stuckBill(parliament, promise) && !applied.length) impediments.push('Un provvedimento sul tema è stato respinto o è decaduto.');
   if (bill && ['commission'].includes(bill.law.stage) && elapsed > span / 2) impediments.push('Il provvedimento è fermo in commissione.');
+  if (offTarget.length && !applied.length) impediments.push(`Una legge sul tema è in vigore (${offTarget[0].instrumentLabel ?? offTarget[0].instrument ?? 'altro strumento'}) ma non è l’intervento promesso (${INSTRUMENT_KINDS[promise.instrument]?.label?.toLowerCase() ?? promise.instrument}).`);
+  if (power && commitment === 'realizzazione' && !power.executive && !power.majority) impediments.push('Non hai più il potere di realizzarla da solo: ora puoi solo proporla o sostenerla.');
   if (instability) impediments.push('Il Governo è instabile: la maggioranza fatica a votare.');
   if (!inMajority && ['governo', 'coalizione'].includes(promise.scope)) impediments.push('Non guidi la maggioranza: da sola non puoi trasformarla in legge.');
   if (fiscalRoom(society) < promise.cost) impediments.push('Il bilancio non lascia margine per questa spesa.');
   const evidence = applied[0] ? `«${applied[0].title}» è in vigore.` : bill ? `Provvedimento «${bill.law.title}» in corso: fase ${bill.law.stage}.` : 'Nessun atto collegato.';
   let status = promise.status, outcome = null;
-  if (applied.length && improved) { status = 'mantenuta'; outcome = 'mantenuta'; }
+  // A proposal is kept when the player presents it (a bill of his own on the subject); a support, when the measure comes into force: neither guarantees the result, and neither is judged as a realisation.
+  if (commitment === 'proposta' && (ownBill(parliament, promise) || applied.length)) { status = 'mantenuta'; outcome = applied.length ? 'proposta approvata' : 'proposta presentata'; }
+  else if (applied.length && improved) { status = 'mantenuta'; outcome = 'mantenuta'; }
   else if (applied.length && week >= promise.dueWeek) { status = 'parzialmente-mantenuta'; outcome = 'misura in vigore, obiettivo non raggiunto'; }
   else if (week < promise.dueWeek) status = progress > 0 ? 'in-corso' : 'non-avviata';
   else if (week < promise.dueWeek + PROMISE_RULES.grace) status = 'ritardata';

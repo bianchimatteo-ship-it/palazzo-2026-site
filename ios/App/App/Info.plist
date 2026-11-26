@@ -22,6 +22,10 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Politicando 2026 usa la fotocamera solo se scegli di creare il tuo avatar da una fotografia: l’immagine viene trasformata sul dispositivo e non viene inviata a nessun server.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Politicando 2026 apre la galleria solo se scegli una fotografia per il tuo avatar: l’immagine viene trasformata sul dispositivo e non viene inviata a nessun server.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

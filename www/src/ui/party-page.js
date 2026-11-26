@@ -1,18 +1,20 @@
 // PARTITO — the organisation seen from inside: identity, the player's role and odds, internal areas, members and
 // sections, the secretary's desk and the history. The real party stays a reference; everything inside is simulated.
-import { careerOverview } from '../core/career-overview.js?v=20261117-3';
-import { organOf, treasuryOutlook } from '../core/organization-engine.js?v=20261117-3';
-import { playerRoles } from '../core/roles.js?v=20261117-3';
-import { currentObjectiveLabel } from '../data/simulation/career-rules.js?v=20261117-3';
-import { formatDate } from '../core/time.js?v=20261117-3';
-import { lineChart, SERIES } from './charts.js?v=20261117-3';
-import { glyph } from './visuals.js?v=20261117-3';
-import { renderPartyPosition, renderSecretaryDesk } from './game-mode.js?v=20261117-3';
-import { renderOrganizationPanel } from './organization-mode.js?v=20261117-3';
-import { renderOddsCard } from './career-page.js?v=20261117-3';
-import { renderCommitteesPanel } from './committees-view.js?v=20261117-3';
-import { renderPartyLife } from './party-life-view.js?v=20261117-3';
-import { arrow, badge, bar, card, esc, euro, num, pct, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20261117-3';
+import { careerOverview } from '../core/career-overview.js?v=20261126-3';
+import { organOf, treasuryOutlook } from '../core/organization-engine.js?v=20261126-3';
+import { playerRoles } from '../core/roles.js?v=20261126-3';
+import { currentObjectiveLabel } from '../data/simulation/career-rules.js?v=20261126-3';
+import { formatDate } from '../core/time.js?v=20261126-3';
+import { lineChart, SERIES } from './charts.js?v=20261126-3';
+import { glyph } from './visuals.js?v=20261126-3';
+import { renderPartyPosition, renderSecretaryDesk } from './game-mode.js?v=20261126-3';
+import { renderOrganizationPanel } from './organization-mode.js?v=20261126-3';
+import { renderOddsCard } from './career-page.js?v=20261126-3';
+import { renderCommitteesPanel } from './committees-view.js?v=20261126-3';
+import { renderPartyLife } from './party-life-view.js?v=20261126-3';
+import { partyOpsAvailability } from '../core/career-engine.js?v=20261126-3';
+import { OP_COSTS, OP_COOLDOWNS } from '../core/party-ops-engine.js?v=20261126-3';
+import { arrow, badge, bar, card, esc, euro, num, pct, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20261126-3';
 
 const SOURCE_LABELS = { real: 'Dato reale verificato', user: 'Creato da te', simulation: 'Simulazione' };
 const partyName = party => party?.officialName ?? party?.name ?? 'Partito';
@@ -120,15 +122,38 @@ function hero(state, record, logoFor, track) {
   });
 }
 
-export function renderPartyPage(state, { tab = null, record = null, logoFor = () => null, selectable = [], territory = {}, filters = {} } = {}) {
+// «Appartenenza»: leaving the party / changing it, in plain sight on the Panoramica (it used to live only in the secondary tab «Ruoli e correnti»). What it does is read from the engine before the player confirms.
+function membershipCard(state, preview) {
+  const party = state.game.party;
+  const lines = (preview?.lines ?? []).map(line => `<li>${esc(line)}</li>`).join('');
+  return card({ kicker: 'APPARTENENZA', title: `Sei iscritto a ${partyName(null) === 'Partito' ? party.label : party.label}`, body: `<p class="parliament-note">Puoi lasciare il partito quando vuoi e continuare come indipendente, oppure passare subito a un altro: la scelta ha conseguenze, che leggi qui prima di confermare.</p>
+    ${lines ? `<details class="pp-leave-details"><summary>Che cosa succede se lasci ${esc(party.label)}</summary><ul class="sx-list">${lines}</ul></details>` : ''}
+    <div class="sx-actions"><button type="button" class="secondary-button danger" data-party-action="leave">Lascia il partito</button><button type="button" class="secondary-button" data-party-action="change">Cambia partito</button></div>` });
+}
+
+// An independent: the two ways back into party politics, said first — found a party of one's own (the operation of the internal life, with its requirements and its cost) or join one that exists.
+function independentPaths(state) {
+  const game = state.game;
+  const ops = partyOpsAvailability(game, { neighbours: [] }).found;
+  const have = { capital: Math.round(game.resources?.politicalCapital ?? 0), funds: Math.round(game.resources?.funds ?? 0) };
+  const need = OP_COSTS.found;
+  const req = (label, ok, detail) => `<li class="${ok ? 'is-ok' : 'is-missing'}"><span aria-hidden="true">${ok ? '✓' : '•'}</span><b>${esc(label)}</b> <small>${esc(detail)}</small></li>`;
+  const office = (playerRoles(state).roles ?? []).filter(([kind]) => !['fondatore', 'segretario', 'direzione', 'dirigente', 'iscritto'].includes(kind)).map(([, title]) => title).filter(Boolean).slice(0, 2);
+  return card({ className: 'pp-independent', kicker: 'INDIPENDENTE', title: 'Fonda un nuovo partito o aderisci a uno esistente', body: `<p class="parliament-note">Senza un partito decidi da solo, ma non hai una struttura alle spalle. Puoi fondarne uno tuo, con nome, sigla, identità, logo, orientamento e posizioni, oppure aderire a un partito che esiste.</p>
+    <div class="sx-grid two"><div><h4 class="pp-sub">Requisiti per fondare</h4><ul class="pp-reqs">${req('Capitale politico', have.capital >= (need.capital ?? 0), `${have.capital} disponibili, ne servono ${need.capital}`)}${req('Fondi', have.funds >= (need.funds ?? 0), `${euro(have.funds)} disponibili, ne servono ${euro(need.funds)}`)}${req('Tempo dall’ultima fondazione', !/settiman/i.test(ops.reason ?? ''), `una fondazione ogni ${OP_COOLDOWNS.found} settimane`)}</ul>${ops.ok ? '' : `<p class="pl-reason">${esc(ops.reason ?? '')}</p>`}</div>
+    <div><h4 class="pp-sub">Cosa ottieni</h4><ul class="sx-list"><li>Diventi fondatore e segretario: decidi linea, alleanze e candidature.</li><li>Nasce l’organizzazione iniziale (iscritti, sezioni, tesoreria) e la prima area interna; la fai crescere dalla Vita del partito.</li><li>Il partito entra nel mondo politico simulato e nei sondaggi, e resta nel salvataggio.</li><li>${office.length ? `Gli incarichi che ricopri (${esc(office.join(', '))}) restano tuoi.` : 'Gli incarichi che ricoprirai saranno legati al nuovo partito.'}</li></ul></div></div>
+    <div class="sx-actions"><button type="button" class="primary-button" data-action="scroll-to" data-target="fonda-partito">Fonda un nuovo partito ${arrow}</button><button type="button" class="secondary-button" data-action="scroll-to" data-target="aderisci-partito">Aderisci a un partito</button></div>` });
+}
+
+export function renderPartyPage(state, { tab = null, record = null, logoFor = () => null, selectable = [], territory = {}, filters = {}, leavePreview = null } = {}) {
   if (!state.game) return '';
   const party = state.game.party;
   const tabs = partyTabs(state);
   const active = tabs.some(([id]) => id === tab) ? tab : 'panoramica';
   const track = careerOverview(state).tracks.find(item => item.id === 'partito');
   let body = '';
-  if (!party) body = `${renderPartyPosition(state, { parties: selectable })}<p class="sx-note">Il partito reale resta un riferimento: la tua posizione interna, le correnti e l’organizzazione sono simulate.</p>`;
-  else if (active === 'panoramica') body = `${alerts(state)}<div class="sx-grid two">${card({ kicker: 'IDENTITÀ', title: partyName(record) || party.label, body: identity(party, record, logoFor) })}${card({ kicker: 'LA TUA POSIZIONE · SIMULAZIONE', title: party.rankTitle, body: positionCard(state, track) })}</div><div class="sx-grid two">${card({ kicker: 'EQUILIBRI INTERNI · SIMULATI', title: 'Le aree del partito', body: currentsCard(party) })}${card({ kicker: 'NEL PAESE', title: 'Il partito nei sondaggi', body: countryCard(state) })}</div>`;
+  if (!party) body = `${independentPaths(state)}<div id="fonda-partito">${renderPartyLife(state, filters)}</div><div id="aderisci-partito">${renderPartyPosition(state, { parties: selectable })}</div><p class="sx-note">Il partito reale resta un riferimento: la tua posizione interna, le correnti e l’organizzazione sono simulate.</p>`;
+  else if (active === 'panoramica') body = `${alerts(state)}<div class="sx-grid two">${card({ kicker: 'IDENTITÀ', title: partyName(record) || party.label, body: identity(party, record, logoFor) })}${card({ kicker: 'LA TUA POSIZIONE · SIMULAZIONE', title: party.rankTitle, body: positionCard(state, track) })}</div><div class="sx-grid two">${card({ kicker: 'EQUILIBRI INTERNI · SIMULATI', title: 'Le aree del partito', body: currentsCard(party) })}${card({ kicker: 'NEL PAESE', title: 'Il partito nei sondaggi', body: countryCard(state) })}</div>${membershipCard(state, leavePreview)}`;
   else if (active === 'ruoli') body = `${track?.odds ? renderOddsCard(track) : ''}${renderPartyPosition(state, { parties: selectable, withSecretary: false })}`;
   else if (active === 'vita') body = renderPartyLife(state, filters);
   else if (active === 'organizzazione') body = party.org ? `<section class="sx-card pp-org">${renderOrganizationPanel(state)}</section>` : '<p class="sx-empty">Organizzazione non disponibile.</p>';

@@ -21,6 +21,8 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        // Appodeal SDK (Android ads provider, plugins/appodeal-ads)
+        maven { url = uri("https://artifactory.appodeal.com/appodeal") }
     }
 }
 

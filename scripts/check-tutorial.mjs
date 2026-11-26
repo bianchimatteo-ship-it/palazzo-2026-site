@@ -1,13 +1,16 @@
 // The guided tutorial, in a real browser (Chrome over the DevTools protocol; skipped when it is not installed): optional (never shown by itself), started from «Come giocare»,
-// thirteen steps that open the real pages with Indietro / Avanti / Salta / Chiudi and a progress bar, resumable after closing and after a reload, repeatable, and harmless:
+// thirteen steps (each with one exercise, on its real page, with the control it points at; the scroll is back at zero after every Avanti/Indietro) that open the real pages with Indietro / Avanti / Salta / Chiudi and a progress bar, resumable after closing and after a reload, repeatable, and harmless:
 // it never changes the career (week, days, date, funds). The guide has a search box. On a phone the card stays on screen above the navigation bar.
 import assert from 'node:assert/strict';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { chromeAvailable, createCareerInPage, openCareer, withBrowser } from './lib/browser.mjs';
 
 if (!chromeAvailable) { console.log('Tutorial saltato: Chrome non trovato (imposta CHROME_PATH per eseguirlo).'); process.exit(0); }
 import { readFile } from 'node:fs/promises';
 const _build = (await readFile(new URL('../index.html', import.meta.url), 'utf8')).match(/main\.js\?v=([^"']+)/)?.[1];
-const N = (await import(`../src/ui/tutorial.js?v=${_build}`)).TUTORIAL_STEPS.length; // the steps of the tutorial (13: the weekly activities and the votes in the Chamber have their own)
+const { TUTORIAL_STEPS, TUTORIAL_TASKS } = await import(`../src/ui/tutorial.js?v=${_build}`);
+const N = TUTORIAL_STEPS.length;
+const SHOTS = process.env.TUTORIAL_SHOTS; // optional: a folder where the before/after screenshots are written // the steps of the tutorial (13: the weekly activities and the votes in the Chamber have their own)
 const problems = [];
 const check = (condition, message) => { if (!condition) problems.push(message); };
 
@@ -61,6 +64,63 @@ await withBrowser(async browser => {
   await click('[data-tutorial-go]'); await pause(500);
   check(await evaluate(`location.hash === '#panoramica' && !document.querySelector('[data-tutorial-go]') && Boolean(document.querySelector('[data-tutorial-card]'))`), '«Vai alla schermata» riporta alla pagina del passo e il tutorial resta aperto.');
 
+
+  // ---- every step shows its real page; every indicated control exists; Avanti/Indietro bring the new screen to the top (also between two steps of the SAME page), on desktop and on a phone ----
+  const shot = async name => { if (!SHOTS) return; await mkdir(SHOTS, { recursive: true }); const { data } = await send('Page.captureScreenshot', { format: 'png' }); await writeFile(`${SHOTS}/${name}.png`, Buffer.from(data, 'base64')); };
+  const scrollState = () => evaluate(`(() => { const card = document.querySelector('[data-tutorial-card]'); const det = document.querySelector('.tutorial-details'); return { y: Math.round(scrollY), cardTop: Math.round(card?.scrollTop ?? 0), detTop: Math.round(det?.scrollTop ?? 0), max: document.scrollingElement.scrollHeight - innerHeight }; })()`);
+  const scrollDown = () => evaluate(`(() => { scrollTo(0, 500); const card = document.querySelector('[data-tutorial-card]'); const det = document.querySelector('.tutorial-details'); if (card) card.scrollTop = 80; if (det) det.scrollTop = 80; return true; })()`);
+  for (const [name, w, h, mobile] of [['desktop', 1280, 800, false], ['smartphone', 390, 844, true]]) {
+    await viewport(w, h, mobile); await pause(500);
+    await click('[data-tutorial=skip]');
+    await click('[data-action=menu]'); await click('[data-menu=guida]');
+    await click('.tutorial-invite [data-tutorial=restart]');
+    if (mobile) { const state = await card(); if (state?.expanded !== '1') await click('[data-tutorial=toggle]'); }
+    await evaluate(`document.querySelectorAll('[data-news-popup-close],[data-outcome-dismiss],[data-report-close]').forEach(el => el.click()), true`);
+    for (let step = 1; step <= N; step++) {
+      const item = TUTORIAL_STEPS[step - 1];
+      const here = await card();
+      check(here?.now === step && here.hash === `#${item.page}`, `${name}, passo ${step} (${item.id}): apre la pagina ${item.page} (${here?.hash}).`);
+      check(here?.inside && here.scrollW <= here.innerW + 1, `${name}, passo ${step}: la scheda sta nello schermo, non tocca la barra inferiore, nessuno scorrimento orizzontale.`);
+      check(here?.buttons.every(([label, height]) => height >= 40), `${name}, passo ${step}: pulsanti da tocco (${JSON.stringify(here?.buttons)}).`);
+      check(await evaluate(`[...document.querySelectorAll('[data-tutorial-card] button')].filter(b => b.getBoundingClientRect().height > 0).every(b => { const r = b.getBoundingClientRect(); const c = document.querySelector('[data-tutorial-card]').getBoundingClientRect(); return r.left >= c.left - 1 && r.right <= c.right + 1 && r.top >= c.top - 1 && r.bottom <= c.bottom + 1 || b.closest('.tutorial-details, .tutorial-actions'); })`), `${name}, passo ${step}: nessun pulsante fuori dalla scheda.`);
+      const target = TUTORIAL_TASKS[item.id].target;
+      check(await evaluate(`Boolean(document.querySelector(${JSON.stringify(target.split(',')[0].trim())}))`), `${name}, passo ${step} (${item.id}): il controllo indicato esiste sulla pagina (${target}).`);
+      check(await evaluate(`document.querySelector('[data-tutorial-task]')?.dataset.taskTarget === ${JSON.stringify(target)}`), `${name}, passo ${step}: la scheda indica lo stesso controllo dell’esercizio.`);
+      if (!mobile) {
+        await pause(450);
+        // on a computer the card never covers the control it points at (it moves to the other side when it would)
+        const covered = await evaluate(`(() => { const t = document.querySelector('.tutorial-point'); const c = document.querySelector('[data-tutorial-card]'); if (!t || !c) return 'manca'; const a = c.getBoundingClientRect(), b = t.getBoundingClientRect(); return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top && b.top >= 0 && b.bottom <= innerHeight; })()`);
+        check(covered === false || covered === 'manca' && false, `${name}, passo ${step} (${item.id}): la scheda non copre il controllo indicato (${covered}).`);
+      }
+      await scrollDown();
+      const moved = await scrollState();
+      if (step === 3 || step === 7) await shot(`${name}-passo${step}-prima-${item.id}`);
+      if (step < N) {
+        await click('[data-tutorial=next]'); await pause(300);
+        const after = await scrollState(); const next = await card();
+        check(after.y <= 1 && after.cardTop === 0 && after.detTop === 0, `${name}, Avanti dal passo ${step}: la nuova schermata parte dall’inizio (pagina ${moved.y}→${after.y}, scheda ${moved.cardTop}→${after.cardTop}, dettagli ${moved.detTop}→${after.detTop}).`);
+        if (TUTORIAL_STEPS[step].page === item.page) check(after.y <= 1 && next?.now === step + 1, `${name}: tra i passi ${step} e ${step + 1} (stessa pagina ${item.page}) lo scroll torna comunque a zero.`);
+        if (step === 3 || step === 7) await shot(`${name}-passo${step + 1}-dopo-${TUTORIAL_STEPS[step].id}`);
+      }
+    }
+    // Indietro: same rule, including on the same page
+    for (let step = N; step > 1; step--) {
+      await scrollDown();
+      await click('[data-tutorial=prev]'); await pause(300);
+      const after = await scrollState();
+      check(after.y <= 1 && after.cardTop === 0 && after.detTop === 0 && (await card())?.now === step - 1, `${name}, Indietro dal passo ${step}: schermata dall’inizio (${after.y}/${after.cardTop}/${after.detTop}).`);
+    }
+    // ordinary scrolling and the details that open and close are left alone
+    await evaluate(`scrollTo(0, 300); true`); await pause(200);
+    const rest = await scrollState();
+    await click('[data-tutorial=toggle]'); await pause(300); await click('[data-tutorial=toggle]'); await pause(300);
+    check(Math.abs((await scrollState()).y - rest.y) <= 2 && rest.y > 100, `${name}: aprire e chiudere i dettagli non muove la pagina (${rest.y}→${(await scrollState()).y}).`);
+    await shot(`${name}-scheda-passo2`);
+  }
+  await viewport(375, 812, true); await pause(300);
+  await click('[data-tutorial=skip]');
+  await click('[data-action=menu]'); await click('[data-menu=guida]'); await click('.tutorial-invite [data-tutorial=restart]');
+
   // walk forward through the real pages
   const seen = [c.hash];
   for (let step = 2; step <= N; step++) {
@@ -70,7 +130,7 @@ await withBrowser(async browser => {
     seen.push(c?.hash);
     check(c?.hash && c.hash !== '#' , `Passo ${step}: apre la sua pagina (${c?.hash}).`);
   }
-  check(new Set(seen).size >= 7, `Attraversa pagine diverse del gioco (${[...new Set(seen)].join(' ')}).`);
+  check(new Set(seen).size >= 8, `Attraversa pagine diverse del gioco (${[...new Set(seen)].join(' ')}).`);
   await click('[data-tutorial=prev]');
   c = await card();
   check(c?.now === N - 1, 'Indietro torna al passo precedente.');
@@ -101,4 +161,4 @@ await withBrowser(async browser => {
   if (errors.length) problems.push(`Errori JavaScript: ${errors.slice(0, 3).join(' | ')}`);
 });
 if (problems.length) { console.error(`Tutorial: ${problems.length} problemi.\n${[...new Set(problems)].slice(0, 40).join('\n')}`); process.exit(1); }
-console.log('Tutorial verificato in Chrome: facoltativo, avviabile da «Come giocare», undici passi sulle pagine vere con Avanti/Indietro/Salta/Chiudi e progresso, ripresa dopo la chiusura e il ricaricamento, rifacibile, ricerca nella guida, nessun effetto sulla carriera, scheda dentro lo schermo a 375 px.');
+console.log('Tutorial verificato in Chrome: facoltativo, avviabile da «Come giocare», tredici passi sulle pagine vere con Avanti/Indietro/Salta/Chiudi e progresso, ripresa dopo la chiusura e il ricaricamento, rifacibile, ricerca nella guida, nessun effetto sulla carriera, scheda dentro lo schermo a 375 px.');

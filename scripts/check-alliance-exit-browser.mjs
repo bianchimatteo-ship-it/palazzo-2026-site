@@ -31,15 +31,15 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   const openForces = async () => {
     if (!(await has('[data-nav="sondaggi"]'))) { await goto(''); await must(() => has('[data-menu="continua"]'), 'il menu con «Continua»'); await click('[data-menu="continua"]'); await must(() => has('.page-wrap'), 'la partita'); }
     await click('[data-nav="sondaggi"]'); await pause(400);
-    await must(() => has('[data-obs-area="forze"]'), 'la pagina dei sondaggi');
-    await click('[data-obs-area="forze"]'); await pause(300);
+    await must(() => has('[data-obs-area="alleanze"]'), 'la pagina dei sondaggi');
+    await click('[data-obs-area="alleanze"]'); await pause(300);
     await must(() => has('[data-my-coalition]'), 'il pannello «La mia coalizione»');
   };
   await openForces();
 
   // ---------- one panel, read from world.alliances ----------
   assert.equal(await count('[data-my-coalition]'), 1, 'Un solo pannello «La mia coalizione».');
-  assert.match(await text('[data-my-coalition]'), /La mia coalizione/); assert.equal(await count('[data-coalition-kind="coalizione"]'), 1, 'È una «Coalizione politica».');
+  assert.match(await text('[data-my-coalition]'), /La mia coalizione/i); assert.equal(await count('[data-coalition-kind="coalizione"]'), 1, 'È una «Coalizione politica».');
   assert.equal(await count('[data-my-coalition] [data-coalition-member]'), 3, 'Ci sono i tre membri.');
   assert.equal(await count('.force-card [data-coalition-member], .force-card [data-world-break]'), 0, 'Nessuna ripetizione sulle schede dei membri.');
   assert.equal(await count('[data-world-break]'), 1, 'Un solo comando di uscita.');

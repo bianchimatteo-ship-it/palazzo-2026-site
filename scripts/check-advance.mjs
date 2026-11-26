@@ -3,7 +3,7 @@
 // (an urgent matter, a situation, a campaign under way) and goes on when the staff takes over; no past dates, a ceiling on the distance, a state that is always at the end of a week.
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { startCareer, fingerprint } from './lib/long-run.mjs';
+import { approveNomination, startCareer, fingerprint } from './lib/long-run.mjs';
 
 const build = (await readFile(new URL('../index.html', import.meta.url), 'utf8')).match(/main\.js\?v=([^"']+)/)?.[1];
 const v = build ? `?v=${build}` : '?';
@@ -134,6 +134,7 @@ const politiche = store.getState().game.elections.find(item => item.type === 'po
 assert.ok(politiche, 'Una carriera da deputato ha le politiche in calendario.');
 store.fastForwardToElection('politiche');
 store.startCampaign({ electionType: 'politiche', role: 'deputato', objective: 'seat' }, run.db.parties, { politicians: run.db.politicians, groups: run.db.parliamentaryGroups });
+approveNomination(store);
 assert.equal(store.getState().campaign.status, 'active');
 const afterVote = advanceDays(politiche.electionDate, 30);
 const campaignDay = store.getState().clock.currentDate;

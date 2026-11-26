@@ -25,7 +25,7 @@ const promise = (id, madeWeek, dueWeek, extra = {}) => ({ id, kind: 'programma',
 if (chromeAvailable) await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version, send, screenshot }) => {
   await createCareerInPage({ evaluate, version }, { weeks: 2 });
   await openCareer({ evaluate, goto, waitFor: wait });
-  await evaluate(`localStorage.setItem('politicando.settings.v1', JSON.stringify({ newsPopup: 'off', sceneMotion: 'off', language: 'it', weeklyReport: 'off' })); document.querySelectorAll('[data-report-close],[data-confirm=cancel]').forEach(b => b.click()); true`);
+  await evaluate(`localStorage.setItem('politicando.settings.v1', JSON.stringify({ newsPopup: 'off', sceneMotion: 'off', language: 'it', weeklyReport: 'off' })); document.querySelectorAll('[data-report-close],[data-confirm=cancel],[data-news-popup-close]').forEach(b => b.click()); true`);
   const S = body => evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); ${body} })()`);
   await S(`store.getState().game.resources.politicalCapital = 40; try { store.makePromise({ area: 'sanita', scope: 'candidato', instrument: 'investimento', ambition: 'media', dueWeeks: 8 }); } catch (e) { return e.message; } return true;`);
   await S(`const g = store.getState().game; g.promises.forEach(p => { p.dueWeek = g.week.index + 6; }); return true;`);
@@ -37,6 +37,17 @@ if (chromeAvailable) await withBrowser(async ({ evaluate, goto, waitFor: wait, p
   assert.ok(!(await evaluate(`Boolean(document.querySelector('[data-promise-reminder]'))`)), '«Più tardi» chiude la scheda.');
   await evaluate(`window.__offerReminder?.(); true`); await pause(600);
   assert.ok(!(await evaluate(`Boolean(document.querySelector('[data-promise-reminder]'))`)), 'Lo stesso promemoria non ricompare.');
+  // «Apri il programma» opens the real Programme tab of Elections (not the first tab), from any other page, and the card is gone
+  await S(`const g = store.getState().game; g.promises.push({ id: 'p-extra', kind: 'programma', label: 'Più posti letto', intervention: 'Investimento', madeWeek: g.week.index - 3, dueWeek: g.week.index + 5, status: 'in-corso', progress: 10, area: 'sanita', scope: 'candidato' }); g.reminderLog = {}; return true;`);
+  await evaluate(`document.querySelector('[data-nav="sondaggi"]')?.click(), true`); await pause(700);
+  await evaluate(`window.__offerReminder?.(); true`); await pause(900);
+  assert.equal(await evaluate(`Boolean(document.querySelector('[data-reminder-open]'))`), true, 'Il promemoria compare da un’altra pagina (Sondaggi).');
+  {
+    await evaluate(`document.querySelector('[data-reminder-open]').click(); true`); await pause(1500);
+    assert.equal(await evaluate(`location.hash`), '#elezioni', '«Apri il programma» porta a Elezioni.');
+    assert.equal(await evaluate(`Boolean(document.querySelector('.program-page'))`), true, '… e apre la scheda Programma, non la prima scheda di Elezioni.');
+    assert.equal(await evaluate(`Boolean(document.querySelector('[data-promise-reminder]'))`), false, 'La scheda si chiude.');
+  }
   assert.deepEqual(errors, [], 'Nessun errore JavaScript.');
 });
 console.log('Promemoria delle promesse verificati: scadenze a otto, quattro e una settimana, ritardo, promessa non avviata, una scheda ogni tre settimane, mai ripetuti, scheda non bloccante in un momento tranquillo.');

@@ -1,7 +1,10 @@
 // POLITICANDO 2026 on Cloudflare Workers: static assets for the game, a small shared archive for the owner's
 // corrections (Workers KV), and player accounts with online career saves (Cloudflare D1).
 // The real dataset files are never written.
+import { testAccessGate, privateResponse } from './worker-test-access.js';
 import { handleTranslate } from './worker-translate.js';
+import { REWARD_MIGRATION, REWARD_COLUMNS, ACTIVITY_KEEP_DAYS, MAIL_SUBJECTS, RETENTION, PORTAL_PATHS } from './worker-constants.js';
+import { resolveAds, resolveAppodeal, APPODEAL_MODE, PLATFORMS } from './src/data/ads-config.js';
 const ARCHIVE_KEY = 'archivio-condiviso';
 const PIN_KEY = 'pin-amministratore';
 const MAX_BYTES = 1_500_000;
@@ -178,6 +181,9 @@ const SCHEMA = [
   // Rewarded videos (migrations/0008_reward_ads.sql has the same text): one row per account and completion id, so the same completion is never credited twice, and the day (Europe/Rome) for the daily limit.
   'CREATE TABLE IF NOT EXISTS reward_ads (user_id TEXT NOT NULL, ad_id TEXT NOT NULL, day TEXT NOT NULL, claimed_at TEXT NOT NULL, career_id TEXT, device_id TEXT, PRIMARY KEY (user_id, ad_id))',
   'CREATE INDEX IF NOT EXISTS reward_ads_day ON reward_ads (user_id, day)',
+  // Rewarded videos of personal funds (migrations/0010_reward_ad_funds.sql has the same text; same Appodeal placement `default` as the poll bonus): one row per account (or guest device) and completion id,
+  // no daily limit — a table of its own, so these videos never count against the limit of the poll bonus; a completion id is accepted in only one of the two tables (bookAdReward).
+  'CREATE TABLE IF NOT EXISTS reward_ad_funds (user_id TEXT NOT NULL, ad_id TEXT NOT NULL, claimed_at TEXT NOT NULL, career_id TEXT, device_id TEXT, PRIMARY KEY (user_id, ad_id))',
   // The migrations applied by the code (the ones that cannot be written as CREATE ... IF NOT EXISTS, such as a column added to a table that already exists).
   'CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, applied_at TEXT NOT NULL)',
   'CREATE TABLE IF NOT EXISTS logos (user_id TEXT NOT NULL, party_id TEXT NOT NULL, version INTEGER NOT NULL, sha256 TEXT, mime TEXT, bytes INTEGER, width INTEGER, height INTEGER, name TEXT, origin TEXT, object_key TEXT, deleted_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, PRIMARY KEY (user_id, party_id))',
@@ -186,11 +192,6 @@ let schemaReady = null;
 // Migration «0006-rewards»: the columns that tables made by an earlier version of the rewards lack. The tables are read with PRAGMA table_info and a column is added ONLY when it is missing; any other error
 // (a table that cannot be read, an ALTER that fails for a reason other than a column that another request has just added) is NOT ignored: schemaReady is reset and the request fails, so that nothing runs on a half-migrated schema.
 // Nothing existing is altered or deleted: the rows stay as they were.
-export const REWARD_MIGRATION = '0006-rewards';
-export const REWARD_COLUMNS = {
-  reward_claims: [['device_id', 'TEXT']],
-  reward_time: [['base_ms', 'INTEGER NOT NULL DEFAULT 0'], ['folded_ms', 'INTEGER NOT NULL DEFAULT 0'], ['spans', "TEXT NOT NULL DEFAULT '[]'"], ['total_ms', 'INTEGER NOT NULL DEFAULT 0'], ['rev', 'INTEGER NOT NULL DEFAULT 0'], ['updated_at', "TEXT NOT NULL DEFAULT ''"]]
-};
 const columnsOf = async (db, table) => ((await db.prepare(`PRAGMA table_info(${table})`).all()).results ?? []).map(row => row.name);
 async function migrateRewards(db) {
   for (const [table, wanted] of Object.entries(REWARD_COLUMNS)) {
@@ -221,7 +222,8 @@ export function romeDay(moment = Date.now()) {
 }
 // ----- the time played, merged across devices (reward_time) -----
 const REWARD_DAILY_MS = 5 * 60_000;
-const COMMUNITY_REWARDS = ['instagram', 'tiktok'];
+// «benvenuto»: the thank-you reward of the update (src/core/welcome-reward.js) bound to the ACCOUNT, so that a reinstallation or cleared data on a device never grants it twice to the same account.
+const COMMUNITY_REWARDS = ['instagram', 'tiktok', 'benvenuto'];
 const AD_COMPLETION_ID = /^[\w.:|~-]{8,160}$/, AD_DAILY_MAX = 30;
 // A reward that is switched off on the Worker cannot be claimed whatever a client says (TikTok: off until the rules of the platform allow a reward for a follow; COMMUNITY_TIKTOK_ENABLED=1 turns it on).
 const communityOn = (env, reward) => reward !== 'tiktok' || env.COMMUNITY_TIKTOK_ENABLED === '1';
@@ -362,6 +364,7 @@ async function cleanupExpired(db, now = Date.now()) {
   await db.prepare('DELETE FROM reward_claims WHERE day < ?').bind(romeDay(now - 62 * 86_400_000)).run().catch(() => null);
   await db.prepare("DELETE FROM reward_time WHERE scope LIKE 'd:%' AND scope < ?").bind(`d:${romeDay(now - 62 * 86_400_000)}`).run().catch(() => null);
   await db.prepare('DELETE FROM reward_ads WHERE day < ?').bind(romeDay(now - 62 * 86_400_000)).run().catch(() => null);
+  await db.prepare('DELETE FROM reward_ad_funds WHERE claimed_at < ?').bind(new Date(now - 62 * 86_400_000).toISOString()).run().catch(() => null);
   await db.prepare('DELETE FROM reward_devices WHERE updated_at < ?').bind(new Date(now - 90 * 86_400_000).toISOString()).run().catch(() => null);
   return { attempts: attempts?.meta?.changes ?? 0, sessions: sessions?.meta?.changes ?? 0, tokens: tokens?.meta?.changes ?? 0 };
 }
@@ -384,7 +387,6 @@ async function openSession(db, userId) {
 // What is counted and why: the ACCOUNTS (a registered player), nothing else. A day of activity is «this account signed in or used its online saves on this day» (Europe/Rome); the row holds the account
 // and the day, no address, no device, no user agent, no content of the game. Players with no account are not counted (nothing identifies them, and nothing is added to identify them). Rows older than
 // ACTIVITY_KEEP_DAYS go away; the rows of an account go with the account. Writing is OFF until the owner sets ADMIN_STATS=on, after the privacy notice has been updated (docs/statistiche-admin.md).
-export const ACTIVITY_KEEP_DAYS = 400;
 export const statsOn = env => env?.ADMIN_STATS === 'on';
 let activityPurgedDay = null;
 export async function noteActivity(env, db, userId, now = Date.now()) {
@@ -418,7 +420,25 @@ export async function adminStats(env, db, { now = Date.now(), days = 90 } = {}) 
   while (day <= today) { series.push({ day, newAccounts: joined.get(day) ?? 0 }); day = addDaysIso(day, 1); }
   const installs = ((await db.prepare('SELECT day, store, installs, source, recorded_at AS recordedAt FROM store_installs WHERE day >= ? ORDER BY day DESC, store').bind(from).all()).results ?? []);
   const installTotals = Object.fromEntries(STORES.map(store => [store, installs.filter(row => row.store === store).reduce((sum, row) => sum + row.installs, 0)]));
-  return { generatedAt: new Date(now).toISOString(), days: span, accounts: { total: accounts, newInPeriod: [...joined.values()].reduce((a, b) => a + b, 0), series }, activity, installs: { rows: installs, totals: installTotals, note: 'Le installazioni non si possono dedurre dal gioco: sono le cifre di Google Play Console e App Store Connect, inserite a mano dal titolare con la fonte.' } };
+  // The careers saved online (only those: a career kept in the browser without an account is not known to the server): how many, how they stand, the difficulty and the game mode written in the meta of the save. Nothing that names a person, a party or a place.
+  const metas = ((await db.prepare('SELECT meta, updated_at AS at FROM saves').all()).results ?? []).map(row => { let meta = {}; try { meta = JSON.parse(row.meta ?? '{}') ?? {}; } catch { /* a save without readable meta counts as «unknown» */ } return { status: typeof meta.status === 'string' ? meta.status : null, difficulty: typeof meta.difficulty === 'string' ? meta.difficulty : null, gameMode: typeof meta.gameMode === 'string' ? meta.gameMode : null, at: row.at }; });
+  const tally = key => { const out = {}; for (const meta of metas) { const value = meta[key] ?? 'non indicato'; out[value] = (out[value] ?? 0) + 1; } return out; };
+  const since = n => metas.filter(meta => meta.at && Date.parse(meta.at) >= now - n * 86400000).length;
+  const careers = { online: metas.length, ended: metas.filter(meta => meta.status === 'ended').length, active: metas.filter(meta => meta.status && meta.status !== 'ended').length, byDifficulty: tally('difficulty'), byGameMode: tally('gameMode'), savedLast7Days: since(7), savedLast30Days: since(30),
+    note: 'Sono le carriere salvate online con un account (una per salvataggio). Le carriere create e giocate solo nel browser, senza account, non arrivano al server e non sono contate; non c’è un contatore delle carriere create: «completate» sono quelle online con stato «ended».' };
+  // What the figures can and cannot tell: every metric asked for is listed with its source, or with the reason it is not there (nothing is made up).
+  const coverage = [
+    { id: 'account', label: 'Account registrati e nuovi', available: true, source: 'tabella degli account (data di creazione)' },
+    { id: 'dau-wau-mau', label: 'Utenti attivi giornalieri, settimanali, mensili (DAU/WAU/MAU)', available: statsOn(env), source: 'giorni di attività degli account', note: statsOn(env) ? null : 'La raccolta è spenta (ADMIN_STATS non è «on»): serve prima la base giuridica e l’informativa.' },
+    { id: 'sessioni', label: 'Sessioni', available: false, note: 'Il server conta i giorni in cui un account è attivo, non le singole sessioni: non si conta altro per minimizzare i dati.' },
+    { id: 'installazioni', label: 'Installazioni', available: true, source: 'cifre inserite a mano dal titolare con la fonte', note: 'Nessun conteggio automatico: servono le credenziali dei report degli store.' },
+    { id: 'carriere-online', label: 'Carriere salvate online e completate', available: true, source: 'metadati dei salvataggi online' },
+    { id: 'carriere-create', label: 'Carriere create (anche senza account)', available: false, note: 'Non c’è un contatore: chi gioca senza account non invia nulla al server.' },
+    { id: 'modalita', label: 'Modalità di gioco', available: metas.some(meta => meta.gameMode), source: 'metadati dei salvataggi online', note: metas.some(meta => meta.gameMode) ? 'Solo per i salvataggi scritti dopo l’introduzione del dato.' : 'I salvataggi online esistenti non indicano ancora la modalità.' },
+    { id: 'elezioni', label: 'Elezioni simulate', available: false, note: 'Non sono raccolte: occorrerebbe un evento di gioco inviato al server, che richiede una decisione sull’informativa.' },
+    { id: 'funzioni', label: 'Uso delle funzioni', available: false, note: 'Non è raccolto: nessuna analitica di prodotto è attiva.' }
+  ];
+  return { generatedAt: new Date(now).toISOString(), days: span, accounts: { total: accounts, newInPeriod: [...joined.values()].reduce((a, b) => a + b, 0), series }, activity, careers, coverage, installs: { rows: installs, totals: installTotals, note: 'Le installazioni non si possono dedurre dal gioco: sono le cifre di Google Play Console e App Store Connect, inserite a mano dal titolare con la fonte.' } };
 }
 export async function recordInstalls(db, { day, store, installs, source }, now = Date.now()) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(day)) || day > romeDay(now)) throw Object.assign(new Error('Giorno non valido.'), { status: 400 });
@@ -438,7 +458,7 @@ async function accountOf(db, request) {
 const cleanMeta = meta => {
   const value = meta && typeof meta === 'object' ? meta : {};
   const text = key => typeof value[key] === 'string' ? value[key].slice(0, 120) : null;
-  return { player: text('player'), role: text('role'), party: text('party'), partyId: text('partyId'), gameDate: text('gameDate'), status: text('status'), difficulty: text('difficulty'), week: Number.isFinite(value.week) ? value.week : null };
+  return { player: text('player'), role: text('role'), party: text('party'), partyId: text('partyId'), gameDate: text('gameDate'), status: text('status'), difficulty: text('difficulty'), gameMode: text('gameMode'), week: Number.isFinite(value.week) ? value.week : null };
 };
 
 // ---------- the content of a save ----------
@@ -527,11 +547,6 @@ const conflictAnswer = async (request, db, account, slot, extra = {}) => json(re
 // gateway's SHARED_SECRET. Nothing is simulated: a message counts as sent only when the gateway answers 200 with `{ "ok": true }`. Without both settings nothing is sent and the service says so
 // (/api/account/status). `env.EMAIL_SEND` is a hook only for tests that run the Worker in process: a Worker's secrets and variables are strings, so it cannot be set in production.
 // The gateway only accepts the subjects listed here (its allow-list must contain exactly these); the secret is never logged or put in an error message.
-export const MAIL_SUBJECTS = Object.freeze({
-  verify: 'POLITICANDO 2026 — conferma il tuo indirizzo email',
-  reset: 'POLITICANDO 2026 — nuova password',
-  retention: 'POLITICANDO 2026: il tuo account sarà eliminato per inattività'
-});
 const GATEWAY_TIMEOUT_MS = 15_000; // (EMAIL_GATEWAY_TIMEOUT_MS only lets a test shorten it)
 const mailConfigured = env => typeof env.EMAIL_SEND === 'function' || Boolean(/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(String(env.EMAIL_GATEWAY_URL ?? '')) && env.EMAIL_GATEWAY_SECRET);
 const mailError = (message, code) => Object.assign(new Error(message), { code });
@@ -570,6 +585,7 @@ async function deleteAccountData(db, userId) {
     db.prepare('DELETE FROM reward_blocks WHERE user_id = ?').bind(userId),
     db.prepare('DELETE FROM reward_community WHERE user_id = ?').bind(userId),
     db.prepare('DELETE FROM reward_ads WHERE user_id = ?').bind(userId),
+    db.prepare('DELETE FROM reward_ad_funds WHERE user_id = ?').bind(userId),
     db.prepare('DELETE FROM users WHERE id = ?').bind(userId)
   ]);
   // the table of the notices exists only once the retention has run (it never does while it is off): nothing to delete when it is not there
@@ -589,7 +605,6 @@ export async function adminCredentialRecord(pin) {
   const salt = randomToken(12);
   return { salt, hash: await pinHash(pin, salt), since: new Date().toISOString(), epoch: randomToken(8) };
 }
-export const RETENTION = Object.freeze({ inactivityMonths: 12, noticeDays: 30, batch: 50 });
 export function retentionState(env) {
   const reasons = [];
   if (env.RETENTION_ENABLED !== '1') reasons.push('RETENTION_ENABLED non è «1»: la procedura è spenta.');
@@ -754,6 +769,44 @@ async function handleLogos(request, env, db, account, path) {
   return json(request, { ok: true, partyId, version, sha256: sha, bytes: bytes.length, mime, updatedAt: now }, row ? 200 : 201);
 }
 
+// ---------- Advertising (InMobi): remote configuration and the validation of every rewarded credit ----------
+// The configuration is the JSON variable `ADS_CONFIG` of the Worker (Cloudflare dashboard > Settings > Variables: no deploy of the code and no new version of the app; docs/inmobi.md lists the keys). It is validated
+// and clamped by the same function the app uses (src/data/ads-config.js): a missing or invalid variable means every format OFF. Nothing secret is in it (placement ids and the Account ID are public identifiers).
+const adsRemote = env => { try { const raw = typeof env.ADS_CONFIG === 'string' ? JSON.parse(env.ADS_CONFIG) : env.ADS_CONFIG; return raw && typeof raw === 'object' ? raw : null; } catch { return null; } };
+const adsFor = (env, platform) => resolveAds(platform, adsRemote(env));
+const adsPublic = env => Object.fromEntries(PLATFORMS.map(platform => { const r = adsFor(env, platform); return [platform, { mode: r.mode, enabled: r.enabled, accountId: r.accountId, rewarded: r.rewarded, banner: r.banner, interstitial: r.interstitial, interstitialPolicy: r.interstitialPolicy, rewardPoints: r.rewardPoints }]; }));
+// The credit of a rewarded video is decided HERE for accounts and guests alike: the rewarded format must be on for the platform, the completion id is booked once (a repeated or concurrent claim is recognised,
+// never credited twice) and the day's limit applies. The answer carries the points in force. NOTE: InMobi offers no server-to-server confirmation of a completion that this code can check (docs/inmobi.md): the
+// Worker validates the claim (configuration, uniqueness, limit), the SDK's own callback on the device validates the completion.
+async function bookAdReward(request, env, db, userId, body) {
+  const id = body?.id;
+  if (typeof id !== 'string' || !AD_COMPLETION_ID.test(id)) return json(request, { error: 'Completamento non valido.' }, 400);
+  if (body?.platform !== undefined && !PLATFORMS.includes(body.platform)) return json(request, { error: 'Piattaforma non valida.' }, 400);
+  const platform = PLATFORMS.includes(body?.platform) ? body.platform : null;
+  // Android's rewarded video provider is Appodeal (src/data/ads-config.js), not InMobi: resolveAds('android', ...) is always closed by
+  // design (InMobi is paused on Android), so the gate must follow Appodeal's own state there instead, or every Android claim is refused.
+  const adsForReward = p => (p === 'android' ? resolveAppodeal(null, APPODEAL_MODE) : adsFor(env, p));
+  const live = platform ? [adsForReward(platform)] : PLATFORMS.map(adsForReward);
+  const config = live.find(item => item.rewarded.enabled);
+  if (!config) return json(request, { error: 'I video con premio non sono al momento attivi.', code: 'disabled' }, 403);
+  const careerId = typeof body?.careerId === 'string' && REWARD_ID.test(body.careerId) ? body.careerId : null, device = typeof body?.device === 'string' && REWARD_ID.test(body.device) ? body.device : null;
+  // Two rewards, ONE Appodeal placement (`default`): the kind is the one the game's button asked for (`reward`: 'sondaggi', the default for the clients that do not send it, or 'fondi', Android only) and
+  // the completion id is ONE claim, whatever the kind: each insert below runs only if the id is in neither table (a statement of D1 is atomic and the writes are serialised), so an id taken as a poll
+  // bonus can never be taken again as personal funds, nor the other way round. Poll bonus: the daily limit of reward_ads, unchanged. Personal funds: no daily limit (reward_ad_funds, its own table).
+  const reward = body?.reward === undefined ? 'sondaggi' : body.reward;
+  if (!['sondaggi', 'fondi'].includes(reward) || (reward === 'fondi' && platform !== 'android')) return json(request, { error: 'Questa ricompensa non è attiva su questa piattaforma.', code: 'disabled' }, 403);
+  const claimed = async () => Boolean(await db.prepare('SELECT 1 AS found FROM reward_ads WHERE user_id = ? AND ad_id = ? UNION ALL SELECT 1 FROM reward_ad_funds WHERE user_id = ? AND ad_id = ?').bind(userId, id, userId, id).first());
+  const at = new Date().toISOString();
+  if (reward === 'fondi') {
+    const funds = await db.prepare('INSERT OR IGNORE INTO reward_ad_funds (user_id, ad_id, claimed_at, career_id, device_id) SELECT ?, ?, ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM reward_ads WHERE user_id = ? AND ad_id = ?)').bind(userId, id, at, careerId, device, userId, id).run();
+    return funds?.meta?.changes > 0 ? json(request, { ok: true, credited: true, reward }) : json(request, { ok: true, credited: false, duplicate: true, reward });
+  }
+  const day = romeDay();
+  const written = await db.prepare('INSERT OR IGNORE INTO reward_ads (user_id, ad_id, day, claimed_at, career_id, device_id) SELECT ?, ?, ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM reward_ads WHERE user_id = ? AND day = ?) < ? AND NOT EXISTS (SELECT 1 FROM reward_ad_funds WHERE user_id = ? AND ad_id = ?)').bind(userId, id, day, at, careerId, device, userId, day, AD_DAILY_MAX, userId, id).run();
+  if (written?.meta?.changes > 0) return json(request, { ok: true, credited: true, reward, points: config.rewardPoints });
+  if (await claimed()) return json(request, { ok: true, credited: false, duplicate: true, reward, points: config.rewardPoints });
+  return json(request, { error: 'Hai raggiunto il limite giornaliero di video con premio.', code: 'limit' }, 429);
+}
 async function handleAccounts(request, env, url) {
   const db = env.ACCOUNTS;
   if (!db) return json(request, { error: 'Gli account non sono ancora configurati su questo sito.' }, 503);
@@ -762,6 +815,14 @@ async function handleAccounts(request, env, url) {
   const mail = mailConfigured(env);
   // The game asks whether the service answers before offering the account (no data, no session needed). `email` says whether messages can really be sent from here.
   if (path === '/api/account/status' && request.method === 'GET') return json(request, { ok: true, service: 'accounts', features: ['account-delete', 'save-protocol-2', 'save-history', 'daily-reward', 'reward-time', 'reward-blocks', 'reward-community', ...(env.LOGOS ? ['logo-sync'] : []), ...(mail ? ['email-recovery'] : [])], email: mail, emailRequired: env.ACCOUNT_EMAIL_REQUIRED === '1' });
+  // Advertising, no account needed: the remote configuration (short cache) and the booking of a rewarded video of a device without an account (its id as the owner of the row).
+  if (path === '/api/account/ads/config' && request.method === 'GET') { const response = json(request, { ok: true, ...adsPublic(env) }); response.headers.set('cache-control', 'public, max-age=300'); return response; }
+  if (path === '/api/account/ads/reward' && request.method === 'POST') {
+    let body = null; try { body = await request.json(); } catch { /* no body */ }
+    const device = typeof body?.device === 'string' && REWARD_ID.test(body.device) ? body.device : null;
+    if (!device) return json(request, { error: 'Dispositivo non valido.' }, 400);
+    return bookAdReward(request, env, db, `device:${device}`, body);
+  }
   if ((path === '/api/account/register' || path === '/api/account/login') && request.method === 'POST') {
     const registering = path.endsWith('register');
     const guard = await accountGuard(db, request, registering ? 'registrazione' : 'accesso');
@@ -931,14 +992,7 @@ async function handleAccounts(request, env, url) {
   // keeps its own record, the Worker is not involved. NOT a server-side verification (SSV) of the ad network: see docs/admob.md.
   if (path === '/api/account/rewards/ad' && request.method === 'POST') {
     let body = null; try { body = await request.json(); } catch { /* no body */ }
-    const id = body?.id;
-    if (typeof id !== 'string' || !AD_COMPLETION_ID.test(id)) return json(request, { error: 'Completamento non valido.' }, 400);
-    const careerId = typeof body?.careerId === 'string' && REWARD_ID.test(body.careerId) ? body.careerId : null, device = typeof body?.device === 'string' && REWARD_ID.test(body.device) ? body.device : null;
-    const day = romeDay();
-    const written = await db.prepare('INSERT OR IGNORE INTO reward_ads (user_id, ad_id, day, claimed_at, career_id, device_id) SELECT ?, ?, ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM reward_ads WHERE user_id = ? AND day = ?) < ?').bind(account.id, id, day, new Date().toISOString(), careerId, device, account.id, day, AD_DAILY_MAX).run();
-    if (written?.meta?.changes > 0) return json(request, { ok: true, credited: true });
-    if (await db.prepare('SELECT 1 AS found FROM reward_ads WHERE user_id = ? AND ad_id = ?').bind(account.id, id).first()) return json(request, { ok: true, credited: false, duplicate: true });
-    return json(request, { error: 'Hai raggiunto il limite giornaliero di video con premio.', code: 'limit' }, 429);
+    return bookAdReward(request, env, db, account.id, body);
   }
   // One-off community rewards («instagram»; «tiktok» exists but is off): the Worker gives each to an account once. The claim is a self-declaration of the player: nothing about the social network is verified or asked for.
   const community = /^\/api\/account\/rewards\/community\/([a-z]{3,20})$/.exec(path);
@@ -1208,9 +1262,7 @@ async function handleApi(request, env) {
   return json(request, { error: 'Richiesta non riconosciuta.' }, 404);
 }
 
-export const PORTAL_PATHS = /^\/(?:index\.html|portal\.(?:js|css)|privacy(?:-en)?\.html|support(?:-en)?\.html|termini\.html|terms-en\.html|elimina-account\.html|delete-account-en\.html|favicon\.(?:ico|svg)|src\/legal\.css|src\/legal\/delete-account\.js|src\/data\/repositories\/(?:account-sync|career-visibility)\.js)?$/;
-export default {
-  async fetch(request, env) {
+async function serveRequest(request, env) {
     const url = new URL(request.url);
     if (url.pathname.startsWith('/api/')) {
       try { return await handleApi(request, env); }
@@ -1219,6 +1271,15 @@ export default {
     // The production Worker serves no game: only the pages of the portal (confirm the e-mail, new password, legal pages, account deletion). The private test site sets GAME_WEB=1 (behind Cloudflare Access) and serves everything.
     if (env.GAME_WEB !== '1' && !PORTAL_PATHS.test(url.pathname)) return new Response('Non trovato.', { status: 404, headers: { 'content-type': 'text/plain; charset=utf-8', 'x-content-type-options': 'nosniff' } });
     return env.ASSETS.fetch(request);
+  }
+
+export default {
+  async fetch(request, env) {
+    // Private TEST site only (TEST_ACCESS_ENABLED=1): nothing, API and assets included, is reachable without the password session.
+    const gated = await testAccessGate(request, env);
+    if (gated) return gated;
+    const answer = await serveRequest(request, env);
+    return env.TEST_ACCESS_ENABLED === '1' ? privateResponse(answer) : answer;
   },
   // Daily (wrangler.jsonc, triggers.crons): expired sessions and old attempts go even when nobody logs in.
   async scheduled(event, env, ctx) {

@@ -1,8 +1,9 @@
-import { campaignScope } from '../core/campaign-engine.js?v=20261117-3';
-import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261117-3';
-import { formatDate } from '../core/time.js?v=20261117-3';
-import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261117-3';
-import { distinctSeries, sparkline } from './charts.js?v=20261117-3';
+import { campaignScope } from '../core/campaign-engine.js?v=20261126-3';
+import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261126-3';
+import { formatDate } from '../core/time.js?v=20261126-3';
+import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261126-3';
+import { distinctSeries, sparkline } from './charts.js?v=20261126-3';
+import { documentedProgramOf, programTexts } from '../data/party-program-values.js?v=20261126-3';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const pctFormats = new Map();
@@ -43,6 +44,13 @@ function statTile(label, value, delta, series, note = '', emphasis = true) {
   return `<div class="poll-stat"><span class="poll-stat-label">${esc(label)}</span><strong>${value}</strong>${delta === null ? '' : deltaChip(delta, emphasis)}${sparkline(series)}${note ? `<small>${esc(note)}</small>` : ''}</div>`;
 }
 
+// The rewarded video of the poll bonus, offered where the polls are (the same video and button as the page of the rewards: data-reward-video, kind 'sondaggi'; the rules are AD_REWARD's, unchanged).
+// `ads`: the snapshot of rewards-service.js (available, code, reason). Nothing where the videos are not active (iOS, the web, ads off).
+export function pollAdOffer(ads, points = null) {
+  if (!ads || ads.code === 'not-configured') return '';
+  const ready = ads.available === true;
+  return `<section class="poll-ad-offer" data-poll-ad-offer data-ads-state="${esc(ready ? 'ready' : ads.code ?? 'no-ad')}"><div class="poll-ad-copy"><span class="section-kicker">VIDEO PREMIATO · SONDAGGI</span><strong>${points ? `+${esc(String(points).replace('.', ','))} punti nei prossimi sondaggi nazionali` : 'Bonus nei sondaggi nazionali'}</strong><small>Guarda un video fino alla fine: il vantaggio vale per i sondaggi delle prossime settimane.</small></div><button type="button" class="primary-button" data-reward-video ${ready ? '' : 'disabled aria-disabled="true"'}>GUARDA IL VIDEO</button>${ready ? '' : `<small class="quiet-copy">${esc(ads.reason ?? 'Nessun video disponibile in questo momento.')}</small>`}</section>`;
+}
 export function barometer(state, world, poll, parties) {
   // An executive exists in the simulation when the Government is in office or, outside Parliament, the scenario has one.
   const inOffice = ['active', 'crisis'].includes(state.parliament?.government?.status) || (!state.parliament?.government && Boolean(state.society?.executive));
@@ -207,17 +215,61 @@ function exitReport(report) {
   return `<aside class="alliance-report is-bad" data-alliance-report="uscita" role="status"><div><strong>${esc(title)}</strong>${report.cause === 'crisi' ? '<small><span>Crisi di coesione: gli altri membri non reggono più la distanza dal tuo partito.</span></small>' : ''}<ul class="alliance-odds-reasons">${lines}</ul></div><button type="button" class="text-link" data-alliance-report-dismiss>Chiudi</button></aside>`;
 }
 // The programme of the player's party against each partner, theme by theme: positions, gap and level, the hard conflicts (conditions to negotiate), and a compromise button for each conflict.
-const LEVEL_LABEL = { accordo: 'in accordo', differenza: 'differenza', conflitto: 'conflitto', incompatibile: 'incompatibile', compromesso: 'compromesso' };
+const LEVEL_LABEL = { accordo: 'in accordo', differenza: 'differenza', conflitto: 'conflitto', incompatibile: 'incompatibile', compromesso: 'compromesso', 'non-rilevato': 'dato non disponibile' };
+// Concrete activities with the allies: a meeting, a programme table, a territorial initiative, a press conference, a mobilisation. Each has cost, duration and odds that depend on the allies.
+const ACTIVITY_STATUS = { 'in-corso': ['In corso', 'warn'], riuscita: ['Riuscita', 'good'], parziale: ['A metà', 'neutral'], fallita: ['Fallita', 'bad'], annullata: ['Annullata', 'neutral'] };
+function activitiesPanel(alliance, members, options, secretary) {
+  const kinds = options.allyKinds?.();
+  if (!kinds) return '';
+  const partners = members.filter(member => !member.isPlayer);
+  const mine = (options.allyActivities?.() ?? []).filter(item => item.allianceId === alliance.id);
+  const open = mine.filter(item => item.status === 'in-corso');
+  const funds = options.funds ?? 0, capital = options.capital ?? 0;
+  const rows = Object.values(kinds).map(kind => {
+    const partner = kind.target === 'partner' ? `<select data-ally-partner="${esc(kind.id)}" aria-label="Alleato">${partners.map(member => `<option value="${esc(member.id)}">${esc(member.label)}</option>`).join('')}</select>` : `<small>con tutti gli alleati</small>`;
+    const odds = options.allyOdds?.(kind.id, kind.target === 'partner' ? partners[0]?.id ?? null : null);
+    const cost = [kind.cost.funds ? `${kind.cost.funds.toLocaleString('it-IT')} €` : '', kind.cost.capital ? `${kind.cost.capital} capitale politico` : '', `${kind.cost.days} ${kind.cost.days === 1 ? 'giorno' : 'giorni'}`].filter(Boolean).join(' · ');
+    const blocked = !secretary || funds < kind.cost.funds || capital < kind.cost.capital || open.length >= 2 || open.some(item => item.kind === kind.id);
+    const why = !secretary ? 'Solo il segretario può farlo.' : open.length >= 2 ? 'Due attività sono già in corso.' : open.some(item => item.kind === kind.id) ? 'Già in corso.' : funds < kind.cost.funds ? 'Fondi insufficienti.' : capital < kind.cost.capital ? 'Capitale politico insufficiente.' : '';
+    return `<li class="ally-activity" data-ally-kind="${esc(kind.id)}"><div><strong>${esc(kind.label)}</strong><small>${esc(kind.hint)}</small><small>${esc(cost)} · dura ${kind.weeks} ${kind.weeks === 1 ? 'settimana' : 'settimane'}${odds ? ` · probabilità di riuscita circa ${Math.round(odds.chance * 100)}%` : ''}</small>${why ? `<small class="force-strategy">${esc(why)}</small>` : ''}</div><div class="ally-activity-do">${partner}<button type="button" class="primary-button compact" data-ally-start="${esc(kind.id)}"${blocked ? ' disabled aria-disabled="true"' : ''}>Avvia</button></div></li>`;
+  }).join('');
+  const history = mine.slice(0, 6).map(item => { const [label, tone] = ACTIVITY_STATUS[item.status] ?? [item.status, 'neutral']; return `<li class="ally-run tone-${tone}" data-ally-run="${esc(item.status)}"><span class="badge">${esc(label)}</span> <strong>${esc(item.label)}</strong> ${item.status === 'in-corso' ? `<small>fino alla settimana ${item.endsWeek}</small>` : `<small>${esc(item.text ?? '')}</small>`}</li>`; }).join('');
+  return `<details class="ally-activities" data-ally-activities><summary>Attività con gli alleati${open.length ? ` · ${open.length} in corso` : ''}</summary><p class="quiet-copy">Fare cose insieme tiene unita l’alleanza: quando va bene salgono coesione e rapporti, quando va male le tensioni crescono. L’esito dipende dalla coesione, dai rapporti con gli alleati e dai programmi.</p><ul class="ally-activity-list">${rows}</ul>${history ? `<h4>Ultime attività</h4><ul class="ally-run-list">${history}</ul>` : ''}</details>`;
+}
+// How a force that already belongs to another accord can be invited: ONLY that party (the default: its partners stay where they are, with the original accord intact) or the merge of the whole accords (each partner
+// has to agree; what the accords hold goes with them). The preview comes from the engine (inviteImpact): who is involved, what changes, which agreements and registrations are concerned.
+function invitePanel(party, options) {
+  const impact = options.inviteImpact?.(party.id) ?? null;
+  const cost = '· 1 giorno · 4 cap.';
+  const until = options.refusedUntil?.(party.id);
+  const retry = until ? `<small class="force-strategy" data-invite-retry>Invito respinto: potrai ripeterlo dal ${esc(formatDate(until))}.</small>` : '';
+  if (!impact) return `<button class="secondary-button" data-world-invite="${esc(party.id)}" data-invite-mode="individual">Invita nella coalizione ${cost}</button>${retry}`;
+  const names = list => list.map(item => esc(item.label)).join(', ');
+  const plural = impact.partners.length > 1;
+  const counted = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  const agreements = [impact.terms ? counted(impact.terms, 'condizione concordata', 'condizioni concordate') : '', impact.registrations.total ? counted(impact.registrations.total, 'registrazione elettorale', 'registrazioni elettorali') : ''].filter(Boolean).join(' · ');
+  const partners = impact.partners.length ? `<li data-invite-partners><b>Partiti coinvolti nell’accordo «${esc(impact.alliance)}»:</b> ${impact.partners.map(item => `${esc(item.label)} <i>${item.compatible ? '(compatibile con la tua coalizione)' : '(non compatibile)'}</i>`).join(', ')}.</li>` : '';
+  const stays = impact.partners.length ? `<li><b>Invita soltanto ${esc(party.label)}:</b> passa solo questo partito. ${names(impact.partners)} ${plural ? 'restano' : 'resta'} nell’accordo «${esc(impact.alliance)}», che resta com’è.${agreements ? ` <span>Restano con l’accordo:</span> <em>${agreements}</em>.` : ''} La compatibilità con la tua coalizione è valutata da sola.</li>` : `<li><b>Invita soltanto ${esc(party.label)}:</b> nessun altro partner.</li>`;
+  const merge = impact.partners.length ? (impact.mergeBlock ? `<li data-invite-merge-block><b>Fusione delle intere alleanze:</b> non disponibile. ${esc(impact.mergeBlock)}</li>` : `<li><b>Proponi la fusione delle intere alleanze:</b> ${names(impact.partners)} ${plural ? 'devono acconsentire uno per uno; chi rifiuta resta nell’accordo originale.' : 'deve acconsentire; se rifiuta resta nell’accordo originale.'} Con la fusione passano composizione, leadership, rapporti, condizioni, storico e registrazioni dell’accordo. Le elezioni concluse non cambiano; le approvazioni per elezioni ancora aperte vanno riverificate.</li>`) : '';
+  return `<div class="invite-choice" data-invite-choice><p class="quiet-copy"><b>${esc(party.label)}</b> fa già parte di un altro accordo. Come vuoi invitarlo?</p><ul class="invite-preview">${partners}${stays}${merge}</ul><div class="setting-actions"><button class="secondary-button" data-world-invite="${esc(party.id)}" data-invite-mode="individual">Invita soltanto questo partito ${cost}</button>${impact.partners.length ? `<button class="secondary-button" data-world-invite="${esc(party.id)}" data-invite-mode="merge"${impact.mergeBlock ? ' disabled aria-disabled="true"' : ''}>Proponi la fusione delle intere alleanze ${cost}</button>` : ''}</div>${retry}</div>`;
+}
+// Where a position comes from and the documents of a party: drawn by ui/program-provenance.js, which arrives with the alliances page (observatory-view.js) — nothing before the texts are loaded.
+const provenanceUi = () => programTexts()?.ui ?? null;
+const provenance = (source, value) => provenanceUi()?.provenance(source, value) ?? '';
 function programPanel(members, options, secretary) {
   if (!options.programAnalysis) return '';
   const partners = members.filter(member => !member.isPlayer);
   const blocks = partners.map(member => {
     const analysis = options.programAnalysis(member.id);
     if (!analysis) return '';
-    const rows = analysis.rows.map(row => `<tr class="level-${esc(row.level)}" data-program-theme="${esc(row.id)}"><th scope="row">${esc(row.label)}</th><td>${esc(row.aText)}</td><td>${esc(row.bText)}</td><td><span class="badge ${row.level === 'incompatibile' ? 'badge-bad' : ''}">${esc(LEVEL_LABEL[row.level] ?? row.level)}</span>${secretary && !options.windowClosed && (row.level === 'incompatibile' || row.level === 'conflitto') ? ` <button type="button" class="secondary-button compact" data-world-compromise="${esc(member.id)}|${esc(row.id)}">Cerca un compromesso · 1 giorno · 3 cap.</button>` : ''}</td></tr>`).join('');
+    const rows = analysis.rows.map(row => `<tr class="level-${esc(row.level)}" data-program-theme="${esc(row.id)}"><th scope="row">${esc(row.label)}</th><td>${esc(row.aText)}</td><td>${esc(row.bText)}${provenance(row.bSource, row.b)}</td><td><span class="badge ${row.level === 'incompatibile' ? 'badge-bad' : ''}">${esc(LEVEL_LABEL[row.level] ?? row.level)}</span>${secretary && !options.windowClosed && (row.level === 'incompatibile' || row.level === 'conflitto') ? ` <button type="button" class="secondary-button compact" data-world-compromise="${esc(member.id)}|${esc(row.id)}">Cerca un compromesso · 1 giorno · 3 cap.</button>` : ''}</td></tr>`).join('');
+    const documented = documentedProgramOf(member);
+    const english = typeof document !== 'undefined' && document.documentElement.lang === 'en';
+    // what the party's documents are: their status (documented, partly, being drafted, no positions), the documents with kind and date, and the topics beyond the ten themes
+    const docNote = provenanceUi()?.docNote(member, documented) ?? '';
     return `<details class="coalition-program" data-coalition-program="${esc(member.id)}"${analysis.hard.length ? ' open' : ''}><summary>Programma con ${esc(member.label)} · compatibilità ${Math.round(analysis.score * 100)}%${analysis.hard.length ? ` · <b class="bad-ink">${analysis.hard.length} incompatibilità da negoziare</b>` : ''}</summary>
       <div class="table-scroll"><table class="program-table"><thead><tr><th>Tema</th><th>Tu</th><th>${esc(member.label)}</th><th>Esito</th></tr></thead><tbody>${rows}</tbody></table></div>
-      <small class="quiet-copy">Posizioni stimate dal gioco (simulazione) dalla collocazione del partito e dalle tue decisioni: non sono dichiarazioni dei partiti reali.</small></details>`;
+      ${provenanceUi()?.coverage(analysis.documented ?? 0) ?? ''}${docNote}</details>`;
   }).join('');
   return blocks ? `<h4>Programma comune</h4>${blocks}` : '';
 }
@@ -266,6 +318,19 @@ function requestsPanel(options) {
   return `<section class="alliance-requests" data-alliance-requests><h4>Richieste</h4>${group('Ricevute', view.received)}${group('Inviate', view.sent)}</section>`;
 }
 const ROLE_REASON = 'Solo il segretario del partito decide intese e coalizioni: si diventa segretari fondando un partito o vincendo un congresso.';
+// An accordion of the alliance page: icon, title and a one-line summary on the head; the state is remembered by the interface (data-remember), `open` says whether it starts open.
+const allianceFold = (id, icon, title, summary, body, open = false) => body ? `<details class="alliance-fold" data-alliance-fold="${esc(id)}" data-remember="alliance-${esc(id)}"${open ? ' open' : ''}><summary><span class="fold-icon">${glyph(icon, 16)}</span><span class="alliance-fold-title"><strong>${esc(title)}</strong>${summary ? `<small>${summary}</small>` : ''}</span><span class="fold-chevron" aria-hidden="true"></span></summary><div class="alliance-fold-body">${body}</div></details>` : '';
+// The weight of the members of an alliance, from the latest survey: the sum is made only of the readings that exist, and says which are missing (nothing is estimated).
+export function allianceWeight(alliance, index, poll) {
+  const members = alliance.partyIds.map(id => index[id]).filter(Boolean);
+  const shareOf = id => poll?.results?.find(row => row.partyId === id)?.share ?? null;
+  const measured = members.filter(member => shareOf(member.id) !== null);
+  const missing = members.filter(member => shareOf(member.id) === null);
+  const total = measured.reduce((sum, member) => sum + shareOf(member.id), 0);
+  return { members, shareOf, measured, missing, total: measured.length ? total : null, complete: members.length > 0 && !missing.length };
+}
+const weightLine = w => w.total === null ? 'Nessuna rilevazione dei componenti nell’ultimo sondaggio: il peso non si calcola.' : `Insieme ${pct(w.total)} (somma delle rilevazioni dei componenti)${w.complete ? '' : `; mancano le rilevazioni di ${w.missing.map(member => member.label).join(', ')}: il totale è parziale`}.`;
+const weightBar = (w, index) => w.measured.length ? `<div class="alliance-weight" role="img" aria-label="Peso dei partiti dell’alleanza">${w.measured.map(member => `<i style="flex:${Math.max(0.5, w.shareOf(member.id))};background:${esc(member.color ?? '#7f8c86')}" title="${esc(member.label)} ${esc(pct(w.shareOf(member.id)))}"></i>`).join('')}</div>` : '';
 // «La mia coalizione»: the one place of the accord of the player's party. It reads world.alliances (never the poll: the party may be missing from the last survey) and holds who is in, who leads,
 // what the coalition weighs, its cohesion, the conditions, the history, what is registered for the vote, and the commands (invite, leave).
 export function myCoalitionPanel(state, world, index, poll, options = {}) {
@@ -275,7 +340,7 @@ export function myCoalitionPanel(state, world, index, poll, options = {}) {
   const secretary = Boolean(options.secretary);
   const report = state.ui?.allianceReport;
   const reportHtml = report?.kind === 'invito' ? inviteReport(report) : report?.kind === 'uscita' ? exitReport(report) : '';
-  if (!alliance) return `<section class="my-coalition" data-my-coalition="none"><header><strong>La mia coalizione</strong> <span class="badge">Autonomo</span></header>${reportHtml}<p class="quiet-copy">Il tuo partito non fa parte di nessuna intesa o coalizione: per cercarne una usa «Proponi un’intesa» sulla scheda di un partito. Dopo la prima intesa potrai invitare altri partiti e ampliarla.</p></section>`;
+  if (!alliance) return `<section class="my-coalition" data-my-coalition="none"><header><strong>La mia coalizione</strong> <span class="badge">Autonomo</span></header>${reportHtml}<p class="quiet-copy">Il tuo partito non fa parte di nessuna intesa o coalizione: ${secretary ? (options.windowClosed ? 'le liste sono depositate: le intese riprendono dopo il voto.' : 'per cercarne una usa «Crea alleanza» (1 giorno, 4 punti di capitale politico) sulla scheda di un partito: l’altra forza può rifiutare. Dopo la prima alleanza potrai invitare altri partiti e ampliarla.') : esc(ROLE_REASON)}</p></section>`;
   const members = alliance.partyIds.map(id => index[id]).filter(Boolean);
   const kindInfo = allianceKind(world, alliance);
   const coalition = kindInfo.kind === 'coalizione';
@@ -295,26 +360,76 @@ export function myCoalitionPanel(state, world, index, poll, options = {}) {
   const registeredHtml = registered ? `<div class="coalition-registered" data-coalition-registered><h4>Coalizione registrata per le politiche del ${esc(formatDate(state.national.campaign.electionDate))}</h4><p><span>${esc(registered.label)}: ${esc(registered.partyIds.map(id => index[id]?.label ?? id).join(', '))}.</span> <span>${filed ? 'Liste depositate: la composizione non cambia fino al voto.' : 'Composizione provvisoria: si fissa al deposito delle liste.'}</span>${filed && !sameAsPolitical ? ' <span>L’accordo politico oggi è diverso, ma per il voto vale la composizione registrata.</span>' : ''}</p></div>` : '';
   const free = state.game?.status !== 'ended' ? [...Object.values(index)].filter(party => !party.isPlayer && party.active !== false && !alliance.partyIds.includes(party.id) && poll?.results?.some(row => row.partyId === party.id) && !options.inviteBlock?.(party.id)) : [];
   const choices = free.map(party => ({ party, chance: options.inviteOdds?.(party.id)?.chance ?? null })).sort((a, b) => (b.chance ?? 0) - (a.chance ?? 0));
-  const invite = options.windowClosed ? '<small class="force-strategy" data-invite-closed>Intese ferme fino al voto: gli inviti riprendono dopo.</small>'
+  let invite = options.windowClosed ? '<small class="force-strategy" data-invite-closed>Intese ferme fino al voto: gli inviti riprendono dopo.</small>'
     : !secretary ? `<small class="force-strategy" data-invite-closed>${esc(ROLE_REASON)}</small>`
-      : choices.length ? `<div class="coalition-invite"><label><span>Invita un partito</span><select data-invite-select>${choices.map(item => `<option value="${esc(item.party.id)}">${esc(item.party.label)}${item.chance === null ? '' : ` · ${Math.round(item.chance * 100)}%`}</option>`).join('')}</select></label><button type="button" class="secondary-button" data-world-invite-selected>Invita nella coalizione · 1 giorno · 4 cap.</button></div>` : '<small class="force-strategy">Nessun altro partito invitabile in questo momento.</small>';
+      : choices.length ? `<div class="coalition-invite"><label><span>Invita un partito</span><select data-invite-select>${choices.map(item => `<option value="${esc(item.party.id)}">${esc(item.party.label)}${item.chance === null ? '' : ` · ${Math.round(item.chance * 100)}%`}</option>`).join('')}</select></label><button type="button" class="secondary-button" data-world-invite-selected>Invita soltanto il partito scelto · 1 giorno · 4 cap.</button></div>${choices.filter(item => options.inviteImpact?.(item.party.id)).map(item => `<div class="invite-choice-host" data-invite-for="${esc(item.party.id)}"${item.party.id === choices[0].party.id ? '' : ' hidden'}>${invitePanel(item.party, options)}</div>`).join('')}` : '<small class="force-strategy">Nessun altro partito invitabile in questo momento.</small>';
+  // Why an invitation cannot be sent is said BEFORE the click (not only as a toast after it): the political capital it costs is checked here, and the buttons stay off until there is enough.
+  if (secretary && !options.windowClosed && Number.isFinite(Number(options.capital)) && Number(options.capital) < 4) {
+    invite = `<small class="force-strategy" data-invite-capital>Per invitare un partito servono 4 punti di capitale politico: ne hai ${Math.floor(Number(options.capital))}. Si guadagna con le attività del partito, i successi e le riunioni; poi l’invito torna disponibile.</small>${invite.replace(/<button([^>]*data-world-invite)/g, '<button disabled aria-disabled="true"$1')}`;
+  }
   const leave = secretary
     ? `<button type="button" class="secondary-button" data-world-break="${esc(alliance.id)}">Esci dall’accordo${alliance.partyIds.length >= 3 ? ' (gli altri restano insieme)' : ''}</button>${options.windowClosed ? '<small class="force-strategy">Le liste sono depositate: puoi uscire, ma la composizione registrata per il voto resta quella.</small>' : ''}`
     : `<button type="button" class="secondary-button" disabled aria-disabled="true" data-world-break-disabled title="${esc(ROLE_REASON)}">Esci dall’accordo</button><small class="force-strategy" data-leave-reason>${esc(ROLE_REASON)}</small>`;
-  return `<section class="my-coalition" data-my-coalition="${esc(alliance.id)}"><header><strong>${coalition ? 'La mia coalizione' : 'La mia alleanza'}</strong> <span class="badge badge-kind" data-coalition-kind="${esc(kindInfo.kind)}">${coalition ? 'Coalizione elettorale' : 'Alleanza politica'}</span></header>
+  const weight = allianceWeight(alliance, index, poll);
+  const kindBadge = `<span class="badge badge-kind" data-coalition-kind="${esc(kindInfo.kind)}">${coalition ? 'Coalizione elettorale' : 'Alleanza politica'}</span>`;
+  const memberFold = allianceFold('composizione', 'users', 'Composizione e peso', `${members.length} partiti · ${weight.total === null ? 'peso non rilevato' : `insieme ${pct(weight.total)}`}`, `${weightBar(weight, index)}<ul class="coalition-members">${rows}</ul><p class="quiet-copy">${esc(weightLine(weight))}</p>`, true);
+  const cohesionFold = allianceFold('coesione', 'heart', 'Coesione e rapporti', `${cohesion}/100 · ${esc(state_)}`, `<p><span>Coesione:</span> <b class="hq-bar ${cohesion < 30 ? 'danger' : ''}"><i style="width:${cohesion}%"></i></b> <small><span>${cohesion}/100 (sim.) ·</span> <span data-coalition-state>${esc(state_)}</span></small></p>${cohesion < 40 ? '<p class="parliament-note" data-coalition-crisis>La coesione è bassa: se scende sotto 25 la coalizione perde il membro più distante (anche il tuo partito, che esce da solo) o, se siete in due, l’intesa si rompe.</p>' : ''}`, cohesion < 40);
+  const programHtml = programPanel(members, options, secretary);
+  const programFold = allianceFold('programma', 'book', 'Compatibilità programmatica', 'tema per tema, con ogni partner', programHtml);
+  const talksHtml = `${talksPanel(alliance, options, secretary)}${requestsPanel(options)}${terms ? `<h4>Condizioni e accordi</h4><ul class="coalition-terms">${terms}</ul>` : '<p class="quiet-copy">Nessuna condizione particolare è stata concordata.</p>'}`;
+  const talksFold = allianceFold('trattative', 'law', 'Trattative e accordi', terms ? 'condizioni concordate e trattative aperte' : 'nessuna condizione concordata', talksHtml);
+  const activitiesHtml = activitiesPanel(alliance, members, options, secretary);
+  const activitiesFold = allianceFold('attivita', 'flag', 'Attività comuni', 'cose da fare insieme agli alleati', activitiesHtml);
+  const registrationHtml = `${registeredHtml}${registrationPanel(alliance, options, secretary)}`;
+  const registrationFold = allianceFold('registrazione', 'ballot', 'Registrazione per le elezioni', registered ? 'coalizione registrata' : 'alleanza politica: non ancora registrata', registrationHtml);
+  const ruptureFold = allianceFold('rotture', 'alert', 'Cronologia e rotture', 'cosa è successo e cosa succede se ci si lascia', `${history ? `<ul class="coalition-history">${history}</ul>` : '<p class="quiet-copy">Nessun evento registrato.</p>'}<p class="quiet-copy">Uscire dall’accordo peggiora i rapporti con gli alleati; se la coesione scende sotto 25 la coalizione perde il membro più distante. Dopo il deposito delle liste la composizione registrata per il voto non cambia.</p>`);
+  const canText = options.windowClosed ? 'le intese sono ferme fino al voto (inviti e uscite riprendono dopo).' : !secretary ? 'solo il segretario del partito invita o esce dall’accordo; tu puoi migliorare i rapporti con le tue attività.' : `${choices.length ? `invitare uno dei ${choices.length} partiti liberi` : 'nessun partito libero da invitare'} · uscire dall’accordo${alliance.partyIds.length >= 3 ? ' (gli altri restano insieme)' : ' (l’intesa si scioglie)'}.`;
+  // A summary card first (name, kind, the three numbers that matter), then the commands one under the other; everything else is a closed fold.
+  const tile = (label, value, tone = '') => `<div class="alliance-tile ${tone}"><small>${esc(label)}</small><strong>${value}</strong></div>`;
+  const summary = `<div class="alliance-summary" data-alliance-summary>
+      <div class="alliance-summary-head"><div class="alliance-summary-title"><span class="section-kicker alliance-kicker">${coalition ? 'La mia coalizione' : 'La mia alleanza'}</span><h3>${esc(alliance.label)}</h3></div>${kindBadge}</div>
+      <div class="alliance-tiles">${tile('Partiti', String(members.length))}${tile('Peso nei sondaggi', weight.total === null ? '—' : esc(pct(weight.total)))}${tile('Coesione', `${cohesion}<small>/100</small>`, cohesion < 25 ? 'is-bad' : cohesion < 40 ? 'is-warn' : 'is-good')}${leader ? tile('Guida', esc(leader.abbreviation ?? leader.label)) : ''}</div>
+      ${weight.measured.length && !weight.complete ? '<p class="quiet-copy">Peso calcolato solo sui partiti rilevati.</p>' : ''}
+      <p class="quiet-copy" data-kind-note>${esc(kindInfo.label)}${coalition ? '' : '. Diventa una coalizione solo se tutti la approvano per una elezione precisa, prima del deposito delle liste.'}</p>
+    </div>`;
+  return `<section class="my-coalition" data-my-coalition="${esc(alliance.id)}">
     ${reportHtml}
-    <p class="quiet-copy" data-kind-note>${esc(kindInfo.label)}${coalition ? '' : '. Diventa una coalizione solo se tutti la approvano per una elezione precisa, prima del deposito delle liste.'}</p>
-    <p><strong>${esc(alliance.label)}</strong> <span>· ${members.length} partiti · insieme ${pct(total)} nei sondaggi</span>${measured.length < members.length ? ' <span>(solo i partiti rilevati)</span>' : ''}${leader ? ` <span>· guida: ${esc(leader.label)}</span>` : ''}</p>
-    <p><span>Coesione:</span> <b class="hq-bar ${cohesion < 30 ? 'danger' : ''}"><i style="width:${cohesion}%"></i></b> <small><span>${cohesion}/100 (sim.) ·</span> <span data-coalition-state>${esc(state_)}</span></small></p>
-    ${cohesion < 40 ? '<p class="parliament-note" data-coalition-crisis>La coesione è bassa: se scende sotto 25 la coalizione perde il membro più distante (anche il tuo partito, che esce da solo) o, se siete in due, l’intesa si rompe.</p>' : ''}
-    <ul class="coalition-members">${rows}</ul>
-    <p class="coalition-can" data-coalition-can><strong>Cosa puoi fare ora:</strong> ${esc(options.windowClosed ? 'le intese sono ferme fino al voto (inviti e uscite riprendono dopo).' : !secretary ? 'solo il segretario del partito invita o esce dall’accordo; tu puoi migliorare i rapporti con le tue attività.' : `${choices.length ? `invitare uno dei ${choices.length} partiti liberi` : 'nessun partito libero da invitare'} · uscire dall’accordo${alliance.partyIds.length >= 3 ? ' (gli altri restano insieme)' : ' (l’intesa si scioglie)'}.`)}</p>
-    ${registeredHtml}
-    ${registrationPanel(alliance, options, secretary)}${talksPanel(alliance, options, secretary)}${requestsPanel(options)}
-    ${programPanel(members, options, secretary)}
-    ${terms ? `<h4>Condizioni e accordi</h4><ul class="coalition-terms">${terms}</ul>` : '<p class="quiet-copy">Nessuna condizione particolare è stata concordata.</p>'}
-    ${history ? `<h4>Cronologia</h4><ul class="coalition-history">${history}</ul>` : ''}
-    <div class="coalition-actions">${invite}${leave}</div></section>`;
+    ${summary}
+    <p class="coalition-can" data-coalition-can><strong>Cosa puoi fare ora:</strong> ${esc(canText)}</p>
+    <div class="coalition-actions">${invite}${leave}</div>
+    <div class="alliance-folds">${memberFold}${cohesionFold}${programFold}${talksFold}${activitiesFold}${registrationFold}${ruptureFold}</div></section>`;
+}
+
+
+// The picture of ALL the alliances of the world: one card each, with the weight of the members read from their own surveys (the sum says when a reading is missing), the cohesion, the agreements and the breaks.
+export function alliancesOverview(state, world, index, poll, options = {}) {
+  const list = world.alliances.filter(item => item.status === 'active' && item.partyIds.length >= 2);
+  const player = world.parties.find(item => item.isPlayer);
+  const mine = player ? allianceOf(world, player.id) : null;
+  const coalitions = list.filter(item => allianceKind(world, item).kind === 'coalizione');
+  const registered = state.national?.campaign?.coalitions ?? [];
+  const autonomous = world.parties.filter(item => item.active !== false && (item.isPlayer || isSurveyed(item)) && !list.some(entry => entry.partyIds.includes(item.id))).length;
+  const kpis = `<div class="sx-kpis"><div class="sx-kpi"><span>Alleanze attive</span><b>${list.length}</b></div><div class="sx-kpi"><span>Coalizioni (3+ forze)</span><b>${coalitions.length}</b></div><div class="sx-kpi"><span>Registrate per il voto</span><b>${registered.length}</b></div><div class="sx-kpi"><span>Partiti autonomi</span><b>${autonomous}</b></div></div>`;
+  const cards = list.map(alliance => {
+    const kind = allianceKind(world, alliance);
+    const w = allianceWeight(alliance, index, poll);
+    const leader = index[alliance.leaderId] ?? null;
+    const cohesion = Math.max(0, Math.min(100, Math.round(alliance.cohesion)));
+    const tone = cohesion < 25 ? 'in crisi' : cohesion < 40 ? 'fragile' : 'solida';
+    const members = `<ul class="coalition-members">${w.members.map(member => `<li><strong>${esc(member.label)}</strong>${member.id === leader?.id ? ' <span class="badge badge-kind">Capofila</span>' : ''}${member.isPlayer ? ' <span class="badge">Tu</span>' : ''}<small>${w.shareOf(member.id) === null ? 'non nell’ultima rilevazione' : pct(w.shareOf(member.id))}</small></li>`).join('')}</ul>`;
+    const terms = (alliance.terms ?? []).slice(-5).map(term => `<li>${esc(term.text)}${term.status ? ` — ${esc({ aperto: 'in sospeso fino al voto', mantenuto: 'mantenuto', tradito: 'non rispettato', decaduto: 'decaduto' }[term.status] ?? term.status)}` : ''}</li>`).join('');
+    const breaks = (alliance.history ?? []).filter(item => /lascia|esce|rott|confluisc|sciolt/i.test(item.text)).slice(-4).map(item => `<li>${esc(item.text)}</li>`).join('');
+    const reg = registered.find(item => item.partyIds.length === alliance.partyIds.length && item.partyIds.every(id => alliance.partyIds.includes(id)));
+    const programme = alliance.id === mine?.id ? 'Compatibilità programmatica tema per tema nella scheda «La mia alleanza».' : 'La compatibilità programmatica si calcola solo per i partiti con cui tratti: non è disponibile per le intese degli altri.';
+    return `<article class="alliance-card${alliance.id === mine?.id ? ' is-mine' : ''}" data-alliance-card="${esc(alliance.id)}"><header><div><strong>${esc(alliance.label)}</strong> <span class="badge badge-kind">${esc(kind.label)}</span>${alliance.id === mine?.id ? ' <span class="badge">La tua</span>' : ''}${reg ? ' <span class="badge badge-good">Registrata per il voto</span>' : ''}</div><small>${w.members.length} partiti${leader ? ` · guida: ${esc(leader.label)}` : ''} · dal ${esc(shortDate(alliance.since))}</small></header>
+      ${weightBar(w, index)}<p data-alliance-weight>${esc(weightLine(w))}</p>
+      <p class="alliance-cohesion"><span>Coesione</span> <b class="hq-bar ${cohesion < 30 ? 'danger' : ''}"><i style="width:${cohesion}%"></i></b> <small>${cohesion}/100 (sim.) · ${esc(tone)}</small></p>
+      ${allianceFold(`c-${alliance.id}-composizione`, 'users', 'Composizione e peso', `${w.members.length} partiti`, members)}
+      ${allianceFold(`c-${alliance.id}-accordi`, 'law', 'Trattative e accordi', terms ? 'condizioni concordate' : 'nessuna condizione', terms ? `<ul class="coalition-terms">${terms}</ul>` : '<p class="quiet-copy">Nessuna condizione particolare è stata concordata.</p>')}
+      ${allianceFold(`c-${alliance.id}-programma`, 'book', 'Compatibilità programmatica', '', `<p class="quiet-copy">${esc(programme)}</p>`)}
+      ${allianceFold(`c-${alliance.id}-rotture`, 'alert', 'Rotture e conseguenze', breaks ? 'ci sono stati addii' : 'nessuna rottura', breaks ? `<ul class="coalition-history">${breaks}</ul><p class="quiet-copy">Chi lascia un’alleanza ne indebolisce la coesione; sotto 25 la coalizione perde il membro più distante.</p>` : '<p class="quiet-copy">Nessuna rottura registrata: se la coesione scende sotto 25 la coalizione perde il membro più distante.</p>')}</article>`;
+  }).join('') || '<p class="quiet-copy">Nessuna alleanza attiva: i partiti sono tutti autonomi.</p>';
+  return `<div class="alliances-overview" data-alliances-overview>${kpis}<div class="alliance-cards">${cards}</div><p class="poll-footnote">Il peso di un’alleanza è la somma delle rilevazioni dei suoi partiti nell’ultimo sondaggio simulato: se ne manca una, il totale è parziale e lo dice. Nessuna stima è aggiunta.</p></div>`;
 }
 export function forcesGrid(state, world, poll, index, logo, realLeader, secretary, options = {}) {
   const player = world.parties.find(item => item.isPlayer);
@@ -352,14 +467,14 @@ export function forcesGrid(state, world, poll, index, logo, realLeader, secretar
       ${canPropose && options.refusedUntil?.(party.id) ? `<small class="force-strategy" data-alliance-retry>Richiesta respinta: potrai ripresentarla dal ${esc(formatDate(options.refusedUntil(party.id)))}.</small>` : canPropose ? `<button class="secondary-button" data-world-alliance="${esc(party.id)}">Crea alleanza · 1 giorno · 4 cap.</button>` : ''}
       ${proposeBlock ? `<small class="force-strategy" data-alliance-block>${esc(proposeBlock)}</small>` : ''}
       ${canInvite && !inviteBlockText ? oddsBlock(options.inviteOdds?.(party.id), options.inviteOdds?.(party.id)?.merge) : ''}
-      ${canInvite && !inviteBlockText ? `<button class="secondary-button" data-world-invite="${esc(party.id)}">Invita nella coalizione · 1 giorno · 4 cap.</button>` : ''}
+      ${canInvite && !inviteBlockText ? invitePanel(party, options) : ''}
       ${inviteBlockText ? `<small class="force-strategy" data-invite-block>${esc(inviteBlockText)}</small>` : ''}
       ${secretary && player && !party.isPlayer && !playerAlliance && options.windowClosed ? '<small class="force-strategy">Intese ferme fino al voto.</small>' : ''}
 
     </article>`;
   }).join('');
   const note = player && !secretary ? '<p class="parliament-note">Alleanze e rotture le decide il segretario del partito: da iscritto o dirigente puoi solo influenzare i rapporti con le tue attività.</p>' : '';
-  return `${note}${player ? myCoalitionPanel(state, world, index, poll, { secretary, windowClosed: options.windowClosed, inviteOdds: options.inviteOdds, programAnalysis: options.programAnalysis, allianceTalkOptions: options.allianceTalkOptions, allianceRequests: options.allianceRequests, coalitionElections: options.coalitionElections, refusedUntil: options.refusedUntil, inviteBlock: options.inviteBlock }) : ''}<div class="force-grid">${rows}</div>`;
+  return `${note}${player && !options.withoutCoalition ? myCoalitionPanel(state, world, index, poll, { secretary, windowClosed: options.windowClosed, allyKinds: options.allyKinds, allyActivities: options.allyActivities, allyOdds: options.allyOdds, funds: options.funds, capital: options.capital, inviteOdds: options.inviteOdds, programAnalysis: options.programAnalysis, allianceTalkOptions: options.allianceTalkOptions, allianceRequests: options.allianceRequests, coalitionElections: options.coalitionElections, refusedUntil: options.refusedUntil, inviteBlock: options.inviteBlock, inviteImpact: options.inviteImpact }) : ''}<div class="force-grid">${rows}</div>`;
 }
 
 // The reason of a way out of the polls, with the figures that decided it: the SIMULATED consensus (what the thresholds read), the weeks it was held, the state it was in and for how long, and
@@ -448,7 +563,7 @@ export function renderPollsPage(state, options = {}) {
       ${panel('TERRITORIO', 'Il tuo partito regione per regione', regionalMap(world, poll))}
       ${panel('CRONACA POLITICA', 'Cosa muove i sondaggi', chronicle(world, 6))}
     </div>
-    ${panel('PARTITI REALI · COMPORTAMENTI SIMULATI', 'Le forze in campo', forcesGrid(state, world, poll, index, logo, options.realLeader, options.secretary, { allianceOdds: options.allianceOdds, inviteOdds: options.inviteOdds, programAnalysis: options.programAnalysis, allianceTalkOptions: options.allianceTalkOptions, allianceRequests: options.allianceRequests, coalitionElections: options.coalitionElections, refusedUntil: options.refusedUntil, inviteBlock: options.inviteBlock, allianceBlock: options.allianceBlock }))}
+    ${panel('PARTITI REALI · COMPORTAMENTI SIMULATI', 'Le forze in campo', forcesGrid(state, world, poll, index, logo, options.realLeader, options.secretary, { allianceOdds: options.allianceOdds, inviteOdds: options.inviteOdds, programAnalysis: options.programAnalysis, allianceTalkOptions: options.allianceTalkOptions, allianceRequests: options.allianceRequests, coalitionElections: options.coalitionElections, refusedUntil: options.refusedUntil, inviteBlock: options.inviteBlock, inviteImpact: options.inviteImpact, allianceBlock: options.allianceBlock, allyKinds: options.allyKinds, allyActivities: options.allyActivities, allyOdds: options.allyOdds, funds: options.funds, capital: options.capital }))}
     ${panel('PRESENZA NEI SONDAGGI · SIMULAZIONE', 'Chi entra e chi esce', presencePanel(world))}
     <div class="poll-grid">
       ${panel('ALLEANZE · SIMULATE', 'Intese e rotture', alliances)}
@@ -470,106 +585,5 @@ export function renderBarometerPanel(state) {
   return `<div class="barometer"><div class="barometer-main"><div><small>${player ? esc(player.label) : 'Gradimento personale'}</small><strong>${player ? pct(row?.share) : pct(poll.personal.approval, 0)}</strong>${player ? deltaChip(row?.delta ?? 0, true) : ''}</div>${sparkline(series, player?.color ?? 'var(--party-accent)')}</div><dl class="hq-facts"><div><dt>Gradimento personale</dt><dd>${pct(poll.personal.approval, 0)}</dd></div>${player ? `<div><dt>${esc(world.place.municipality || 'Territorio')}</dt><dd>${pct(poll.local)}</dd></div>` : ''}${poll.government ?? poll.executive ? `<div><dt>Governo</dt><dd>${pct((poll.government ?? poll.executive).approval, 0)}</dd></div>` : ''}<div><dt>${isReal(poll) ? 'Fonte' : 'Istituto'}</dt><dd>${esc(poll.institute)} · ${marginText(poll)}</dd></div></dl></div>${chronicle(world, 3)}`;
 }
 
-// Tooltips for charts and marks: values stay reachable through labels and the data table.
-// One tooltip for the whole page. It is hidden with display:none (the stylesheet gives it display:grid, which would
-// otherwise override the hidden attribute and leave an empty dark box on screen), and it disappears whenever its
-// anchor goes away: pointer out, touch end, render, route change, scroll, resize, focus loss.
-let tipElement = null;
-let tipAnchor = null;
-let touchTimer = null;
-let listening = false;
-const attachedRoots = new WeakSet();
-export function hideChartTip() {
-  if (tipElement) { tipElement.hidden = true; tipElement.style.display = 'none'; tipElement.replaceChildren(); }
-  tipAnchor = null;
-  if (touchTimer) { clearTimeout(touchTimer); touchTimer = null; }
-  if (typeof document !== 'undefined') for (const line of document.querySelectorAll?.('.crosshair') ?? []) line.setAttribute('visibility', 'hidden');
-}
-export const isChartTipVisible = () => Boolean(tipElement && !tipElement.hidden && tipElement.style.display !== 'none');
-function ensureTip() {
-  if (tipElement && tipElement.isConnected !== false) return tipElement;
-  for (const stale of document.querySelectorAll?.('.viz-tip') ?? []) stale.remove?.();
-  tipElement = document.createElement('div');
-  tipElement.className = 'viz-tip';
-  tipElement.setAttribute?.('role', 'tooltip');
-  tipElement.hidden = true;
-  tipElement.style.display = 'none';
-  document.body.append(tipElement);
-  return tipElement;
-}
-export function attachChartInteractions(root) {
-  if (!root?.addEventListener || typeof document === 'undefined' || attachedRoots.has(root)) return;
-  attachedRoots.add(root);
-  ensureTip();
-  const place = (clientX, clientY) => {
-    const tip = ensureTip();
-    const { innerWidth } = window;
-    tip.style.left = `${Math.max(8, Math.min(innerWidth - tip.offsetWidth - 12, clientX + 14))}px`;
-    tip.style.top = `${Math.max(8, clientY - tip.offsetHeight - 12)}px`;
-  };
-  const reveal = () => { const tip = ensureTip(); tip.hidden = false; tip.style.display = ''; return tip; };
-  const showText = (anchor, text, x, y) => { if (!text) return hideChartTip(); tipAnchor = anchor; const tip = reveal(); tip.replaceChildren(document.createTextNode(text)); place(x, y); };
-  const showTrend = (chart, clientX, clientY) => {
-    let data;
-    try { data = JSON.parse(chart.dataset.trend); } catch { return hideChartTip(); }
-    const box = chart.getBoundingClientRect();
-    const ratio = (clientX - box.left) / box.width;
-    // The chart is drawn at two widths: the one on screen decides where the points are.
-    const svg = [...chart.querySelectorAll('svg')].find(item => item.getClientRects().length) ?? chart.querySelector('svg');
-    const xs = (svg.classList.contains('lc-narrow') && data.xn) || (svg.classList.contains('lc-mid') && data.xm) || data.x;
-    const index = xs.reduce((best, value, i) => Math.abs(value - ratio) < Math.abs(xs[best] - ratio) ? i : best, 0);
-    const line = svg.querySelector('.crosshair');
-    const xPos = xs[index] * Number(svg.viewBox.baseVal.width);
-    line?.setAttribute('x1', xPos); line?.setAttribute('x2', xPos); line?.setAttribute('visibility', 'visible');
-    const title = document.createElement('strong');
-    title.textContent = data.weeks[index];
-    const rows = data.series.map(series => {
-      const row = document.createElement('span');
-      const key = document.createElement('i');
-      key.style.background = series.color;
-      const value = document.createElement('b');
-      value.textContent = Number.isFinite(series.values[index]) ? `${series.values[index].toLocaleString('it-IT', { maximumFractionDigits: 1 })}${data.unit ?? '%'}` : '—';
-      row.append(key, value, document.createTextNode(` ${series.label}`));
-      return row;
-    });
-    tipAnchor = chart;
-    const tip = reveal();
-    tip.replaceChildren(title, ...rows);
-    place(clientX, clientY);
-  };
-  root.addEventListener('pointermove', event => {
-    const chart = event.target.closest?.('[data-trend]');
-    if (chart) return showTrend(chart, event.clientX, event.clientY);
-    const mark = event.target.closest?.('[data-tip]');
-    if (mark) return showText(mark, mark.dataset.tip, event.clientX, event.clientY);
-    if (tipAnchor || isChartTipVisible()) hideChartTip();
-  });
-  // Leaving the anchor for anything that is not part of it hides the tooltip at once.
-  root.addEventListener('pointerout', event => {
-    if (!tipAnchor) return;
-    const next = event.relatedTarget;
-    if (!next || !tipAnchor.contains?.(next)) hideChartTip();
-  });
-  root.addEventListener('pointerleave', hideChartTip);
-  root.addEventListener('pointerdown', event => { if (event.pointerType !== 'touch') hideChartTip(); });
-  // On touch screens a tap shows the value briefly, then it goes away by itself.
-  root.addEventListener('pointerup', event => { if (event.pointerType === 'touch' && tipAnchor) { clearTimeout(touchTimer); touchTimer = setTimeout(hideChartTip, 1800); } });
-  root.addEventListener('pointercancel', hideChartTip);
-  root.addEventListener('click', event => { if (!event.target.closest?.('[data-tip],[data-trend]')) hideChartTip(); });
-  root.addEventListener('focusin', event => {
-    const chart = event.target.closest?.('[data-trend]');
-    const box = event.target.getBoundingClientRect();
-    if (chart) showTrend(chart, box.right - 4, box.top + 20);
-    else if (event.target.closest?.('[data-tip]')) showText(event.target, event.target.dataset.tip, box.left + box.width / 2, box.top);
-  });
-  root.addEventListener('focusout', hideChartTip);
-  // A re-render can remove the anchor under a still pointer: the tooltip goes with it.
-  if (typeof MutationObserver !== 'undefined') new MutationObserver(() => { if (tipAnchor && !tipAnchor.isConnected) hideChartTip(); }).observe(root, { childList: true, subtree: true });
-  if (listening) return;
-  listening = true;
-  // Anything that changes the page takes the tooltip away with it (registered once, whatever the number of roots).
-  for (const type of ['hashchange', 'popstate', 'blur', 'resize']) globalThis.addEventListener?.(type, hideChartTip);
-  globalThis.addEventListener?.('scroll', hideChartTip, { passive: true, capture: true });
-  globalThis.addEventListener?.('keydown', event => { if (event.key === 'Escape') hideChartTip(); });
-  document.addEventListener?.('visibilitychange', hideChartTip);
-}
+// the tooltips of the charts live in chart-tips.js (loaded with the first screen); re-exported here for the pages and tests that import them from this module
+export { attachChartInteractions, hideChartTip, isChartTipVisible } from './chart-tips.js?v=20261126-3';

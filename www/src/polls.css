@@ -446,8 +446,8 @@
 .obs-subtabs { display: flex; gap: 6px; margin: -6px 0 14px; padding: 0 2px 2px; overflow-x: auto; scrollbar-width: none; }
 .obs-subtabs::-webkit-scrollbar { display: none; }
 .obs-subtab { flex: none; min-height: 34px; padding: 0 14px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--panel-2); color: var(--ink-2); font: 650 12.5px var(--font-ui); white-space: nowrap; }
-.obs-subtab:hover { border-color: var(--teal-soft); color: var(--ink-hi); }
-.obs-subtab.active { border-color: var(--teal-soft); background: var(--info-soft); color: var(--teal-light); }
+.obs-subtab:hover { border-color: var(--gold-deep); color: var(--ink-hi); }
+.obs-subtab.active { border-color: var(--gold-deep); background: rgba(196, 166, 106, .14); color: var(--gold-light); }
 .obs-filters { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 4px 18px; }
 .obs-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 18px; }
 .obs-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 0 0 12px; color: var(--muted); font-size: 13px; }
@@ -476,7 +476,7 @@
 .rbars { display: grid; gap: 2px; }
 .rbar-row { display: grid; grid-template-columns: minmax(110px, 190px) minmax(0, 1fr) 64px; align-items: center; gap: 4px 12px; width: 100%; padding: 7px 8px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--ink); font: 500 14px var(--font-ui); text-align: left; cursor: pointer; overflow-wrap: anywhere; }
 .rbar-row:hover { background: var(--panel-3); }
-.rbar-row.is-selected { background: var(--info-soft); color: var(--ink-hi); }
+.rbar-row.is-selected { background: rgba(196, 166, 106, .12); color: var(--ink-hi); }
 .rbar-row.is-missing { color: var(--ink-2); }
 .rbar-track.is-empty { background: transparent; border: 1px dashed var(--line); height: 14px; }
 .rbar-why { grid-column: 1 / -1; color: var(--ink-3); font-size: 12px; line-height: 1.3; }
@@ -610,3 +610,42 @@
 .coalition-elections { list-style: none; margin: 8px 0 12px; padding: 0; display: grid; gap: 8px; }
 .coalition-elections li { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
 @media (max-width: 600px) { .program-table thead { display: none; } .program-table tr { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; padding: 8px 10px; border-top: 1px solid var(--line); } .program-table th { grid-column: 1 / -1; border: 0; padding: 0; } .program-table td { border: 0; padding: 0; } .program-table td:last-child { grid-column: 1 / -1; } }
+
+/* Alliances: accordions and cards of the alliances page (only here) */
+.alliance-folds { display: grid; gap: 8px; margin-top: 10px; }
+.alliance-fold { border: 1px solid var(--line, rgba(127,140,134,.35)); border-radius: 12px; background: rgba(127,140,134,.06); }
+.alliance-fold > summary { list-style: none; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; min-height: 48px; cursor: pointer; }
+.alliance-fold > summary::-webkit-details-marker { display: none; }
+.alliance-fold-title { display: grid; min-width: 0; } .alliance-fold-title small { opacity: .85; overflow-wrap: anywhere; }
+.alliance-fold .fold-icon { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: rgba(217,180,90,.16); color: var(--gold-soft, #e8c875); }
+.alliance-fold .fold-chevron { width: 10px; height: 10px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); transition: transform .15s; margin-right: 4px; }
+.alliance-fold[open] > summary .fold-chevron { transform: rotate(-135deg); }
+.alliance-fold > summary:focus-visible { outline: 2px solid var(--gold, #d9b45a); outline-offset: 2px; border-radius: 12px; }
+.alliance-fold-body { padding: 4px 12px 12px; display: grid; gap: 8px; }
+.alliance-weight { display: flex; height: 12px; gap: 2px; border-radius: 6px; overflow: hidden; margin: 6px 0; } .alliance-weight i { display: block; min-width: 6px; }
+.alliance-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 12px; margin-top: 10px; }
+.alliance-card { border: 1px solid var(--line, rgba(127,140,134,.35)); border-radius: 14px; padding: 12px; display: grid; gap: 8px; min-width: 0; align-content: start; }
+.alliance-card.is-mine { border-color: rgba(217,180,90,.7); }
+.alliance-card header { display: grid; gap: 2px; } .alliance-card p { margin: 0; }
+.alliance-cohesion { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* Alleanze: scheda di sintesi + azioni in colonna (niente righe strette con select e pulsanti affiancati), tutto il resto in sezioni chiuse */
+.my-coalition { min-width: 0; max-width: 100%; display: grid; gap: 12px; }
+.my-coalition > * { min-width: 0; }
+.alliance-summary { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--line, rgba(127,140,134,.35)); border-radius: 14px; background: linear-gradient(180deg, rgba(217,180,90,.10), rgba(127,140,134,.05)); }
+.alliance-summary-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.alliance-summary-title { min-width: 0; } .alliance-summary-title h3 { margin: 2px 0 0; font-size: 1.15rem; line-height: 1.25; overflow-wrap: anywhere; }
+.alliance-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; }
+.alliance-tile { display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; background: rgba(0,0,0,.18); min-width: 0; }
+.alliance-tile small { font-size: .72rem; letter-spacing: .04em; text-transform: uppercase; opacity: .8; } .alliance-tile strong { font-size: 1.15rem; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.alliance-tile strong small { font-size: .75rem; opacity: .7; text-transform: none; letter-spacing: 0; }
+.alliance-tile.is-good strong { color: var(--sem-good, #4cb782); } .alliance-tile.is-warn strong { color: var(--gold-soft, #e8c875); } .alliance-tile.is-bad strong { color: var(--sem-bad, #e07070); }
+.coalition-can { margin: 0; overflow-wrap: anywhere; }
+.coalition-actions { display: grid; gap: 10px; }
+.coalition-actions > * { min-width: 0; }
+.coalition-invite { display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr); }
+.coalition-invite label { display: grid; gap: 4px; min-width: 0; } .coalition-invite select { width: 100%; max-width: 100%; min-height: 44px; }
+.coalition-invite .secondary-button, .coalition-actions > .secondary-button { width: 100%; min-height: 44px; height: auto; white-space: normal; text-align: center; }
+.invite-choice .setting-actions { display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr); } .invite-choice .setting-actions button { width: 100%; height: auto; min-height: 44px; white-space: normal; }
+@media (min-width: 900px) { .coalition-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } .coalition-invite { grid-column: 1; } }
+.alliance-kicker { text-transform: uppercase; letter-spacing: .08em; }

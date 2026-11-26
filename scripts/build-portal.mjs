@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 export const PORTAL_COPIES = Object.freeze([
-  'privacy.html', 'privacy-en.html', 'support.html', 'support-en.html', 'termini.html', 'terms-en.html', 'elimina-account.html', 'delete-account-en.html', 'favicon.ico', 'favicon.svg',
+  'privacy.html', 'privacy-en.html', 'support.html', 'support-en.html', 'termini.html', 'terms-en.html', 'elimina-account.html', 'delete-account-en.html', 'favicon.ico', 'favicon.svg', 'app-ads.txt',
   'src/legal.css', 'src/legal/delete-account.js', 'src/data/repositories/account-sync.js', 'src/data/repositories/career-visibility.js'
 ]);
 const check = process.argv.includes('--check');

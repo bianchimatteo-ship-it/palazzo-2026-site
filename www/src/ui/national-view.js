@@ -2,14 +2,14 @@
 // elections, coalitions and national campaign, the seats projected on the real map of 2022, the last votes, the new
 // Chambers and the formation of the Government. The map, the seats and the results of 2022 are real data (Eligendo);
 // polls, coalitions, votes, seats and Governments of the game are simulation, and every block says which is which.
-import { districtRows } from '../core/legislature-engine.js?v=20261117-3';
-import { territoryResultsCard } from './territory-results-card.js?v=20261117-3';
-import { formatDate } from '../core/time.js?v=20261117-3';
-import { ALLIANCE_COLORS, NEUTRAL_COLOR, coalitionColor, forceColor } from './political-colors.js?v=20261117-3';
-import { glyph } from './visuals.js?v=20261117-3';
-import { arrow, badge, bar, card, esc, euro, kpi, num, pct, table } from './sections-kit.js?v=20261117-3';
-import { toneEdge } from '../data/party-brand.js?v=20261117-3';
-import { ABSENT_COLOR, MAP_SCOPES, NO_DATA_COLOR, PRESENCE_NOTE, PROVINCE_INDICATOR_NOTE, italyMapInfo, italyMapSvg, italyMapTable, territoryTallies } from './italy-map.js?v=20261117-3';
+import { districtRows } from '../core/legislature-engine.js?v=20261126-3';
+import { territoryResultsCard } from './territory-results-card.js?v=20261126-3';
+import { formatDate } from '../core/time.js?v=20261126-3';
+import { ALLIANCE_COLORS, NEUTRAL_COLOR, coalitionColor, forceColor } from './political-colors.js?v=20261126-3';
+import { glyph } from './visuals.js?v=20261126-3';
+import { arrow, badge, bar, card, esc, euro, kpi, num, pct, table } from './sections-kit.js?v=20261126-3';
+import { toneEdge } from '../data/party-brand.js?v=20261126-3';
+import { ABSENT_COLOR, MAP_SCOPES, NO_DATA_COLOR, PRESENCE_NOTE, PROVINCE_INDICATOR_NOTE, italyMapInfo, italyMapSvg, italyMapTable, territoryTallies } from './italy-map.js?v=20261126-3';
 
 export const NATIONAL_MAP_VIEWS = Object.freeze([['proiezione', 'Proiezione di oggi'], ['2022', 'Vincitori 2022 (reale)'], ['voto', 'Ultimo voto della partita']]);
 const NEUTRAL = NEUTRAL_COLOR;
@@ -303,6 +303,8 @@ function sourcesCard(overview) {
   return card({ fold: { id: 'nv-fonti', icon: 'shield', start: 'closed' }, kicker: 'FONTI E REGOLE', title: 'Cosa è reale e cosa è simulato', body: `${real}<ul class="nv-notes">${notes}</ul>` });
 }
 
+// What the territory page needs to paint the lists of the last simulated vote: swatch, colour and label of every list.
+export const territoryPaint = overview => ({ swatch, colorOf: id => palette(overview, overview.national.lastPolitiche).of(id), labelOf: labelOf(overview, overview.national.lastPolitiche) });
 export function renderNationalView(state, overview, { geography = null, view = null, map = null } = {}) {
   if (!overview) return '<p class="sx-empty">Ciclo nazionale non disponibile.</p>';
   const formationActive = overview.national.formation && !['completata'].includes(overview.national.formation.phase);
@@ -314,7 +316,7 @@ export function renderNationalView(state, overview, { geography = null, view = n
     ${geoMapCard(overview, geography, view, map)}
     ${mapCard(overview, geography, view, map?.group === 'partiti' ? 'partiti' : 'schieramenti', map?.party ?? '')}
     ${lastVoteCard(overview, state)}
-    ${overview.national.lastPolitiche ? territoryResultsCard({ overview, last: overview.national.lastPolitiche, geography, terr: map?.terr ?? '', municipalities: map?.municipalities ?? [], swatch, colorOf: id => palette(overview, overview.national.lastPolitiche).of(id), labelOf: labelOf(overview, overview.national.lastPolitiche) }) : ''}
+    ${overview.national.lastPolitiche ? territoryResultsCard({ overview, state, last: overview.national.lastPolitiche, geography, terr: map?.terr ?? '', municipalities: map?.municipalities ?? [], swatch, colorOf: id => palette(overview, overview.national.lastPolitiche).of(id), labelOf: labelOf(overview, overview.national.lastPolitiche) }) : ''}
     ${!formationActive ? formationCard(overview, state) : ''}
     <div class="sx-grid two">${europeanCard(overview)}${historyCard(overview)}</div>
     ${sourcesCard(overview)}

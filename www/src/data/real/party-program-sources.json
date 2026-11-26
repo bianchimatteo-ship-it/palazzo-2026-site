@@ -1,0 +1,2270 @@
+{
+  "generatedBy": "scripts/report-party-programs.mjs",
+  "retrievedAt": "2026-11-24",
+  "note": "Documentazione: i programmi del gioco sono in src/data/party-programs.js; qui documenti e catalogo dei 82 record.",
+  "documents": {
+    "pci-tesi-2025": {
+      "title": "Le Tesi del PCI (documento politico, Forlì 2025)",
+      "url": "https://www.ilpartitocomunistaitaliano.it/le-tesi-del-pci/",
+      "date": "2025-02",
+      "type": "tesi-congressuali",
+      "scope": "nazionale",
+      "status": "congressuale",
+      "read": "diretta"
+    },
+    "pcivico-carta": {
+      "title": "Carta dei Valori — Progetto Civico Italia",
+      "url": "https://progettocivicoitalia.it/carta-dei-valori/",
+      "date": null,
+      "type": "carta-dei-valori",
+      "scope": "nazionale",
+      "status": "approvato",
+      "read": "diretta"
+    },
+    "pcivico-laboratori": {
+      "title": "Programma — I Laboratori Civici Nazionali",
+      "url": "https://progettocivicoitalia.it/programma/",
+      "date": null,
+      "type": "programma-in-elaborazione",
+      "scope": "nazionale",
+      "status": "in-elaborazione",
+      "read": "diretta"
+    },
+    "nm-battaglie": {
+      "title": "Programma — Le nostre battaglie (Noi Moderati)",
+      "url": "https://www.noimoderati.it/programma",
+      "date": null,
+      "type": "proposte-tematiche",
+      "scope": "nazionale",
+      "status": "corrente",
+      "read": "diretta"
+    },
+    "nm-2022": {
+      "title": "Programma Noi Moderati 2022 (PDF)",
+      "url": "https://www.noimoderati.it/programma",
+      "date": "2022",
+      "type": "programma-elettorale",
+      "scope": "nazionale",
+      "status": "storico",
+      "read": "non-letto"
+    },
+    "volt-programma": {
+      "title": "Il Programma Volt Italia",
+      "url": "https://www.voltitalia.it/Programma/",
+      "date": null,
+      "type": "programma",
+      "scope": "nazionale ed europeo",
+      "status": "corrente (sezioni 2022 e 2024)",
+      "read": "diretta"
+    },
+    "piueuropa-manifesto": {
+      "title": "Manifesto di Più Europa",
+      "url": "https://www.piueuropa.eu/manifesto",
+      "date": null,
+      "type": "manifesto",
+      "scope": "nazionale",
+      "status": "approvato",
+      "read": "diretta"
+    },
+    "piueuropa-2022": {
+      "title": "«Una Generazione Avanti», programma elettorale 2022",
+      "url": "https://www.piueuropa.eu/una_generazione_avanti_il_programma_elettorale_di_europa",
+      "date": "2022-08-23",
+      "type": "programma-elettorale",
+      "scope": "nazionale",
+      "status": "storico",
+      "read": "dossier"
+    },
+    "m5s-nova-2026": {
+      "title": "Nova, 20 punti: una alleanza per la Costituzione",
+      "url": "https://www.movimento5stelle.eu/nova-20-punti-una-alleanza-per-la-costituzione/",
+      "date": "2026-09-18",
+      "type": "consultazione",
+      "scope": "proposte per la coalizione progressista",
+      "status": "consultazione degli iscritti",
+      "read": "diretta (testo dei 20 punti non leggibile)"
+    },
+    "pd-cinque-punti": {
+      "title": "Cinque punti per l’Italia; Per il diritto alla salute (30/09/2026); intervista sulla manovra (24/11/2026)",
+      "url": "https://partitodemocratico.it/cinque-punti-per-litalia/",
+      "date": "2026-11-24",
+      "type": "sintesi-programmatica",
+      "scope": "nazionale",
+      "status": "corrente",
+      "read": "dossier"
+    },
+    "cdx-2022": {
+      "title": "Accordo quadro di programma del centrodestra 2022 (sul sito di Fratelli d’Italia)",
+      "url": "https://www.fratelli-italia.it/programmacentrodestra/",
+      "date": "2022-08",
+      "type": "programma-coalizione",
+      "scope": "coalizione",
+      "status": "storico",
+      "read": "dossier"
+    },
+    "lega-sl37": {
+      "title": "La Settimana Leghista n. 37 (13/09/2026): manifesto programmatico in preparazione",
+      "url": "https://legaonline.it/la-settimana-leghista-37/",
+      "date": "2026-09-13",
+      "type": "comunicazione-ufficiale",
+      "scope": "nazionale",
+      "status": "manifesto in elaborazione",
+      "read": "dossier"
+    },
+    "lega-2022": {
+      "title": "Programma elettorale Lega 2022 (PDF)",
+      "url": "https://static.legaonline.it/files/Programma_Lega_2022.pdf",
+      "date": "2022",
+      "type": "programma-elettorale",
+      "scope": "nazionale",
+      "status": "storico",
+      "read": "non-letto"
+    },
+    "fi-schede": {
+      "title": "Forza Italia, Forza di Governo — schede tematiche dei Dipartimenti",
+      "url": "https://forzaitalia.it/forza-italia-forza-di-governo/",
+      "date": null,
+      "type": "proposte-tematiche",
+      "scope": "nazionale",
+      "status": "corrente",
+      "read": "dossier"
+    },
+    "azione-proposte": {
+      "title": "Proposte — Azione (titoli delle proposte per area)",
+      "url": "https://www.azione.it/proposte/",
+      "date": null,
+      "type": "proposte-tematiche",
+      "scope": "nazionale",
+      "status": "corrente",
+      "read": "diretta (solo i titoli)"
+    },
+    "iv-cantieri": {
+      "title": "Cantieri di Futuro — Italia Viva",
+      "url": "https://www.italiaviva.it/i_cantieri_di_futuro",
+      "date": null,
+      "type": "percorso-partecipativo",
+      "scope": "nazionale",
+      "status": "in-elaborazione",
+      "read": "diretta"
+    },
+    "ev-12-priorita": {
+      "title": "Europa Verde — 12 priorità per cambiare l’Europa",
+      "url": "https://europaverde.it/programma/",
+      "date": null,
+      "type": "priorita-europee",
+      "scope": "europeo",
+      "status": "corrente",
+      "read": "dossier"
+    },
+    "avs-2022": {
+      "title": "Programma elettorale Alleanza Verdi e Sinistra 2022 (PDF)",
+      "url": "https://www.sinistraitaliana.si/wp-content/uploads/2022/09/Programma-Alleanza-Verdi-e-Sinistra.pdf",
+      "date": "2022-09",
+      "type": "programma-coalizione",
+      "scope": "coalizione",
+      "status": "storico",
+      "read": "non-letto"
+    },
+    "pld-manifesto": {
+      "title": "Manifesto del Partito Liberaldemocratico",
+      "url": "https://partitoliberaldemocratico.com/manifesto/",
+      "date": null,
+      "type": "manifesto",
+      "scope": "nazionale",
+      "status": "approvato",
+      "read": "dossier"
+    },
+    "fn-bip": {
+      "title": "B.I.P. — Base Ideologica e Programmatica 2027–2037 (prima e seconda parte di tre)",
+      "url": "https://futuronazionale.it/programma/",
+      "date": null,
+      "type": "base-programmatica",
+      "scope": "nazionale",
+      "status": "incompleto (due parti su tre)",
+      "read": "dossier (pagina troppo grande per lo strumento)"
+    },
+    "ora-proposta": {
+      "title": "La nostra proposta — ORA!",
+      "url": "https://ora-italia.it/proposta/",
+      "date": null,
+      "type": "tesi-in-elaborazione",
+      "scope": "nazionale",
+      "status": "in-elaborazione",
+      "read": "diretta"
+    },
+    "demos-2026": {
+      "title": "Documento programmatico Demo.S 2026 (Servizio sanitario nazionale)",
+      "url": "https://www.democraziasolidale.it/wp-content/uploads/2026/05/DOCUMENTO-PROGRAMMATICO-DEMOS-2026.pdf",
+      "date": "2026-05",
+      "type": "documento-tematico",
+      "scope": "nazionale",
+      "status": "approvato",
+      "read": "dossier"
+    },
+    "scn-principi": {
+      "title": "I dieci principi programmatici — Sud chiama Nord",
+      "url": "https://www.sud-chiamanord.it/documentazione/principi-programmatici",
+      "date": null,
+      "type": "manifesto",
+      "scope": "regionale (Sicilia)",
+      "status": "approvato",
+      "read": "dossier"
+    }
+  },
+  "coalitions": [
+    {
+      "id": "tavolo-centrosinistra-2026",
+      "title": [
+        "Tavolo per il programma comune del centrosinistra",
+        "Table for the common centre-left programme"
+      ],
+      "date": "2026-11-07",
+      "status": "in-elaborazione",
+      "statusText": [
+        "avviato il 7 novembre 2026 con dieci tavoli tematici: nessun testo finale approvato",
+        "started on 7 November 2026 with ten thematic tables: no final text approved"
+      ],
+      "members": [
+        "party-registro-p1-2015-29-ir",
+        "party-registro-p1-2022-63-ir",
+        "party-registro-p1-2014-13-ir",
+        "party-registro-p1-2017-44-ir",
+        "party-registro-p1-2019-52-ir",
+        "party-registro-p1-2018-47-ir",
+        "party-progetto-civico-italia",
+        "party-registro-p1-2014-05-ir"
+      ],
+      "url": "https://www.piueuropa.eu/centrosinistra_avviato_il_tavolo_per_il_programma_comune_obiettivo_concludere_entro_novembre"
+    },
+    {
+      "id": "accordo-centrodestra-2022",
+      "title": [
+        "Accordo quadro di programma del centrodestra",
+        "Centre-right framework programme agreement"
+      ],
+      "date": "2022-08",
+      "status": "storico",
+      "statusText": [
+        "programma di coalizione delle politiche 2022",
+        "coalition programme of the 2022 general election"
+      ],
+      "members": [
+        "party-registro-p1-2014-04-ir",
+        "party-registro-p1-2017-41-ir",
+        "party-registro-p1-2015-20-ir",
+        "party-registro-p1-2020-56-ir"
+      ],
+      "url": "https://www.fratelli-italia.it/programmacentrodestra/"
+    }
+  ],
+  "records": [
+    {
+      "id": "party-registro-p1-2014-01-ir",
+      "name": "Partito della Rifondazione Comunista - Sinistra Europea",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "nazionale",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2014-02-ir",
+      "name": "Solidarietà - Libertà, Giustizia e Pace",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "da-verificare",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2014-03-ir",
+      "name": "Alternativa Popolare",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "da-verificare",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2014-04-ir",
+      "name": "Fratelli d'Italia - Alleanza Nazionale",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "nazionale",
+      "note": "Denominazione registrata di Fratelli d’Italia (con la dicitura storica «Alleanza Nazionale»): è il record canonico di FdI.",
+      "aliasOf": null,
+      "programStatus": "parziale",
+      "documents": [
+        "cdx-2022"
+      ],
+      "documented": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "europa",
+        "istituzioni",
+        "esteri"
+      ],
+      "missing": [
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "diritti"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2014-05-ir",
+      "name": "Partito Socialista Italiano",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "nazionale",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2014-07-ir",
+      "name": "Verdi del Sudtirolo/Alto Adige - Grüne Südtirols - Verdi-Grüne-Vërc",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "regionale",
+      "note": "Alto Adige",
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2014-08-ir",
+      "name": "Süd-Tiroler Freiheit -Freies Bündnis für Tirol",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "regionale",
+      "note": "Alto Adige",
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2014-09-ir",
+      "name": "Partito Autonomista Trentino Tirolese",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "regionale",
+      "note": "Trentino",
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2014-10-ir",
+      "name": "Unione per il Trentino",
+      "file": "parties.json",
+      "datasetStatus": "historical",
+      "kind": "storico",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2014-11-ir",
+      "name": "Lega Nord per l'Indipendenza della Padania",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "da-verificare",
+      "note": "Registrazione ancora attiva; l’attività politica corrente passa per Lega per Salvini Premier.",
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2014-13-ir",
+      "name": "Europa Verde-Verdi",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "nazionale",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "parziale",
+      "documents": [
+        "ev-12-priorita",
+        "avs-2022"
+      ],
+      "documented": [
+        "immigrazione",
+        "economia",
+        "lavoro",
+        "ambiente",
+        "diritti",
+        "esteri"
+      ],
+      "missing": [
+        "sicurezza",
+        "sanita",
+        "europa",
+        "istituzioni"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2015-14-ir",
+      "name": "Movimento Associativo Italiani all'Estero - MAIE",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "italiani-estero",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2015-17-ir",
+      "name": "Centro Democratico",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "nazionale",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2015-18-ir",
+      "name": "Italia dei Valori",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "da-verificare",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2015-19-ir",
+      "name": "Südtiroler Volkspartei",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "regionale",
+      "note": "Alto Adige",
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2015-21-ir",
+      "name": "Progetto Trentino",
+      "file": "parties.json",
+      "datasetStatus": "historical",
+      "kind": "storico",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2015-22-ir",
+      "name": "Unione Sudamericana Emigrati Italiani",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "italiani-estero",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2015-24-ir",
+      "name": "Popolari per l'Italia",
+      "file": "parties.json",
+      "datasetStatus": "historical",
+      "kind": "storico",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2015-25-ir",
+      "name": "UDC-Unione di Centro",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "nazionale",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2015-26-ir",
+      "name": "Union Valdôtaine",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "regionale",
+      "note": "Valle d’Aosta",
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2015-27-ir",
+      "name": "Movimento La Puglia in Più",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "regionale",
+      "note": "Puglia",
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2015-28-ir",
+      "name": "Partito Liberale Italiano",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "nazionale",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2015-29-ir",
+      "name": "Partito Democratico",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "nazionale",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "parziale",
+      "documents": [
+        "pd-cinque-punti"
+      ],
+      "documented": [
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "diritti"
+      ],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "europa",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2016-31-ir",
+      "name": "Die Freiheitlichen",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "regionale",
+      "note": "Alto Adige",
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2016-32-ir",
+      "name": "Possibile",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "nazionale",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2016-33-ir",
+      "name": "La Puglia prima di tutto",
+      "file": "parties.json",
+      "datasetStatus": "historical",
+      "kind": "storico",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2016-34-ir",
+      "name": "Stella Alpina",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "regionale",
+      "note": "Valle d’Aosta",
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2016-35-ir",
+      "name": "Fare!",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "da-verificare",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2016-36-ir",
+      "name": "Union Valdôtaine Progressiste",
+      "file": "parties.json",
+      "datasetStatus": "historical",
+      "kind": "storico",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2016-37-ir",
+      "name": "IDEA - Identità e Azione - popolo e libertà",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "da-verificare",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2016-38-ir",
+      "name": "Conservatori e Riformisti",
+      "file": "parties.json",
+      "datasetStatus": "historical",
+      "kind": "storico",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2016-39-ir",
+      "name": "ALPE Autonomie - Liberté - Participation - Écologie",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "regionale",
+      "note": "Valle d’Aosta",
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2017-40-ir",
+      "name": "Articolo 1 - Movimento Democratico e Progressista",
+      "file": "parties.json",
+      "datasetStatus": "historical",
+      "kind": "storico",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2017-41-ir",
+      "name": "Lega per Salvini Premier",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "nazionale",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "parziale",
+      "documents": [
+        "lega-sl37",
+        "lega-2022"
+      ],
+      "documented": [
+        "sicurezza",
+        "economia"
+      ],
+      "missing": [
+        "immigrazione",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2017-43-ir",
+      "name": "Democrazia Solidale - Demo.S",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "nazionale",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "parziale",
+      "documents": [
+        "demos-2026"
+      ],
+      "documented": [
+        "sanita"
+      ],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2017-44-ir",
+      "name": "Sinistra Italiana",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "nazionale",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2018-47-ir",
+      "name": "+ Europa",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "nazionale",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "parziale",
+      "documents": [
+        "piueuropa-manifesto",
+        "piueuropa-2022"
+      ],
+      "documented": [
+        "europa",
+        "diritti",
+        "esteri"
+      ],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "istituzioni"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2018-48-ir",
+      "name": "MOUV'",
+      "file": "parties.json",
+      "datasetStatus": "historical",
+      "kind": "storico",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2019-49-ir",
+      "name": "Patto per il Nord",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "da-verificare",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2019-50-ir",
+      "name": "Dieci volte meglio",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "da-verificare",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2019-51-ir",
+      "name": "AZIONE",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "nazionale",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "parziale",
+      "documents": [
+        "azione-proposte"
+      ],
+      "documented": [
+        "immigrazione",
+        "lavoro"
+      ],
+      "missing": [
+        "sicurezza",
+        "economia",
+        "sanita",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2019-52-ir",
+      "name": "Italia Viva",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "nazionale",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "in-elaborazione",
+      "documents": [
+        "iv-cantieri"
+      ],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2019-53-ir",
+      "name": "Radicali Italiani",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "nazionale",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2020-54-ir",
+      "name": "TEAM K",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "regionale",
+      "note": "Alto Adige",
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2020-55-ir",
+      "name": "Cambiamo!",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "da-verificare",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2020-56-ir",
+      "name": "Noi Moderati",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "nazionale",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "parziale",
+      "documents": [
+        "nm-battaglie",
+        "nm-2022"
+      ],
+      "documented": [
+        "economia",
+        "ambiente",
+        "europa",
+        "esteri"
+      ],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "sanita",
+        "lavoro",
+        "diritti",
+        "istituzioni"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2021-57-ir",
+      "name": "Siciliani Liberi",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "regionale",
+      "note": "Sicilia",
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2021-58-ir",
+      "name": "Pour l'Autonomie - Per l'Autonomia",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "regionale",
+      "note": "Valle d’Aosta",
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2021-59-ir",
+      "name": "Italexit per l'Italia",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "da-verificare",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2022-60-ir",
+      "name": "Coraggio Italia",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "da-verificare",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2022-61-ir",
+      "name": "EUROPEISTI",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "da-verificare",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2022-62-ir",
+      "name": "Alternativa",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "da-verificare",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2022-63-ir",
+      "name": "MoVimento 5 Stelle",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "nazionale",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "senza-posizioni",
+      "documents": [
+        "m5s-nova-2026"
+      ],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2022-64-ir",
+      "name": "Sicilia Vera",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "regionale",
+      "note": "Sicilia",
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2022-65-ir",
+      "name": "Moderati",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "da-verificare",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2022-66-ir",
+      "name": "Italia al Centro",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "da-verificare",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2022-67-ir",
+      "name": "Sud chiama Nord",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "regionale",
+      "note": "Sicilia",
+      "aliasOf": null,
+      "programStatus": "parziale",
+      "documents": [
+        "scn-principi"
+      ],
+      "documented": [
+        "ambiente"
+      ],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2023-68-ir",
+      "name": "L'Italia C'è",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "da-verificare",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2023-69-ir",
+      "name": "Campobase",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "regionale",
+      "note": "Trentino",
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2024-70-ir",
+      "name": "Rassemblement Valdôtain",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "regionale",
+      "note": "Valle d’Aosta",
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2024-71-ir",
+      "name": "Volt Italia",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "nazionale",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "parziale",
+      "documents": [
+        "volt-programma"
+      ],
+      "documented": [
+        "immigrazione",
+        "ambiente",
+        "europa",
+        "diritti"
+      ],
+      "missing": [
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2024-72-ir",
+      "name": "Patto per l'Autonomia",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "regionale",
+      "note": "Friuli Venezia Giulia",
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2024-73-ir",
+      "name": "Democrazia Cristiana con Rotondi",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "nazionale",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2024-74-ir",
+      "name": "Partito Liberaldemocratico",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "nazionale",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "parziale",
+      "documents": [
+        "pld-manifesto"
+      ],
+      "documented": [
+        "economia",
+        "ambiente",
+        "europa",
+        "diritti",
+        "esteri"
+      ],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "sanita",
+        "lavoro",
+        "istituzioni"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2025-75-ir",
+      "name": "Forza del Popolo",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "da-verificare",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2026-77-ir",
+      "name": "Sinistra Futura - Costituente per la Nuova Sinistra",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "da-verificare",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-mef-2025-15",
+      "name": "Movimento Cinque Stelle",
+      "file": "parties.json",
+      "datasetStatus": null,
+      "kind": "alias",
+      "note": "Denominazione dell’elenco MEF del 2×1000 2025 del MoVimento 5 Stelle.",
+      "aliasOf": "party-registro-p1-2022-63-ir",
+      "programStatus": "vedi record canonico",
+      "documents": [
+        "m5s-nova-2026"
+      ],
+      "documented": [],
+      "missing": []
+    },
+    {
+      "id": "party-mef-2025-21",
+      "name": "Più Europa",
+      "file": "parties.json",
+      "datasetStatus": null,
+      "kind": "alias",
+      "note": "Denominazione dell’elenco MEF del 2×1000 2025 di +Europa.",
+      "aliasOf": "party-registro-p1-2018-47-ir",
+      "programStatus": "vedi record canonico",
+      "documents": [
+        "piueuropa-manifesto",
+        "piueuropa-2022"
+      ],
+      "documented": [
+        "europa",
+        "diritti",
+        "esteri"
+      ],
+      "missing": []
+    },
+    {
+      "id": "party-futuro-nazionale",
+      "name": "Futuro Nazionale",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "nazionale",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "in-elaborazione",
+      "documents": [
+        "fn-bip"
+      ],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-democrazia-sovrana-popolare",
+      "name": "Democrazia Sovrana Popolare",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "nazionale",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-partito-popolare-del-nord",
+      "name": "Partito Popolare del Nord - Autonomia e Libertà",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "regionale",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-partito-comunista-italiano",
+      "name": "Partito Comunista Italiano",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "nazionale",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "documentato",
+      "documents": [
+        "pci-tesi-2025"
+      ],
+      "documented": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ],
+      "missing": []
+    },
+    {
+      "id": "party-partito-comunista-dei-lavoratori",
+      "name": "Partito Comunista dei Lavoratori",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "nazionale",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-partito-sardo-d-azione",
+      "name": "Partito Sardo d’Azione",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "regionale",
+      "note": "Sardegna",
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-ora",
+      "name": "ORA!",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "nazionale",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "in-elaborazione",
+      "documents": [
+        "ora-proposta"
+      ],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-progetto-civico-italia",
+      "name": "Progetto Civico Italia",
+      "file": "parties.json",
+      "datasetStatus": "active",
+      "kind": "nazionale",
+      "note": "Formazione con sito, Carta dei Valori e Laboratori Civici: programma in elaborazione (non un soggetto fittizio).",
+      "aliasOf": null,
+      "programStatus": "in-elaborazione",
+      "documents": [
+        "pcivico-carta",
+        "pcivico-laboratori"
+      ],
+      "documented": [
+        "immigrazione",
+        "sicurezza",
+        "sanita",
+        "ambiente",
+        "europa",
+        "diritti",
+        "esteri"
+      ],
+      "missing": [
+        "economia",
+        "lavoro",
+        "istituzioni"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2015-20-ir",
+      "name": "Movimento politico Forza Italia",
+      "file": "political-movements.json",
+      "datasetStatus": "active",
+      "kind": "nazionale",
+      "note": "Movimento politico Forza Italia: è il record canonico di Forza Italia nel gioco (nessun duplicato in parties.json).",
+      "aliasOf": null,
+      "programStatus": "senza-posizioni",
+      "documents": [
+        "fi-schede"
+      ],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "party-registro-p1-2017-45-ir",
+      "name": "Movimento politico Pensiero e Azione",
+      "file": "political-movements.json",
+      "datasetStatus": "active",
+      "kind": "da-verificare",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "movement-forza-nuova",
+      "name": "Forza Nuova",
+      "file": "political-movements.json",
+      "datasetStatus": "active",
+      "kind": "movimento",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "movement-casapound-italia",
+      "name": "CasaPound Italia",
+      "file": "political-movements.json",
+      "datasetStatus": "active",
+      "kind": "movimento",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "movement-potere-al-popolo",
+      "name": "Potere al Popolo!",
+      "file": "political-movements.json",
+      "datasetStatus": "active",
+      "kind": "movimento",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    },
+    {
+      "id": "movement-rete-dei-patrioti",
+      "name": "Rete dei Patrioti",
+      "file": "political-movements.json",
+      "datasetStatus": "active",
+      "kind": "movimento",
+      "note": null,
+      "aliasOf": null,
+      "programStatus": "nessuna fonte nel dossier",
+      "documents": [],
+      "documented": [],
+      "missing": [
+        "immigrazione",
+        "sicurezza",
+        "economia",
+        "sanita",
+        "lavoro",
+        "ambiente",
+        "europa",
+        "diritti",
+        "istituzioni",
+        "esteri"
+      ]
+    }
+  ]
+}

@@ -31,7 +31,8 @@ const applicationId = /applicationId\s+"([^"]+)"/.exec(gradle)?.[1];
 const versionCode = Number(/versionCode\s+(\d+)/.exec(gradle)?.[1]);
 const versionName = /versionName\s+"([^"]+)"/.exec(gradle)?.[1];
 assert.equal(applicationId, capacitor.appId, 'applicationId coincide con l’appId di Capacitor.');
-assert.equal(applicationId, buildInfo.appId, 'applicationId coincide con quello di www/build-info.json.');
+assert.equal(applicationId, buildInfo.appIds?.android, 'applicationId coincide con l’identità Android di www/build-info.json (appIds.android).');
+assert.notEqual(applicationId, buildInfo.appIds?.ios, 'L’identità Android non coincide con quella iOS.');
 assert.match(String(await text('android/app/src/main/res/values/strings.xml')), new RegExp(`<string name="package_name">${applicationId.replaceAll('.', '\\.')}</string>`), 'Il nome del pacchetto nelle risorse è quello dell’app.');
 assert.ok(Number.isInteger(versionCode) && versionCode >= 1, `versionCode è un intero positivo (letto: ${versionCode}).`);
 assert.match(versionName ?? '', /^\d+\.\d+(\.\d+)?$/, `versionName è un numero di versione (letto: ${versionName}).`);
@@ -125,6 +126,10 @@ const wwwIndex = await text('www/index.html');
 if (/name="politicando-api-origin"/.test(wwwIndex)) {
   if (release) assert.fail('www/index.html dichiara il Worker di Test (politicando-api-origin): una build per lo store legge e scrive la Produzione. Ricostruisci www senza POLITICANDO_API_ORIGIN.');
   notes.push('www/index.html dichiara un Worker di Test (build di collaudo): non va usata per lo store');
+}
+if (/name="politicando-local-test"/.test(wwwIndex)) {
+  if (release) assert.fail('www/index.html è una build di prova LOCALE (politicando-local-test, Worker su localhost:8787): una build per lo store non la può contenere. Ricostruisci www senza POLITICANDO_LOCAL_API.');
+  notes.push('www/index.html è una build di prova locale (localhost:8787): non va usata per lo store');
 }
 const stamp = /main\.js\?v=([\w-]+)/.exec(await text('index.html'))?.[1];
 assert.ok(stamp && wwwIndex.includes(`?v=${stamp}`), 'www/index.html ha lo stesso timbro di versione dei sorgenti.');

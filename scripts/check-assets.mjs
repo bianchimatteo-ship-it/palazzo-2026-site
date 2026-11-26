@@ -97,7 +97,8 @@ const bindings = new Set([...(wrangler.kv_namespaces ?? []).map(item => item.bin
 // LOGO_BUCKET: an optional R2 bucket for the shared logo files, bound only when the owner creates one (declaring a bucket that does not exist would break the deploy); without it the files go to KV.
 // LOGOS: the R2 bucket of the personal logos of the accounts (docs/logo-sync.md): declared and active in wrangler.jsonc (the bucket was created by the owner; without it the routes answer 503 and the game keeps the logos on the device).
 // It is a declared binding, not a secret: it must stay active, so this check fails if the block is removed or commented out again.
-const WORKER_SECRETS = new Set(['ADMIN_SETUP_CODE', 'EMAIL_GATEWAY_SECRET', 'EMAIL_GATEWAY_TIMEOUT_MS', 'EMAIL_SEND', 'LOGO_BUCKET']);
+// ADS_CONFIG: the owner's optional JSON of the (legacy, paused) InMobi remote configuration, set from the dashboard like a secret, never in the repository; with no value everything stays off (docs/ios-senza-pubblicita.md)
+const WORKER_SECRETS = new Set(['ADS_CONFIG', 'ADMIN_SETUP_CODE', 'EMAIL_GATEWAY_SECRET', 'EMAIL_GATEWAY_TIMEOUT_MS', 'EMAIL_SEND', 'LOGO_BUCKET']);
 assert.deepEqual(wrangler.r2_buckets, [{ binding: 'LOGOS', bucket_name: 'politicando-logos' }], 'Il binding R2 dei loghi è dichiarato e attivo in wrangler.jsonc (non commentato).');
 assert.ok(/env\.LOGOS\b/.test(worker), 'Il Worker usa il binding LOGOS.');
 assert.ok(['EMAIL_GATEWAY_URL', 'PUBLIC_BASE_URL', 'ACCOUNT_EMAIL_REQUIRED'].every(name => name in (wrangler.vars ?? {})) && !('EMAIL_GATEWAY_SECRET' in (wrangler.vars ?? {})), 'Le impostazioni dell’email sono dichiarate; il segreto del gateway è un secret, non una variabile.');

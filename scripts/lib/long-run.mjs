@@ -136,6 +136,14 @@ const STATE_SCHEMA = 1;
 const CAMPAIGN_ROLE = { politiche: 'deputato', europee: null, regionale: null, comunale: null };
 // One week of play with the same rules for every seed: each open decision takes a choice drawn from the seed; when
 // the candidacies open, the player runs (most of the times) and campaigns until the vote; then the week advances.
+// The party confirms the candidacy, for fixtures whose subject is the vote and not the internal selection: since the update of 24 November 2026 a candidacy the party does not confirm closes the
+// campaign there and then (no vote, no result), so a fixture that needs a result settles the selection first, as the party would on a favourable decision.
+export function approveNomination(store) {
+  const campaign = store.getState().campaign;
+  if (campaign?.nomination?.status === 'pending') { campaign.nomination.status = 'approved'; if (campaign.candidacy) campaign.candidacy.listPosition = campaign.nomination.listPosition; }
+  store.loadGame(JSON.parse(store.exportSave()));
+  return store.getState().campaign;
+}
 export function playWeek({ store, db, decide }) {
   const state = store.getState();
   for (const item of [...(state.game?.inbox ?? [])]) {
@@ -177,6 +185,8 @@ export function health(state) {
     size: JSON.stringify(state).length,
     elections: (game.elections ?? []).filter(item => item.status === 'held').length,
     upcoming: (game.elections ?? []).filter(item => ['upcoming', 'open', 'running'].includes(item.status)).map(item => `${item.type}:${item.electionDate}`),
+    // the votes the country still has to hold, whatever the player does: «missed» is the player's candidacy (window closed without running), not the vote — it is held on its date all the same
+    scheduled: (game.elections ?? []).filter(item => item.status !== 'held' && item.electionDate >= state.clock.currentDate).map(item => `${item.type}:${item.electionDate}`),
     campaigns: (state.career.electionHistory ?? []).length,
     legislature: state.national?.legislature?.number ?? null,
     government: state.parliament?.government ? `${state.parliament.government.status}` : null,

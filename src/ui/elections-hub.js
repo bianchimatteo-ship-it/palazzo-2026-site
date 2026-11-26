@@ -1,20 +1,20 @@
 // The electoral centre: next vote, calendar, context, candidacy, campaign, polls and rivals, results and history.
-import { renderProgram } from './program-view.js?v=20261117-3';
-import { isSecretary, upcomingElections, upcomingRounds } from '../core/career-engine.js?v=20261117-3';
-import { campaignScope, campaignSummary, strategyOf } from '../core/campaign-engine.js?v=20261117-3';
-import { CAMPAIGN_PHASES, ELECTION_MODELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261117-3';
-import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261117-3';
-import { formatDate } from '../core/time.js?v=20261117-3';
-import { societyMood } from '../core/society-engine.js?v=20261117-3';
-import { candidacyAccess, renderCampaignPage } from './campaign-mode.js?v=20261117-3';
-import { politicalPhase } from './game-mode.js?v=20261117-3';
-import { lineChart, SERIES } from './charts.js?v=20261117-3';
-import { glyph } from './visuals.js?v=20261117-3';
-import { arrow, badge, bar, card, empty, esc, euro, kpi, num, pct, sectionHero, sectionTabs, signed, table, weeksLabel } from './sections-kit.js?v=20261117-3';
-import { mandatePlace, renderElectionReport } from './election-report.js?v=20261117-3';
-import { renderNationalView } from './national-view.js?v=20261117-3';
-import { renderQuirinale } from './presidency-view.js?v=20261117-3';
-import { renderCampaignObservatory } from './observatory-view.js?v=20261117-3';
+import { renderProgram } from './program-view.js?v=20261126-3';
+import { isSecretary, upcomingElections, upcomingRounds } from '../core/career-engine.js?v=20261126-3';
+import { campaignScope, campaignSummary, strategyOf } from '../core/campaign-engine.js?v=20261126-3';
+import { CAMPAIGN_PHASES, ELECTION_MODELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261126-3';
+import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261126-3';
+import { formatDate } from '../core/time.js?v=20261126-3';
+import { societyMood } from '../core/society-engine.js?v=20261126-3';
+import { candidacyAccess, renderCampaignPage } from './campaign-mode.js?v=20261126-3';
+import { politicalPhase } from './game-mode.js?v=20261126-3';
+import { lineChart, SERIES } from './charts.js?v=20261126-3';
+import { glyph } from './visuals.js?v=20261126-3';
+import { arrow, badge, bar, card, empty, esc, euro, kpi, num, pct, sectionHero, sectionTabs, signed, table, weeksLabel } from './sections-kit.js?v=20261126-3';
+import { mandatePlace, renderElectionReport } from './election-report.js?v=20261126-3';
+import { renderNationalView } from './national-view.js?v=20261126-3';
+import { renderQuirinale } from './presidency-view.js?v=20261126-3';
+import { renderCampaignObservatory } from './observatory-view.js?v=20261126-3';
 export { renderElectionReport };
 
 export const ELECTION_TABS = Object.freeze([['panoramica', 'Panoramica'], ['nazionali', 'Nazionali'], ['quirinale', 'Quirinale'], ['candidatura', 'Candidatura'], ['campagna', 'Campagna'], ['programma', 'Programma'], ['avversari', 'Sondaggi e avversari'], ['risultati', 'Risultati'], ['storico', 'Storico']]);
@@ -67,7 +67,7 @@ function hero(state, summary) {
   const mood = state.society ? societyMood(state.society) : null;
   const last = state.career.lastElectionReport;
   const open = next?.status === 'open';
-  const actions = next ? (open ? candidateButton(state, next, { label: 'Candidati ora' }) : next.status === 'upcoming' && game.status !== 'ended' ? `<button class="secondary-button" data-game-fastforward="${esc(next.type)}" data-fastforward-label="${esc(next.label)}" data-fastforward-date="${esc(next.windowOpensAt)}" data-fastforward-weeks="${weeksUntil(today, next.windowOpensAt)}">Avanza fino alle candidature ${arrow}</button>` : '') : '';
+  const actions = next ? (open ? candidateButton(state, next, { label: 'Candidati ora', hero: true }) : next.status === 'upcoming' && game.status !== 'ended' ? `<button class="secondary-button" data-game-fastforward="${esc(next.type)}" data-fastforward-label="${esc(next.label)}" data-fastforward-date="${esc(next.windowOpensAt)}" data-fastforward-weeks="${weeksUntil(today, next.windowOpensAt)}">Avanza fino alle candidature ${arrow}</button>` : '') : '';
   return sectionHero({
     kicker: 'CENTRALE ELETTORALE · SIMULAZIONE', icon: next ? TYPE_ICONS[next.type] ?? 'ballot' : 'ballot', tone: open ? 'open' : 'default',
     title: next ? `Prossimo voto: ${next.label}` : 'Nessuna elezione in calendario',
@@ -85,9 +85,10 @@ function hero(state, summary) {
 }
 
 // «Candidati» goes straight to the procedure of that vote (its type already chosen in the campaign setup) when the player can stand, and when not it says exactly why, on the spot.
-function candidateButton(state, entry, { primary = true, label = 'Candidati' } = {}) {
+function candidateButton(state, entry, { primary = true, label = 'Candidati', hero = false } = {}) {
   const access = candidacyAccess(state, entry);
-  const cls = primary ? 'primary-button' : 'secondary-button';
+  // «Candidati ora» of the electoral centre is one of the main actions of the game: the design of «Nuova partita» (theme.css .cta-hero)
+  const cls = primary ? `primary-button${hero ? ' cta-hero' : ''}` : 'secondary-button';
   if (!access.ok) return `<span class="eh-blocked"><button type="button" class="${cls}" disabled aria-disabled="true" title="${esc(access.reason)}">${esc(label)}</button><small class="eh-block-reason" role="status">Non puoi candidarti: ${esc(access.reason)}</small></span>`;
   return `<button type="button" class="${cls}" data-campaign-goto="${esc(entry.type)}" data-campaign-goto-id="${esc(entry.id)}">${esc(label)}</button>${access.partial ? `<small class="eh-block-reason">Ruoli disponibili: ${esc(access.available.map(item => item.label).join(', '))}.</small>` : ''}`;
 }

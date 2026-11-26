@@ -111,6 +111,14 @@ export const PRESIDENCY_SITUATIONS = Object.freeze({
       sponsorChoice('non-disponibile', 'Annuncia che lasci alla scadenza', 'presidency-step-down')
     ]
   },
+  // the consultations find no political majority in both Chambers and the President is the player: the choice is the player's (art. 88 and 92), between the two ways that exist then
+  'quirinale-nessuna-maggioranza': {
+    id: 'quirinale-nessuna-maggioranza', title: 'Nessuna maggioranza alle consultazioni', body: '{situation} Le consultazioni non trovano una maggioranza politica in entrambe le Camere: tocca a te decidere. Puoi tentare un governo del Presidente con un tecnico sostenuto da molti, o sciogliere le Camere{whiteSemester}.',
+    defaultChoice: 'tecnico', choices: [
+      sponsorChoice('tecnico', 'Governo del Presidente: un tecnico sostenuto da molti', 'presidency-formation-tech'),
+      sponsorChoice('sciogli', 'Sciogli le Camere: si torna al voto', 'presidency-formation-dissolve')
+    ]
+  },
   'quirinale-consultazioni': {
     id: 'quirinale-consultazioni', title: 'Consultazioni al Quirinale', body: '{situation} Dopo le consultazioni tocca a te decidere a chi affidare l’incarico. La maggioranza più solida è {main}; un’alternativa è {alt}. Puoi anche tentare un governo del Presidente con un tecnico, o sciogliere le Camere{whiteSemester}.',
     defaultChoice: 'maggioranza', choices: [

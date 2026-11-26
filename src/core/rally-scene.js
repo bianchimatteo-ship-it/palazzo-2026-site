@@ -8,9 +8,9 @@
 // of the game: the variation comes from a hash of the seed of the scene, so a scene resumed or played again from the same choices is the same scene.
 //
 // VOTE ('voto'): the player votes in his polling station — entrance, desk, booth, ballot folded, urn, exit. It decides nothing: the result of the election is the one of election-engine.js.
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261117-3';
-import { defaultAvatarFor, genderOf, normalizeAvatar } from './avatar.js?v=20261117-3';
-import { RALLY_CROWD_EXTRA, RALLY_EXTRA } from '../data/studio-lines.js?v=20261117-3';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261126-3';
+import { defaultAvatarFor, genderOf, normalizeAvatar } from './avatar.js?v=20261126-3';
+import { RALLY_CROWD_EXTRA, RALLY_EXTRA } from '../data/studio-lines.js?v=20261126-3';
 
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 const round1 = value => Math.round(value * 10) / 10;
@@ -25,11 +25,14 @@ export const VOTE_BEATS = Object.freeze(['ingresso', 'banco', 'cabina', 'voto', 
 
 // ---------- the builders ----------
 function crowdOf(notoriety, trust) { return Math.round(clamp(80 + notoriety * 4.2 + (trust - 50) * 1.6, 60, 700)); }
+// A name that carries its own article («la mia lista», «il partito») cannot follow «di»: the sentences that name the party say «con il nome «…»», and the proposal is the one «del programma».
+const capital = text => text.charAt(0).toUpperCase() + text.slice(1);
 export function createRallyScene({ id, seed, player, playerAvatar, party = {}, place = {}, mode = 'settimana', campaignId = null, date = null, context = {} }) {
   const stats = context.stats ?? { competence: 50, charisma: 50, reputation: 50, notoriety: 40 };
   const crowd = crowdOf(stats.notoriety, context.territory?.trust ?? 50);
-  const planned = unit(`${seed}|contestazione`) < clamp((context.protestLevel ?? 0) * 0.5 - 0.04, 0, 0.45);
-  const reason = planned ? protestReason(seed, context) : null;
+  const wanted = unit(`${seed}|contestazione`) < clamp((context.protestLevel ?? 0) * 0.5 - 0.04, 0, 0.45);
+  const reason = wanted ? protestReason(seed, context) : null;
+  const planned = Boolean(reason);
   const cast = [{ id: 'giocatore', role: 'giocatore', name: player.name, avatar: playerAvatar, position: 'palco' }];
   // a few characters of the crowd stand out in front (they are drawn, not listed in the credits); the protesters are a group that arrives only if the situation says so
   for (let i = 0; i < 3; i++) cast.push({ id: `sostenitore-${i}`, role: 'sostenitore', name: 'Sostenitore', x: 150 + i * 170 + Math.round(unit(`${seed}|s${i}`) * 40), y: 300 + (i % 2) * 22 });
@@ -69,6 +72,40 @@ export function protestProfile(reason) {
   const [group, slogans] = GROUPS[key];
   return { group, slogans };
 }
+// What stands behind a protest, read from the game: who protests, for which problem, where, which indicator or promise is involved and why it is current now. Every line comes from the state the
+// rally was built from (the promises, the problems of the territory, the diary, the economy, the Government): a protest without such a basis is not generated.
+export function protestEvidence(reason, ctx) {
+  const where = ctx.territory?.name ?? ctx.place?.label ?? 'il territorio';
+  const group = protestProfile(reason).group;
+  const num = value => Math.round(Number(value) || 0);
+  const kinds = {
+    promessa: () => { const item = (ctx.promises ?? []).find(entry => entry.status === 'non-mantenuta' && (entry.area ?? null) === (reason.area ?? null)) ?? (ctx.promises ?? []).find(entry => entry.status === 'non-mantenuta'); return { indicator: `promessa «${item?.label ?? 'su questo tema'}»: non mantenuta`, why: 'è una promessa che avevi fatto e che nel Programma risulta non mantenuta' }; },
+    territorio: () => { const problem = (ctx.territory?.problems ?? []).find(entry => (entry.area ?? null) === (reason.area ?? null)) ?? (ctx.territory?.problems ?? [])[0]; return { indicator: problem ? `${problem.label}: gravità ${num(problem.severity)}` : 'problema registrato sul territorio', why: 'è tra i problemi più gravi registrati oggi nel territorio e non è risolto' }; },
+    memoria: () => ({ indicator: `${num(ctx.memoryBad)} ${num(ctx.memoryBad) === 1 ? 'episodio negativo' : 'episodi negativi'} nel tuo registro recente`, why: 'compaiono tra le decisioni e gli eventi recenti della tua carriera' }),
+    governo: () => ({ indicator: `gradimento del Governo ${num(ctx.government?.approval ?? 50)}/100`, why: 'il gradimento è sotto la soglia del 42 e tu fai parte del Governo' }),
+    economia: () => ({ indicator: `inflazione al ${String(ctx.economy?.inflation ?? '').replace('.', ',')}%`, why: 'i prezzi crescono sopra il 4,5% annuo nello scenario di oggi' }),
+    opera: () => ({ indicator: 'lavori in ritardo, registrati nel diario delle opere', why: 'il cantiere è fermo da settimane e la cosa è documentata nel diario' }),
+    tagli: () => ({ indicator: 'tagli al settore, registrati nel bilancio', why: 'una decisione di spesa recente ha ridotto le risorse del settore' }),
+    evento: () => ({ indicator: 'fatto di cronaca recente nel diario della carriera', why: 'è accaduto nelle ultime settimane e compare nel diario' })
+  };
+  const base = (kinds[reason.kind] ?? kinds.evento)();
+  return { who: group, problem: reason.label, where, indicator: base.indicator, why: base.why };
+}
+// the protesters' line: their slogan and the documented reason, addressed to what the player answers for
+export function protestQuote(reason, responsibility = 'nessuna') {
+  if (!reason) return null;
+  const slogan = reason.slogans?.[0] ? `${reason.slogans[0].charAt(0)}${reason.slogans[0].slice(1).toLowerCase()}!` : '';
+  const topic = String(reason.label ?? '').replace(/^la promessa tradita su /, '');
+  const lines = {
+    promessa: 'Avevi promesso, ora dicci dov’è finita la parola data!',
+    territorio: responsibility === 'amministrazione' || responsibility === 'governo' ? `Amministrate voi: ${topic} è ancora lì!` : responsibility === 'eletto' ? `Sei stato eletto anche per questo: che cosa fai per ${topic}?` : `Chi chiede il nostro voto deve dirci che cosa farà per ${topic}!`,
+    memoria: 'Prima le polemiche, adesso i comizi? Rispondi!',
+    governo: 'Il Governo di cui fai parte ci ha dimenticati!',
+    economia: responsibility === 'governo' ? 'Al Governo ci siete voi: i prezzi salgono e gli stipendi no!' : 'I prezzi salgono: qual è la vostra proposta, oltre ai discorsi?'
+  };
+  const line = lines[reason.kind] ?? `Vogliamo risposte su ${topic}!`;
+  return `«${slogan ? `${slogan} ` : ''}${line}»`;
+}
 function protestReason(seed, ctx) {
   const reasons = [...(ctx.triggers ?? [])];
   const broken = (ctx.promises ?? []).filter(item => item.status === 'non-mantenuta');
@@ -78,12 +115,13 @@ function protestReason(seed, ctx) {
   if ((ctx.memoryBad ?? 0) >= 1) reasons.push({ kind: 'memoria', area: null, label: 'le polemiche che ti hanno accompagnato', weight: 1.1 });
   if (ctx.governing && (ctx.government?.approval ?? 50) < 42) reasons.push({ kind: 'governo', area: null, label: 'l’azione del Governo', weight: 1.6 });
   if ((ctx.economy?.inflation ?? 2) >= 4.5) reasons.push({ kind: 'economia', area: 'costo-vita', label: 'il caro vita', weight: 1.1 });
-  if (!reasons.length) reasons.push({ kind: 'evento', area: null, label: 'il malcontento sul territorio', weight: 1 });
+  // No concrete, checkable reason: no protest at all (a generic «discontent» is never invented).
+  if (!reasons.length) return null;
   // among the strongest reasons the one that comes out is picked by the seed: the same situation does not always give the same protest
   reasons.sort((a, b) => b.weight - a.weight || hashOf(`${seed}${a.label}`) - hashOf(`${seed}${b.label}`));
   const top = reasons.slice(0, 3);
   const reason = top[Math.floor(unit(`${seed}|motivo`) * top.length) % top.length];
-  return { ...reason, ...protestProfile(reason) };
+  return { ...reason, ...protestProfile(reason), evidence: protestEvidence(reason, ctx) };
 }
 // How loud the protest is, 0..1: from the weight of its reason and the discontent of the territory.
 const protestSeverity = scene => clamp(0.28 + (scene.protest.reason?.weight ?? 1) * 0.16 + (50 - (scene.context.territory?.trust ?? 50)) / 160 + (scene.context.stats.notoriety - 40) / 400, 0.2, 0.95);
@@ -102,7 +140,7 @@ function speechOptions(scene, nodeId) {
   for (const event of (ctx.events ?? []).slice(0, 1)) options.push({ id: `attualita-${hashOf(event) % 997}`, kind: 'attualita', area: null, label: 'Commenta i fatti di questi giorni', detail: `In piazza si parla di «${event}»: prendi posizione.` });
   if (ctx.governing) options.push({ id: 'governo', kind: 'governo', area: null, label: 'Rendi conto dell’azione del Governo', detail: `Governi tu: racconti cosa hai fatto e cosa resta da fare. ${(ctx.government?.approval ?? 50) >= 50 ? 'Il gradimento ti sostiene.' : 'Il gradimento è basso: sarà dura.'}` });
   const program = (ctx.programAreas ?? []).filter(id => !open.some(item => item.area === id)).slice(0, 1);
-  for (const area of program) options.push({ id: `proposta-${area}`, kind: 'proposta', area, label: `Presenta la proposta di ${party} su ${areaLabel(area)}`, detail: 'Una proposta del programma del partito che non hai ancora promesso: coerente, ma senza una tua parola data.' });
+  for (const area of program) options.push({ id: `proposta-${area}`, kind: 'proposta', area, label: `Presenta la proposta del programma su ${areaLabel(area)}`, detail: 'Una proposta del programma del partito che non hai ancora promesso: coerente, ma senza una tua parola data.' });
   options.push({ id: 'attacco', kind: 'attacco', area: null, label: 'Attacca chi governa il territorio', detail: 'Tono duro: la piazza si scalda, ma il rischio di polemica sale.' });
   // what was said in the last rallies weighs less, and the topic of this scene's first speech is not proposed again
   const recent = new Set((ctx.rallyMemory ?? []).slice(-3).flatMap(item => item.topics ?? []));
@@ -115,11 +153,11 @@ function speechOptions(scene, nodeId) {
 }
 // The sentence the player says: many variants, filled with the situation, avoiding the ones used in the last rallies.
 const LINES = {
-  promessa: ['«Vi avevo promesso {intervention}: ve lo ripeto qui, in {place}, davanti a tutti.»', '«Su {area} ho dato la mia parola. Controllatemi: a ogni settimana il conto di cosa è stato fatto.»', '«{party} non cambia idea a seconda del vento: {intervention}, e ne rispondo a voi.»', '«Una promessa non è uno slogan. {intervention}: è scritto, e voi potete verificarlo.»', '«Mi chiedete cosa farò su {area}? Quello che ho già detto: {intervention}.»'],
+  promessa: ['«Vi avevo promesso {intervention}: ve lo ripeto qui, a {place}, davanti a tutti.»', '«Su {area} ho dato la mia parola. Controllatemi: a ogni settimana il conto di cosa è stato fatto.»', '«{party} non cambia idea a seconda del vento: {intervention}, e ne rispondo a voi.»', '«Una promessa non è uno slogan. {intervention}: è scritto, e voi potete verificarlo.»', '«Mi chiedete cosa farò su {area}? Quello che ho già detto: {intervention}.»'],
   territorio: ['«{place} ha un problema vero: {problem}. Non basta indignarsi, serve un piano, e io ne porto uno.»', '«Camminando per {place} ho sentito una cosa sola: {problem}. Da qui parte il mio lavoro.»', '«Chi vive qui lo sa meglio di Roma: {problem}. E non si risolve con un comunicato.»', '«Non vi racconto favole su {problem}: vi dico cosa si può fare, e in quanto tempo.»', '«{problem} non è una statistica, è la vita di chi è in questa piazza.»'],
   attualita: ['«Lo so, vi pesa: {topic}. Prima di tutto vi devo la verità sui numeri.»', '«Parliamo di {topic}: la politica che finge di non vedere è la stessa che poi chiede il voto.»', '«Su {topic} serve serietà, non propaganda: ecco cosa propongo.»', '«{topic}: è la domanda che mi fate di più. Provo a rispondere senza giri di parole.»'],
   governo: ['«Governare costa fatica. In questi mesi abbiamo fatto cose, e ne restano altre: ve le dico una per una.»', '«Non ho paura di rendere conto: ecco cosa ha fatto il Governo, e dove abbiamo sbagliato.»', '«Chi governa deve rispondere ai cittadini, non ai sondaggi. Rispondo qui, a voce.»'],
-  proposta: ['«{party} ha una proposta su {area}: la porto in piazza prima che nei palazzi.»', '«Nel nostro programma c’è {area}. Ora vi spiego perché conta per {place}.»', '«Una proposta semplice su {area}: e vi chiedo di giudicarla per ciò che è.»'],
+  proposta: ['«{Party} ha una proposta su {area}: la porto in piazza prima che nei palazzi.»', '«Nel nostro programma c’è {area}. Ora vi spiego perché conta per {place}.»', '«Una proposta semplice su {area}: e vi chiedo di giudicarla per ciò che è.»'],
   attacco: ['«Chi ha amministrato fin qui deve spiegare perché {place} è rimasta indietro.»', '«Non faccio sconti a chi ha avuto tutto il tempo e ha fatto poco.»', '«Basta con chi promette e poi sparisce: questa piazza merita di meglio.»']
 };
 function speechLine(scene, option, nodeId) {
@@ -129,7 +167,7 @@ function speechLine(scene, option, nodeId) {
   const order = bank.map((text, index) => ({ text, index })).sort((a, b) => hashOf(`${scene.seed}|${nodeId}|${option.id}|${a.index}`) - hashOf(`${scene.seed}|${nodeId}|${option.id}|${b.index}`));
   const chosen = order.find(item => !used.has(hashOf(item.text) % 100003)) ?? order[0];
   const fill = {
-    place: scene.place.label, party: scene.party.name, area: areaLabel(option.area) || 'questo tema', intervention: (option.promise?.intervention ?? option.promise?.label ?? 'un impegno preciso').replace(/\.$/, ''),
+    place: scene.place.label, party: scene.party.name, Party: capital(scene.party.name), area: areaLabel(option.area) || 'questo tema', intervention: (option.promise?.intervention ?? option.promise?.label ?? 'un impegno preciso').replace(/\.$/, ''),
     problem: (option.problem?.label ?? 'un problema che conosciamo').toLowerCase(), topic: option.kind === 'attualita' ? (option.label.replace(/^(Parla del |Parla di |Commenta )/i, '').toLowerCase()) : 'i problemi del Paese'
   };
   return { text: chosen.text.replace(/\{(\w+)\}/g, (_, key) => fill[key] ?? ''), variant: hashOf(chosen.text) % 100003 };
@@ -182,7 +220,7 @@ export function rallyNode(scene) {
       const size = scene.crowd.size;
       const crowdLine = size > 420 ? 'La piazza è piena, c’è gente anche nelle vie laterali.' : size > 220 ? 'Una bella folla ha riempito la piazza.' : 'La piazza non è affollata, ma chi c’è è venuto per ascoltarti.';
       const dusk = pick(['Il sole sta calando dietro i palazzi.', 'È il tardo pomeriggio e le luci del palco si accendono.', 'Il vento muove le bandiere appese ai lampioni.', 'Dagli altoparlanti parte la musica di apertura.'], `${scene.seed}|arrivo`);
-      return { ...base, speaker: null, camera: 'panorama', title: `Piazza di ${place}`, text: `${dusk} ${crowdLine} Bandiere e striscioni di ${scene.party.name} ovunque: ${scene.context.protestLevel > 0.55 ? 'qualcuno, però, guarda con sospetto' : 'l’aria è quella di una bella serata'}.`, choices: [['continua', 'Attraversa la piazza']] };
+      return { ...base, speaker: null, camera: 'panorama', title: `Piazza di ${place}`, text: `${dusk} ${crowdLine} Bandiere e striscioni con il nome «${scene.party.name}» ovunque: ${scene.context.protestLevel > 0.55 ? 'qualcuno, però, guarda con sospetto' : 'l’aria è quella di una bella serata'}.`, choices: [['continua', 'Attraversa la piazza']] };
     }
     case 'cammino': {
       const rel = scene.context.relations?.civic ?? 50;
@@ -195,7 +233,8 @@ export function rallyNode(scene) {
     }
     case 'contestazione': {
       const reason = scene.protest.reason;
-      return { ...base, speaker: me.id, expression: 'sorpresa', gesture: 'ascolta', camera: 'protest', title: 'Una contestazione', text: `Dal fondo arriva un gruppo di contestatori con cartelli e striscioni: protestano per ${reason?.label ?? 'il malcontento sul territorio'}. Cori, fischi, il discorso si ferma. Come reagisci?`, choices: [['ascolta', 'Invita un contestatore a parlare', false, 'Mostri rispetto: funziona se hai reputazione e la protesta è motivata.'], ['rispondi', 'Rispondi nel merito dal palco', false, 'Dati e fatti: serve competenza, e nessuna promessa tradita su quel tema.'], ['prosegui', 'Alza la voce e prosegui', false, 'Carisma e nervi saldi: rischi che la situazione degeneri.'], ['interrompi', 'Interrompi il comizio e lascia il palco', false, 'Eviti lo scontro, ma il comizio finisce qui.']] };
+      const voice = scene.cast.find(item => item.role === 'contestatore');
+      return { ...base, speaker: voice?.id ?? me.id, quote: protestQuote(reason, scene.context.responsibility ?? 'nessuna'), expression: 'sorpresa', gesture: 'ascolta', camera: 'protest', title: 'Una contestazione', text: `Dal fondo arriva un gruppo di contestatori con cartelli e striscioni: protestano per ${reason?.label ?? 'un motivo che la situazione documenta'}. Cori, fischi, il discorso si ferma. Come reagisci?`, facts: reason?.evidence ? [['Chi protesta', reason.evidence.who], ['Per quale problema', reason.evidence.problem], ['Dove', reason.evidence.where], ['Indicatore o promessa', reason.evidence.indicator], ['Perché adesso', reason.evidence.why]] : [], choices: [['ascolta', 'Invita un contestatore a parlare', false, 'Mostri rispetto: funziona se hai reputazione e la protesta è motivata.'], ['rispondi', 'Rispondi nel merito dal palco', false, 'Dati e fatti: serve competenza, e nessuna promessa tradita su quel tema.'], ['prosegui', 'Alza la voce e prosegui', false, 'Carisma e nervi saldi: rischi che la situazione degeneri.'], ['interrompi', 'Interrompi il comizio e lascia il palco', false, 'Eviti lo scontro, ma il comizio finisce qui.']] };
     }
     case 'chiusura': {
       const topicBest = bestTopic(scene);
@@ -269,6 +308,58 @@ export function rallyChoose(scene, choiceId) {
   }
   scene.nodeId = next;
   return scene;
+}
+// Pro and contro of each decision of the rally, read from the very terms `rallyChoose` and `judgeSpeech` use (stats, credibility, promises, the territory, the mood, the protest): nothing here is
+// said that the engine does not apply. `effect` tells what the engine does with the result, `cost` what the choice commits the player to.
+export function rallyOdds(scene, nodeId, choiceId) {
+  const ctx = scene.context, st = ctx.stats, pro = [], contro = [], effect = [], cost = [];
+  const side = (ok, good, bad) => (ok ? pro : contro).push(ok ? good : bad);
+  const num = value => Math.round(value);
+  if (nodeId === 'saluto') {
+    if (choiceId === 'caloroso') side(st.charisma >= 50, `carisma ${num(st.charisma)}/100`, `carisma ${num(st.charisma)}/100: il calore suona forzato`);
+    else if (choiceId === 'sobrio') { side(st.reputation >= 50, `reputazione ${num(st.reputation)}/100`, `reputazione ${num(st.reputation)}/100`); contro.push('scalda meno la piazza'); }
+    else if (choiceId === 'locale') { side((ctx.territory?.problems ?? []).length > 0, 'la piazza ha problemi reali da nominare', 'nessun problema locale registrato da citare'); side((ctx.relations?.civic ?? 50) >= 50, 'buoni rapporti con la società civile locale', 'rapporti freddi con la società civile locale'); }
+    else if (choiceId === 'combattivo') { side(scene.audience.mood >= 50, 'la piazza è già calda', 'la piazza è fredda: l’attacco cade nel vuoto'); contro.push('rischio di polemica'); }
+    effect.push('cambia l’umore della piazza; il saluto pesa poco nel giudizio (0,6)');
+    return { pro, contro, effect, cost };
+  }
+  if (nodeId === 'tema1' || nodeId === 'tema2') {
+    const option = speechOptions(scene, nodeId).find(item => item.id === choiceId);
+    if (!option) return null;
+    const result = judgeSpeech(scene, option, nodeId);
+    const broken = (ctx.promises ?? []).some(item => item.status === 'non-mantenuta' && item.area === option.area);
+    if (option.kind === 'promessa') { side((ctx.credibility ?? 55) >= 50, `credibilità ${num(ctx.credibility ?? 55)}/100`, `credibilità ${num(ctx.credibility ?? 55)}/100`); side(option.promise?.status !== 'ritardata', 'promessa ancora in corso', 'promessa in ritardo: la piazza lo sa'); if (broken) contro.push('una promessa tradita sullo stesso tema'); }
+    else if (option.kind === 'territorio') { pro.push('un problema che la piazza sente'); side(st.competence >= 55, `competenza ${num(st.competence)}/100`, `competenza ${num(st.competence)}/100`); if (broken) contro.push('hai promesso e non hai mantenuto'); if (scene.protest.planned && scene.protest.reason?.kind === 'territorio' && scene.protest.reason.area === option.area && nodeId === 'tema1') pro.push('può disinnescare la contestazione prevista (se il discorso va bene)'); }
+    else if (option.kind === 'attualita') { side(st.charisma >= 50, `carisma ${num(st.charisma)}/100`, `carisma ${num(st.charisma)}/100`); }
+    else if (option.kind === 'governo') { side((ctx.government?.approval ?? 50) >= 50, `gradimento del Governo ${num(ctx.government?.approval ?? 50)}`, `gradimento del Governo ${num(ctx.government?.approval ?? 50)}`); }
+    else if (option.kind === 'proposta') { pro.push('coerente con il programma del partito'); contro.push('senza una promessa tua: pesa meno'); }
+    else { side(st.charisma >= 50, `carisma ${num(st.charisma)}/100`, `carisma ${num(st.charisma)}/100`); contro.push('tono duro: rischio di polemica'); side(scene.audience.mood >= 50, 'la piazza è con te', 'la piazza è fredda'); }
+    if ((ctx.rallyMemory ?? []).slice(-2).some(item => (item.topics ?? []).includes(option.area ?? option.id))) contro.push('ne hai già parlato di recente');
+    effect.push(`cambia l’umore della piazza; il discorso pesa molto nel giudizio (1,3)${result.score >= 60 ? '' : ''}`);
+    if (nodeId === 'tema1' && scene.protest.planned && option.kind !== 'territorio') contro.push('la contestazione prevista arriverà comunque dopo questo punto');
+    return { pro, contro, effect, cost };
+  }
+  if (nodeId === 'contestazione') {
+    const severity = protestSeverity(scene), broken = scene.protest.reason?.kind === 'promessa';
+    const gravity = `gravità della protesta ${num(severity * 100)}%`;
+    if (choiceId === 'ascolta') { side(st.reputation >= 50, `reputazione ${num(st.reputation)}/100`, `reputazione ${num(st.reputation)}/100`); if (broken) pro.push('la protesta nasce da una tua promessa tradita: ascoltare vale di più'); }
+    else if (choiceId === 'rispondi') { side(st.competence >= 55, `competenza ${num(st.competence)}/100`, `competenza ${num(st.competence)}/100`); if (broken) contro.push('hai tradito quella promessa: rispondere nel merito è più difficile'); }
+    else if (choiceId === 'prosegui') { side(st.charisma >= 50, `carisma ${num(st.charisma)}/100`, `carisma ${num(st.charisma)}/100`); contro.push('rischi che la situazione degeneri e il comizio salti'); }
+    else { pro.push('eviti lo scontro in piazza'); contro.push('il comizio finisce qui (prestazione al massimo 40)'); effect.push('umore della piazza in calo; il comizio si chiude subito'); return { pro, contro, effect, cost }; }
+    (severity > 0.6 ? contro : pro).push(gravity);
+    effect.push('riuscita: la contestazione si ricompone e il comizio riparte; fallimento: comizio interrotto');
+    return { pro, contro, effect, cost };
+  }
+  if (nodeId === 'chiusura') {
+    const top = bestTopic(scene);
+    if (choiceId === 'appello') side(st.charisma >= 50, `carisma ${num(st.charisma)}/100`, `carisma ${num(st.charisma)}/100`);
+    else if (choiceId === 'impegno') { side((ctx.credibility ?? 55) >= 50, `credibilità ${num(ctx.credibility ?? 55)}/100`, `credibilità ${num(ctx.credibility ?? 55)}/100`); if (top?.area) { cost.push(`diventa una promessa nel Programma su ${areaLabel(top.area)}: se non la mantieni cala la fiducia`); } }
+    else if (choiceId === 'coro') { side(scene.audience.mood >= 50, 'la piazza è già calda', 'la piazza è fredda'); contro.push('bella da vedere, poca sostanza'); }
+    else { pro.push('chiusura sicura e cordiale'); contro.push('non aggiunge nulla al discorso'); }
+    effect.push('chiude il comizio e fissa il giudizio finale (0,7)');
+    return { pro, contro, effect, cost };
+  }
+  return null;
 }
 // The verdict of the rally: performance, the effects on the numbers of the game (applied by the store with the rules of its engines), a line for the history.
 function finishRally(scene) {

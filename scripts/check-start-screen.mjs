@@ -21,7 +21,8 @@ await withBrowser(async browser => {
     for (const [width, height] of WIDTHS) {
       await viewport(width, height);
       await goto();
-      await waitFor(() => evaluate('Boolean(document.querySelector(".main-menu"))'));
+      // Known intermittency (also on `main`): now and then the first reload of the same address stays on the splash screen and the next navigation completes it (it looks like the previous document still holding the browser storage); one retry is allowed, a second failure is a real failure.
+      try { await waitFor(() => evaluate('Boolean(document.querySelector(".main-menu"))'), 10000); } catch { await goto(); await waitFor(() => evaluate('Boolean(document.querySelector(".main-menu"))')); }
       await pause(500);
       const audit = await evaluate(legibilityAudit('.menu-shell'));
       for (const issue of audit.issues) check(false, `${width}px ${label} · ${issue}`);
@@ -164,6 +165,6 @@ await withBrowser(async browser => {
   // ---------- 4. widths, with a career ----------
   await widthsPass('con carriera');
   if (errors.length) problems.push(`Errori JavaScript: ${errors.slice(0, 3).join(' | ')}`);
-});
+}, { language: 'it' });
 if (problems.length) { console.error(`Schermata iniziale: ${problems.length} problemi.\n${[...new Set(problems)].slice(0, 60).join('\n')}`); process.exit(1); }
 console.log('Schermata iniziale verificata in Chrome: «Nuova partita» per prima, «Continua» (solo con una carriera) con logo e colore del partito, poi carriere già fatte e aiuto; ogni voce apre il suo popup centrato sopra la homepage e lo richiude con la chiusura, «Annulla», Escape o lo sfondo (un clic dentro non lo chiude); Nuova partita apre i passaggi e annullare torna all’apertura; continuare e caricare uno slot riprendono la stessa partita; l’indipendente ha un segno neutro; a 320, 375, 390, 430, 768, 1024 e 1280 px nessuno scorrimento orizzontale, testi leggibili e le due azioni principali nella prima schermata del telefono.');

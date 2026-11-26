@@ -21,17 +21,17 @@ const state = run.store.getState();
 const page = (view, filters = {}, s = state) => renderObservatory(s, { view, logoFor: () => null, filters, secretary: true, window: () => ({ open: true }) });
 const clean = (html, where) => { const text = html.replace(/data-[a-z-]+="[^"]*"/g, ''); const bad = text.match(/undefined|NaN|\[object Object\]|Infinity/); assert.ok(!bad, `${where}: valore non valido …${bad && text.slice(Math.max(0, bad.index - 80), bad.index + 30)}…`); };
 
-// ---------- 1. five areas, nine views, each view in exactly one area ----------
-assert.deepEqual(OBSERVATORY_AREAS.map(([id]) => id), ['quadro', 'istituti', 'territori', 'forze', 'gradimento'], 'Cinque aree.');
-assert.deepEqual(OBSERVATORY_AREAS.map(([, label]) => label), ['Quadro elettorale', 'Istituti e rilevazioni', 'Territori', 'Partiti, alleanze e flussi', 'Opinione pubblica']);
+// ---------- 1. two areas (the surveys of the parties; the alliances and coalitions), ten views, each view in exactly one area ----------
+assert.deepEqual(OBSERVATORY_AREAS.map(([id]) => id), ['partiti', 'alleanze'], 'Due aree.');
+assert.deepEqual(OBSERVATORY_AREAS.map(([, label]) => label), ['Sondaggi dei partiti', 'Alleanze e coalizioni']);
 const inAreas = OBSERVATORY_AREAS.flatMap(([, , views]) => views);
-assert.equal(OBSERVATORY_VIEWS.length, 9, 'Le nove viste dell’osservatorio ci sono ancora.');
+assert.equal(OBSERVATORY_VIEWS.length, 10, 'Le nove viste dell’osservatorio ci sono ancora, più il quadro delle alleanze.');
 assert.deepEqual([...inAreas].sort(), OBSERVATORY_VIEWS.map(([id]) => id).sort(), 'Ogni vista sta in una sola area, nessuna è persa.');
 for (const [view] of OBSERVATORY_VIEWS) {
   const html = page(view);
   clean(html, view);
   const tabs = [...html.matchAll(/<button type="button" role="tab" class="sx-tab[^"]*" data-obs-area="([a-z]+)"/g)].map(match => match[1]);
-  assert.deepEqual(tabs, ['quadro', 'istituti', 'territori', 'forze', 'gradimento'], `${view}: le cinque aree come tab.`);
+  assert.deepEqual(tabs, ['partiti', 'alleanze'], `${view}: le due aree come tab.`);
   assert.ok(html.includes(`data-section-tab="osservatorio" data-section-tab-value="${view}" aria-selected="true"`), `${view}: la vista attiva è segnata.`);
   const area = OBSERVATORY_AREAS.find(([, , views]) => views.includes(view));
   const sub = html.includes('class="obs-subtabs"');

@@ -6,6 +6,7 @@
 //   · the REFUSAL: a force that said no to a request is not asked again by the same party for seven days of the game;
 //   · the COALITION as an agreement for ONE election, apart from the alliance (the standing political agreement): it is registered for that election by an explicit approval and only until the filing of the lists.
 // Nothing here draws a random number or reads a clock: the callers pass the roll and the date, so every rule can be tested.
+import { documentOf, documentedProgramOf } from '../data/party-program-values.js?v=20261126-3';
 export const THEMES = Object.freeze([
   { id: 'immigrazione', label: 'Immigrazione e integrazione', low: 'accoglienza senza restrizioni', high: 'remigrazione e chiusura', weight: 1.4, veto: true },
   { id: 'sicurezza', label: 'Sicurezza', low: 'prevenzione e garanzie', high: 'pugno duro e controllo', weight: 1.0, veto: false },
@@ -29,16 +30,30 @@ const hashOf = text => { let h = 2166136261; for (const char of String(text)) { 
 export const pairKey = (a, b) => [a, b].sort().join('|');
 const addDays = (date, days) => new Date(Date.parse(`${date}T12:00:00Z`) + days * 86400000).toISOString().slice(0, 10);
 
-// The position of a force on a theme: what the player and the compromises fixed, else the estimate from the collocazione (with a small variation of its own, always the same for the same force).
+// Position for the play: player's compromise › the party's own document › the game's estimate from the collocazione (labelled simulated) › null.
 export function positionOf(world, party, themeId) {
   const fixed = world?.programPositions?.[party?.id]?.[themeId];
   if (Number.isFinite(fixed)) return fixed;
-  const axis = Number.isFinite(party?.axis) ? party.axis : 0;
+  const documented = documentedProgramOf(party)?.themes?.[themeId];
+  if (Number.isFinite(documented?.value)) return documented.value;
+  return simulatedPosition(party, themeId);
+}
+export function simulatedPosition(party, themeId) {
+  if (!Number.isFinite(party?.axis)) return null;
+  const axis = party.axis;
   const own = ((hashOf(`${party?.id}|${themeId}`) % 3) - 1) * 0.5;
   return round1(clamp(axis * (FACTOR[themeId] ?? 0.8) + (Math.abs(axis) >= 3 ? 0 : own), -3, 3));
 }
+// How a theme is known: documented (document, summary), simulated (with the gap the documents state) or unknown.
+export function programSource(party, themeId) {
+  const program = documentedProgramOf(party), theme = program?.themes?.[themeId];
+  if (Number.isFinite(theme?.value)) return { documented: true, confidence: theme.confidence, summary: theme.summary, document: documentOf(theme.doc), status: program.status, subpositions: theme.subpositions ?? null };
+  const simulated = Number.isFinite(simulatedPosition(party, themeId));
+  return { documented: false, simulated, gap: theme ? { summary: theme.summary, document: documentOf(theme.doc) } : null, status: program?.status ?? null };
+}
 export const programOf = (world, party) => Object.fromEntries(THEMES.map(theme => [theme.id, positionOf(world, party, theme.id)]));
-export const stanceText = (themeId, value) => { const theme = THEME_BY_ID[themeId]; return value <= -1.5 ? theme.low : value >= 1.5 ? theme.high : 'posizione intermedia'; };
+export const documentedCoverage = party => THEMES.filter(theme => Number.isFinite(documentedProgramOf(party)?.themes?.[theme.id]?.value)).length;
+export const stanceText = (themeId, value) => { const theme = THEME_BY_ID[themeId]; if (!Number.isFinite(value)) return 'posizione non rilevata'; return value <= -1.5 ? theme.low : value >= 1.5 ? theme.high : 'posizione intermedia'; };
 const levelOf = gap => gap <= 1 ? 'accordo' : gap <= 2 ? 'differenza' : gap < HARD_GAP ? 'conflitto' : 'incompatibile';
 
 // The programme of two forces compared theme by theme: the rows with the positions, the gap and the level, the overall compatibility (0..1, weighted) and the hard conflicts still to be negotiated.
@@ -48,13 +63,18 @@ export function compare(world, a, b) {
   const rows = THEMES.map(theme => {
     const agreed = settled[theme.id];
     const pa = agreed ? agreed.value : positionOf(world, a, theme.id), pb = agreed ? agreed.value : positionOf(world, b, theme.id);
+    const aSource = programSource(a, theme.id), bSource = programSource(b, theme.id);
+    // a theme with an unknown position counts neither as agreement nor as conflict
+    if (!Number.isFinite(pa) || !Number.isFinite(pb)) return { id: theme.id, label: theme.label, a: pa, b: pb, aText: stanceText(theme.id, pa), bText: stanceText(theme.id, pb), gap: null, level: 'non-rilevato', aSource, bSource, veto: theme.veto, weight: theme.weight, compromise: null };
     const gap = round1(Math.abs(pa - pb));
-    return { id: theme.id, label: theme.label, a: pa, b: pb, aText: stanceText(theme.id, pa), bText: stanceText(theme.id, pb), gap, level: agreed ? 'compromesso' : levelOf(gap), veto: theme.veto, weight: theme.weight, compromise: agreed ?? null };
+    const basis = agreed ? 'compromesso' : aSource.documented && bSource.documented ? 'documentato' : aSource.documented || bSource.documented ? 'misto' : 'stima';
+    return { id: theme.id, label: theme.label, a: pa, b: pb, aText: stanceText(theme.id, pa), bText: stanceText(theme.id, pb), gap, level: agreed ? 'compromesso' : levelOf(gap), aSource, bSource, basis, veto: theme.veto, weight: theme.weight, compromise: agreed ?? null };
   });
-  const max = rows.reduce((sum, row) => sum + row.weight * 6, 0);
-  const score = 1 - rows.reduce((sum, row) => sum + row.weight * row.gap, 0) / max;
+  const known = rows.filter(row => row.level !== 'non-rilevato');
+  const max = known.reduce((sum, row) => sum + row.weight * 6, 0);
+  const score = max ? 1 - known.reduce((sum, row) => sum + row.weight * row.gap, 0) / max : 0.5;
   return {
-    rows, score: Math.round(score * 100) / 100,
+    rows, score: Math.round(score * 100) / 100, missing: rows.length - known.length, documented: rows.filter(row => row.basis === 'documentato').length,
     agreements: rows.filter(row => row.level === 'accordo' || row.level === 'compromesso'),
     conflicts: rows.filter(row => row.level === 'conflitto' || row.level === 'incompatibile'),
     hard: rows.filter(row => row.veto && row.level === 'incompatibile')
@@ -107,3 +127,19 @@ export function isElectoral(alliance, electionType = null) {
   return alliance.coalitions.some(item => item.status === 'approvata' && (!electionType || item.type === electionType));
 }
 export const registrationsOf = alliance => (alliance?.coalitions ?? []).filter(item => item.status === 'approvata');
+// The registration of an alliance for ONE vote: approved for that election (its id; a race of the same round, the same kind of vote on the same day), granted to the members the alliance has now (a
+// change of the members, a merger, a force that left, asks for a new approval: registerCoalition). A refused or expired approval, or one for another vote, is not a registration for this one.
+// Old records without the election (written before the rule) stand for the kind of vote they name.
+export function registrationFor(alliance, election) {
+  if (!alliance || !election || !Array.isArray(alliance.coalitions)) return null;
+  const sameMembers = item => !Array.isArray(item.members) || (item.members.length === alliance.partyIds.length && item.members.every(id => alliance.partyIds.includes(id)));
+  const forThis = item => item.electionId ? item.electionId === election.id || (item.type === election.type && Boolean(item.electionDate) && item.electionDate === election.electionDate) : item.type === election.type;
+  return [...alliance.coalitions].reverse().find(item => item.status === 'approvata' && forThis(item) && sameMembers(item)) ?? null;
+}
+// Whether an alliance runs as a coalition at THIS vote (the exact election), with the same exceptions as isElectoral for the poles and the accords of old saves.
+export function isElectoralFor(alliance, election) {
+  if (!alliance || alliance.status !== 'active') return false;
+  if (!election) return isElectoral(alliance);
+  if (alliance.kind === 'coalizione' || alliance.electoral || !Array.isArray(alliance.coalitions)) return true;
+  return Boolean(registrationFor(alliance, election));
+}

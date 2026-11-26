@@ -7,7 +7,7 @@
 //   4. Sandbox on the real engine: a deputy with no mayor's mandate stands for President of the Province (Realistica refuses), and every kind of vote is played to its result.
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { startCareer } from './lib/long-run.mjs';
+import { approveNomination, startCareer } from './lib/long-run.mjs';
 
 const build = (await readFile(new URL('../index.html', import.meta.url), 'utf8')).match(/main\.js\?v=([^"']+)/)?.[1];
 const module = path => import(new URL(`../${path}${build ? `?v=${build}` : ''}`, import.meta.url).href);
@@ -95,7 +95,7 @@ const play = async ({ seed, mode, type, role }) => {
   const info = { run, store, db, before, held: R.heldOfficesOf(before), lapses: O.candidacyLapses({ held: R.heldOfficesOf(before), facts: R.candidacyFacts(before, { electionType: type }), electionType: type, role }) };
   return info;
 };
-const start = (info, type, role) => info.store.startCampaign({ electionType: type, role, objective: 'seat' }, info.db.parties, { politicians: info.db.politicians, groups: info.db.parliamentaryGroups });
+const start = (info, type, role) => { const out = info.store.startCampaign({ electionType: type, role, objective: 'seat' }, info.db.parties, { politicians: info.db.politicians, groups: info.db.parliamentaryGroups }); approveNomination(info.store); return out; };
 const finish = store => { let guard = 0; while (store.getState().campaign?.status === 'active' && guard++ < 40) store.advance(7); return store.getState(); };
 
 {
@@ -104,6 +104,8 @@ const finish = store => { let guard = 0; while (store.getState().campaign?.statu
   assert.deepEqual(lose.held, ['deputato']);
   assert.deepEqual(lose.lapses.map(item => item.office), ['deputato'], 'Prima della candidatura: avviso sul seggio da deputato');
   start(lose, 'regionale', 'consigliere');
+  // a real defeat: the party confirms the candidacy (a candidacy turned down now closes the campaign with no vote), but the candidate has almost no following in the Region
+  { const c = lose.store.getState().campaign; for (const key of Object.keys(c.candidateStats)) if (typeof c.candidateStats[key] === 'number') c.candidateStats[key] = Math.min(c.candidateStats[key], 5); lose.store.loadGame(JSON.parse(lose.store.exportSave())); }
   assert.deepEqual(R.heldOfficesOf(lose.store.getState()), ['deputato'], 'Il seggio resta durante la campagna');
   const after = finish(lose.store);
   assert.equal(after.campaign.result.personalMandate, false, 'Seed s1: il giocatore non è eletto');

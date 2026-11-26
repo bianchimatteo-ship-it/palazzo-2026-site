@@ -66,6 +66,18 @@ for (const needle of ['political-simulation game', 'never real journalism', 'ind
 // minors: the texts say what the registration form does (age range, never stored) and do not claim a verification or a parental-consent procedure that does not exist
 for (const [html, label] of [[privacy, 'Informativa'], [enPrivacy, 'Informativa inglese']]) assert.ok(!/(parental consent (is|has been) (obtained|verified)|consenso (dei genitori )?(è|viene) (acquisito|verificato))/i.test(html), `${label}: non dichiara un consenso dei genitori che non esiste.`);
 assert.ok(privacy.includes('non è una verifica dell’età') && privacy.includes('meno di 14 anni'), 'Informativa: dichiara che la fascia di età non è una verifica.');
+// advertising: the pages must say what the code does (Android: Appodeal, with consent; iOS and the site: none) and never describe the old provider as the present one or the game as ad-free
+{
+  const android = await readFile(new URL('../android/app/build.gradle', import.meta.url), 'utf8').catch(() => ''), adsConfig = await readFile(new URL('../src/data/ads-config.js', import.meta.url), 'utf8');
+  const adsOn = /APPODEAL_MODE\s*=\s*'production'/.test(adsConfig);
+  for (const [html, label] of [[privacy, 'Informativa'], [enPrivacy, 'Informativa inglese'], [terms, 'Termini'], [enTerms, 'Termini inglesi']]) {
+    const plain = html.replace(/<[^>]+>/g, ' ');
+    if (adsOn) assert.ok(/Appodeal/.test(plain), `${label}: l’app Android mostra pubblicità tramite Appodeal e la pagina lo dice.`);
+    assert.ok(!/InMobi|Google UMP|AdMob/.test(plain), `${label}: nessun fornitore pubblicitario storico presentato come presente.`);
+    assert.ok(!(adsOn && /(non ha pubblicità,|has no advertising,|la versione attuale non contiene pubblicità|current version contains no advertising)/.test(plain)), `${label}: non afferma che il gioco sia senza pubblicità mentre Android ne mostra.`);
+  }
+  if (adsOn) { assert.ok(/privacy-policy/.test(privacy) && /consenso/.test(privacy) && /AppLovin/.test(privacy), 'Informativa: collegamento all’informativa di Appodeal, consenso e reti collegate.'); assert.ok(/Unity Ads/.test(privacy) && /iOS/.test(privacy), 'Informativa: reti e assenza di pubblicità su iOS.'); }
+}
 // robots: indexable only when nothing required is missing
 for (const name of PAGES) {
   const noindex = /<meta name="robots" content="noindex"/.test(await readFile(new URL(name, root), 'utf8'));

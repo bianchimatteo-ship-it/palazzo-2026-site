@@ -56,17 +56,40 @@ export const normalizeAvatar = (value, fallback = DEFAULT_AVATAR) => {
 // take the stable default of the character), or the stable default of a career made before avatars.
 // A random look: every trait is drawn from its own options with the generator given (Math.random in the wizard, a seeded one in the tests). The face (masculine or feminine) is drawn too; beard and moustache
 // are drawn for the masculine face only (a choice of this generator, not a rule of the drawings), glasses one time in four. The proportions of the face stay as they are (the sliders are the player's own choice).
-export function randomAvatar(rand = Math.random, { keepShape = null } = {}) {
+// `gender` (the one chosen in the wizard: 'uomo' / 'donna', also 'maschile' / 'femminile'): the face follows it, the other traits stay random; with another or no value the face is drawn too.
+const FACE_OF_GENDER = Object.freeze({ uomo: 'maschile', maschile: 'maschile', donna: 'femminile', femminile: 'femminile' });
+export function randomAvatar(rand = Math.random, { keepShape = null, gender = null } = {}) {
   const pick = field => AVATAR_OPTIONS[field][Math.min(AVATAR_OPTIONS[field].length - 1, Math.floor(rand() * AVATAR_OPTIONS[field].length))].id;
-  const face = pick('face');
+  const drawn = pick('face');
+  const face = FACE_OF_GENDER[String(gender ?? '').toLowerCase()] ?? drawn;
   const masculine = face === 'maschile';
   const beard = masculine && rand() < 0.4 ? pick('beard') : 'nessuna';
   const moustache = masculine && beard === 'nessuna' && rand() < 0.2 ? pick('moustache') : 'nessuno';
   const glasses = rand() < 0.25 ? AVATAR_OPTIONS.glasses[1 + Math.floor(rand() * (AVATAR_OPTIONS.glasses.length - 1))].id : 'nessuno';
-  const out = { face, skin: pick('skin'), hair: pick('hair'), hairstyle: pick('hairstyle'), beard, glasses, jacket: pick('jacket'), eyes: pick('eyes'), expression: pick('expression'), moustache };
+  const hairstyle = pick('hairstyle');
+  // a receding hairline is a masculine style: for a feminine face the next style of the list is taken (the variety stays)
+  const hairs = AVATAR_OPTIONS.hairstyle, hairstyleId = face === 'femminile' && hairstyle === 'stempiato' ? hairs[(hairs.findIndex(item => item.id === hairstyle) + 1) % hairs.length].id : hairstyle;
+  const out = { face, skin: pick('skin'), hair: pick('hair'), hairstyle: hairstyleId, beard, glasses, jacket: pick('jacket'), eyes: pick('eyes'), expression: pick('expression'), moustache };
   return normalizeAvatar(keepShape ? { ...out, shape: keepShape } : out);
 }
-export const avatarOf = player => player ? (player.avatar && typeof player.avatar === 'object' && !Array.isArray(player.avatar) ? normalizeAvatar(player.avatar, defaultAvatarFor(player.id)) : defaultAvatarFor(player.id)) : { ...DEFAULT_AVATAR };
+// The look of a person of a given gender: the face follows the gender, and what the drawings give only to a masculine face (a beard, a moustache, the receding hairline) is taken off a feminine one;
+// everything else the player or the game chose (skin, hair and its colour, eyes, glasses, jacket, expression, proportions) stays as it is. With no gender known the avatar stays as it is: no feature is
+// attributed to a person whose gender the data do not give.
+export function avatarForGender(value, gender) {
+  const face = FACE_OF_GENDER[String(gender ?? '').toLowerCase()] ?? null;
+  const avatar = normalizeAvatar(value);
+  if (!face) return avatar;
+  const out = { ...avatar, face };
+  if (face === 'femminile') {
+    out.beard = 'nessuna'; out.moustache = 'nessuno';
+    if (out.hairstyle === 'stempiato') { const hairs = AVATAR_OPTIONS.hairstyle; out.hairstyle = hairs[(hairs.findIndex(item => item.id === 'stempiato') + 1) % hairs.length].id; }
+  }
+  return out;
+}
+// The gender a record states (the player's choice in the wizard, the data of a simulated person): the explicit field only; a real politician whose verified data give no gender has none here.
+export const statedGender = person => person?.legacyGender ? null : FACE_OF_GENDER[String(person?.gender ?? '').toLowerCase()] ?? null;
+// The avatar of a politician record: its own, or the stable default of the character; the base follows the gender the record states.
+export const avatarOf = player => player ? avatarForGender(player.avatar && typeof player.avatar === 'object' && !Array.isArray(player.avatar) ? normalizeAvatar(player.avatar, defaultAvatarFor(player.id)) : defaultAvatarFor(player.id), statedGender(player)) : { ...DEFAULT_AVATAR };
 // A value given with a wrong trait is refused; a missing trait is not a problem (it is completed with the default one).
 const shapeOk = value => value?.shape == null || (typeof value.shape === 'object' && !Array.isArray(value.shape) && Object.keys(value.shape).every(key => SHAPE_FIELDS.includes(key) && Number.isInteger(value.shape[key]) && Math.abs(value.shape[key]) <= SHAPE_LIMIT));
 export const avatarProblems = value => value == null || (typeof value === 'object' && !Array.isArray(value) && AVATAR_FIELDS.every(field => !(field in value) || IDS[field].has(value[field])) && shapeOk(value)) ? [] : ['Scegli un aspetto valido per l’avatar.'];
@@ -153,7 +176,9 @@ Un contadino della zona
 Un artigiano con la bottega in difficoltà`)
 });
 // The gender a role asks for: 'maschile' | 'femminile' | null (anyone). A role the table does not know is anyone's.
-export const roleGender = label => ROLE_GENDER[String(label ?? '').trim()] ?? null;
+const EXTRA_ROLE_GENDER = new Map();
+export const registerRoleGenders = map => { for (const [label, gender] of Object.entries(map)) EXTRA_ROLE_GENDER.set(label, gender); };
+export const roleGender = label => { const text = String(label ?? '').trim(); return ROLE_GENDER[text] ?? EXTRA_ROLE_GENDER.get(text) ?? (/^(Il|Lo|Uno)\s|^Un\s/.test(text) ? M : /^(La|Una)\s|^Un’/.test(text) ? F : null); };
 
 // Names to fall back on when the pool of a scene has no one of the gender the role asks for: complete names, each with its gender.
 export const EXTRA_NAMES = Object.freeze({

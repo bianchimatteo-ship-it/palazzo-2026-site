@@ -1,42 +1,42 @@
-import { uniqueId } from './ids.js?v=20261117-3';
-import { advanceDays, formatDate, nextMunicipalVote, nextProvincialVote, nextRegionalVote } from './time.js?v=20261117-3';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261117-3';
-import { CALENDAR_RULES, harmonizeElections, pickRoundDate, settleOpenRounds } from './calendar-planner.js?v=20261117-3';
-import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20261117-3';
+import { uniqueId } from './ids.js?v=20261126-3';
+import { advanceDays, formatDate, nextMunicipalVote, nextProvincialVote, nextRegionalVote } from './time.js?v=20261126-3';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261126-3';
+import { CALENDAR_RULES, harmonizeElections, pickRoundDate, settleOpenRounds } from './calendar-planner.js?v=20261126-3';
+import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20261126-3';
 import {
   APPOINTMENTS, CAREER_EVENTS, CURRENT_TEMPLATES, EARLY_ELECTION_AFTER_WEEKS, ELECTION_SCHEDULE,
   FORCED_EVENTS, LEGACY_RIVAL_NAMES, SIMULATED_RIVAL_LABEL, FOUNDER_RANK, LEVEL_FIRST_ELECTION, OFFICE_INCOME, PARTY_RANKS, RELATION_TEMPLATES, STAT_LABELS,
-  AGENDA_CAPS, SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS, ROUND_RULES } from '../data/simulation/career-rules.js?v=20261117-3';
-import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20261117-3';
-import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20261117-3';
-import { ITALIAN_REGIONS, hasProvincialLevel } from '../data/regions.js?v=20261117-3';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261117-3';
-import { createMandate, setMandateStatus, staffWeek, updateMandate } from './staff-engine.js?v=20261117-3';
-import { beginOperation, book, buyInvestment, contributeToParty, createFinance, depositElectionFund, depositReserve, hasAsset, normalizeFinance, releaseReserve, requestPartyFunds, settleFinanceWeek, settleOperations, settleTransfers, supporterIncome, treasuryOperation } from './finance-engine.js?v=20261117-3';
-import { addMembers, advanceOrganization, allocateCurrentPortfolios, applyOrgEffects, createOrganization, isPartyLeader, normalizeCurrentProfiles, normalizeOrganization, rememberCurrent, treasuryBook } from './organization-engine.js?v=20261117-3';
-import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20261117-3';
-import { HARD_CATEGORIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261117-3';
-import { AREA_GROUPS, macroAreaOf } from '../data/simulation/policy-rules.js?v=20261117-3';
-import { advancementOdds, evaluateAdvancement, progressionFactors } from './progression-engine.js?v=20261117-3';
-import { advanceCommittees, applyCommitteeAction, applyLocalEvent, COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, committeeActionCost, foundCommittee, leaderStance, scaleOf, territorialControl } from './committee-engine.js?v=20261117-3';
-import { europeanElectionDate, legislatureTerm, LEGISLATURE_RULES, sundayOnOrBefore } from './legislature-engine.js?v=20261117-3';
-import { CADRE_ACTIONS, CONGRESS_ACTIONS, LIFE_MEMORY_KINDS, LIFE_SITUATIONS, SPLINTER_NAMES } from '../data/simulation/party-life-rules.js?v=20261117-3';
-import { DAILY_EVENTS } from '../data/simulation/daily-events.js?v=20261117-3';
-import { eventDay, pickWeighted, reactionRelevance } from './event-engine.js?v=20261117-3';
-import { heldOffices, localOffices } from './office-engine.js?v=20261117-3';
-import { worksSignals } from './local-works-engine.js?v=20261117-3';
-import { SECTOR_GAINS, advanceStanding, applyStandingEffects, createStanding, gainSector, normalizeStanding, sectorValue, standingOf } from './standing-engine.js?v=20261117-3';
-import { EVENT_SECTORS } from '../data/simulation/standing-rules.js?v=20261117-3';
-import { affiliationOf, scenarioCapitalGain, scenarioGrowth, scenarioInit, scenarioOf } from './scenario-engine.js?v=20261117-3';
-import { PRESIDENCY_SITUATIONS } from '../data/simulation/presidency-rules.js?v=20261117-3';
-import { START_SITUATIONS } from '../data/simulation/start-rules.js?v=20261117-3';
-import { AMBITION_BROKEN, AMBITION_COST, AMBITION_KEPT, OBJECTIVE_BY_ID, OBJECTIVE_SITUATIONS } from '../data/simulation/objective-rules.js?v=20261117-3';
-import { ambitionProblem, bump, bumpAmbition, bumpDecision, expiredAmbitions, isClassicObjective, objectiveBase, objectiveStatus } from './objective-engine.js?v=20261117-3';
-import { advanceStart, hasStart, startBase, startFundsFactor, startInit, startSpecial } from './start-engine.js?v=20261117-3';
-import { advanceLife, breakPact, cadreAction, cadreDecision, congressActionsOf, congressWork, createLife, honourCadrePromises, honourListPacts, lapseAnswer, lifeOverview, normalizeLife, resolveCongress, respondRequest, startRebuild } from './party-life-engine.js?v=20261117-3';
-import { enterNewParty, foundParty, mergeParties, OP_COSTS, partyOpsAvailability, renameParty, splitOff } from './party-ops-engine.js?v=20261117-3';
+  AGENDA_CAPS, SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS, ROUND_RULES } from '../data/simulation/career-rules.js?v=20261126-3';
+import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20261126-3';
+import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20261126-3';
+import { ITALIAN_REGIONS, hasProvincialLevel } from '../data/regions.js?v=20261126-3';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261126-3';
+import { createMandate, setMandateStatus, staffWeek, updateMandate } from './staff-engine.js?v=20261126-3';
+import { beginOperation, book, buyInvestment, contributeToParty, createFinance, depositElectionFund, depositReserve, hasAsset, normalizeFinance, releaseReserve, requestPartyFunds, settleFinanceWeek, settleOperations, settleTransfers, supporterIncome, treasuryOperation } from './finance-engine.js?v=20261126-3';
+import { addMembers, advanceOrganization, allocateCurrentPortfolios, applyOrgEffects, createOrganization, isPartyLeader, normalizeCurrentProfiles, normalizeOrganization, rememberCurrent, treasuryBook } from './organization-engine.js?v=20261126-3';
+import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20261126-3';
+import { HARD_CATEGORIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261126-3';
+import { AREA_GROUPS, macroAreaOf } from '../data/simulation/policy-rules.js?v=20261126-3';
+import { advancementOdds, evaluateAdvancement, progressionFactors } from './progression-engine.js?v=20261126-3';
+import { advanceCommittees, applyCommitteeAction, applyLocalEvent, COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, committeeActionCost, foundCommittee, leaderStance, scaleOf, territorialControl } from './committee-engine.js?v=20261126-3';
+import { europeanElectionDate, legislatureTerm, LEGISLATURE_RULES, sundayOnOrBefore } from './legislature-engine.js?v=20261126-3';
+import { CADRE_ACTIONS, CONGRESS_ACTIONS, LIFE_MEMORY_KINDS, LIFE_SITUATIONS, SPLINTER_NAMES } from '../data/simulation/party-life-rules.js?v=20261126-3';
+import { DAILY_EVENTS } from '../data/simulation/daily-events.js?v=20261126-3';
+import { eventDay, pickWeighted, reactionRelevance } from './event-engine.js?v=20261126-3';
+import { heldOffices, localOffices } from './office-engine.js?v=20261126-3';
+import { worksSignals } from './local-works-engine.js?v=20261126-3';
+import { SECTOR_GAINS, advanceStanding, applyStandingEffects, createStanding, gainSector, normalizeStanding, sectorValue, standingOf } from './standing-engine.js?v=20261126-3';
+import { EVENT_SECTORS } from '../data/simulation/standing-rules.js?v=20261126-3';
+import { affiliationOf, scenarioCapitalGain, scenarioGrowth, scenarioInit, scenarioOf } from './scenario-engine.js?v=20261126-3';
+import { PRESIDENCY_SITUATIONS } from '../data/simulation/presidency-rules.js?v=20261126-3';
+import { START_SITUATIONS } from '../data/simulation/start-rules.js?v=20261126-3';
+import { AMBITION_BROKEN, AMBITION_COST, AMBITION_KEPT, OBJECTIVE_BY_ID, OBJECTIVE_SITUATIONS } from '../data/simulation/objective-rules.js?v=20261126-3';
+import { ambitionProblem, bump, bumpAmbition, bumpDecision, expiredAmbitions, isClassicObjective, objectiveBase, objectiveStatus } from './objective-engine.js?v=20261126-3';
+import { advanceStart, hasStart, startBase, startFundsFactor, startInit, startSpecial } from './start-engine.js?v=20261126-3';
+import { advanceLife, breakPact, cadreAction, cadreDecision, congressActionsOf, congressWork, createLife, honourCadrePromises, honourListPacts, lapseAnswer, lifeOverview, normalizeLife, resolveCongress, respondRequest, startRebuild } from './party-life-engine.js?v=20261126-3';
+import { enterNewParty, foundParty, mergeParties, OP_COSTS, partyOpsAvailability, renameParty, splitOff } from './party-ops-engine.js?v=20261126-3';
 // The decisions of the party's internal life join the situation events; the daily events join the procedural ones.
-import { RIVAL_SITUATIONS } from '../data/simulation/rival-life-rules.js?v=20261117-3';
+import { RIVAL_SITUATIONS } from '../data/simulation/rival-life-rules.js?v=20261126-3';
 const SITUATIONS = { ...RIVAL_SITUATIONS, ...SITUATION_EVENTS, ...LIFE_SITUATIONS, ...PRESIDENCY_SITUATIONS, ...START_SITUATIONS, ...OBJECTIVE_SITUATIONS };
 const EVENT_POOL = [...CAREER_EVENTS, ...DAILY_EVENTS];
 
@@ -88,7 +88,8 @@ export function situation(ctx, env = {}) {
   const seat = Boolean(parliament?.player?.groupId);
   const governing = ['active', 'crisis'].includes(parliament?.government?.status);
   // Who the player is right now: level, open offices, territory and the weight of the party.
-  const level = env.career?.currentLevel ?? env.career?.initialLevel ?? null;
+  // a plain member with no office has no institutional level
+  const level = env.career?.currentLevel ?? (env.career?.startingOffice === 'iscritto' ? null : env.career?.initialLevel) ?? null;
   const titles = (env.offices ?? []).filter(item => !item.endDate && item.politicianId && item.politicianId === env.player?.id).map(item => String(item.title ?? '').toLocaleLowerCase('it-IT'));
   const region = ctx.game.place?.region ?? null;
   const share = Number.isFinite(env.pollShare) ? env.pollShare : null;
@@ -315,7 +316,7 @@ export function normalizeGameState(game) {
   const incoherent = Boolean(game.flags?.president && game.party);
   const pastParties = incoherent ? [...(game.pastParties ?? []), { partyId: game.party.partyId, label: game.party.label, rankTitle: game.party.rankTitle, reason: 'Presidente della Repubblica: l’iscrizione a un partito è incompatibile con il mandato (sanata al caricamento)', leftAtWeek: week, source: SIM }] : null;
   const revived = game.status === 'ended' && !game.endKind ? { status: 'active', endedAt: null, endReason: null, setbacks: [...(game.setbacks ?? []), { week, date: game.endedAt ?? date, reason: game.endReason ?? 'Crisi di reputazione', source: SIM }] } : {};
-  return alignNationalCalendar({
+  const normalized = alignNationalCalendar({
     status: 'active', prep: 0, pastParties: [], inbox: [], log: [], objectives: {}, flags: {}, lastReport: null, lastEventId: null, fallenWeeks: 0, place: {},
     contacts: [], promises: [], rivalRegistry: [], endorsers: [], pending: [], eventQueue: [], eventHistory: {}, eventRecent: [], memory: [], legislature: { ...REAL_LEGISLATURE }, difficulty: 'normale', setbacks: [],
     ...game, ...revived, party: incoherent ? null : party,
@@ -334,6 +335,9 @@ export function normalizeGameState(game) {
     })),
     eventQueue: (Array.isArray(game.eventQueue) ? game.eventQueue : []).map(item => ({ ...item, causes: [...new Set([...(item.causes ?? []), item.from].filter(Boolean))], source: SIM }))
   });
+  // Saves with decisions of a party the player has left (the congress that stopped the week of an independent): closed with the reason, the rest of the agenda untouched.
+  closeStalePartyEvents(normalized, { date, reason: 'Salvataggio precedente: la decisione riguardava un partito di cui non fai più parte.' });
+  return normalized;
 }
 // Saves made with the accelerated national calendar: the general and European elections still ahead move to the real
 // calendar (end of the legislature, European elections of 2029 and every five years). Local votes keep their cycle.
@@ -592,7 +596,15 @@ export function activityProblem(ctx, env, activity) {
 // institution (`local`: the whole intended effect, a pressure that falls is as intended as a stability that rises). Negative numbers are costs and stay what they are; funds and the treasury are never scaled.
 const SCALED_KEYS = ['stats', 'relations', 'contacts', 'groups', 'party', 'group', 'government', 'org'];
 const scaleUp = (value, factor) => Number.isFinite(value) && value > 0 ? Math.round(value * factor * 100) / 100 : value;
-export const sceneFactor = edge => Math.max(0.2, Math.min(1.8, 1 + edge / 10));
+// The verdict of a scene (`edge`, from −6 to +6) as the factor of what the activity gives: a good verdict (3 and over) gives more than the plain activity (up to 1.8×), an intermediate one is proportional (from 0 to
+// the plain effect), and a bad one (under −3: the public reacted badly) gives NO benefit at all and turns the gains into a loss (down to −0.8×): the animation, the reaction, the verdict and the numbers tell the same thing.
+export const sceneFactor = edge => {
+  const e = Math.max(-6, Math.min(6, Number(edge) || 0));
+  if (e >= 3) return Math.min(1.8, 1.2 + (e - 3) * 0.2);
+  if (e >= 0) return 0.7 + e * (0.5 / 3);
+  if (e >= -3) return Math.max(0, 0.7 + e * (0.7 / 3));
+  return Math.max(-0.8, (e + 3) / 3);
+};
 export const scaleEffects = (effects, factor) => {
   if (!effects) return effects;
   const out = { ...effects };
@@ -629,11 +641,16 @@ export function performActivity(input, env, activityId, targetId = null, options
     lines.push(activity.risk.label);
     applyEffects(ctx, activity.risk.effects, targetId, lines, { date: env.currentDate });
     tone = 'bad';
+  } else if (factor !== null && options.sceneEdge < -3) {
+    // a scene that went badly is told as such even when the activity has no named risk: the diary, the toast and the numbers say the same
+    lines.push('La reazione del pubblico è negativa: l’attività non ottiene i risultati sperati.');
+    tone = 'bad';
   }
   schedule(ctx.game, activity.later, activity.label);
   // What the player decided in the scene beyond the plain activity (the consequences of each move: relations, standing, costs) and the commitments he took: applied here, in the same pass and on the same
   // account as the activity, so nothing is paid or recorded twice and «Partecipa», «Simula» and the plain activity share the same engine.
-  if (options.extras) applyEffects(ctx, options.extras, targetId, lines, { date: env.currentDate, fundsLabel: activity.label, source: activity.label });
+  // the benefits of the moves follow the verdict too (none when the public reacted badly, at most a little more than their face value when it went well); what they cost stays what it is
+  if (options.extras) applyEffects(ctx, factor === null ? options.extras : scaleEffects(options.extras, Math.max(0, Math.min(1.2, factor))), targetId, lines, { date: env.currentDate, fundsLabel: activity.label, source: activity.label });
   for (const later of options.commitments ?? []) schedule(ctx.game, later, activity.label);
   // What the activity does to the institution where the player sits (a council is not part of the career state: the store applies it).
   const specials = [];
@@ -684,6 +701,36 @@ function templateFor(item) {
   if (item.kind === 'situazione') return SITUATIONS[item.templateId];
   return EVENT_POOL.find(entry => entry.id === item.templateId);
 }
+// Decisions that exist only inside a party: the congress and the leadership, the secretary, the currents, the committees, the internal life, the lists, the offers of the organs. When the
+// player has no party, or is in another one, they cannot be decided any more: they are closed with the reason on record (game.archivedEvents), never run, so the week goes on.
+const PARTY_INTERNAL_IDS = new Set(['territory-tour', 'territory-coordinator', 'territory-promise', 'party-cuts', 'party-subscription', 'accept-rank', 'objective-role-dipartimento', 'objective-role-garante']);
+export const isPartyInternalSpecial = special => typeof special === 'string' && (/^(leadership-|secretary-|life-|committee-|selection-|current-)/.test(special) || PARTY_INTERNAL_IDS.has(special));
+const internalTemplate = template => Boolean(template) && (template.choices ?? []).some(choice => isPartyInternalSpecial(choice.special) || (choice.outcomes ?? []).some(outcome => isPartyInternalSpecial(outcome.special)));
+export const isPartyInternal = item => internalTemplate(templateFor(item));
+// Whether a party decision no longer belongs to the player's party: no party; a different party (the id stamped when it was raised); in saves from before the stamp, currents named that the party does not have.
+export function stalePartyItem(game, item) {
+  if (!isPartyInternal(item)) return false;
+  if (!game.party) return true;
+  if (item.partyId && item.partyId !== game.party.partyId) return true;
+  const named = [item.params?.currentAId, item.params?.currentBId].filter(Boolean);
+  const special = (templateFor(item)?.choices ?? []).map(choice => choice.special).find(id => /^leadership-[ab]$/.test(id ?? ''));
+  return Boolean(special) && named.some(id => !(game.party.currents ?? []).some(current => current.id === id));
+}
+const staleQueued = (game, entry) => internalTemplate(EVENT_POOL.find(template => template.id === entry.id)) && (!game.party || Boolean(entry.partyId && entry.partyId !== game.party.partyId));
+export function closeStalePartyEvents(game, { date = null, reason = null } = {}) {
+  if (!game || !Array.isArray(game.inbox)) return [];
+  const stale = game.inbox.filter(item => stalePartyItem(game, item));
+  const queued = (game.eventQueue ?? []).filter(entry => staleQueued(game, entry));
+  if (!stale.length && !queued.length) return [];
+  const why = reason ?? (game.party ? 'Riguardava un partito di cui non fai più parte.' : 'Riguardava la vita interna di un partito: ora sei indipendente.');
+  const week = game.week?.index ?? null;
+  game.inbox = game.inbox.filter(item => !stale.includes(item));
+  game.eventQueue = (game.eventQueue ?? []).filter(entry => !queued.includes(entry));
+  game.archivedEvents = [...(game.archivedEvents ?? []),
+    ...stale.map(item => ({ id: item.id, templateId: item.templateId, title: item.title, raisedWeek: item.week ?? null, closedWeek: week, date, reason: why, source: SIM })),
+    ...queued.map(entry => ({ id: `coda-${entry.id}-${entry.dueWeek}`, templateId: entry.id, title: EVENT_POOL.find(template => template.id === entry.id)?.title ?? entry.id, raisedWeek: null, closedWeek: week, date, reason: why, source: SIM }))].slice(-40);
+  return stale;
+}
 // What happens to a decision nobody took: its default choice, which must cost nothing and ask for nothing (an unpaid choice
 // with a cost would hand its benefits to whoever did not decide); when the declared default is not free, the closest free
 // choice, and when no choice is free the decision lapses with no effect. The agenda shows the same choice the week runs.
@@ -708,7 +755,8 @@ function instantiate(template, kind, ctx, params) {
     id, kind, templateId: template.id, ...(day !== null ? { day } : {}),
     title: fill(template.title, params), body: fill(template.body, params), params,
     choices: template.choices.map(choice => ({ id: choice.id, label: fill(choice.label, params), cost: choice.cost ?? null, requires: typeof choice.requires === 'string' ? choice.requires : null })),
-    defaultChoice: freeDefault(template.choices, template.defaultChoice ?? template.choices.at(-1).id)?.id ?? template.defaultChoice ?? template.choices.at(-1).id, week: ctx.game.week.index, source: SIM
+    defaultChoice: freeDefault(template.choices, template.defaultChoice ?? template.choices.at(-1).id)?.id ?? template.defaultChoice ?? template.choices.at(-1).id, week: ctx.game.week.index, source: SIM,
+    ...(internalTemplate(template) ? { partyId: ctx.game.party?.partyId ?? null } : {})
   };
 }
 function eventParams(ctx) {
@@ -986,7 +1034,7 @@ function runChoice(ctx, env, item, choice, lines, specials) {
   if (EVENT_SECTORS[item.templateId] && (choice.cost?.ap || choice.cost?.capital || choice.cost?.funds)) gainSector(ctx.game, EVENT_SECTORS[item.templateId], SECTOR_GAINS.engage, { cause: item.title });
   pushLocal(choice.effects, specials, lines);
   if (choice.memory) remember(ctx.game, { date: env.currentDate, ...choice.memory, text: fill(choice.memory.text, item.params) });
-  if (choice.followUp && draw(ctx.game) < (choice.followUp.chance ?? 1)) ctx.game.eventQueue = [...(ctx.game.eventQueue ?? []), { id: choice.followUp.id, dueWeek: ctx.game.week.index + (choice.followUp.weeks ?? 2), params: { region2: item.params?.region2 }, from: item.templateId, causes: [item.templateId, ...(choice.followUp.causes ?? [])], source: SIM }];
+  if (choice.followUp && draw(ctx.game) < (choice.followUp.chance ?? 1)) ctx.game.eventQueue = [...(ctx.game.eventQueue ?? []), { partyId: ctx.game.party?.partyId ?? null, id: choice.followUp.id, dueWeek: ctx.game.week.index + (choice.followUp.weeks ?? 2), params: { region2: item.params?.region2 }, from: item.templateId, causes: [item.templateId, ...(choice.followUp.causes ?? [])], source: SIM }];
   if (choice.outcomes) {
     const outcome = pickOutcome(ctx.game, choice.outcomes);
     lines.push(outcome.label);
@@ -1006,6 +1054,12 @@ export function resolveInboxItem(input, env, itemId, choiceId) {
   const ctx = start(input);
   const item = ctx.game.inbox.find(entry => entry.id === itemId);
   if (!item) throw new Error('Questa decisione non è più disponibile.');
+  if (stalePartyItem(ctx.game, item)) {
+    closeStalePartyEvents(ctx.game, { date: env.currentDate });
+    const line = 'Non fai più parte di quel partito: la decisione è stata archiviata.';
+    addLog(ctx.game, env.currentDate, item.kind, `${item.title} — archiviata`, [line], 'neutral');
+    return { ctx, report: { title: item.title, lines: [line], tone: 'neutral' }, specials: [], completed: [] };
+  }
   const choice = templateFor(item)?.choices.find(entry => entry.id === choiceId);
   if (!choice) throw new Error('Scelta non valida.');
   const problem = costProblem(ctx.game, choice.cost);
@@ -1031,6 +1085,7 @@ function leaveParty(ctx, reason) {
   ctx.game.pastParties.push({ partyId: party.partyId, label: party.label, rankTitle: party.rankTitle, reason, leftAtWeek: ctx.game.week.index, source: SIM });
   ctx.game.party = null;
   ctx.game.relations = ctx.game.relations.filter(item => item.id !== 'leadership');
+  closeStalePartyEvents(ctx.game, { date: ctx.game.week?.startedAt ?? null, reason: `Hai lasciato ${party.label ?? 'il partito'} (${reason}): la decisione interna al partito è chiusa.` });
 }
 // Specials the store turns into changes of the country, the Parliament or the Government.
 const WORLD_SPECIALS = ['dossier-fund', 'dossier-draft', 'dossier-postpone', 'dossier-withdraw', 'dossier-wait', 'project-integrate', 'project-scale', 'project-suspend', 'project-commissioner', 'project-wait', 'project-inaugurate', 'project-inaugurate-light', 'eu-apply', 'eu-report', 'projects-open', 'markets-calm', 'markets-worse', 'europe-up', 'europe-down', 'society-cost', 'minister-defend', 'minister-resign', 'budget-open', 'partner-accept', 'partner-negotiate', 'partner-refuse', 'obstruction-add', 'obstruction-clear', 'snipers',
@@ -1046,6 +1101,8 @@ const WORLD_SPECIALS = ['dossier-fund', 'dossier-draft', 'dossier-postpone', 'do
   'work-request-promise', 'work-request-motion', 'work-integrate', 'work-scale', 'work-suspend', 'work-commissioner', 'work-wait', 'work-refund', 'work-protest-dialog', 'work-protest-compensate', 'work-protest-ignore', 'work-inaugurate', 'work-inaugurate-light', 'work-upkeep-pay'];
 function handleSpecial(ctx, env, special, item, lines, specials, choice = {}) {
   const game = ctx.game;
+  // A decision of a party the player is no longer in: it lapses with a line, nothing of a party that is not there is touched.
+  if (isPartyInternalSpecial(special) && (!game.party || (item.partyId && item.partyId !== game.party.partyId))) { lines.push('Non fai più parte di quel partito: la questione interna decade.'); return; }
   if (WORLD_SPECIALS.includes(special) || special.startsWith('presidency-')) { specials.push({ type: special, params: item.params ?? {} }); return; }
   // The starting conditions: debts, a divided party, the outsider's apparatus, enemies, the past, expectations.
   if (special.startsWith('start-')) { lines.push(...startSpecial(game, special, item, choice, lifeApi())); return; }
@@ -1979,13 +2036,15 @@ export function lifeFound(input, env, { label, abbreviation = null, followerIds 
   addLog(game, env.currentDate, 'partito', `Fondi ${clean}`, out.lines, 'good');
   return { ctx, lines: out.lines, specials: [{ type: 'party-split', descriptor: out.descriptor, followed: true, founded: true, abbreviation, identity: cleanPartyIdentity(identity) }] };
 }
-export function lifeMerge(input, env, { forceId, label, share = 1, ownShare = 3, newLabel = null }) {
+export function lifeMerge(input, env, { forceId, label, share = 1, ownShare = 3, newLabel = null, identity = null }) {
   const ctx = asSecretary(input, OP_COSTS.merge);
   const availability = partyOpsAvailability(ctx.game, { neighbours: [{ id: forceId }] }).merge;
   if (availability.reason && !availability.ok) throw new Error(availability.reason);
   const week = ctx.game.week.index;
   const founder = ctx.game.party.affiliation === 'founder';
-  const out = mergeParties(ctx.game, lifeApi(), { forceId, label, share, ownShare, newLabel: founder ? newLabel : null, week, date: env.currentDate, rand: () => draw(ctx.game) });
+  const out = mergeParties(ctx.game, lifeApi(), { forceId, label, share, ownShare, newLabel: founder ? (identity?.label ?? newLabel) : null, week, date: env.currentDate, rand: () => draw(ctx.game) });
+  // the identity chosen for the new subject travels with the descriptor: the store applies it to the party record, the polls and the history of the merger
+  if (founder && identity) out.descriptor.identity = identity;
   addLog(ctx.game, env.currentDate, 'partito', `Fusione con ${label}`, out.lines, 'neutral');
   return { ctx, lines: out.lines, specials: [{ type: 'party-merge', descriptor: out.descriptor }] };
 }
@@ -2376,7 +2435,11 @@ export function advanceWeek(input, env, governmentWeek = parliament => parliamen
   const specials = [];
   if (game.status === 'ended') return { ctx, specials, report: null };
   const closing = game.week.index;
+  closeStalePartyEvents(game, { date });
   for (const item of [...game.inbox]) {
+    if (!game.inbox.includes(item)) continue;
+    // an earlier decision of this same week may have taken the player out of the party
+    if (stalePartyItem(game, item)) { closeStalePartyEvents(game, { date }); continue; }
     if ((item.holdUntilWeek ?? 0) > closing || (item.holdUntilDate && item.holdUntilDate > date)) continue;
     const choice = defaultChoiceOf(item);
     game.inbox = game.inbox.filter(entry => entry.id !== item.id);

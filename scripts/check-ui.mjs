@@ -361,7 +361,7 @@ await pickDate(advanceDays(dayBefore, -3));
 assert.ok(!(await click({ action: 'advance-to-date' })).includes('confirm-dialog') && store.getState().clock.currentDate === dayBefore, 'Una data passata non si avanza.');
 await pickDate(advanceDays(dayBefore, 30));
 page = await click({ action: 'advance-to-date' });
-assert.ok(page.includes('confirm-dialog') && page.includes('Avanzare fino al') && page.includes('circa 5 settimane') && page.includes('Delega allo staff le decisioni che compaiono') && page.includes('decisione urgente'), 'Il salto a una data chiede conferma, dice quanto tempo passa e offre la delega allo staff.');
+assert.ok(page.includes('confirm-dialog') && page.includes('Avanzare fino al') && /Passeranno \d+ settiman[ae]( e \d+ giorn[oi])?/.test(page) && page.includes('Delega allo staff le decisioni che compaiono') && page.includes('decisione urgente'), 'Il salto a una data chiede conferma, dice quanto tempo passa e offre la delega allo staff.');
 await click({ confirm: 'cancel' });
 assert.equal(store.getState().clock.currentDate, dayBefore, 'Annullando la data non è cambiata.');
 await click({ action: 'advance-to-date' });

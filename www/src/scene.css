@@ -92,8 +92,8 @@ html[data-scene-motion="full"] .cm-protest .cm-arm { animation: st-arms .45s eas
 .generated-tag { font: 600 11px var(--font-ui); color: var(--ink-3); border: 1px solid var(--line); border-radius: 99px; padding: 1px 7px; margin-left: 6px; }
 
 /* The Aula (ui/aula-view.js): a vote replayed seat by seat in a window over the page. */
-.aula-enter { background: linear-gradient(#e0bd6e, #c4a05a); color: #1d1a12; border: 1px solid #f0d68a; font-weight: 900; letter-spacing: .08em; min-height: 42px; padding: 8px 18px; border-radius: var(--radius); }
-.aula-enter:hover { background: linear-gradient(#f0d68a, #d4b068); color: #14110b; }
+.aula-enter { background: var(--accent); color: var(--accent-ink); border: 1px solid var(--gold-deep); font-weight: 900; letter-spacing: .08em; min-height: 42px; padding: 8px 18px; border-radius: var(--radius); }
+.aula-enter:hover { background: var(--gold-soft); color: var(--accent-ink); }
 .aula-enter-small { margin-left: 8px; min-height: 34px; padding: 4px 10px; font-size: 12px; }
 .hemi-head .aula-enter { margin-left: auto; align-self: center; }
 .aula-overlay { position: fixed; inset: 0; z-index: 90; display: flex; align-items: flex-start; justify-content: center; padding: 16px; background: rgba(4, 9, 8, .82); overflow-y: auto; }
@@ -166,7 +166,7 @@ html[data-scene-motion="full"] .cm-protest .cm-arm { animation: st-arms .45s eas
 .floor-kind { color: var(--ink-2); font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .floor-window h2 { margin: 0; }
 .floor-summary, .floor-proposer { margin: 0; color: var(--ink); line-height: 1.5; }
-.floor-content { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 6px 14px; }
+.floor-content { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 6px 14px; }
 .floor-content div { display: grid; gap: 1px; min-width: 0; }
 .floor-content dt { color: var(--ink-2); font-size: 11.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
 .floor-content dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
@@ -218,3 +218,37 @@ html[data-scene-motion="full"] .cm-protest .cm-arm { animation: st-arms .45s eas
 .scene-procon em { font-style: normal; display: block; }
 .scene-procon .pro b { color: #4cae7a; }
 .scene-procon .contro b { color: #d9825b; }
+.scene-procon .effetto b { color: #7fb4e8; }
+.scene-procon .costo b { color: #e6bd5c; }
+.scene-facts { display: grid; gap: 4px; margin: 6px 0 2px; padding: 8px 10px; border-left: 3px solid #d9825b; background: rgba(217,130,91,.1); border-radius: 6px; font-size: .86rem; }
+.scene-facts div { display: grid; grid-template-columns: minmax(96px, 30%) minmax(0, 1fr); gap: 8px; } .scene-facts dt { opacity: .8; } .scene-facts dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 480px) { .scene-facts div { grid-template-columns: minmax(0, 1fr); gap: 0; } }
+/* Presentation of the beats and of the choices: a soft entrance of the line and a press feedback on the choices (never when the player asks for reduced motion; no layout change, transform and opacity only) */
+@media (prefers-reduced-motion: no-preference) {
+  .scene-said, .scene-result, .scene-why, .scene-facts { animation: scene-line-in .38s ease-out both; }
+  .scene-choice { transition: transform .12s ease, box-shadow .18s ease; }
+  .scene-choice:active:not(:disabled) { transform: scale(.985); }
+  @keyframes scene-line-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+}
+
+/* The ambience of a room (ui/room-art.js): a flash of the cameras, a slow nod of the crowd. Only when the visitor has not asked for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .rm-live { animation: rm-nod 3.2s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+  .rm-live.rm-flash { animation: rm-flash 3.6s ease-in-out infinite; }
+  @keyframes rm-nod { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+  @keyframes rm-flash { 0%, 86%, 100% { opacity: 0; } 90%, 94% { opacity: 1; } }
+}
+html[data-scene-motion="off"] .rm-live, html[data-scene-motion="reduced"] .rm-live { animation: none !important; }
+html[data-scene-motion="off"] .rm-live.rm-flash, html[data-scene-motion="reduced"] .rm-live.rm-flash { opacity: 0; }
+.rm-live.rm-flash { opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .rm-live.rm-flash { opacity: .8; } }
+
+/* Scene delle attività: la luce della stanza cambia da una scena all'altra (giorno, sera, luce piena); il movimento ridotto non toglie la luce, che non si muove */
+.st-svg[data-light="evening"] { filter: sepia(.28) saturate(1.12) brightness(.93) hue-rotate(-8deg); }
+.st-svg[data-light="bright"] { filter: brightness(1.06) saturate(1.05); }
+/* The in-game setting «Animazioni delle scene» wins over the system preference: with it OFF nothing of the scene animates (the entrance of the lines and the ambience of the rooms included); with it REDUCED the entrances are brief */
+html[data-scene-motion="off"] .scene-said, html[data-scene-motion="off"] .scene-result, html[data-scene-motion="off"] .scene-why, html[data-scene-motion="off"] .scene-facts,
+html[data-scene-motion="off"] .rm-live, html[data-scene-motion="off"] .rm-live.rm-flash { animation: none !important; }
+html[data-scene-motion="off"] .scene-choice { transition: none !important; }
+html[data-scene-motion="reduced"] .scene-said, html[data-scene-motion="reduced"] .scene-result, html[data-scene-motion="reduced"] .scene-why, html[data-scene-motion="reduced"] .scene-facts { animation: none !important; }   /* reduced: the lines simply appear */
+html[data-scene-motion="reduced"] .rm-live, html[data-scene-motion="reduced"] .rm-live.rm-flash { animation: none !important; }

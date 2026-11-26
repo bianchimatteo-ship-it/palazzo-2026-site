@@ -49,8 +49,8 @@ function intesa(world, partner) {
   throw new Error(`Nessuna intesa con ${partner} in 80 prove.`);
 }
 // An invitation that succeeds (and, separately, one that is refused) with different draws.
-function invite(world, id, want = true) {
-  for (let n = 0; n < 120; n++) { const out = W.inviteToAlliance(fresh(world, n), id, { date: DATE }); if (out.success === want) return out; }
+function invite(world, id, want = true, mode = 'merge') {
+  for (let n = 0; n < 120; n++) { const out = W.inviteToAlliance(fresh(world, n), id, { date: DATE, mode }); if (out.success === want) return out; }
   throw new Error(`Nessun invito ${want ? 'riuscito' : 'rifiutato'} per ${id} in 120 prove.`);
 }
 
@@ -125,9 +125,23 @@ const five = world;
   // incompatible partner: Destra A and Destra B run together; inviting one of them would pull the other into a coalition of the centre-left, or leave them split
   const withRight = structuredClone(start);
   withRight.alliances.push({ id: 'accordo-destra', label: 'Intesa Destra A – Destra B', partyIds: ['fdi', 'fn'], cohesion: 70, since: DATE, status: 'active', motive: 'prova', source: 'simulation' });
-  const reason = W.inviteBlock(withRight, 'fn');
+  // the INDIVIDUAL invitation is not blocked by the partner that would stay behind: only the invited force is judged against the coalition
+  assert.equal(W.inviteBlock(withRight, 'fn'), null, 'Invito individuale: l’incompatibilità di un partner che non si sposta non blocca.');
+  assert.equal(W.inviteBlock(withRight, 'fn', 'individual'), null);
+  // the FULL merge needs every partner to fit: it is blocked, with the reason
+  const reason = W.inviteBlock(withRight, 'fn', 'merge');
   assert.match(reason ?? '', /fa già parte dell’accordo «Intesa Destra A – Destra B»/); assert.match(reason, /non è compatibile|non sono compatibili/); assert.match(reason, /bloccato/);
-  assert.throws(() => W.inviteToAlliance(withRight, 'fn', { date: DATE }), /bloccato/);
+  assert.throws(() => W.inviteToAlliance(withRight, 'fn', { date: DATE, mode: 'merge' }), /bloccato/);
+  const impactRight = W.inviteImpact(withRight, 'fn');
+  assert.ok(impactRight.mergeBlock && impactRight.partners.some(p => p.id === 'fdi' && !p.compatible), 'L’anteprima dice che la fusione è bloccata e quale partner non è compatibile.');
+  assert.ok(impactRight.staying.some(p => p.id === 'fdi'), 'L’anteprima dice chi resterebbe.');
+  // individual invitation of that force: whatever the odds, the original accord is never touched
+  for (let n = 0; n < 40; n++) {
+    let out; try { out = W.inviteToAlliance(fresh(withRight, n), 'fn', { date: DATE }); } catch (error) { assert.match(String(error.message), /respint|tempo|capitale|rifiuto|ripresentare/i); continue; }
+    const kept = out.world.alliances.find(item => item.id === 'accordo-destra');
+    if (out.success) { assert.deepEqual(out.joined, ['fn']); assert.deepEqual(kept.partyIds, ['fdi']); }
+    else assert.deepEqual(kept.partyIds, ['fdi', 'fn'], 'Un rifiuto lascia l’accordo preesistente com’era.');
+  }
   const stillThere = active(withRight).find(item => item.id === 'accordo-destra');
   assert.deepEqual(stillThere.partyIds, ['fdi', 'fn']); assert.equal(stillThere.status, 'active', 'L’accordo preesistente è intatto.');
   // the bilateral proposal does not take a member out of another accord either
@@ -139,7 +153,7 @@ const five = world;
   for (const pair of [['iv', 'pd'], ['io', 'iv'], ['az', 'pd'], ['az', 'io']]) centre.ties[pair.sort().join('|')] = 60;
   assert.equal(W.inviteBlock(centre, 'az'), null, 'Un accordo compatibile non blocca l’invito.');
   assert.ok(W.inviteOdds(centre, 'az', {}).merge?.partners.includes('Centro B'), 'Le probabilità dicono che l’accordo confluisce con i suoi partner.');
-  const merged = invite(centre, 'az');
+  const merged = invite(centre, 'az', true, 'merge');
   const grown = W.playerAlliance(merged.world);
   assert.ok(['io', 'pd', 'az', 'iv'].every(id => grown.partyIds.includes(id)), 'La forza invitata porta con sé il suo partner.');
   assert.equal(merged.world.alliances.find(item => item.id === 'accordo-centro').status, 'merged'); assert.equal(merged.world.alliances.find(item => item.id === 'accordo-centro').mergedInto, grown.id);
@@ -147,7 +161,84 @@ const five = world;
   assert.ok(merged.merged && /Intesa Centro A – Centro B/.test(merged.merged) && /confluisce nella coalizione/.test(merged.world.events[0].body), 'La fusione è dichiarata nell’esito e nella cronaca.');
   assert.deepEqual(merged.joined.sort(), ['az', 'iv']);
   coherent(merged.world, 'fusione');
+  // --- a force already in another accord: the individual joining is the default, the full merge a choice; registrations travel with a merger and are never rewritten ---
+  const trio = structuredClone(start);
+  trio.alliances.push({ id: 'accordo-trio', label: 'Alleanza Centro A – Centro B – Centro C', partyIds: ['az', 'iv', 'pe'], cohesion: 60, since: DATE, status: 'active', motive: 'prova', terms: [{ id: 'accordo-trio|collegi|1', kind: 'collegi', partyId: 'az', text: 'Collegi al Centro', status: 'aperto' }], coalitions: [{ electionId: 'politiche-2022', type: 'politiche', label: 'elezioni politiche 2022', status: 'approvata', approvedAt: '2022-09-01', members: ['az', 'iv', 'pe'] }] });
+  for (const pair of [['iv', 'pd'], ['io', 'iv'], ['az', 'pd'], ['az', 'io'], ['pe', 'pd'], ['io', 'pe']]) trio.ties[pair.sort().join('|')] = 60;
+  const impact = W.inviteImpact(trio, 'az');
+  assert.ok(impact && impact.individual && /Alleanza Centro A/.test(impact.alliance), 'L’impatto dice a quale accordo appartiene la forza invitata.');
+  assert.ok([...impact.followers, ...impact.staying].map(item => item.id).sort().join() === 'iv,pe', 'L’impatto elenca esplicitamente i partner che potrebbero seguirla.');
+  const solo = invite(trio, 'az', true, 'individual');
+  const soloAlliance = W.playerAlliance(solo.world);
+  assert.deepEqual(solo.joined, ['az'], 'Adesione individuale: passa solo la forza invitata.'); assert.deepEqual(solo.stayed.sort(), ['iv', 'pe'], 'Gli altri partner restano e il risultato lo dichiara.'); assert.equal(solo.mode, 'individual');
+  assert.ok(soloAlliance.partyIds.includes('az') && !soloAlliance.partyIds.includes('iv') && !soloAlliance.partyIds.includes('pe'));
+  const kept = solo.world.alliances.find(item => item.id === 'accordo-trio');
+  assert.equal(kept.status, 'active'); assert.deepEqual(kept.partyIds.sort(), ['iv', 'pe'], 'L’accordo originale resta con i partiti che rimangono.');
+  assert.ok((kept.terms ?? []).some(term => term.id === 'accordo-trio|collegi|1'), 'Le condizioni dell’accordo originale restano.'); assert.equal(kept.coalitions.length, 1, 'E le sue registrazioni.');
+  assert.ok(kept.history.some(item => /passa a/.test(item.text)), 'L’uscita è registrata nella cronologia dell’accordo che resta.');
+  coherent(solo.world, 'adesione individuale');
+  // a merge needs the consent of each partner: some seeds bring everyone, others leave a partner behind (declined) and the accord stays for it
+  let full = null, partial = null;
+  for (let n = 0; n < 200 && !(full && partial); n++) { const out = W.inviteToAlliance(fresh(trio, n), 'az', { date: DATE, mode: 'merge' }); if (!out.success) continue; if (out.joined.length === 3) full ??= out; else if (out.declined.length) partial ??= out; }
+  assert.ok(full && partial, 'Con i consensi dei partner la fusione completa riesce o lascia indietro chi rifiuta.');
+  assert.ok(partial.declined.length >= 1 && partial.joined.includes('az') && partial.stayed.length === partial.declined.length, 'Il rifiuto di un partner è dichiarato e il partner resta.');
+  const keptPartial = partial.world.alliances.find(item => item.id === 'accordo-trio'); assert.equal(keptPartial.status, 'active', 'Per chi rifiuta l’accordo originale resta.'); assert.ok((keptPartial.coalitions ?? []).length === 1 && (keptPartial.terms ?? []).length === 1, 'Con le sue condizioni e registrazioni.');
+  coherent(partial.world, 'fusione con rifiuto');
+  assert.deepEqual(full.joined.sort(), ['az', 'iv', 'pe'], 'Fusione completa (scelta esplicita): seguono i partner compatibili.');
+  const grownTrio = W.playerAlliance(full.world);
+  const carried = (grownTrio.coalitions ?? []).find(item => item.electionId === 'politiche-2022');
+  assert.ok(carried && carried.status === 'approvata' && carried.mergedFrom === 'accordo-trio', 'La registrazione elettorale dell’accordo che confluisce passa al nuovo accordo.');
+  const original = trio.alliances.find(item => item.id === 'accordo-trio').coalitions[0];
+  for (const key of Object.keys(original)) assert.deepEqual(carried[key], original[key], `La registrazione di un’elezione conclusa resta immutata (${key}).`);
+  // an open election: the approval granted to other members is verified again, not taken as it is
+  const open = structuredClone(full.world); const reg = W.registerCoalition(open, grownTrio.id, { id: 'politiche-2022', type: 'politiche', label: 'elezioni politiche 2022' }, '2022-09-02');
+  assert.ok(reg.already !== true, 'Con i membri cambiati l’approvazione di una elezione aperta non vale più «così com’è»: va verificata di nuovo.');
+  assert.ok(full.world.alliances.find(item => item.id === 'accordo-trio').status === 'merged' && Array.isArray(grownTrio.coalitions) && grownTrio.coalitions.length >= 1);
+  coherent(full.world, 'fusione completa con registrazioni');
   lines.push('accordi preesistenti: incompatibile bloccato con il motivo e lasciato intatto, compatibile fuso con partner e condizioni');
+}
+
+// ---------- 3b. registrations of every level travel with a merge and are never rewritten ----------
+{
+  const start = intesa(base(), 'pd');
+  const levels = [['nazionale', 'politiche'], ['europea', 'europee'], ['regionale', 'regionali'], ['provinciale', 'provinciali'], ['comunale', 'comunali']];
+  const make = () => {
+    const w = structuredClone(start);
+    w.alliances.push({ id: 'accordo-trio', label: 'Alleanza Centro A – Centro B – Centro C', partyIds: ['az', 'iv', 'pe'], cohesion: 60, since: DATE, status: 'active', motive: 'prova', source: 'simulation',
+      coalitions: levels.map(([, type], index) => ({ electionId: `${type}-conclusa-${index}`, type, label: `elezioni ${type}`, status: 'approvata', approvedAt: '2022-05-01', members: ['az', 'iv', 'pe'] })) });
+    for (const pair of [['iv', 'pd'], ['io', 'iv'], ['az', 'pd'], ['az', 'io'], ['pe', 'pd'], ['io', 'pe']]) w.ties[pair.sort().join('|')] = 60;
+    return w;
+  };
+  const trio = make();
+  const original = structuredClone(trio.alliances.find(item => item.id === 'accordo-trio').coalitions);
+  // individual: the registrations stay with the accord that stays; nothing is copied to the new one
+  const solo = invite(trio, 'az', true, 'individual');
+  assert.deepEqual(solo.world.alliances.find(item => item.id === 'accordo-trio').coalitions, original, 'Adesione individuale: le registrazioni dell’accordo che resta non cambiano.');
+  assert.ok(!(W.playerAlliance(solo.world).coalitions ?? []).some(item => item.mergedFrom), 'E non vengono copiate al nuovo accordo.');
+  // merge with everybody: all five levels pass, each exactly as it was, none twice
+  let full = null; for (let n = 0; n < 300 && !full; n++) { const out = W.inviteToAlliance(fresh(trio, n), 'az', { date: DATE, mode: 'merge' }); if (out.success && out.joined.length === 3) full = out; }
+  assert.ok(full, 'Una fusione completa riesce.');
+  const grown = W.playerAlliance(full.world);
+  for (const record of original) {
+    const carried = grown.coalitions.filter(item => item.electionId === record.electionId && item.type === record.type);
+    assert.equal(carried.length, 1, `${record.type}: la registrazione passa una volta sola.`);
+    for (const key of Object.keys(record)) assert.deepEqual(carried[0][key], record[key], `${record.type}: elezione conclusa, ${key} immutato.`);
+  }
+  // no force in two accords, no duplicate member, the old accord no longer active
+  const holders = new Map(); for (const alliance of full.world.alliances.filter(item => item.status === 'active')) for (const id of alliance.partyIds) holders.set(id, (holders.get(id) ?? 0) + 1);
+  assert.ok([...holders.values()].every(count => count === 1), 'Nessun partito in due alleanze.'); assert.equal(new Set(grown.partyIds).size, grown.partyIds.length, 'Nessun membro doppio.');
+  // a record of the same election and type that the destination already has is not duplicated, and the destination's own stays as it is
+  const dup = make(); const mine = W.playerAlliance(dup); mine.coalitions = [{ electionId: 'politiche-conclusa-0', type: 'politiche', label: 'elezioni politiche', status: 'respinta', reasons: ['prova'], members: ['io', 'pd'] }];
+  let merged = null; for (let n = 0; n < 300 && !merged; n++) { const out = W.inviteToAlliance(fresh(dup, n), 'az', { date: DATE, mode: 'merge' }); if (out.success && out.joined.length === 3) merged = out; }
+  const mergedCo = W.playerAlliance(merged.world).coalitions.filter(item => item.electionId === 'politiche-conclusa-0' && item.type === 'politiche');
+  assert.equal(mergedCo.length, 1, 'Nessuna registrazione duplicata per la stessa elezione e lo stesso tipo.'); assert.equal(mergedCo[0].status, 'respinta', 'Quella già presente resta com’era.');
+  // concluded elections and closed candidatures: no registration can be made or changed after the lists are filed or the vote is held
+  assert.throws(() => W.registerCoalition(full.world, grown.id, { id: 'politiche-conclusa-0', type: 'politiche', label: 'politiche', status: 'held', electionDate: '2022-09-25' }, '2026-11-01'), /già tenuta/);
+  assert.throws(() => W.registerCoalition(full.world, grown.id, { id: 'regionali-x', type: 'regionali', label: 'regionali', electionDate: '2027-03-01', listsFiledAt: '2027-01-20', listsDeadline: '2027-01-20' }, '2027-02-10'), /si sono chiuse|già tenuta/);
+  // an OPEN election: the approval granted to the old members is verified again after the composition changed
+  const reg = W.registerCoalition(structuredClone(full.world), grown.id, { id: 'politiche-aperta', type: 'politiche', label: 'politiche aperte', electionDate: '2099-01-01' }, '2026-11-01');
+  assert.ok(reg && typeof reg.approved === 'boolean', 'Per un’elezione aperta la registrazione viene valutata con i nuovi membri.');
+  lines.push('registrazioni nazionali, europee, regionali, provinciali e comunali: passano una sola volta, immutate; nessuna doppia appartenenza; elezioni concluse e candidature chiuse non si toccano');
 }
 
 // ---------- 4. leaving ----------

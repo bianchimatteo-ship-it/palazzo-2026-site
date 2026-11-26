@@ -2,10 +2,10 @@
 // its person (avatar-svg.js: always the avatar saved for the player, a stable one for the others) plus a body drawn here — torso, two arms with an elbow, two legs — in separate groups, so that the
 // player (ui/stage-player.js) can make them walk, sit, gesture. Every group carries the data the player needs (class, data-*); the poses come from core/stage-script.js. No animation is started here:
 // what is drawn is the FINAL pose of the beat, so with the motion off or reduced, or in a scene resumed, the stage is already right.
-import { avatarColors, avatarParts, shade } from './avatar-svg.js?v=20261117-3';
-import { depthScale, STAGE_W, STAGE_H } from '../core/stage-script.js?v=20261117-3';
-import { defaultAvatarFor, genderOf } from '../core/avatar.js?v=20261117-3';
-import { isEnglish, translateText } from '../core/i18n.js?v=20261117-3';
+import { avatarColors, avatarParts, shade } from './avatar-svg.js?v=20261126-3';
+import { depthScale, STAGE_W, STAGE_H } from '../core/stage-script.js?v=20261126-3';
+import { defaultAvatarFor, genderOf } from '../core/avatar.js?v=20261126-3';
+import { isEnglish, translateText } from '../core/i18n.js?v=20261126-3';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const hash = text => { let h = 2166136261 >>> 0; for (const ch of String(text)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return h; };
@@ -24,6 +24,9 @@ export const gestureAngles = (name, posture) => GESTURES[name] ?? (posture === '
 
 // ---------- a character ----------
 // Local coordinates: the feet at (0, 0), the figure about 270 units tall, the shoulders at y = -200, the hips at y = -105. `pose` is the final pose of the beat.
+// The player's face from a photo (on this device only), over the drawn head; never in the scene or the save.
+let photoFace = null;
+const photoHead = uid => `<g class="st-photo-head" data-photo-face="1"><clipPath id="${uid}pf"><circle cx="0" cy="-232" r="37"/></clipPath><circle cx="0" cy="-232" r="40" fill="#f4efe0"/><image href="${esc(photoFace)}" x="-37" y="-269" width="74" height="74" clip-path="url(#${uid}pf)" preserveAspectRatio="xMidYMid slice"/><circle cx="0" cy="-232" r="38.5" fill="none" stroke="#c4a66a" stroke-width="2.5"/></g>`;
 export function actorSvg(member, pose, uid, { speaking = false, expression = null } = {}) {
   // a character without a saved avatar (an older scene): the stable default of its id, with the face of its gender when the data gives it (gender field, title or first name)
   const avatar = member.avatar ?? (() => { const gender = genderOf(member); return gender ? { ...defaultAvatarFor(member.id), face: gender } : defaultAvatarFor(member.id); })();
@@ -45,6 +48,7 @@ export function actorSvg(member, pose, uid, { speaking = false, expression = nul
     + `${leg('l')}${leg('r')}`
     + `<path d="M-48 -167L-44 -104 44 -104 48 -167Z" fill="${jacket}"/><path d="M-44 -108H44" stroke="${shade(jacket, -0.5)}" stroke-width="5"/>`
     + `<g class="st-avatar" transform="translate(-60 -291)">${parts.figure}</g>`
+    + (member.role === 'giocatore' && photoFace ? photoHead(uid) : '')
     + arm('l', angles.l) + arm('r', angles.r)
     + `</g></g></g>`;
 }
@@ -295,16 +299,48 @@ export const CAMERAS = Object.freeze({
   wide: { x: 320, y: 180, s: 1 }, panorama: { x: 320, y: 186, s: 1 }, host: { x: 320, y: 232, s: 1.3 }, left: { x: 150, y: 235, s: 1.7 }, right: { x: 490, y: 235, s: 1.7 }, crowd: { x: 320, y: 290, s: 1.5 },
   follow: { x: 260, y: 270, s: 1.3 }, stage: { x: 330, y: 190, s: 1.45 }, protest: { x: 420, y: 205, s: 1.15 }, player: { x: 330, y: 182, s: 1.8 }, 'talk-host': { x: 190, y: 242, s: 1.6 }, 'talk-left': { x: 450, y: 252, s: 1.8 }, 'talk-right': { x: 560, y: 252, s: 1.8 }, 'intervista-host': { x: 215, y: 246, s: 1.6 }, 'intervista-left': { x: 442, y: 252, s: 1.8 }, 'intervista-right': { x: 558, y: 252, s: 1.8 }, booth: { x: 440, y: 222, s: 1.4 }, urn: { x: 220, y: 235, s: 1.35 }
 });
-export const cameraTransform = name => { const c = CAMERAS[name] ?? CAMERAS.wide; return `translate(${(STAGE_W / 2 - c.s * c.x).toFixed(1)}px,${(STAGE_H / 2 - c.s * c.y).toFixed(1)}px) scale(${c.s})`; };
+// A camera is a named shot (CAMERAS) or a frame on the people themselves, «at:x:y:scale» (core/activity-scenes.js frames the one who speaks or reacts where he really stands: the rooms place the guests differently).
+// The frame is kept inside the stage, so it never shows what is outside the picture.
+const shot = name => {
+  const found = CAMERAS[name];
+  if (found) return found;
+  const at = /^at:(-?\d+(?:\.\d+)?):(-?\d+(?:\.\d+)?):(\d+(?:\.\d+)?)$/.exec(String(name));
+  if (!at) return CAMERAS.wide;
+  const s = Math.min(2, Math.max(1, Number(at[3])));
+  const halfW = STAGE_W / (2 * s), halfH = STAGE_H / (2 * s);
+  return { x: Math.min(STAGE_W - halfW, Math.max(halfW, Number(at[1]))), y: Math.min(STAGE_H - halfH, Math.max(halfH, Number(at[2]))), s };
+};
+export const cameraTransform = name => { const c = shot(name); return `translate(${(STAGE_W / 2 - c.s * c.x).toFixed(1)}px,${(STAGE_H / 2 - c.s * c.y).toFixed(1)}px) scale(${c.s})`; };
 export { depthScale, STAGE_W, STAGE_H, defsOf };
 
 // The whole stage of a beat as one SVG. `before` (optional) is JSON the player reads to animate the passage from the previous beat.
 // Settings of other kinds (the rooms of the optional scenes, ui/room-art.js) register their drawing here: (scene, stage, node, uid) -> { body, overlay }.
 const SETTINGS = {};
 export const registerStageSetting = (setting, fn) => { SETTINGS[setting] = fn; };
-export function renderStageSvg(scene, stage, node, { identity = null, before = null, label = '' } = {}) {
+// never an empty stage: unknown setting → room of its kind; failure → a valid room
+const KIND_ROOM = { associazioni: 'sala', cittadini: 'mercato', cantiere: 'cantiere', sede: 'sede', commissione: 'commissione', redazione: 'redazione', consiglio: 'consiglio' };
+function drawSetting(scene, stage, node, uid, identity) {
+  const studio = () => scene.cast?.some(item => item.role === 'rivale') && scene.cast?.some(item => item.role === 'conduttore');
+  const builtIn = setting => setting === 'piazza' ? squareSvg(scene, stage, node, uid, identity) : setting === 'seggio' ? stationSvg(scene, stage, node, uid) : studioSvg(scene, stage, node, uid);
+  const fallback = () => {
+    const room = [KIND_ROOM[scene.sceneKey], KIND_ROOM[scene.kind], 'sala'].find(key => key && SETTINGS[key]);
+    if (room) return SETTINGS[room]({ ...scene, setting: room }, stage, node, uid, identity);
+    return squareSvg(scene, stage, node, uid, identity);
+  };
+  try {
+    if (SETTINGS[scene.setting]) return SETTINGS[scene.setting](scene, stage, node, uid, identity);
+    if (scene.setting === 'piazza' || scene.setting === 'seggio' || studio()) return builtIn(scene.setting);
+    return fallback();
+  } catch (error) {
+    console.warn?.('Scena: disegno di ripiego', scene.setting, error?.message);
+    try { return fallback(); } catch { return { body: `<rect width="${STAGE_W}" height="${STAGE_H}" fill="#2a3a33"/><rect y="${Math.round(STAGE_H * .62)}" width="${STAGE_W}" height="${Math.round(STAGE_H * .38)}" fill="#3b3326"/>`, overlay: '' }; }
+  }
+}
+export const STAGE_SETTINGS = () => Object.keys(SETTINGS);
+export function renderStageSvg(scene, stage, node, { identity = null, before = null, label = '', playerPhoto } = {}) {
   const uid = `st${hash(scene.id) % 9973}`;
-  const art = SETTINGS[scene.setting] ? SETTINGS[scene.setting](scene, stage, node, uid, identity) : scene.setting === 'piazza' ? squareSvg(scene, stage, node, uid, identity) : scene.setting === 'seggio' ? stationSvg(scene, stage, node, uid) : studioSvg(scene, stage, node, uid);
+  if (playerPhoto !== undefined) photoFace = playerPhoto;
+  const art = drawSetting(scene, stage, node, uid, identity);
   const data = esc(JSON.stringify({ node: scene.nodeId, camera: stage.camera, crowd: stage.crowd, props: stage.props ?? {}, before }));
-  return `<svg class="st-svg" viewBox="0 0 ${STAGE_W} ${STAGE_H}" role="img" aria-label="${esc(label)}" data-stage="${data}" data-setting="${esc(scene.setting)}"${scene.format ? ` data-format="${esc(scene.format)}"` : ''} preserveAspectRatio="xMidYMid slice"><g class="st-cam" data-camera="${esc(stage.camera)}" style="transform-origin:0 0;transform:${cameraTransform(stage.camera)}">${art.body}</g>${art.overlay ?? ''}</svg>`;
+  return `<svg class="st-svg" viewBox="0 0 ${STAGE_W} ${STAGE_H}" role="img" aria-label="${esc(label)}" data-stage="${data}" data-setting="${esc(scene.setting)}"${stage.props?.light ? ` data-light="${esc(stage.props.light)}"` : ''}${scene.format ? ` data-format="${esc(scene.format)}"` : ''} preserveAspectRatio="xMidYMid slice"><g class="st-cam" data-camera="${esc(stage.camera)}" style="transform-origin:0 0;transform:${cameraTransform(stage.camera)}">${art.body}</g>${art.overlay ?? ''}</svg>`;
 }

@@ -33,6 +33,7 @@ globalThis.location = new URL('http://127.0.0.1:8794/');
 const client = await module('src/data/repositories/account-sync.js');
 const { startLocalWorker } = await import('./lib/local-worker.mjs');
 const local = await startLocalWorker({ port: 8794 });
+local.env.ADS_CONFIG = JSON.stringify({ android: { accountId: 'abcdef0123456789abcdef0123456789', enabled: true, rewarded: { enabled: true } } });   // the rewarded format is on (remote configuration): the Worker books a video only then (docs/inmobi.md)
 
 // ----- the virtual clock: the Worker reads Date.now() too -----
 const realNow = Date.now.bind(Date);
@@ -530,6 +531,10 @@ const HOUR = 3600000;
   assert.equal(burst.filter(answer => answer.claimed === true).length, 1, 'Otto richieste insieme: una sola vince.');
   assert.equal(burst.filter(answer => answer.already === true).length, 7);
   assert.equal(local.sqlite.prepare("SELECT COUNT(*) AS n FROM reward_community WHERE user_id = (SELECT id FROM users WHERE username = 'social.quattro')").get().n, 1);
+  // the thank-you reward of the update bound to the account (core/welcome-reward.js): once per account, also from two «reinstallations» claiming together
+  const welcome = await Promise.all(Array.from({ length: 4 }, (_, i) => post(token4, '/api/account/rewards/community/benvenuto', { careerId, device: `reinstallazione-${i}` })));
+  assert.equal(welcome.filter(answer => answer.claimed === true).length, 1, 'Premio di benvenuto: una sola richiesta vince per account.');
+  assert.equal(welcome.filter(answer => answer.already === true).length, 3, '…le altre (dispositivi reinstallati) sono «già ricevuto».');
   const token5 = await register('social.cinque');
   const P = make('S5', 'social.cinque', token5), Q = make('S6', 'social.cinque', token5);
   activate('S5'); const f5 = game().resources.funds; P.service.visitCommunity('instagram'); Q.service.visitCommunity('instagram');

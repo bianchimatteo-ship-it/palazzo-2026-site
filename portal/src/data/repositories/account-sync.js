@@ -10,7 +10,7 @@
 // The last one is kept per CAREER (not per slot name and not per account) together with what the copy was when it was synced (its local revision and how far it had got). A copy
 // goes online only if it descends from that: an older copy with the same name does not inherit the newest revision. Without that proof (a copy that was never linked, a record written by
 // the old protocol) nothing is uploaded automatically: the player reconciles first.
-import { hiddenOwner, releaseCareersOf } from './career-visibility.js?v=20261117-3';
+import { hiddenOwner, releaseCareersOf } from './career-visibility.js?v=20261125-12';
 const PRODUCTION_ORIGIN = 'https://palazzo-2026-site.bianchimatteo657.workers.dev';
 const ACCOUNT_KEY = 'politicando.account.v1';
 // The old record (revision per slot and per account, with no provenance): never trusted again to authorize an upload; kept only so that nothing is erased.
@@ -40,6 +40,9 @@ export function nativeApiOrigin() {
   try {
     const declared = globalThis.document?.querySelector?.('meta[name="politicando-api-origin"]')?.getAttribute('content') ?? '';
     if (/^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)*\.workers\.dev$/.test(declared)) return declared;
+    // The LOCAL test mode of the iOS Simulator (scripts/ios-test-build.mjs, docs/inmobi.md): only the app (never the web), only when the build declares BOTH tags, only the two exact loopback addresses of
+    // `wrangler dev` (port 8787). A build for the store never has them (check-android refuses it), so a published app can never point here, and a local build never reaches Production.
+    if (isNativeApp() && /^http:\/\/(localhost|127\.0\.0\.1):8787$/.test(declared) && globalThis.document?.querySelector?.('meta[name="politicando-local-test"]')?.getAttribute('content') === '1') return declared;
   } catch { /* no document: Production */ }
   return PRODUCTION_ORIGIN;
 }
@@ -330,5 +333,8 @@ export async function deleteCloudSave(slot) {
 // The blocks of 30/60 minutes of a career, confirmed to the Worker: { claims: [{ kind, n }] } → results [{ kind, n, status: 'first' | 'recorded' | 'short' | 'invalid' }].
 export const claimRewardBlocks = body => call('/api/account/rewards/blocks', { method: 'POST', body });
 // A one-off community reward (today «instagram»): the Worker gives it once for each account: { claimed: true } the first time, { claimed: false, already: true, mine } afterwards.
-export const claimAdRewardOnServer = (id, careerId, device = null) => call('/api/account/rewards/ad', { method: 'POST', body: { id: String(id), ...(careerId ? { careerId: String(careerId) } : {}), ...(device ? { device: String(device) } : {}) } });
+export const claimAdRewardOnServer = (id, careerId, device = null, platform = null, reward = null) => call('/api/account/rewards/ad', { method: 'POST', body: { id: String(id), ...(careerId ? { careerId: String(careerId) } : {}), ...(device ? { device: String(device) } : {}), ...(platform ? { platform: String(platform) } : {}), ...(reward ? { reward: String(reward) } : {}) } });   // `platform` lets the Worker check the rewarded format of THAT platform
+// The remote advertising configuration (public, no account) and the booking of a rewarded video of a device without an account: the Worker validates both (docs/inmobi.md).
+export const fetchAdsConfig = () => call('/api/account/ads/config', { auth: false, timeout: 8000 });
+export const claimAdRewardForDevice = (id, careerId, device, platform = null, reward = null) => call('/api/account/ads/reward', { method: 'POST', auth: false, body: { id: String(id), ...(careerId ? { careerId: String(careerId) } : {}), ...(device ? { device: String(device) } : {}), ...(platform ? { platform: String(platform) } : {}), ...(reward ? { reward: String(reward) } : {}) } });
 export const claimCommunityReward = (reward, careerId, device = null) => call(`/api/account/rewards/community/${encodeURIComponent(reward)}`, { method: 'POST', body: { ...(careerId ? { careerId: String(careerId) } : {}), ...(device ? { device: String(device) } : {}) } });

@@ -283,3 +283,93 @@ Riepilogo: Bloccato 6 · Completato 154 · In lavorazione 9 · totale 169
 | 22.4 | Priorità: reattività pulsanti, candidatura, notte elettorale, alleanze/coalizioni con tutti i test | In lavorazione |  |  | Reattività, notte e alleanze completate; resta la candidatura (2.2/2.3): il blocco segnalato non si riproduce con carriere di prova, serve il tuo salvataggio. |
 | 22.5 | Poi: Parlamento, iniziative popolari, Governo, Ministeri, CdM, consultazioni, promesse, animazioni, guida, risultati territoriali, traduzioni, statistiche, AdMob | In lavorazione |  |  | Parlamento, iniziative, Governo, Ministeri, CdM, consultazioni, promesse, animazioni, guida, traduzioni, statistiche, AdMob: completati; restano 14.3 (effetti locali per comune), 19.3 (SSV) e 17.3/17.4 (credenziali e base giuridica). |
 | 22.6 | Mantenere aggiornati checklist, test, screenshot; non eliminare funzioni; non dichiarare completato senza verifica; nessun deploy/merge/main | Completato |  |  | Checklist, test e screenshot aggiornati; nessuna funzione eliminata; nulla dichiarato completato senza verifica; merge in main eseguito solo dopo l'autorizzazione e la verifica; deploy non eseguibile da qui. |
+
+## 23. Lavoro residuale e rilascio (build 20261118-35)
+
+Solo voci nuove; dettaglio in `docs/qa/rapporto-miglioramento-completo.md` (Aggiornamento 3).
+
+| Punto | Richiesta | Stato | File modificati | Test | Screenshot / note |
+|---|---|---|---|---|---|
+| 23.1 | «Altri» contati due volte in voti e Notte Elettorale | Completato | electorate.js, night-engine.js | check-election-night-engine | Causa alla radice; verifica su `result.electorate.ballots` |
+| 23.2 | Alleanze: `joinCamp`, invito singolo/fusione, iscrizioni immutabili, riverifica approvazioni | Completato | world-engine.js, store.js | check-coalition-invites | — |
+| 23.3 | Programma Progetto Civico Italia | Bloccato |  |  | Sito ufficiale non raggiungibile; nulla inventato |
+| 23.4 | Animazioni scene (gesti variati, prefers-reduced-motion) | Parziale | activity-scenes.js, scene.css | check-activity-audit | 44 attività riusano i 6 cast |
+| 23.5 | Esercizi pratici del tutorial | Completato | tutorial.js | check-tutorial-tasks | tutorial-esercizio-390.png |
+| 23.6 | Effetti locali territorio; copertura 5.075/7.894 | Completato | territory-results.js | check-territory-results | 7.894 comuni reali; 5.075 = campioni dei test |
+| 23.7 | Schermata «Caricamento…» intermittente | Non riprodotto |  | check-start-screen | 28 ricaricamenti OK; causa non dimostrata |
+| 23.8 | Contrasto hover pulsanti (AA) | Completato | theme.css | check-button-contrast | pulsante-primario-hover-1280.png |
+| 23.9 | Scadenze referendum in mesi di calendario | Completato | referendum-engine.js | check-referendum | referendum-390.png |
+| 23.10 | Pubblicità: InMobi unico fornitore, tutto spento, iOS 1.0 (1) invariato | Completato (config) / Bloccato (dispositivo) | plugins/inmobi-ads, ads-config.js, worker.js | check:inmobi, check:inmobi-native | Prove UMP/annuncio su dispositivo da fare |
+| 23.11 | Test check-presidency, promise-reminders, campaign-ui | Preesistenti | | | FAIL anche su `main`; campaign-ui SKIPPED (Chrome) |
+| 23.12 | Build www, cap sync, check:www/android/capacitor/publication/security/legal | Completato | | PASS | `check:legal -- --release`: 13 voci del titolare |
+| 23.13 | AAB / IPA / deploy TEST | Bloccato |  |  | Mancano SDK, chiave, macOS, credenziali Cloudflare TEST; nessun deploy |
+
+
+## 24. Rifinitura finale (build 20261118-36)
+
+| Punto | Richiesta | Stato | File | Test | Screenshot / note |
+|---|---|---|---|---|---|
+| 24.1 | Progetto Civico Italia: programma documentato sui dieci temi | Completato (9 temi con valore, 1 «non rilevato»: istituzioni) | party-programs.js, party-program-sources.json, alliance-rules.js, polls-mode.js | check-party-programs, check-pci-program-ui | progetto-civico-italia-programma-{1280,it-390,en-390}.png |
+| 24.2 | Scene: aperture, dialoghi, personaggi, gesti, ambienti, 62 attività | Completato (stanze invariate) | activity-scene-variety.js, activity-scenes.js, room-art.js, scene.css | check-activity-variety (62×3×30) | scena-variata-*.png |
+| 24.3 | check-presidency, promise-reminders, territory-legibility, election-night-language, campaign-ui | Completato (cause: test, non il motore) | scripts/ | tutti PASS | — |
+| 24.4 | «Caricamento…» | Non riprodotto; nessuna modifica | — | check-start-screen PASS | meccanismo di blocco senza messaggio documentato |
+| 24.5 | Traduzioni inglesi | Completato salvo intermittenza di check-i18n-pages | release-pairs.js | check-i18n, -offline, -audit PASS | censimento 0 lacune |
+| 24.6 | 13 voci legali | Elenco preciso preparato; decisioni del titolare | docs/qa/decisioni-titolare-legali.md | check:legal PASS, `--release` blocca (13) | — |
+| 24.7 | Preparazione deploy TEST da VS Code | Documento pronto; deploy non eseguito | docs/qa/deploy-test-vscode.md, .gitignore | wrangler dry-run | — |
+| 24.8 | AAB / IPA / prove su dispositivo | Bloccato (SDK, keystore, macOS, dispositivo) | — | — | — |
+
+
+## 25. Rifinitura del 19/11 (build 20261119-2)
+
+| Punto | Richiesta | Stato | Test | Note |
+|---|---|---|---|---|
+| 25.1 | Privacy/termini senza segnaposto | Completato (11 voci legali ancora «mancante») | check:legal | domande in docs/qa/decisioni-titolare-legali.md |
+| 25.2 | Alleanze: invito individuale non bloccato, scelta esplicita, anteprima, fusione con consensi | Completato | check-coalition-invites, check-alliance-invite-ui | alleanze-invito-scelta-{it,en}-390.png |
+| 25.3 | Vecchi salvataggi: migrazione voti «Altri» versionata e non distruttiva | Completato (limiti documentati) | check-old-saves-votes | territori e candidati non ricalcolati |
+| 25.4 | Account: registrazione, accesso, recupero, logout, isolamento, cancellazione | Completato; invio reale e-mail SKIPPED | check:accounts, email-gateway, account-isolation, logout-careers, account-deletion, security, account-recovery | richiede TEST con gateway |
+| 25.5 | Animazioni: movimento attivo/ridotto/disattivato/sistema | Verificato | check-scene-motion | scena-movimento-*.png |
+| 25.6 | check-i18n-pages intermittente: causa alla fonte | Corretto (anteprime tagliate a fine frase) | check-news-preview, check-i18n-pages ×3 | |
+| 25.7 | «Caricamento…»: guardia di avvio, messaggio, Riprova, una sola ripetizione automatica | Completato | check-boot-failure | errore-caricamento-{it,en}.png |
+| 25.8 | Preparazione TEST da VS Code | Documento aggiornato (§7, §8); deploy non eseguito | wrangler dry-run | |
+
+
+## 26. Aggiornamento generale del 23/11/2026
+
+Rapporto con la matrice completa (🟢/🟡/🔴), le cause trovate, i test e i percorsi delle build: [`docs/qa/aggiornamento-generale-finale.md`](aggiornamento-generale-finale.md).
+
+| Punto | Richiesta | Stato | Test | Note |
+|---|---|---|---|---|
+| 26.1 | Staff segue la linea del gruppo; 2/4 settimane nella UI reale | Completato | check-staff-weeks-ui | Prova in Chrome senza elettore di prova |
+| 26.2 | Lasciare/cambiare partito visibile nella Panoramica | Completato | check-party-leave-ui | |
+| 26.3 | Alleanze: scheda di sintesi e azioni in colonna | Completato | check-alliance-* | |
+| 26.4 | Telecamera delle scene sull'attore giusto | Completato | check-scene-camera | |
+| 26.5 | Leggi in vigore: schede chiuse con «Cosa cambierebbe» | Completato | check-statutes, check-parliament-page | |
+| 26.6 | Raccolta firme referendaria collegata alla procedura | Completato | check-referendum-link | Fonti ufficiali non rivalidate |
+| 26.7 | «Chiedi al gioco» v2 (73 domande IT/EN) | Completato | check-ask-game | |
+| 26.8 | iOS senza pubblicità; popup recensione App Store | Completato | check-inmobi*, check-appodeal, check-review-prompt | |
+| 26.9 | Candidature indipendenti / lista civica / movimento | Non iniziato | — | Serve decisione sui requisiti per tipo di elezione |
+| 26.10 | Prestazioni del ridisegno | Non iniziato | — | Limite noto in reattivita.md |
+| 26.11 | Test su Xiaomi/iPad/Safari | Bloccato | — | Nessun dispositivo disponibile |
+| 26.12 | check-load, check-long-run, check-poll-election-consistency | Preesistenti | — | Rossi anche prima (stessi valori) |
+
+## 27. Aggiornamento ufficiale del 24/11/2026 (build 20261124-3)
+
+Matrice completa (🟢/🟡/🔴/⚫), regressione e build: [`docs/qa/aggiornamento-ufficiale-2026-11-24.md`](aggiornamento-ufficiale-2026-11-24.md).
+
+| Punto | Richiesta | Stato | Test | Note |
+|---|---|---|---|---|
+| 27.1 | Crash della leadership da indipendente; eventi di partito dopo l’uscita | Completato | check-party-events-after-leave | Archiviati con motivo, anche nei vecchi salvataggi |
+| 27.2 | Coalizioni registrate in corsa insieme in tutte le elezioni | Completato | check-coalition-elections | |
+| 27.3 | Candidatura esclusa chiude la campagna | Completato | check-nomination-exclusion | Nessuna Notte Elettorale, rimborso, storico |
+| 27.4 | Risultato finale solo alla dodicesima ora | Completato | check-night-final-hour | |
+| 27.5 | Calendario dalla data della barra | Completato | check-topbar-date-jump | Stesso motore di «Avanza fino al…» |
+| 27.6 | Fondare un partito da indipendente | Completato | check-found-from-independent | |
+| 27.7 | Consiglio dei ministri con appartenenze reali | Completato | check-council-ministers | |
+| 27.8 | Avatar coerente con il genere | Completato | check-avatar-gender, check-avatar | |
+| 27.9 | Dialoghi coerenti (soccorsi) | Completato · revisione generale In lavorazione | check-dialogue-coherence | |
+| 27.10 | Atmosfera delle scene, pulsanti oro, BETA, schermate | Completato · animazioni In lavorazione | check-scene-atmosphere, check-button-palette | |
+| 27.11 | Avatar da foto sul dispositivo | Completato · fotocamera reale Bloccato | check-photo-avatar | Nessun dispositivo |
+| 27.12 | Premio di benvenuto 2.500 € | Completato (logica) · store Bloccato | check-welcome-reward | Solo Android 1.0.6 (7) / iOS 1.0.2 (3) release |
+| 27.13 | Regressione `check:all` | Completato | 325 controlli | 313 al primo giro, 12 corretti e rieseguiti |
+| 27.14 | AAB, xcarchive, IPA firmati | Completato | verifiche manuali | Non caricati sugli store |
+| 27.15 | Appodeal su dispositivo, 9/13 decisioni legali, iPhone/Xiaomi/Safari | Bloccato | — | Serve il titolare o un dispositivo |

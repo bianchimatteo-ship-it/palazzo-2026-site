@@ -1,5 +1,5 @@
-import { countBallots, distributeVotes, withVotes } from './electorate.js?v=20261117-3';
-import { ELECTION_MODELS, EUROPEAN_CONSTITUENCIES, EUROPEAN_THRESHOLD, OUTCOME_LABELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261117-3';
+import { countBallots, distributeVotes, withVotes } from './electorate.js?v=20261126-3';
+import { ELECTION_MODELS, EUROPEAN_CONSTITUENCIES, EUROPEAN_THRESHOLD, OUTCOME_LABELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261126-3';
 
 const SCALE_FALLBACK = 100000;
 // every candidate of a local or regional race is a row: the shares add up to 100 (up to rounding), so no «other lists» row is made
@@ -339,6 +339,16 @@ function ownListRatio(campaign, playerRow) {
   const own = territories(campaign).reduce((sum, area) => sum + Number(area.supportByCandidate?.[campaign.playerCandidateId] ?? 0) * area.weight, 0) / weight;
   return clamp(own / Math.max(.5, playerRow.percent), .05, 1);
 }
+// the player's list seats inside a coalition: D'Hondt among its lists (it used to round a ratio)
+function ownListSeats(campaign, playerRow, groupSeats) {
+  const members = playerRow?.memberCandidateIds ?? [];
+  if (members.length <= 1 || !(groupSeats > 0)) return groupSeats;
+  const areas = territories(campaign);
+  const weight = areas.reduce((sum, area) => sum + area.weight, 0) || 1;
+  const lists = members.map(id => ({ id, share: areas.reduce((sum, area) => sum + Number(area.supportByCandidate?.[id] ?? 0) * area.weight, 0) / weight }));
+  if (lists.filter(list => list.share > 0).length < 2) return Math.round(groupSeats * ownListRatio(campaign, playerRow));
+  return allocateDHondt(lists, groupSeats).find(list => list.id === campaign.playerCandidateId)?.seats ?? 0;
+}
 // Seats of the player's list in the player's own constituency (closed lists: the place on the list decides).
 function constituencySeats(campaign, playerRow) {
   const areas = territories(campaign);
@@ -378,9 +388,10 @@ function personalResult(campaign,playerRow,winner,rows) {
   if (base.belowThreshold && role !== 'uninominale') return { ...base, code:'sotto-soglia' };
   if(role==='consigliere'||role==='eurodeputato') {
     const groupSeats = role==='eurodeputato' ? europeanHomeSeats(campaign, playerRow).seats : playerRow.seats;
-    const listSeats = Math.round(groupSeats * ownListRatio(campaign, playerRow));
+    const listSeats = ownListSeats(campaign, playerRow, groupSeats);
     const preference = preferenceStanding(campaign, listSeats);
     const coalition = (playerRow.memberCandidateIds?.length ?? 1) > 1;
+    base.listSeats = listSeats;
     if (listSeats > 0 && preference.rank <= listSeats) return { ...base, mandate:true, via:coalition?'coalizione':'lista', side:campaign.electionType==='europee'?null:won?'maggioranza':'opposizione', code:coalition?'eletto-coalizione':'eletto-lista', preference };
     return { ...base, code:listSeats > 0 && preference.rank === listSeats + 1 ? 'primo-non-eletto' : listSeats > 0 ? 'non-eletto' : 'sconfitta', preference };
   }

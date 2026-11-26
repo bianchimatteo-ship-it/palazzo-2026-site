@@ -1,0 +1,5 @@
+{
+  "note": "Identificativi delle due app: SEPARATI, mai da scambiare. Android: applicationId del progetto Gradle e di Google Play. iOS: Bundle ID del progetto Xcode e dell'app registrata in App Store Connect (confermati dal titolare il 19/11/2026). capacitor.config.json resta la configurazione comune e porta l'appId ANDROID: l'identità iOS si imposta con `npm run cap:sync:ios`.",
+  "android": { "applicationId": "it.matteobianchi.politicando2026" },
+  "ios": { "bundleId": "it.politicando2026.app", "appleAppId": "6835582269", "sku": "POLITICANDO2026-IOS" }
+}

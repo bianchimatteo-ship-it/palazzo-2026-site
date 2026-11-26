@@ -71,7 +71,7 @@ else {
       const { evaluate, version } = browser;
       await createCareerInPage(browser, { party, group, weeks: 12 });
       await openCareer(browser);
-      await evaluate(`(async () => { document.querySelector('[data-nav="sondaggi"]')?.click(); await new Promise(r => setTimeout(r, 700)); document.querySelector('[data-obs-area="territori"]')?.click(); await new Promise(r => setTimeout(r, 600)); return true; })()`);
+      await evaluate(`(async () => { document.querySelector('[data-nav="sondaggi"]')?.click(); await new Promise(r => setTimeout(r, 700)); document.querySelector('[data-section-tab="osservatorio"][data-section-tab-value="territori"]')?.click(); await new Promise(r => setTimeout(r, 600)); return true; })()`);
       const source = await evaluate(`(async () => {
         const { store } = await import('/src/core/store.js?v=${version}'); const engine = await import('/src/core/world-engine.js?v=${version}'); const reg = await import('/src/core/regional-vote.js?v=${version}'); const real = await import('/src/data/repositories/real-data.js?v=${version}');
         const s = store.getState(); const report = engine.observatoryReport(s.world, s.society); const force = s.world.parties.find(item => item.isPlayer);

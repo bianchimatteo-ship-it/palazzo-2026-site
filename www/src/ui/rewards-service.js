@@ -1,17 +1,16 @@
-// Wires the rewards to the page: the play clock (visibility, foreground, one tab at a time, the career that is open), the journal of the device, the time of an account (kept by the Worker, merged across devices),
-// the daily reward and the one-off community reward (the Worker decides for an account, the device for a guest), the notices the player is shown and the rewarded videos. The rules are in core/rewards-engine.js and the store;
-// this file only decides WHEN time is counted, what is sent to the Worker and who may claim what.
-import { createPlayClock, createStorageLease } from '../core/play-clock.js?v=20261117-3';
-import { normalizeRewards, playProgress, romeDay, rewardHistory } from '../core/rewards-engine.js?v=20261117-3';
-import { COMMUNITY_REWARD, DAILY_REWARD, PLAY_CLOCK, PLAY_REWARDS } from '../data/simulation/reward-rules.js?v=20261117-3';
-import { rewardsJournal } from '../data/repositories/rewards-journal.js?v=20261117-3';
-import { createRewardedAds } from '../data/repositories/ads-rewarded.js?v=20261117-3';
+// What this module does and why: docs/architettura-ricompense.md (§ rewards-service.js).
+import { createPlayClock, createStorageLease } from '../core/play-clock.js?v=20261126-3';
+import { normalizeRewards, playProgress, romeDay, rewardHistory } from '../core/rewards-engine.js?v=20261126-3';
+import { COMMUNITY_REWARD, DAILY_REWARD, PLAY_CLOCK, PLAY_REWARDS } from '../data/simulation/reward-rules.js?v=20261126-3';
+import { rewardsJournal } from '../data/repositories/rewards-journal.js?v=20261126-3';
+import { setAdRewardPoints } from '../data/simulation/reward-rules.js?v=20261126-3';
+import { createRewardedAds } from '../data/repositories/ads-rewarded.js?v=20261126-3';
 
 const RETRY_MS = 30000;
 const BLOCK_KINDS = { capitale: PLAY_REWARDS.capital.everyMinutes, preparazione: PLAY_REWARDS.preparation.everyMinutes };
 const NOTICE_KINDS = new Set(['giornaliera', 'capitale', 'preparazione', 'community']);
 
-export function createRewardsService({ store, journal = rewardsJournal, username = () => null, claimDaily = null, syncTime = null, claimBlocks = null, claimCommunity = null, claimAd = null, onAdCompleted = () => {}, community = {}, ads = {}, env = {} } = {}) {
+export function createRewardsService({ store, journal = rewardsJournal, username = () => null, claimDaily = null, syncTime = null, claimBlocks = null, claimCommunity = null, claimAd = null, claimGuestAd = null, onAdCompleted = () => {}, community = {}, ads = {}, env = {} } = {}) {
   const wall = env.wall ?? (() => Date.now());
   const storage = env.storage ?? globalThis.localStorage;
   const lease = env.lease ?? createStorageLease(storage, { wall });
@@ -21,18 +20,34 @@ export function createRewardsService({ store, journal = rewardsJournal, username
   const communityRetry = {};
   // A completed video is credited (in the career of the player, once for each id) only after the Worker has booked it for the account: a repeated or concurrent claim, or one over the daily limit, is refused there.
   // Without an account (a guest) the record of the device is the only one. If the Worker cannot be reached the reward is NOT given (the video must be watched again): a credit never goes unbooked.
-  const grantAd = async id => {
-    if (username() && claimAd) {
-      let answer;
-      try { answer = await claimAd(id, store.getState().career?.id ?? null, journal.deviceId()); } catch (error) { return { ok: false, reason: error?.data?.code === 'limit' ? 'limite' : 'rete' }; }
-      if (answer?.duplicate) return { ok: false, reason: 'duplicato' };
-      if (!answer?.ok) return { ok: false, reason: 'rifiutato' };
+  // TWO rewards, ONE rewarded video (one provider, the Appodeal placement `default`, one busy guard for every way in): the kind is the one the button asked for ('sondaggi' or 'fondi'), fixed for the request by
+  // data/repositories/ads-rewarded.js and sent to the Worker, which books the completion id once whatever the kind (worker.js bookAdReward). Then each kind has its own credit in the store.
+  const serverClaim = async (id, kind) => {
+    const claim = username() && claimAd ? claimAd : claimGuestAd;
+    if (!claim) return null;
+    try { return await claim(id, store.getState().career?.id ?? null, journal.deviceId(), kind); } catch (error) { return { failed: true, reason: error?.data?.code === 'limit' || error?.status === 429 ? 'limite' : 'rete' }; }
+  };
+  const grantAd = async (id, kind = 'sondaggi') => {
+    // The server always validates: an account claims with its session, a guest with the id of its device (the Worker books both once for each completion id, applies the daily limit of the poll bonus and
+    // answers with the points in force). Without an answer (offline, refused) nothing is credited. `claimGuestAd` is absent only in tests of the engine without a server — never for the personal funds.
+    const answer = await serverClaim(id, kind);
+    if (kind === 'fondi' && !answer) return { ok: false, reason: 'rete' };
+    if (answer) {
+      if (answer.failed) return { ok: false, reason: answer.reason };
+      if (answer.duplicate) return { ok: false, reason: 'duplicato' };
+      if (!answer.ok) return { ok: false, reason: 'rifiutato' };
+      if (answer.reward !== undefined && answer.reward !== kind) return { ok: false, reason: 'rifiutato' };   // the Worker booked another kind: nothing is credited here
+      if (kind === 'sondaggi' && answer.points !== undefined) setAdRewardPoints(answer.points);
     }
+    if (kind === 'fondi') return store.claimFundsAdReward(id);   // 1.000 € to the personal funds of the career (core/funds-credit.js)
     const out = store.claimAdReward(id);
     if (out?.ok) onAdCompleted();
     return out;
   };
   const rewardedAds = createRewardedAds({ ...ads, grant: grantAd });
+  // ui/funds-ad.js: the offer of the personal funds on the same video (Android, where the native Appodeal bridge is there), loaded on demand
+  let funds = null;
+  const fundsAds = () => ads.native ? (funds ??= import('./funds-ad.js?v=20261126-3').then(m => m.createFundsAds({ store, rewarded: rewardedAds, onChange: emit }))) : Promise.resolve(null);
   const scope = () => journal.scope(username());
   const playing = () => Boolean(store.hasCareer?.() && store.getState().game && store.getState().game.status !== 'ended' && (env.playing ? env.playing() : true));
   const emit = () => { for (const fn of listeners) { try { fn(); } catch { /* a listener must not stop the clock */ } } };
@@ -230,7 +245,8 @@ export function createRewardsService({ store, journal = rewardsJournal, username
         ads: { ...adsState }, playing: playing()
       };
     },
-    async refreshAds() { const availability = await rewardedAds.availability(); adsState = { available: availability.ok, reason: availability.reason, code: availability.code ?? (availability.ok ? 'ready' : 'not-configured') }; emit(); return adsState; }
+    funds: fundsAds,
+    async refreshAds() { const availability = await rewardedAds.availability(); adsState = { available: availability.ok, reason: availability.reason, code: availability.code ?? (availability.ok ? 'ready' : 'not-configured') }; if (adsState.code !== 'not-configured') fundsAds().then(f => f?.refresh()).catch(() => {}); emit(); return adsState; }
   };
   return service;
 }

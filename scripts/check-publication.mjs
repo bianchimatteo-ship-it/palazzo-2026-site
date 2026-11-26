@@ -1,5 +1,5 @@
 // The architecture of publication: the game reaches the users only as the Android app; the production Worker answers the API and the portal (confirm the e-mail, new password, legal pages) and NEVER the game; the full web game lives
-// in a private test site (Cloudflare Access) with its own D1/KV/R2 and no production e-mail. Nothing here touches the network or a real resource.
+// in a private test site (password gate of the Worker) with its own D1/KV/R2 and no production e-mail. Nothing here touches the network or a real resource.
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -26,7 +26,8 @@ const portalFiles = (await walk(join(ROOT, 'portal'))).sort();
 const GAME = /(^|\/)(main\.js|sw\.js|store\.js|app\.js|styles\.css|theme\.css|site\.webmanifest|database\.json)$|^src\/(core|ui|data\/real|data\/simulation|data\/i18n)\//;
 assert.deepEqual(portalFiles.filter(name => GAME.test(name)), [], 'Il portale non contiene file del gioco.');
 const worker = await import('../worker.js');
-for (const name of portalFiles) assert.ok(worker.PORTAL_PATHS.test(`/${name}`), `Il portale serve ${name}.`);
+const { PORTAL_PATHS } = await import('../worker-constants.js');
+for (const name of portalFiles) assert.ok(PORTAL_PATHS.test(`/${name}`), `Il portale serve ${name}.`);
 lines.push(`produzione: risorse invariate, ${portalFiles.length} file pubblici (portale e pagine legali), nessun file del gioco`);
 
 // ---------- 2. production Worker: the game does not come out, not even if the assets held it ----------
@@ -38,7 +39,7 @@ for (const path of ['/src/main.js', '/src/core/store.js', '/sw.js', '/src/data/r
   assert.equal(response.status, 404, `${path}: non è raggiungibile dal browser in produzione.`);
 }
 assert.deepEqual(served, [], 'Per le richieste non API non si leggono i file del gioco.');
-for (const path of ['/', '/index.html', '/portal.js', '/privacy.html', '/termini.html', '/elimina-account.html', '/support.html', '/support-en.html', '/src/data/repositories/account-sync.js']) assert.equal((await ask(path)).status, 200, `${path}: pagina del portale servita.`);
+for (const path of ['/', '/index.html', '/portal.js', '/privacy.html', '/termini.html', '/elimina-account.html', '/support.html', '/support-en.html', '/app-ads.txt', '/src/data/repositories/account-sync.js']) assert.equal((await ask(path)).status, 200, `${path}: pagina del portale servita.`);
 // the API stays (the app uses it): the Android origins are accepted, a web origin of the game (GitHub Pages) is not
 const origin = async value => (await ask('/api/account/status', { method: 'OPTIONS', headers: { origin: value, 'access-control-request-method': 'GET' } })).headers.get('access-control-allow-origin');
 assert.equal(await origin('https://localhost'), 'https://localhost', 'L’app Android (https://localhost) è accettata.');
@@ -51,7 +52,7 @@ lines.push('Worker di produzione: 404 per il gioco, portale e API servite, origi
 
 // ---------- 3. the Android app: bundled game, production Worker ----------
 const cap = JSON.parse(await read('capacitor.config.json'));
-assert.equal(cap.webDir, 'www'); assert.equal(cap.appId, 'it.matteobianchi.politicando2026');
+assert.equal(cap.webDir, 'www'); assert.equal(cap.appId, 'it.matteobianchi.politicando2026', 'capacitor.config.json porta l’appId ANDROID (quello iOS è in app-identity.json).');
 const sync = await import('../src/data/repositories/account-sync.js?pub=1');
 globalThis.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
 globalThis.location = new URL('https://localhost/'); globalThis.Capacitor = { isNativePlatform: () => true };
@@ -76,7 +77,7 @@ const bad = await ask('/api/account/email/verify', { method: 'POST', body: JSON.
 assert.ok([400, 503].includes(bad.status) || bad.status < 500, 'Il token non valido è rifiutato dal servizio.');
 lines.push('portale: aggiornato rispetto ai sorgenti, stessi collegamenti e token, nessun gioco');
 
-// ---------- 5. the private test site: protected by Access (manual), isolated, no production e-mail ----------
+// ---------- 5. the private test site: protected by the Worker's own password gate (TEST_ACCESS_ENABLED + secret), isolated, no production e-mail ----------
 const testSource = await read('wrangler.test.jsonc');
 const test = await jsonc('wrangler.test.jsonc');
 assert.notEqual(test.name, prod.name);
@@ -92,6 +93,9 @@ const gameEnv = { ...env, GAME_WEB: '1' };
 assert.equal((await ask('/src/main.js', {}, gameEnv)).status, 200, 'Il sito di prova serve il gioco completo.');
 const ignore = await read('.assetsignore');
 assert.ok(/wrangler\.test\.jsonc/.test(ignore), 'La configurazione di prova non è pubblicata come file.');
+for (const pattern of ['wrangler.test.local.jsonc', '.dev.vars', '.dev.vars.*']) assert.ok(ignore.split('\n').includes(pattern), `.assetsignore esclude ${pattern}.`);
+assert.equal(test.vars.TEST_ACCESS_ENABLED, '1', 'Il sito di prova ha il cancello con password.'); assert.deepEqual(test.assets.run_worker_first, ['/*'], 'Nel sito di prova ogni richiesta passa dal Worker.');
+assert.ok(!('TEST_ACCESS_ENABLED' in prod.vars), 'La produzione non ha il cancello di prova.');
 lines.push('sito di prova: gioco completo, risorse e nomi diversi dalla produzione, segnaposto non distribuibili, nessuna e-mail di produzione, nessun segreto');
 
 // ---------- 6. the repository carries no secret and the e-mail gateway is still Apps Script (no Resend) ----------

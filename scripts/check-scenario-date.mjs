@@ -54,7 +54,7 @@ else await withBrowser(async browser => {
   await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu=nuova]:not([disabled])"))'));
   await evaluate('document.querySelector("[data-menu=nuova]:not([disabled])").click(), true'); await evaluate(`document.querySelector('[data-wizard-mode="realistica"]')?.click(); true`); await new Promise(resolve => setTimeout(resolve, 500));
   await waitFor(() => evaluate('Boolean(document.querySelector(".career-wizard"))'));
-  const max = await waitFor(() => evaluate('document.querySelector("input[name=birthDate]")?.max || ""'));
+  const max = await waitFor(() => evaluate('document.querySelector("[data-birth]")?.dataset.birthToday || ""'));
   assert.equal(max, SCENARIO, `La procedura di creazione non accetta una nascita dopo il ${SCENARIO} (${max}).`);
   // a career already made keeps its date, week and history
   await evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); for (let i = 0; i < 3; i++) store.advanceTurn(1); store.saveToSlot(); return true; })()`);

@@ -33,3 +33,26 @@ assert.ok(abstainMode.staff > 0, `Con «Lo staff si astiene» lo staff vota (${a
 assert.ok(lineMode.stops < stopMode.stops && abstainMode.stops < stopMode.stops, `Con lo staff ci si ferma meno (${stopMode.stops} → ${lineMode.stops} / ${abstainMode.stops}).`);
 assert.equal(lineMode.stops, lineMode.essentialStops, 'Con lo staff ci si ferma solo per i voti essenziali (fiducia, leggi proprie, bilancio).');
 console.log(`Votazioni delegate allo staff verificate: ferma ${stopMode.stops} volte; linea del gruppo ${lineMode.staff} voti dello staff e ${lineMode.stops} fermate per voti essenziali; astensione ${abstainMode.staff} voti e ${abstainMode.stops} fermate.`);
+
+// ---- the plain Advance button (no `delegate` flag): the setting alone lets the staff cast the ordinary ballots; only the essential ones stop the week ----
+{
+  const { startCareer: start } = await import('./lib/long-run.mjs');
+  const { openVotesOf } = await import('../src/core/lawmaking-engine.js');
+  const { store } = await start({ seed: 'staff-plain-advance', level: 'deputato', fast: true });
+  setMode('linea'); store.setHeadlessVoter(null);
+  let stoppedOnOrdinary = 0, staffCast = 0;
+  for (let n = 0; n < 150 && store.getState().game.status !== 'ended'; n++) {
+    for (const item of store.getState().game.inbox.filter(entry => ['urgente', 'situazione'].includes(entry.kind))) for (const choice of item.choices ?? []) { try { store.resolveAgendaItem(item.id, choice.id); break; } catch { /* next */ } }
+    const report = store.advanceTurn(1);   // exactly what the Advance button calls
+    const stopping = store.votesStoppingTheWeek();
+    if (report.reason === 'voto') {
+      const open = openVotesOf(store.getState());
+      if (open.some(vote => !(vote.scope === 'fiducia' || vote.own || /bilancio|manovra/i.test(`${vote.kindLabel ?? ''} ${vote.title ?? ''}`)))) stoppedOnOrdinary++;
+      assert.ok(stopping.length > 0 && stopping.every(vote => vote.scope === 'fiducia' || vote.own || /bilancio|manovra/i.test(`${vote.kindLabel ?? ''} ${vote.title ?? ''}`)), 'votesStoppingTheWeek elenca solo i voti essenziali.');
+      for (const vote of open) { try { store.castOpenVote(vote.id, 'favorevole'); } catch { /* closed */ } }
+    }
+  }
+  staffCast = store.getState().game.memory?.filter?.(item => item.kind === 'voto-staff').length ?? 0;
+  assert.ok(staffCast > 0, 'Il pulsante Avanza semplice, con la delega attiva, fa votare lo staff.');
+  console.log(`Avanzamento semplice con delega «linea»: ${staffCast} voti dello staff, ${stoppedOnOrdinary} fermate su voti ordinari (devono essere 0 se ce n'è uno essenziale aperto).`);
+}

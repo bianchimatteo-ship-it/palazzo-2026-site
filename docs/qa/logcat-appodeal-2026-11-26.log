@@ -1,0 +1,661 @@
+11-26 02:10:14.920  5818  5948 D PolitAppodeal: js: banner: non richiesto: pagina «panoramica», momento da non interrompere (campagna elettorale, menu)
+11-26 02:10:16.447  5818  5818 W PolitAppodeal: consent form: com.appodeal.consent.ConsentManagerError$FormPresentationNotRequired: Presentation not required
+11-26 02:10:16.536  5818  5818 D InternalLogs: AdNetworkRegistry: Builder for UnityAds created successfully
+11-26 02:10:16.536  5818  5818 D InternalLogs: AdNetworkRegistry: Builder for Vungle created successfully
+11-26 02:10:16.582  5818  5861 D Appodeal: Network [Info]: UnityAds - ver. 4.17.0
+11-26 02:10:16.584  5818  5861 D Appodeal: Network [Info]: Vungle - ver. 7.7.9
+11-26 02:10:17.473  5818  5818 D InternalLogs: InitRequestUseCase: Initialization unity_ads: UnityAdsInitializeParams(appId='6230040', mediatorName='Appodeal')
+11-26 02:10:17.488  5818  5818 D InternalLogs: AdNetworkRegistry: getAdNetwork(vungle) --> com.appodeal.ads.adapters.vungle.VungleNetwork@3c62761
+11-26 02:10:17.488  5818  5818 D InternalLogs: InitRequestUseCase: Initialization vungle: VungleInitializeParams(appId='6b02bea14ebef38442beb31b')
+11-26 02:10:17.492  5818  5818 D Appodeal: Banner [Initialize]: done
+11-26 02:10:17.492  5818  5818 D Appodeal: Interstitial [Initialize]: done
+11-26 02:10:17.492  5818  5818 D Appodeal: RewardedVideo [Initialize]: done
+11-26 02:10:17.492  5818  5818 D Appodeal: Banner [Cache]: isDebug: false, isLoaded: false, isLoading: false
+11-26 02:10:17.493  5818  5818 D Appodeal: Interstitial [Cache]: isDebug: false, isLoaded: false, isLoading: false
+11-26 02:10:17.494  5818  5818 D Appodeal: RewardedVideo [Cache]: isDebug: false, isLoaded: false, isLoading: false
+11-26 02:10:17.495  5818  5818 D PolitAppodeal: banner state after init: initialized=true autoCache=true loaded=false testing=false
+11-26 02:10:17.495  5818  5818 W PolitAppodeal: initialisation finished with 1 non-blocking error(s): [com.appodeal.ads.initializing.ApdInitializationError$InternalError$SdkConfigurationError]
+11-26 02:10:17.499  5818  6117 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:10:17.500  5818  6117 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:10:17.501  5818  6117 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:10:17.501  5818  6117 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:10:17.502  5818  6117 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:10:17.503  5818  6117 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:10:17.503  5818  5818 D UnityAds: com.unity3d.services.ads.UnityAdsImplementation.initialize() (line:84) :: ENTERED METHOD
+11-26 02:10:17.504  5818  5818 D UnityAds: com.unity3d.services.UnityServices.initialize() (line:31) :: ENTERED METHOD
+11-26 02:10:17.505  5818  5818 D UnityAds: com.unity3d.services.core.cache.CacheDirectory.getCacheDirectory() (line:72) :: Unity Ads is using internal cache directory: /data/user/0/it.matteobianchi.politicando2026/no_backup/UnityAdsWebViewCache
+11-26 02:10:17.509  5818  6117 D UnityAds: com.unity3d.services.ads.gmascar.bridges.mobileads.MobileAdsBridge$1.<init>() (line:24) :: Could not find class "com.google.android.gms.ads.initialization.OnInitializationCompleteListener" com.google.android.gms.ads.initialization.OnInitializationCompleteListener
+11-26 02:10:17.509  5818  6117 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.classForName() (line:47) :: ERROR: Could not find Class com.google.android.gms.ads.MobileAds com.google.android.gms.ads.MobileAds
+11-26 02:10:17.509  5818  6117 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.buildMethodMap() (line:78) :: ERROR: Could not find com.google.android.gms.ads.MobileAds class with method getVersion and parameters : [Ljava.lang.Class;@a6024cd
+11-26 02:10:17.510  5818  6117 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.classForName() (line:47) :: ERROR: Could not find Class com.google.android.gms.ads.MobileAds com.google.android.gms.ads.MobileAds
+11-26 02:10:17.510  5818  6117 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.buildMethodMap() (line:78) :: ERROR: Could not find com.google.android.gms.ads.MobileAds class with method getInitializationStatus and parameters : [Ljava.lang.Class;@3742494
+11-26 02:10:17.510  5818  6117 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.classForName() (line:47) :: ERROR: Could not find Class com.google.android.gms.ads.MobileAds com.google.android.gms.ads.MobileAds
+11-26 02:10:17.510  5818  6117 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.exists() (line:56) :: ERROR: Could not find class com.google.android.gms.ads.MobileAds
+11-26 02:10:17.510  5818  6117 D UnityAds: com.unity3d.services.ads.gmascar.bridges.InitializeListenerBridge$1.<init>() (line:21) :: Could not find class "com.google.android.gms.ads.initialization.InitializationStatus" com.google.android.gms.ads.initialization.InitializationStatus
+11-26 02:10:17.511  5818  6117 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.classForName() (line:47) :: ERROR: Could not find Class com.google.android.gms.ads.initialization.InitializationStatus com.google.android.gms.ads.initialization.InitializationStatus
+11-26 02:10:17.511  5818  6117 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.buildMethodMap() (line:78) :: ERROR: Could not find com.google.android.gms.ads.initialization.InitializationStatus class with method getAdapterStatusMap and parameters : [Ljava.lang.Class;@2b8f600
+11-26 02:10:17.511  5818  6117 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.classForName() (line:47) :: ERROR: Could not find Class com.google.android.gms.ads.initialization.AdapterStatus com.google.android.gms.ads.initialization.AdapterStatus
+11-26 02:10:17.511  5818  6117 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.buildMethodMap() (line:78) :: ERROR: Could not find com.google.android.gms.ads.initialization.AdapterStatus class with method getInitializationState and parameters : [Ljava.lang.Class;@7b4ee39
+11-26 02:10:17.512  5818  6117 D UnityAds: com.unity3d.services.ads.gmascar.bridges.AdapterStatusBridge.<init>() (line:23) :: ERROR: Could not find class com.google.android.gms.ads.initialization.AdapterStatus$State com.google.android.gms.ads.initialization.AdapterStatus$State
+11-26 02:10:17.516  5818  5818 D Appodeal: Network [Info]: Vungle initialization finished in 28 ms.
+11-26 02:10:17.547  5818  6117 I UnityAds: Initializing SDK 4.17.0 41700 with game id 6230040 in test mode, session 3ca714ef-84d6-4a95-8d44-331cde2b8298
+11-26 02:10:17.577  5818  6117 W UnityAds: com.unity3d.ads.core.data.datasource.AndroidDynamicDeviceInfoDataSource.getNetworkType() (line:170) :: Unity Ads was not able to get current network type due to missing permission
+11-26 02:10:17.796  5818  6123 D Appodeal: SDK [Dump]: Banner waterfall:
+11-26 02:10:17.796  5818  6123 D Appodeal:     Test ad (Mraid), eCPM: 0.00; 
+11-26 02:10:17.800  5818  5818 D Appodeal: Banner [Load Start]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: eStKW...
+11-26 02:10:17.847  5818  6123 D Appodeal: SDK [Dump]: RewardedVideo waterfall:
+11-26 02:10:17.847  5818  6123 D Appodeal:     Test ad (Vast), eCPM: 0.00; 
+11-26 02:10:17.849  5818  5818 D Appodeal: Banner [Loaded]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: eStKW...
+11-26 02:10:17.857  5818  5818 D Appodeal: RewardedVideo [Load Start]: Vast - eCPM: 0.00, precache: false, expTime: 0, id: bTlPQ...
+11-26 02:10:18.006  5818  6123 D Appodeal: SDK [Dump]: Interstitial waterfall:
+11-26 02:10:18.006  5818  6123 D Appodeal:     Test ad (Mraid), eCPM: 0.00; 
+11-26 02:10:18.009  5818  5818 D Appodeal: Interstitial [Load Start]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: MUVHT...
+11-26 02:10:18.054  5818  6123 D Appodeal: Banner [Request Failed]: No ads in banner
+11-26 02:10:18.054  5818  6123 D Appodeal: Banner [Load Failed (soft)]: REQUEST ERROR (4)
+11-26 02:10:18.056  5818  6123 D Appodeal: Banner [Notify Mediation Result]: (winner): Mraid - eCPM: 0.00, id: eStKW...
+11-26 02:10:18.056  5818  5818 D Appodeal: Banner [Notify Loaded]: height: 50dp, isPrecache: false
+11-26 02:10:18.056  5818  5818 D PolitAppodeal: banner LOADED (height 50dp, precache=false, waitingForIt=false)
+11-26 02:10:18.071  5818  6124 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-private-data.json
+11-26 02:10:18.081  5818  6112 I UnityAds: Initialized successfully
+11-26 02:10:18.083  5818  6112 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-private-data.json
+11-26 02:10:18.098  5818  5818 D Appodeal: Interstitial [Loaded]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: MUVHT...
+11-26 02:10:18.108  5818  5818 D Appodeal: Network [Info]: UnityAds initialization finished in 635 ms.
+11-26 02:10:18.162  5818  5818 D Appodeal: RewardedVideo [Loaded]: Vast - eCPM: 0.00, precache: false, expTime: 0, id: bTlPQ...
+11-26 02:10:18.321  5818  6123 D Appodeal: Interstitial [Request Failed]: No ads in interstitial
+11-26 02:10:18.321  5818  6123 D Appodeal: Interstitial [Load Failed (soft)]: REQUEST ERROR (4)
+11-26 02:10:18.323  5818  5818 D Appodeal: Interstitial [Notify Loaded]: isPrecache: false
+11-26 02:10:18.323  5818  5818 D PolitAppodeal: interstitial loaded
+11-26 02:10:18.323  5818  6123 D Appodeal: Interstitial [Notify Mediation Result]: (winner): Mraid - eCPM: 0.00, id: MUVHT...
+11-26 02:10:18.351  5818  6112 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-private-data.json
+11-26 02:10:18.352  5818  6123 D Appodeal: RewardedVideo [Request Failed]: No ads in rewarded video
+11-26 02:10:18.352  5818  6123 D Appodeal: RewardedVideo [Load Failed (soft)]: REQUEST ERROR (4)
+11-26 02:10:18.353  5818  5818 D Appodeal: RewardedVideo [Notify Loaded]: isPrecache: false
+11-26 02:10:18.353  5818  5818 D PolitAppodeal: rewarded loaded
+11-26 02:10:18.353  5818  6123 D Appodeal: RewardedVideo [Notify Mediation Result]: (winner): Vast - eCPM: 0.00, id: bTlPQ...
+11-26 02:11:10.566  5818  5948 D PolitAppodeal: js: banner: richiesto al plugin
+11-26 02:11:10.663  5818  5818 D PolitAppodeal: showBanner: requested (initialized=true autoCache=true loaded=true)
+11-26 02:11:10.668  5818  5818 D Appodeal: Banner [Show]: isDebug: false, isLoaded: true, isLoading: false, placement: 'default'
+11-26 02:11:10.673  5818  5818 D PolitAppodeal: banner show INVOKED: result=true (view attached=true, height=50dp)
+11-26 02:11:10.680  5818  5818 D Appodeal: Banner [Shown]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: eStKW...
+11-26 02:11:10.682  5818  5818 D Appodeal: Banner [Cache]: isDebug: false, isLoaded: false, isLoading: false
+11-26 02:11:10.682  5818  5818 D Appodeal: SDK [Dump]: Banner waterfall:
+11-26 02:11:10.682  5818  5818 D Appodeal:     Test ad (Mraid), eCPM: 0.00; 
+11-26 02:11:10.688  5818  6124 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:11:10.695  5818  5818 D Appodeal: Banner [Load Start]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: eStKW...
+11-26 02:11:10.695  5818  5818 D Appodeal: Banner [Notify Shown]
+11-26 02:11:10.695  5818  5818 D PolitAppodeal: banner SHOWN (the SDK counts the impression)
+11-26 02:11:10.801  5818  5948 D PolitAppodeal: js: banner: mostrato
+11-26 02:11:11.281  5818  5818 D Appodeal: Banner [Loaded]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: eStKW...
+11-26 02:11:11.494  5818  6123 D Appodeal: Banner [Request Failed]: No ads in banner
+11-26 02:11:11.494  5818  6123 D Appodeal: Banner [Load Failed (soft)]: REQUEST ERROR (4)
+11-26 02:11:11.495  5818  6123 D Appodeal: Banner [Notify Mediation Result]: (winner): Mraid - eCPM: 0.00, id: eStKW...
+11-26 02:11:11.535  5818  5818 D Appodeal: Banner [Notify Loaded]: height: 50dp, isPrecache: false
+11-26 02:11:11.535  5818  5818 D PolitAppodeal: banner LOADED (height 50dp, precache=false, waitingForIt=false)
+11-26 02:11:12.691  5818  5818 D Appodeal: Banner [Finished]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: eStKW...
+11-26 02:11:20.682  5818  5818 D Appodeal: Banner [Show]: isDebug: false, isLoaded: true, isLoading: false, placement: 'default'
+11-26 02:11:21.538  5818  5818 D Appodeal: Banner [Shown]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: eStKW...
+11-26 02:11:21.540  5818  5818 D Appodeal: Banner [Cache]: isDebug: false, isLoaded: false, isLoading: false
+11-26 02:11:21.546  5818  5861 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:11:21.567  5818  5818 D Appodeal: Banner [Notify Shown]
+11-26 02:11:21.567  5818  5818 D PolitAppodeal: banner SHOWN (the SDK counts the impression)
+11-26 02:11:21.567  5818  5818 D Appodeal: Banner [Finished]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: eStKW...
+11-26 02:11:21.834  5818  6123 D Appodeal: SDK [Dump]: Banner waterfall:
+11-26 02:11:21.834  5818  6123 D Appodeal:     Test ad (Mraid), eCPM: 0.00; 
+11-26 02:11:21.839  5818  5818 D Appodeal: Banner [Load Start]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: dXR1e...
+11-26 02:11:21.884  5818  5818 D Appodeal: Banner [Loaded]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: dXR1e...
+11-26 02:11:22.087  5818  6123 D Appodeal: Banner [Request Failed]: No ads in banner
+11-26 02:11:22.088  5818  6123 D Appodeal: Banner [Load Failed (soft)]: REQUEST ERROR (4)
+11-26 02:11:22.090  5818  5818 D Appodeal: Banner [Notify Loaded]: height: 50dp, isPrecache: false
+11-26 02:11:22.091  5818  5818 D PolitAppodeal: banner LOADED (height 50dp, precache=false, waitingForIt=false)
+11-26 02:11:22.091  5818  6123 D Appodeal: Banner [Notify Mediation Result]: (winner): Mraid - eCPM: 0.00, id: dXR1e...
+11-26 02:11:22.709  5818  5948 D PolitAppodeal: js: banner: non richiesto: pagina «panoramica», momento da non interrompere (menu)
+11-26 02:11:22.710  5818  5818 D Appodeal: Banner [Hide]
+11-26 02:11:22.710  5818  5818 D PolitAppodeal: banner hidden
+11-26 02:11:55.199  5818  5948 D PolitAppodeal: js: banner: pausa di 120 s dopo l’ultima sessione
+11-26 02:12:00.990  5818  5948 D PolitAppodeal: js: banner: non richiesto: pagina «panoramica», momento da non interrompere (rapporto)
+11-26 02:12:02.034  5818  5948 D PolitAppodeal: js: banner: pausa di 120 s dopo l’ultima sessione
+11-26 02:12:03.251  5818  5948 D PolitAppodeal: js: banner: non richiesto: pagina «panoramica», momento da non interrompere (menu)
+11-26 02:12:28.729  5818  5948 D PolitAppodeal: js: banner: pausa di 120 s dopo l’ultima sessione
+11-26 02:12:58.782  1358  1358 I adbd    : adbd service requested 'shell,v2:export ANDROID_LOG_TAGS=''; exec logcat '-d' '-s' 'PolitAppodeal:D''
+11-26 02:13:24.893  5818  5948 D PolitAppodeal: js: banner: richiesto al plugin
+11-26 02:13:24.896  5818  5818 D PolitAppodeal: showBanner: requested (initialized=true autoCache=true loaded=true)
+11-26 02:13:24.903  5818  5818 D Appodeal: Banner [Show]: isDebug: false, isLoaded: true, isLoading: false, placement: 'default'
+11-26 02:13:24.917  5818  5818 D PolitAppodeal: banner show INVOKED: result=true (view attached=true, height=0dp)
+11-26 02:13:24.936  5818  5948 D PolitAppodeal: js: banner: mostrato
+11-26 02:13:25.727  5818  5818 D Appodeal: Banner [Shown]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: dXR1e...
+11-26 02:13:25.730  5818  5818 D Appodeal: Banner [Cache]: isDebug: false, isLoaded: false, isLoading: false
+11-26 02:13:25.740  5818  6117 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:13:25.761  5818  5818 D Appodeal: Banner [Notify Shown]
+11-26 02:13:25.761  5818  5818 D PolitAppodeal: banner SHOWN (the SDK counts the impression)
+11-26 02:13:25.762  5818  5818 D Appodeal: Banner [Finished]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: dXR1e...
+11-26 02:13:26.157  5818  6123 D Appodeal: SDK [Dump]: Banner waterfall:
+11-26 02:13:26.157  5818  6123 D Appodeal:     Test ad (Mraid), eCPM: 0.00; 
+11-26 02:13:26.160  5818  5818 D Appodeal: Banner [Load Start]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: aE9qN...
+11-26 02:13:26.220  5818  5818 D Appodeal: Banner [Loaded]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: aE9qN...
+11-26 02:13:26.443  5818  6123 D Appodeal: Banner [Request Failed]: No ads in banner
+11-26 02:13:26.444  5818  6123 D Appodeal: Banner [Load Failed (soft)]: REQUEST ERROR (4)
+11-26 02:13:26.446  5818  5818 D Appodeal: Banner [Notify Loaded]: height: 50dp, isPrecache: false
+11-26 02:13:26.447  5818  5818 D PolitAppodeal: banner LOADED (height 50dp, precache=false, waitingForIt=false)
+11-26 02:13:26.447  5818  6123 D Appodeal: Banner [Notify Mediation Result]: (winner): Mraid - eCPM: 0.00, id: aE9qN...
+11-26 02:13:35.735  5818  5818 D Appodeal: Banner [Show]: isDebug: false, isLoaded: true, isLoading: false, placement: 'default'
+11-26 02:13:36.590  5818  5818 D Appodeal: Banner [Shown]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: aE9qN...
+11-26 02:13:36.591  5818  5818 D Appodeal: Banner [Cache]: isDebug: false, isLoaded: false, isLoading: false
+11-26 02:13:36.592  5818  5818 D Appodeal: SDK [Dump]: Banner waterfall:
+11-26 02:13:36.592  5818  5818 D Appodeal:     Test ad (Mraid), eCPM: 0.00; 
+11-26 02:13:36.597  5818  5818 D Appodeal: Banner [Load Start]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: aE9qN...
+11-26 02:13:36.597  5818  5861 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:13:36.617  5818  5818 D Appodeal: Banner [Notify Shown]
+11-26 02:13:36.617  5818  5818 D PolitAppodeal: banner SHOWN (the SDK counts the impression)
+11-26 02:13:36.645  5818  5818 D Appodeal: Banner [Loaded]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: aE9qN...
+11-26 02:13:36.850  5818  6123 D Appodeal: Banner [Request Failed]: No ads in banner
+11-26 02:13:36.850  5818  6123 D Appodeal: Banner [Load Failed (soft)]: REQUEST ERROR (4)
+11-26 02:13:36.852  5818  5818 D Appodeal: Banner [Notify Loaded]: height: 50dp, isPrecache: false
+11-26 02:13:36.852  5818  5818 D PolitAppodeal: banner LOADED (height 50dp, precache=false, waitingForIt=false)
+11-26 02:13:36.852  5818  6123 D Appodeal: Banner [Notify Mediation Result]: (winner): Mraid - eCPM: 0.00, id: aE9qN...
+11-26 02:13:38.599  5818  5818 D Appodeal: Banner [Finished]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: aE9qN...
+11-26 02:13:46.593  5818  5818 D Appodeal: Banner [Show]: isDebug: false, isLoaded: true, isLoading: false, placement: 'default'
+11-26 02:13:47.423  5818  5818 D Appodeal: Banner [Shown]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: aE9qN...
+11-26 02:13:47.425  5818  5818 D Appodeal: Banner [Cache]: isDebug: false, isLoaded: false, isLoading: false
+11-26 02:13:47.435  5818  6873 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:13:47.447  5818  5818 D Appodeal: Banner [Notify Shown]
+11-26 02:13:47.447  5818  5818 D PolitAppodeal: banner SHOWN (the SDK counts the impression)
+11-26 02:13:47.447  5818  5818 D Appodeal: Banner [Finished]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: aE9qN...
+11-26 02:13:47.696  5818  6123 D Appodeal: SDK [Dump]: Banner waterfall:
+11-26 02:13:47.696  5818  6123 D Appodeal:     Test ad (Mraid), eCPM: 0.00; 
+11-26 02:13:47.701  5818  5818 D Appodeal: Banner [Load Start]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: UDdTQ...
+11-26 02:13:47.742  5818  5818 D Appodeal: Banner [Loaded]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: UDdTQ...
+11-26 02:13:47.943  5818  6123 D Appodeal: Banner [Request Failed]: No ads in banner
+11-26 02:13:47.944  5818  6123 D Appodeal: Banner [Load Failed (soft)]: REQUEST ERROR (4)
+11-26 02:13:47.945  5818  5818 D Appodeal: Banner [Notify Loaded]: height: 50dp, isPrecache: false
+11-26 02:13:47.945  5818  5818 D PolitAppodeal: banner LOADED (height 50dp, precache=false, waitingForIt=false)
+11-26 02:13:47.946  5818  6123 D Appodeal: Banner [Notify Mediation Result]: (winner): Mraid - eCPM: 0.00, id: UDdTQ...
+11-26 02:13:57.428  5818  5818 D Appodeal: Banner [Show]: isDebug: false, isLoaded: true, isLoading: false, placement: 'default'
+11-26 02:14:03.321  7542  7688 D PolitAppodeal: js: banner: non richiesto: pagina «panoramica», momento da non interrompere (menu)
+11-26 02:14:05.182  7542  7542 W PolitAppodeal: consent form: com.appodeal.consent.ConsentManagerError$FormPresentationNotRequired: Presentation not required
+11-26 02:14:05.273  7542  7542 D InternalLogs: AdNetworkRegistry: Builder for UnityAds created successfully
+11-26 02:14:05.273  7542  7542 D InternalLogs: AdNetworkRegistry: Builder for Vungle created successfully
+11-26 02:14:05.338  7542  8241 D Appodeal: Network [Info]: UnityAds - ver. 4.17.0
+11-26 02:14:05.341  7542  8241 D Appodeal: Network [Info]: Vungle - ver. 7.7.9
+11-26 02:14:06.178  7542  7542 D InternalLogs: InitRequestUseCase: Initialization unity_ads: UnityAdsInitializeParams(appId='6230040', mediatorName='Appodeal')
+11-26 02:14:06.193  7542  7542 D InternalLogs: AdNetworkRegistry: getAdNetwork(vungle) --> com.appodeal.ads.adapters.vungle.VungleNetwork@2659ae0
+11-26 02:14:06.193  7542  7542 D InternalLogs: InitRequestUseCase: Initialization vungle: VungleInitializeParams(appId='6b02bea14ebef38442beb31b')
+11-26 02:14:06.196  7542  7542 D Appodeal: Banner [Initialize]: done
+11-26 02:14:06.197  7542  7542 D Appodeal: Interstitial [Initialize]: done
+11-26 02:14:06.197  7542  7542 D Appodeal: RewardedVideo [Initialize]: done
+11-26 02:14:06.197  7542  7542 D Appodeal: Banner [Cache]: isDebug: false, isLoaded: false, isLoading: false
+11-26 02:14:06.199  7542  7542 D Appodeal: Interstitial [Cache]: isDebug: false, isLoaded: false, isLoading: false
+11-26 02:14:06.199  7542  7542 D Appodeal: RewardedVideo [Cache]: isDebug: false, isLoaded: false, isLoading: false
+11-26 02:14:06.201  7542  7542 D PolitAppodeal: banner state after init: initialized=true autoCache=true loaded=false testing=false
+11-26 02:14:06.201  7542  7542 W PolitAppodeal: initialisation finished with 1 non-blocking error(s): [com.appodeal.ads.initializing.ApdInitializationError$InternalError$SdkConfigurationError]
+11-26 02:14:06.207  7542  8248 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:06.208  7542  8248 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:06.208  7542  8248 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:06.209  7542  8248 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:06.210  7542  8248 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:06.212  7542  8248 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:06.212  7542  7542 D UnityAds: com.unity3d.services.ads.UnityAdsImplementation.initialize() (line:84) :: ENTERED METHOD
+11-26 02:14:06.212  7542  7542 D UnityAds: com.unity3d.services.UnityServices.initialize() (line:31) :: ENTERED METHOD
+11-26 02:14:06.213  7542  7542 D UnityAds: com.unity3d.services.core.cache.CacheDirectory.getCacheDirectory() (line:72) :: Unity Ads is using internal cache directory: /data/user/0/it.matteobianchi.politicando2026/no_backup/UnityAdsWebViewCache
+11-26 02:14:06.217  7542  8248 D UnityAds: com.unity3d.services.ads.gmascar.bridges.mobileads.MobileAdsBridge$1.<init>() (line:24) :: Could not find class "com.google.android.gms.ads.initialization.OnInitializationCompleteListener" com.google.android.gms.ads.initialization.OnInitializationCompleteListener
+11-26 02:14:06.218  7542  8248 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.classForName() (line:47) :: ERROR: Could not find Class com.google.android.gms.ads.MobileAds com.google.android.gms.ads.MobileAds
+11-26 02:14:06.220  7542  8248 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.buildMethodMap() (line:78) :: ERROR: Could not find com.google.android.gms.ads.MobileAds class with method getVersion and parameters : [Ljava.lang.Class;@ab7722c
+11-26 02:14:06.221  7542  8248 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.classForName() (line:47) :: ERROR: Could not find Class com.google.android.gms.ads.MobileAds com.google.android.gms.ads.MobileAds
+11-26 02:14:06.222  7542  8248 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.buildMethodMap() (line:78) :: ERROR: Could not find com.google.android.gms.ads.MobileAds class with method getInitializationStatus and parameters : [Ljava.lang.Class;@eed34f5
+11-26 02:14:06.223  7542  8248 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.classForName() (line:47) :: ERROR: Could not find Class com.google.android.gms.ads.MobileAds com.google.android.gms.ads.MobileAds
+11-26 02:14:06.224  7542  8248 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.exists() (line:56) :: ERROR: Could not find class com.google.android.gms.ads.MobileAds
+11-26 02:14:06.224  7542  8248 D UnityAds: com.unity3d.services.ads.gmascar.bridges.InitializeListenerBridge$1.<init>() (line:21) :: Could not find class "com.google.android.gms.ads.initialization.InitializationStatus" com.google.android.gms.ads.initialization.InitializationStatus
+11-26 02:14:06.225  7542  8248 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.classForName() (line:47) :: ERROR: Could not find Class com.google.android.gms.ads.initialization.InitializationStatus com.google.android.gms.ads.initialization.InitializationStatus
+11-26 02:14:06.225  7542  8248 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.buildMethodMap() (line:78) :: ERROR: Could not find com.google.android.gms.ads.initialization.InitializationStatus class with method getAdapterStatusMap and parameters : [Ljava.lang.Class;@ba0628a
+11-26 02:14:06.227  7542  8248 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.classForName() (line:47) :: ERROR: Could not find Class com.google.android.gms.ads.initialization.AdapterStatus com.google.android.gms.ads.initialization.AdapterStatus
+11-26 02:14:06.228  7542  8248 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.buildMethodMap() (line:78) :: ERROR: Could not find com.google.android.gms.ads.initialization.AdapterStatus class with method getInitializationState and parameters : [Ljava.lang.Class;@20c30fb
+11-26 02:14:06.228  7542  8248 D UnityAds: com.unity3d.services.ads.gmascar.bridges.AdapterStatusBridge.<init>() (line:23) :: ERROR: Could not find class com.google.android.gms.ads.initialization.AdapterStatus$State com.google.android.gms.ads.initialization.AdapterStatus$State
+11-26 02:14:06.259  7542  7542 D Appodeal: Network [Info]: Vungle initialization finished in 65 ms.
+11-26 02:14:06.287  7542  8248 I UnityAds: Initializing SDK 4.17.0 41700 with game id 6230040 in production mode, session d77f3b4c-469c-447c-9cc9-f3e1cb8c9a5b
+11-26 02:14:06.326  7542  8248 W UnityAds: com.unity3d.ads.core.data.datasource.AndroidDynamicDeviceInfoDataSource.getNetworkType() (line:170) :: Unity Ads was not able to get current network type due to missing permission
+11-26 02:14:06.573  7542  8278 D Appodeal: SDK [Dump]: Interstitial waterfall:
+11-26 02:14:06.573  7542  8278 D Appodeal:     UnityAds, eCPM: 60.00; UnityAds, eCPM: 37.00; UnityAds, eCPM: 22.00; Vungle, eCPM: 17.00; UnityAds, eCPM: 16.00; 
+11-26 02:14:06.573  7542  8278 D Appodeal:     Vungle, eCPM: 13.00; UnityAds, eCPM: 12.00; Vungle, eCPM: 9.00; Vungle, eCPM: 5.50; UnityAds, eCPM: 4.50; 
+11-26 02:14:06.573  7542  8278 D Appodeal:     Vungle, eCPM: 3.00; UnityAds, eCPM: 2.50; Vungle, eCPM: 1.50; UnityAds, eCPM: 1.50; Vungle, eCPM: 0.50; 
+11-26 02:14:06.573  7542  8278 D Appodeal:     Vungle, eCPM: 0.25; UnityAds, eCPM: 0.18; 
+11-26 02:14:06.579  7542  7542 D Appodeal: Interstitial [Load Start]: UnityAds - eCPM: 60.00, precache: false, expTime: 0, id: Rit4W...
+11-26 02:14:06.580  7542  8278 D Appodeal: SDK [Dump]: RewardedVideo waterfall:
+11-26 02:14:06.580  7542  8278 D Appodeal:     UnityAds, eCPM: 60.00; UnityAds, eCPM: 37.00; UnityAds, eCPM: 22.00; UnityAds, eCPM: 16.00; UnityAds, eCPM: 8.00; 
+11-26 02:14:06.580  7542  8278 D Appodeal:     UnityAds, eCPM: 4.50; UnityAds, eCPM: 2.50; UnityAds, eCPM: 1.50; UnityAds, eCPM: 0.45; Vungle, eCPM: 0.24; 
+11-26 02:14:06.582  7542  8255 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:06.582  7542  8255 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:06.583  7542  8255 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:06.583  7542  8255 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:06.583  7542  8255 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:06.586  7542  7542 D Appodeal: RewardedVideo [Load Start]: UnityAds - eCPM: 60.00, precache: false, expTime: 0, id: VUNhV...
+11-26 02:14:06.587  7542  8241 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:06.587  7542  8241 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:06.588  7542  8241 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:06.588  7542  8241 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:06.588  7542  8255 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:06.588  7542  8241 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:06.588  7542  7542 D UnityAds: com.unity3d.services.ads.UnityAdsImplementation.initialize() (line:84) :: ENTERED METHOD
+11-26 02:14:06.588  7542  7542 D UnityAds: com.unity3d.services.UnityServices.initialize() (line:31) :: ENTERED METHOD
+11-26 02:14:06.589  7542  8241 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:06.590  7542  7542 D UnityAds: com.unity3d.services.ads.UnityAdsImplementation.initialize() (line:84) :: ENTERED METHOD
+11-26 02:14:06.590  7542  7542 D UnityAds: com.unity3d.services.UnityServices.initialize() (line:31) :: ENTERED METHOD
+11-26 02:14:06.678  7542  8278 D Appodeal: Banner [Request Failed]: No ads in banner
+11-26 02:14:06.678  7542  8278 D Appodeal: Banner [Load Failed (soft)]: REQUEST ERROR (4)
+11-26 02:14:06.680  7542  7542 D Appodeal: Banner [Notify Load Failed]
+11-26 02:14:06.680  7542  7542 D PolitAppodeal: banner LOAD FAILED (no ad from any network: the SDK asks again by itself; waitingForIt=false)
+11-26 02:14:06.882  7542  8306 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-private-data.json
+11-26 02:14:06.889  7542  8306 I UnityAds: Initialized successfully
+11-26 02:14:06.890  7542  8306 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-private-data.json
+11-26 02:14:06.900  7542  7542 D Appodeal: Network [Info]: UnityAds initialization finished in 722 ms.
+11-26 02:14:06.901  7542  8241 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:06.902  7542  8241 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:06.903  7542  8241 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:06.903  7542  8241 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:06.903  7542  8241 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:06.904  7542  8275 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:06.904  7542  8275 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:06.904  7542  8275 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:06.905  7542  8275 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:06.906  7542  7568 I UnityAds: Load invoked for placement: unity_rewarded_video_60 with instance id: 6882f5e8-45b5-434e-a2a1-82980a8ded71
+11-26 02:14:06.906  7542  8275 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:06.906  7542  8255 I UnityAds: Load invoked for placement: unity_video_60 with instance id: 6e625e21-5bc0-4ca3-8923-17885d362bc6
+11-26 02:14:07.120  7542  8248 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-private-data.json
+11-26 02:14:07.441  7542  8241 E UnityAds: Failed to load ad for placement unity_video_60 with instance id 6e625e21-5bc0-4ca3-8923-17885d362bc6, error: PUBLIC_ERROR_CODE_LOAD_NO_FILL :: Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:07.444  7542  7542 D Appodeal: Interstitial [Network Error]: UnityAds - (NO_FILL) Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:07.445  7542  7542 D Appodeal: Interstitial [Load Failed]: UnityAds - NO FILL (2) - eCPM: 60.00, precache: false, expTime: 0, id: Rit4W...
+11-26 02:14:07.448  7542  7542 D Appodeal: Interstitial [Load Start]: UnityAds - eCPM: 37.00, precache: false, expTime: 0, id: UXVoQ...
+11-26 02:14:07.451  7542  8248 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:07.451  7542  8248 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:07.451  7542  8240 I UnityAds: Load invoked for placement: unity_video_37 with instance id: d2ed9143-9e47-476a-a259-ade9f3fdce27
+11-26 02:14:07.452  7542  8248 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:07.452  7542  8248 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:07.452  7542  8248 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:07.455  7542  7568 E UnityAds: Failed to load ad for placement unity_rewarded_video_60 with instance id 6882f5e8-45b5-434e-a2a1-82980a8ded71, error: PUBLIC_ERROR_CODE_LOAD_NO_FILL :: Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:07.456  7542  7542 D Appodeal: RewardedVideo [Network Error]: UnityAds - (NO_FILL) Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:07.457  7542  7542 D Appodeal: RewardedVideo [Load Failed]: UnityAds - NO FILL (2) - eCPM: 60.00, precache: false, expTime: 0, id: VUNhV...
+11-26 02:14:07.458  7542  7542 D Appodeal: RewardedVideo [Load Start]: UnityAds - eCPM: 37.00, precache: false, expTime: 0, id: emlQV...
+11-26 02:14:07.459  7542  8255 I UnityAds: Load invoked for placement: unity_rewarded_video_37 with instance id: ca561fa0-ad8e-4ce0-abcf-d5aa9cd57ce2
+11-26 02:14:07.461  7542  7568 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:07.461  7542  7568 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:07.461  7542  7568 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:07.461  7542  7568 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:07.462  7542  7568 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:07.777  7542  8240 E UnityAds: Failed to load ad for placement unity_video_37 with instance id d2ed9143-9e47-476a-a259-ade9f3fdce27, error: PUBLIC_ERROR_CODE_LOAD_NO_FILL :: Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:07.779  7542  7542 D Appodeal: Interstitial [Network Error]: UnityAds - (NO_FILL) Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:07.780  7542  8275 E UnityAds: Failed to load ad for placement unity_rewarded_video_37 with instance id ca561fa0-ad8e-4ce0-abcf-d5aa9cd57ce2, error: PUBLIC_ERROR_CODE_LOAD_NO_FILL :: Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:07.780  7542  7542 D Appodeal: Interstitial [Load Failed]: UnityAds - NO FILL (2) - eCPM: 37.00, precache: false, expTime: 0, id: UXVoQ...
+11-26 02:14:07.781  7542  7542 D Appodeal: RewardedVideo [Network Error]: UnityAds - (NO_FILL) Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:07.781  7542  7542 D Appodeal: RewardedVideo [Load Failed]: UnityAds - NO FILL (2) - eCPM: 37.00, precache: false, expTime: 0, id: emlQV...
+11-26 02:14:07.783  7542  7542 D Appodeal: Interstitial [Load Start]: UnityAds - eCPM: 22.00, precache: false, expTime: 0, id: bFEyN...
+11-26 02:14:07.783  7542  7542 D Appodeal: RewardedVideo [Load Start]: UnityAds - eCPM: 22.00, precache: false, expTime: 0, id: d2FuU...
+11-26 02:14:07.784  7542  8275 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:07.784  7542  8275 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:07.785  7542  8275 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:07.785  7542  8275 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:07.785  7542  7568 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:07.785  7542  7568 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:07.786  7542  7568 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:07.786  7542  7568 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:07.786  7542  8240 I UnityAds: Load invoked for placement: unity_rewarded_video_22 with instance id: 6fb75a1a-4711-457e-96c8-2b5a05faf3c9
+11-26 02:14:07.787  7542  8241 I UnityAds: Load invoked for placement: unity_video_22 with instance id: 9b259bba-65eb-423b-94ac-0bfa03cc920a
+11-26 02:14:07.787  7542  7568 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:07.789  7542  8275 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:08.122  7542  8275 E UnityAds: Failed to load ad for placement unity_rewarded_video_22 with instance id 6fb75a1a-4711-457e-96c8-2b5a05faf3c9, error: PUBLIC_ERROR_CODE_LOAD_NO_FILL :: Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:08.124  7542  7542 D Appodeal: RewardedVideo [Network Error]: UnityAds - (NO_FILL) Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:08.125  7542  7542 D Appodeal: RewardedVideo [Load Failed]: UnityAds - NO FILL (2) - eCPM: 22.00, precache: false, expTime: 0, id: d2FuU...
+11-26 02:14:08.127  7542  7542 D Appodeal: RewardedVideo [Load Start]: UnityAds - eCPM: 16.00, precache: false, expTime: 0, id: MkVnZ...
+11-26 02:14:08.131  7542  8240 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:08.131  7542  8240 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:08.132  7542  8240 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:08.132  7542  8240 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:08.132  7542  8240 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:08.133  7542  8275 I UnityAds: Load invoked for placement: unity_rewarded_video_16 with instance id: 64b2f21e-c020-4dc1-a162-5277f0fbb653
+11-26 02:14:08.141  7542  8241 E UnityAds: Failed to load ad for placement unity_video_22 with instance id 9b259bba-65eb-423b-94ac-0bfa03cc920a, error: PUBLIC_ERROR_CODE_LOAD_NO_FILL :: Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:08.143  7542  7542 D Appodeal: Interstitial [Network Error]: UnityAds - (NO_FILL) Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:08.143  7542  7542 D Appodeal: Interstitial [Load Failed]: UnityAds - NO FILL (2) - eCPM: 22.00, precache: false, expTime: 0, id: bFEyN...
+11-26 02:14:08.144  7542  7542 D InternalLogs: AdNetworkRegistry: getAdNetwork(vungle, Interstitial) --> com.appodeal.ads.adapters.vungle.VungleNetwork@2659ae0
+11-26 02:14:08.144  7542  7542 D Appodeal: Interstitial [Load Start]: Vungle - eCPM: 17.00, precache: false, expTime: 0, id: SkozV...
+11-26 02:14:08.486  7542  7568 E UnityAds: Failed to load ad for placement unity_rewarded_video_16 with instance id 64b2f21e-c020-4dc1-a162-5277f0fbb653, error: PUBLIC_ERROR_CODE_LOAD_NO_FILL :: Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:08.488  7542  7542 D Appodeal: RewardedVideo [Network Error]: UnityAds - (NO_FILL) Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:08.489  7542  7542 D Appodeal: RewardedVideo [Load Failed]: UnityAds - NO FILL (2) - eCPM: 16.00, precache: false, expTime: 0, id: MkVnZ...
+11-26 02:14:08.491  7542  7542 D Appodeal: RewardedVideo [Load Start]: UnityAds - eCPM: 8.00, precache: false, expTime: 0, id: VUtHM...
+11-26 02:14:08.492  7542  8306 I UnityAds: Load invoked for placement: unity_rewarded_video_8 with instance id: 7e0e6ca0-14e4-476d-a2b7-6f78e5254779
+11-26 02:14:08.495  7542  7568 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:08.495  7542  7568 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:08.495  7542  7568 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:08.495  7542  7568 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:08.495  7542  7568 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:08.816  7542  8306 E UnityAds: Failed to load ad for placement unity_rewarded_video_8 with instance id 7e0e6ca0-14e4-476d-a2b7-6f78e5254779, error: PUBLIC_ERROR_CODE_LOAD_NO_FILL :: Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:08.818  7542  7542 D Appodeal: RewardedVideo [Network Error]: UnityAds - (NO_FILL) Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:08.819  7542  7542 D Appodeal: RewardedVideo [Load Failed]: UnityAds - NO FILL (2) - eCPM: 8.00, precache: false, expTime: 0, id: VUtHM...
+11-26 02:14:08.821  7542  7542 D Appodeal: RewardedVideo [Load Start]: UnityAds - eCPM: 4.50, precache: false, expTime: 0, id: M1pCW...
+11-26 02:14:08.823  7542  8241 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:08.823  7542  8241 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:08.823  7542  8240 I UnityAds: Load invoked for placement: unity_rewarded_video_4_5 with instance id: a989a851-ed0a-48d5-a0a2-b5bcbdc9d5a3
+11-26 02:14:08.823  7542  8241 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:08.823  7542  8241 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:08.824  7542  8241 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:09.129  7542  8306 E UnityAds: Failed to load ad for placement unity_rewarded_video_4_5 with instance id a989a851-ed0a-48d5-a0a2-b5bcbdc9d5a3, error: PUBLIC_ERROR_CODE_LOAD_NO_FILL :: Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:09.131  7542  7542 D Appodeal: RewardedVideo [Network Error]: UnityAds - (NO_FILL) Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:09.132  7542  7542 D Appodeal: RewardedVideo [Load Failed]: UnityAds - NO FILL (2) - eCPM: 4.50, precache: false, expTime: 0, id: M1pCW...
+11-26 02:14:09.134  7542  7542 D Appodeal: RewardedVideo [Load Start]: UnityAds - eCPM: 2.50, precache: false, expTime: 0, id: VUkza...
+11-26 02:14:09.135  7542  8275 I UnityAds: Load invoked for placement: unity_rewarded_video_2_5 with instance id: c0f82958-0abf-4f29-bfb6-22c7c2c9984f
+11-26 02:14:09.135  7542  8306 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:09.135  7542  8306 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:09.136  7542  8306 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:09.136  7542  8306 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:09.136  7542  8306 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:09.297  7542  7542 D Appodeal: Interstitial [Network Error]: Vungle - (10001) Response error: 845, Request failed with error: 10001, impression auctioned but unsold
+11-26 02:14:09.298  7542  7542 D Appodeal: Interstitial [Load Failed]: Vungle - NO FILL (2) - eCPM: 17.00, precache: false, expTime: 0, id: SkozV...
+11-26 02:14:09.299  7542  7542 D Appodeal: Interstitial [Load Start]: UnityAds - eCPM: 16.00, precache: false, expTime: 0, id: cW9LW...
+11-26 02:14:09.301  7542  8241 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:09.301  7542  8241 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:09.301  7542  8241 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:09.301  7542  8241 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:09.302  7542  8241 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:09.302  7542  8241 I UnityAds: Load invoked for placement: unity_video_16 with instance id: 0354ed56-9bc4-4101-9c49-e9c4c97f5be3
+11-26 02:14:09.521  7542  8275 E UnityAds: Failed to load ad for placement unity_rewarded_video_2_5 with instance id c0f82958-0abf-4f29-bfb6-22c7c2c9984f, error: PUBLIC_ERROR_CODE_LOAD_NO_FILL :: Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:09.523  7542  7542 D Appodeal: RewardedVideo [Network Error]: UnityAds - (NO_FILL) Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:09.524  7542  7542 D Appodeal: RewardedVideo [Load Failed]: UnityAds - NO FILL (2) - eCPM: 2.50, precache: false, expTime: 0, id: VUkza...
+11-26 02:14:09.526  7542  7542 D Appodeal: RewardedVideo [Load Start]: UnityAds - eCPM: 1.50, precache: false, expTime: 0, id: ZjFWU...
+11-26 02:14:09.529  7542  8241 I UnityAds: Load invoked for placement: unity_rewarded_video_1_5 with instance id: 7e56d11e-c505-42bd-8abc-b1867687aa1c
+11-26 02:14:09.529  7542  8275 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:09.529  7542  8275 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:09.530  7542  8275 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:09.531  7542  8275 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:09.531  7542  8275 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:09.620  7542  8241 E UnityAds: Failed to load ad for placement unity_video_16 with instance id 0354ed56-9bc4-4101-9c49-e9c4c97f5be3, error: PUBLIC_ERROR_CODE_LOAD_NO_FILL :: Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:09.622  7542  7542 D Appodeal: Interstitial [Network Error]: UnityAds - (NO_FILL) Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:09.623  7542  7542 D Appodeal: Interstitial [Load Failed]: UnityAds - NO FILL (2) - eCPM: 16.00, precache: false, expTime: 0, id: cW9LW...
+11-26 02:14:09.624  7542  7542 D InternalLogs: AdNetworkRegistry: getAdNetwork(vungle, Interstitial) --> com.appodeal.ads.adapters.vungle.VungleNetwork@2659ae0
+11-26 02:14:09.625  7542  7542 D Appodeal: Interstitial [Load Start]: Vungle - eCPM: 13.00, precache: false, expTime: 0, id: cG94Y...
+11-26 02:14:09.874  7542  8241 E UnityAds: Failed to load ad for placement unity_rewarded_video_1_5 with instance id 7e56d11e-c505-42bd-8abc-b1867687aa1c, error: PUBLIC_ERROR_CODE_LOAD_NO_FILL :: Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:09.876  7542  7542 D Appodeal: RewardedVideo [Network Error]: UnityAds - (NO_FILL) Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:09.877  7542  7542 D Appodeal: RewardedVideo [Load Failed]: UnityAds - NO FILL (2) - eCPM: 1.50, precache: false, expTime: 0, id: ZjFWU...
+11-26 02:14:09.880  7542  7542 D Appodeal: RewardedVideo [Load Start]: UnityAds - eCPM: 0.45, precache: false, expTime: 0, id: bWVtc...
+11-26 02:14:09.882  7542  8240 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:09.882  7542  8306 I UnityAds: Load invoked for placement: Rewarded_Android with instance id: 8f8b5c47-61aa-4509-8e12-07d8840d5399
+11-26 02:14:09.882  7542  8240 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:09.883  7542  8240 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:09.883  7542  8240 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:09.884  7542  8240 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:14:10.345  7542  7542 D Appodeal: Interstitial [Network Error]: Vungle - (10001) Response error: 1265, Request failed with error: 10001, impression auctioned but unsold
+11-26 02:14:10.347  7542  7542 D Appodeal: Interstitial [Load Failed]: Vungle - NO FILL (2) - eCPM: 13.00, precache: false, expTime: 0, id: cG94Y...
+11-26 02:14:10.348  7542  7542 D Appodeal: Interstitial [Load Start]: UnityAds - eCPM: 12.00, precache: false, expTime: 0, id: SFpQc...
+11-26 02:14:10.349  7542  8240 I UnityAds: Load invoked for placement: unity_video_12 with instance id: 7e5ff3bb-3805-4145-9da6-ec40cb19c77d
+11-26 02:14:10.353  7542  8306 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:10.353  7542  8306 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:10.418  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.sendDiagnosticEvent(["ad_viewer_load_start",{"wv":"v1.78.1-ad-viewer"}])
+11-26 02:14:10.419  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.getAdContext([])
+11-26 02:14:10.420  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.core.api.Storage.get(["PRIVATE","unity.privacy.permissions"])
+11-26 02:14:10.438  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.core.api.Storage.get(["PRIVATE","privacy.agegateunderagelimit"])
+11-26 02:14:10.439  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.core.api.Storage.get(["PRIVATE","privacy.agegatesource"])
+11-26 02:14:10.484  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.sendDiagnosticEvent(["ad_viewer_generic_diagnostic",{"wv":"v1.78.1-ad-viewer","data":"tapsToClose=4,skipToAppsheetEnabled=true,playableEndScreenOptOut=false","type":"tapsToCloseConfig"}])
+11-26 02:14:10.490  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.omidGetData([])
+11-26 02:14:10.491  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.core.api.DeviceInfo.getScreenWidth([])
+11-26 02:14:10.493  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.core.api.DeviceInfo.getScreenHeight([])
+11-26 02:14:10.521  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.sendDiagnosticEvent(["ad_viewer_load_cache_start",{"ad_format":"rewarded","wv":"v1.78.1-ad-viewer","file_name":"VP9_high.webm"}])
+11-26 02:14:10.522  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.download([{"priority":0,"url":"https:\/\/cdn-creatives-cf-prd.acquire.unity3dusercontent.com\/assets\/6b044d170763fe5364fbef27\/VP9_high.webm"}])
+11-26 02:14:10.530  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.sendDiagnosticEvent(["ad_viewer_load_cache_success",{"ad_format":"rewarded","wv":"v1.78.1-ad-viewer","file_name":"VP9_high.webm","network_downlink_mbps":"10","network_effective_type":"4g","network_rtt_ms":"0","file_size_bytes":"2994058"},12])
+11-26 02:14:10.534  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.sendDiagnosticEvent(["ad_viewer_load_cache_start",{"ad_format":"rewarded","wv":"v1.78.1-ad-viewer"}])
+11-26 02:14:10.536  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.download([{"priority":100,"url":"https:\/\/cdn-store-icons-akamai-prd.unityads.unity3d.com\/store-icons\/7bffc7f7-0361-45fa-b89d-07858806106d.png"}])
+11-26 02:14:10.538  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.sendDiagnosticEvent(["ad_viewer_load_cache_start",{"ad_format":"rewarded","wv":"v1.78.1-ad-viewer"}])
+11-26 02:14:10.539  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.download([{"priority":100,"url":"https:\/\/cdn-creatives-cf-prd.acquire.unity3dusercontent.com\/assets\/6b044d09af8797996fb9dd57\/9e70b549-0018-48bc-b671-edb73de445a9.jpg"}])
+11-26 02:14:10.542  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.sendDiagnosticEvent(["ad_viewer_load_parsed",{"ad_format":"rewarded","wv":"v1.78.1-ad-viewer"}])
+11-26 02:14:10.546  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.setOpportunityTTL([7200])
+11-26 02:14:10.548  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.updateCampaignState([{"data":"Chg2YjA0NGRiMmQ1OTg0ZTYyMjk1YTU0ZjgQu6bH7gEgACgAMAA=","dataVersion":1}])
+11-26 02:14:10.552  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.core.api.Storage.get(["PUBLIC","adapter.name.value"])
+11-26 02:14:10.553  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.sendDiagnosticEvent(["ad_viewer_load_complete",{"ad_format":"rewarded","campaign_type":"performance(v)","content_type":"comet\/campaign","wv":"v1.78.1-ad-viewer"}])
+11-26 02:14:10.554  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.loadComplete([])
+11-26 02:14:10.556  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.sendDiagnosticEvent(["ad_viewer_load_cache_success",{"ad_format":"rewarded","campaign_type":"performance(v)","content_type":"comet\/campaign","wv":"v1.78.1-ad-viewer"}])
+11-26 02:14:10.559  7542  8240 I UnityAds: Successfully loaded ad for placement Rewarded_Android with instance id 8f8b5c47-61aa-4509-8e12-07d8840d5399
+11-26 02:14:10.559  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.sendDiagnosticEvent(["ad_viewer_load_cache_success",{"ad_format":"rewarded","campaign_type":"performance(v)","content_type":"comet\/campaign","wv":"v1.78.1-ad-viewer"}])
+11-26 02:14:10.560  7542  7542 D Appodeal: RewardedVideo [Loaded]: UnityAds - eCPM: 0.45, precache: false, expTime: 0, id: bWVtc...
+11-26 02:14:10.677  7542  7569 E UnityAds: Failed to load ad for placement unity_video_12 with instance id 7e5ff3bb-3805-4145-9da6-ec40cb19c77d, error: PUBLIC_ERROR_CODE_LOAD_NO_FILL :: Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:10.679  7542  7542 D Appodeal: Interstitial [Network Error]: UnityAds - (NO_FILL) Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:10.680  7542  7542 D Appodeal: Interstitial [Load Failed]: UnityAds - NO FILL (2) - eCPM: 12.00, precache: false, expTime: 0, id: SFpQc...
+11-26 02:14:10.680  7542  7542 D InternalLogs: AdNetworkRegistry: getAdNetwork(vungle, Interstitial) --> com.appodeal.ads.adapters.vungle.VungleNetwork@2659ae0
+11-26 02:14:10.683  7542  7542 D Appodeal: Interstitial [Load Start]: Vungle - eCPM: 9.00, precache: false, expTime: 0, id: UzROY...
+11-26 02:14:10.775  7542  8278 D Appodeal: RewardedVideo [Request Failed]: No ads in rewarded video
+11-26 02:14:10.775  7542  8278 D Appodeal: RewardedVideo [Load Failed (soft)]: REQUEST ERROR (4)
+11-26 02:14:10.777  7542  7542 D Appodeal: RewardedVideo [Notify Loaded]: isPrecache: false
+11-26 02:14:10.777  7542  7542 D PolitAppodeal: rewarded loaded
+11-26 02:14:10.777  7542  8278 D Appodeal: RewardedVideo [Notify Mediation Result]: (winner): UnityAds - eCPM: 0.45, id: bWVtc...
+11-26 02:14:11.388  7542  7542 D Appodeal: Interstitial [Network Error]: Vungle - (10001) Response error: 1025, Request failed with error: 10001, impression auctioned but unsold
+11-26 02:14:11.388  7542  7542 D Appodeal: Interstitial [Load Failed]: Vungle - NO FILL (2) - eCPM: 9.00, precache: false, expTime: 0, id: UzROY...
+11-26 02:14:11.389  7542  7542 D InternalLogs: AdNetworkRegistry: getAdNetwork(vungle, Interstitial) --> com.appodeal.ads.adapters.vungle.VungleNetwork@2659ae0
+11-26 02:14:11.391  7542  7542 D Appodeal: Interstitial [Load Start]: Vungle - eCPM: 5.50, precache: false, expTime: 0, id: MEc4a...
+11-26 02:14:11.679  7542  7542 D Appodeal: Banner [Cache]: isDebug: false, isLoaded: false, isLoading: false
+11-26 02:14:11.899  7542  8278 D Appodeal: Banner [Request Failed]: No ads in banner
+11-26 02:14:11.899  7542  8278 D Appodeal: Banner [Load Failed (soft)]: REQUEST ERROR (4)
+11-26 02:14:11.900  7542  7542 D Appodeal: Banner [Notify Load Failed]
+11-26 02:14:11.900  7542  7542 D PolitAppodeal: banner LOAD FAILED (no ad from any network: the SDK asks again by itself; waitingForIt=false)
+11-26 02:14:12.126  7542  7542 D Appodeal: Interstitial [Network Error]: Vungle - (10001) Response error: 1145, Request failed with error: 10001, impression auctioned but unsold
+11-26 02:14:12.127  7542  7542 D Appodeal: Interstitial [Load Failed]: Vungle - NO FILL (2) - eCPM: 5.50, precache: false, expTime: 0, id: MEc4a...
+11-26 02:14:12.129  7542  7542 D Appodeal: Interstitial [Load Start]: UnityAds - eCPM: 4.50, precache: false, expTime: 0, id: bWIyQ...
+11-26 02:14:12.131  7542  7568 I UnityAds: Load invoked for placement: unity_video_4_5 with instance id: d8da0fea-a154-46ac-bf5c-8b11c26697b0
+11-26 02:14:12.133  7542  7569 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:12.135  7542  7569 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:12.463  7542  8306 E UnityAds: Failed to load ad for placement unity_video_4_5 with instance id d8da0fea-a154-46ac-bf5c-8b11c26697b0, error: PUBLIC_ERROR_CODE_LOAD_NO_FILL :: Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:12.465  7542  7542 D Appodeal: Interstitial [Network Error]: UnityAds - (NO_FILL) Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:12.465  7542  7542 D Appodeal: Interstitial [Load Failed]: UnityAds - NO FILL (2) - eCPM: 4.50, precache: false, expTime: 0, id: bWIyQ...
+11-26 02:14:12.466  7542  7542 D InternalLogs: AdNetworkRegistry: getAdNetwork(vungle, Interstitial) --> com.appodeal.ads.adapters.vungle.VungleNetwork@2659ae0
+11-26 02:14:12.468  7542  7542 D Appodeal: Interstitial [Load Start]: Vungle - eCPM: 3.00, precache: false, expTime: 0, id: WlpPW...
+11-26 02:14:13.193  7542  7542 D Appodeal: Interstitial [Network Error]: Vungle - (10001) Response error: 1385, Request failed with error: 10001, impression auctioned but unsold
+11-26 02:14:13.194  7542  7542 D Appodeal: Interstitial [Load Failed]: Vungle - NO FILL (2) - eCPM: 3.00, precache: false, expTime: 0, id: WlpPW...
+11-26 02:14:13.197  7542  7542 D Appodeal: Interstitial [Load Start]: UnityAds - eCPM: 2.50, precache: false, expTime: 0, id: SjRHV...
+11-26 02:14:13.199  7542  8240 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:13.199  7542  7568 I UnityAds: Load invoked for placement: unity_video_2_5 with instance id: dba20da0-dd5c-42fa-b797-7dea79bbfae3
+11-26 02:14:13.201  7542  8240 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:13.651  7542  8240 E UnityAds: Failed to load ad for placement unity_video_2_5 with instance id dba20da0-dd5c-42fa-b797-7dea79bbfae3, error: PUBLIC_ERROR_CODE_LOAD_NO_FILL :: Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:13.653  7542  7542 D Appodeal: Interstitial [Network Error]: UnityAds - (NO_FILL) Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:13.654  7542  7542 D Appodeal: Interstitial [Load Failed]: UnityAds - NO FILL (2) - eCPM: 2.50, precache: false, expTime: 0, id: SjRHV...
+11-26 02:14:13.655  7542  7542 D InternalLogs: AdNetworkRegistry: getAdNetwork(vungle, Interstitial) --> com.appodeal.ads.adapters.vungle.VungleNetwork@2659ae0
+11-26 02:14:13.656  7542  7542 D Appodeal: Interstitial [Load Start]: Vungle - eCPM: 1.50, precache: false, expTime: 0, id: UjRtW...
+11-26 02:14:14.396  7542  7542 D Appodeal: Interstitial [Network Error]: Vungle - (10001) Response error: 1625, Request failed with error: 10001, impression auctioned but unsold
+11-26 02:14:14.396  7542  7542 D Appodeal: Interstitial [Load Failed]: Vungle - NO FILL (2) - eCPM: 1.50, precache: false, expTime: 0, id: UjRtW...
+11-26 02:14:14.400  7542  7542 D Appodeal: Interstitial [Load Start]: UnityAds - eCPM: 1.50, precache: false, expTime: 0, id: TXJGS...
+11-26 02:14:14.402  7542  7568 I UnityAds: Load invoked for placement: unity_video_1_5 with instance id: 0dc15223-a1ef-4686-a1f7-42fdf4f5b3c6
+11-26 02:14:14.403  7542  7587 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:14.405  7542  7587 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:14.914  7542  7568 E UnityAds: Failed to load ad for placement unity_video_1_5 with instance id 0dc15223-a1ef-4686-a1f7-42fdf4f5b3c6, error: PUBLIC_ERROR_CODE_LOAD_NO_FILL :: Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:14.916  7542  7542 D Appodeal: Interstitial [Network Error]: UnityAds - (NO_FILL) Unity Ads SDK ad load failed: No ad fill available for the requested placement.
+11-26 02:14:14.917  7542  7542 D Appodeal: Interstitial [Load Failed]: UnityAds - NO FILL (2) - eCPM: 1.50, precache: false, expTime: 0, id: TXJGS...
+11-26 02:14:14.918  7542  7542 D InternalLogs: AdNetworkRegistry: getAdNetwork(vungle, Interstitial) --> com.appodeal.ads.adapters.vungle.VungleNetwork@2659ae0
+11-26 02:14:14.919  7542  7542 D Appodeal: Interstitial [Load Start]: Vungle - eCPM: 0.50, precache: false, expTime: 0, id: cXBwW...
+11-26 02:14:15.921  7542  7542 D Appodeal: Interstitial [Network Error]: Vungle - (10001) Response error: 1565, Request failed with error: 10001, impression auctioned but unsold
+11-26 02:14:15.922  7542  7542 D Appodeal: Interstitial [Load Failed]: Vungle - NO FILL (2) - eCPM: 0.50, precache: false, expTime: 0, id: cXBwW...
+11-26 02:14:15.923  7542  7542 D InternalLogs: AdNetworkRegistry: getAdNetwork(vungle, Interstitial) --> com.appodeal.ads.adapters.vungle.VungleNetwork@2659ae0
+11-26 02:14:15.924  7542  7542 D Appodeal: Interstitial [Load Start]: Vungle - eCPM: 0.25, precache: false, expTime: 0, id: VGEwK...
+11-26 02:14:16.624  7542  7542 D Appodeal: Interstitial [Network Error]: Vungle - (10001) Response error: 905, Request failed with error: 10001, impression auctioned but unsold
+11-26 02:14:16.625  7542  7542 D Appodeal: Interstitial [Load Failed]: Vungle - NO FILL (2) - eCPM: 0.25, precache: false, expTime: 0, id: VGEwK...
+11-26 02:14:16.627  7542  7542 D Appodeal: Interstitial [Load Start]: UnityAds - eCPM: 0.18, precache: false, expTime: 0, id: SDlib...
+11-26 02:14:16.629  7542  8240 I UnityAds: Load invoked for placement: Interstitial_Android with instance id: c1807873-906a-4c52-a89d-849513d5829f
+11-26 02:14:16.629  7542  7568 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:16.631  7542  7568 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:14:17.034  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.sendDiagnosticEvent(["ad_viewer_load_start",{"wv":"v1.78.1-ad-viewer"}])
+11-26 02:14:17.035  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.getAdContext([])
+11-26 02:14:17.035  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.core.api.Storage.get(["PRIVATE","unity.privacy.permissions"])
+11-26 02:14:17.043  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.core.api.Storage.get(["PRIVATE","privacy.agegateunderagelimit"])
+11-26 02:14:17.044  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.core.api.Storage.get(["PRIVATE","privacy.agegatesource"])
+11-26 02:14:17.055  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.sendDiagnosticEvent(["ad_viewer_generic_diagnostic",{"wv":"v1.78.1-ad-viewer","data":"tapsToClose=4,skipToAppsheetEnabled=true,playableEndScreenOptOut=false","type":"tapsToCloseConfig"}])
+11-26 02:14:17.056  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.omidGetData([])
+11-26 02:14:17.057  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.core.api.DeviceInfo.getScreenWidth([])
+11-26 02:14:17.059  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.core.api.DeviceInfo.getScreenHeight([])
+11-26 02:14:17.069  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.sendDiagnosticEvent(["ad_viewer_load_cache_start",{"ad_format":"interstitial","wv":"v1.78.1-ad-viewer","file_name":"VP9_high.webm"}])
+11-26 02:14:17.070  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.download([{"priority":0,"url":"https:\/\/cdn-creatives-cf-prd.acquire.unity3dusercontent.com\/assets\/6b044d170763fe5364fbef27\/VP9_high.webm"}])
+11-26 02:14:17.073  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.sendDiagnosticEvent(["ad_viewer_load_cache_success",{"ad_format":"interstitial","wv":"v1.78.1-ad-viewer","file_name":"VP9_high.webm","network_downlink_mbps":"10","network_effective_type":"4g","network_rtt_ms":"0","file_size_bytes":"2994058"},5])
+11-26 02:14:17.076  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.sendDiagnosticEvent(["ad_viewer_load_cache_start",{"ad_format":"interstitial","wv":"v1.78.1-ad-viewer"}])
+11-26 02:14:17.076  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.download([{"priority":100,"url":"https:\/\/cdn-store-icons-akamai-prd.unityads.unity3d.com\/store-icons\/7bffc7f7-0361-45fa-b89d-07858806106d.png"}])
+11-26 02:14:17.080  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.sendDiagnosticEvent(["ad_viewer_load_cache_start",{"ad_format":"interstitial","wv":"v1.78.1-ad-viewer"}])
+11-26 02:14:17.081  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.download([{"priority":100,"url":"https:\/\/cdn-creatives-cf-prd.acquire.unity3dusercontent.com\/assets\/6b044d09af8797996fb9dd57\/9e70b549-0018-48bc-b671-edb73de445a9.jpg"}])
+11-26 02:14:17.082  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.sendDiagnosticEvent(["ad_viewer_load_parsed",{"ad_format":"interstitial","wv":"v1.78.1-ad-viewer"}])
+11-26 02:14:17.085  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.setOpportunityTTL([7200])
+11-26 02:14:17.085  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.updateCampaignState([{"data":"Chg2YjA0NGRiMmQ1OTg0ZTYyMjk1YTU0ZjgQu6bH7gEgACgAMAA=","dataVersion":1}])
+11-26 02:14:17.087  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.core.api.Storage.get(["PUBLIC","adapter.name.value"])
+11-26 02:14:17.088  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.sendDiagnosticEvent(["ad_viewer_load_complete",{"ad_format":"interstitial","campaign_type":"performance(v)","content_type":"comet\/campaign","wv":"v1.78.1-ad-viewer"}])
+11-26 02:14:17.089  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.loadComplete([])
+11-26 02:14:17.091  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.sendDiagnosticEvent(["ad_viewer_load_cache_success",{"ad_format":"interstitial","campaign_type":"performance(v)","content_type":"comet\/campaign","wv":"v1.78.1-ad-viewer"}])
+11-26 02:14:17.091  7542  8303 I UnityAds: Successfully loaded ad for placement Interstitial_Android with instance id c1807873-906a-4c52-a89d-849513d5829f
+11-26 02:14:17.093  7542  7694 D UnityAds: Unity Ads WebView calling for: com.unity3d.services.ads.api.AdViewer.sendDiagnosticEvent(["ad_viewer_load_cache_success",{"ad_format":"interstitial","campaign_type":"performance(v)","content_type":"comet\/campaign","wv":"v1.78.1-ad-viewer"}])
+11-26 02:14:17.093  7542  7542 D Appodeal: Interstitial [Loaded]: UnityAds - eCPM: 0.18, precache: false, expTime: 0, id: SDlib...
+11-26 02:14:17.349  7542  8278 D Appodeal: Interstitial [Request Failed]: No ads in interstitial
+11-26 02:14:17.351  7542  8278 D Appodeal: Interstitial [Load Failed (soft)]: REQUEST ERROR (4)
+11-26 02:14:17.352  7542  8278 D Appodeal: Interstitial [Notify Mediation Result]: (winner): UnityAds - eCPM: 0.18, id: SDlib...
+11-26 02:14:17.353  7542  7542 D Appodeal: Interstitial [Notify Loaded]: isPrecache: false
+11-26 02:14:17.353  7542  7542 D PolitAppodeal: interstitial loaded
+11-26 02:14:21.900  7542  7542 D Appodeal: Banner [Cache]: isDebug: false, isLoaded: false, isLoading: false
+11-26 02:14:22.122  7542  8278 D Appodeal: Banner [Request Failed]: No ads in banner
+11-26 02:14:22.122  7542  8278 D Appodeal: Banner [Load Failed (soft)]: REQUEST ERROR (4)
+11-26 02:14:22.123  7542  7542 D Appodeal: Banner [Notify Load Failed]
+11-26 02:14:22.124  7542  7542 D PolitAppodeal: banner LOAD FAILED (no ad from any network: the SDK asks again by itself; waitingForIt=false)
+11-26 02:14:42.127  7542  7542 D Appodeal: Banner [Cache]: isDebug: false, isLoaded: false, isLoading: false
+11-26 02:14:42.485  7542  7688 D PolitAppodeal: js: banner: pausa di 120 s dopo l’ultima sessione
+11-26 02:14:42.490  7542  8278 D Appodeal: Banner [Request Failed]: No ads in banner
+11-26 02:14:42.491  7542  8278 D Appodeal: Banner [Load Failed (soft)]: REQUEST ERROR (4)
+11-26 02:14:42.492  7542  7542 D Appodeal: Banner [Notify Load Failed]
+11-26 02:14:42.492  7542  7542 D PolitAppodeal: banner LOAD FAILED (no ad from any network: the SDK asks again by itself; waitingForIt=false)
+11-26 02:15:22.494  7542  7542 D Appodeal: Banner [Cache]: isDebug: false, isLoaded: false, isLoading: false
+11-26 02:15:22.885  7542  8278 D Appodeal: Banner [Request Failed]: No ads in banner
+11-26 02:15:22.886  7542  8278 D Appodeal: Banner [Load Failed (soft)]: REQUEST ERROR (4)
+11-26 02:15:22.887  7542  7542 D Appodeal: Banner [Notify Load Failed]
+11-26 02:15:22.888  7542  7542 D PolitAppodeal: banner LOAD FAILED (no ad from any network: the SDK asks again by itself; waitingForIt=false)
+11-26 02:15:28.066  8820  8951 D PolitAppodeal: js: banner: non richiesto: pagina «panoramica», momento da non interrompere (menu)
+11-26 02:15:29.581  8820  8820 W PolitAppodeal: consent form: com.appodeal.consent.ConsentManagerError$FormPresentationNotRequired: Presentation not required
+11-26 02:15:29.658  8820  8820 D InternalLogs: AdNetworkRegistry: Builder for UnityAds created successfully
+11-26 02:15:29.658  8820  8820 D InternalLogs: AdNetworkRegistry: Builder for Vungle created successfully
+11-26 02:15:29.704  8820  8851 D Appodeal: Network [Info]: UnityAds - ver. 4.17.0
+11-26 02:15:29.708  8820  8851 D Appodeal: Network [Info]: Vungle - ver. 7.7.9
+11-26 02:15:30.531  8820  8820 D InternalLogs: InitRequestUseCase: Initialization unity_ads: UnityAdsInitializeParams(appId='6230040', mediatorName='Appodeal')
+11-26 02:15:30.553  8820  8820 D InternalLogs: AdNetworkRegistry: getAdNetwork(vungle) --> com.appodeal.ads.adapters.vungle.VungleNetwork@a4f7e55
+11-26 02:15:30.553  8820  8820 D InternalLogs: InitRequestUseCase: Initialization vungle: VungleInitializeParams(appId='6b02bea14ebef38442beb31b')
+11-26 02:15:30.556  8820  8820 D Appodeal: Banner [Initialize]: done
+11-26 02:15:30.556  8820  8820 D Appodeal: Interstitial [Initialize]: done
+11-26 02:15:30.557  8820  8820 D Appodeal: RewardedVideo [Initialize]: done
+11-26 02:15:30.557  8820  8820 D Appodeal: Banner [Cache]: isDebug: false, isLoaded: false, isLoading: false
+11-26 02:15:30.558  8820  8820 D Appodeal: Interstitial [Cache]: isDebug: false, isLoaded: false, isLoading: false
+11-26 02:15:30.559  8820  8820 D Appodeal: RewardedVideo [Cache]: isDebug: false, isLoaded: false, isLoading: false
+11-26 02:15:30.559  8820  8820 D PolitAppodeal: banner state after init: initialized=true autoCache=true loaded=false testing=false
+11-26 02:15:30.559  8820  8820 W PolitAppodeal: initialisation finished with 1 non-blocking error(s): [com.appodeal.ads.initializing.ApdInitializationError$InternalError$SdkConfigurationError]
+11-26 02:15:30.568  8820  9090 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:15:30.570  8820  9090 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:15:30.572  8820  9090 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-public-data.json
+11-26 02:15:30.572  8820  9090 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:15:30.573  8820  9090 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:15:30.575  8820  9090 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:15:30.576  8820  8820 D UnityAds: com.unity3d.services.ads.UnityAdsImplementation.initialize() (line:84) :: ENTERED METHOD
+11-26 02:15:30.576  8820  8820 D UnityAds: com.unity3d.services.UnityServices.initialize() (line:31) :: ENTERED METHOD
+11-26 02:15:30.577  8820  8820 D UnityAds: com.unity3d.services.core.cache.CacheDirectory.getCacheDirectory() (line:72) :: Unity Ads is using internal cache directory: /data/user/0/it.matteobianchi.politicando2026/no_backup/UnityAdsWebViewCache
+11-26 02:15:30.583  8820  9090 D UnityAds: com.unity3d.services.ads.gmascar.bridges.mobileads.MobileAdsBridge$1.<init>() (line:24) :: Could not find class "com.google.android.gms.ads.initialization.OnInitializationCompleteListener" com.google.android.gms.ads.initialization.OnInitializationCompleteListener
+11-26 02:15:30.584  8820  9090 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.classForName() (line:47) :: ERROR: Could not find Class com.google.android.gms.ads.MobileAds com.google.android.gms.ads.MobileAds
+11-26 02:15:30.585  8820  9090 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.buildMethodMap() (line:78) :: ERROR: Could not find com.google.android.gms.ads.MobileAds class with method getVersion and parameters : [Ljava.lang.Class;@5f0cf59
+11-26 02:15:30.586  8820  9090 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.classForName() (line:47) :: ERROR: Could not find Class com.google.android.gms.ads.MobileAds com.google.android.gms.ads.MobileAds
+11-26 02:15:30.587  8820  9090 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.buildMethodMap() (line:78) :: ERROR: Could not find com.google.android.gms.ads.MobileAds class with method getInitializationStatus and parameters : [Ljava.lang.Class;@c56072a
+11-26 02:15:30.587  8820  9090 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.classForName() (line:47) :: ERROR: Could not find Class com.google.android.gms.ads.MobileAds com.google.android.gms.ads.MobileAds
+11-26 02:15:30.588  8820  9090 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.exists() (line:56) :: ERROR: Could not find class com.google.android.gms.ads.MobileAds
+11-26 02:15:30.588  8820  9090 D UnityAds: com.unity3d.services.ads.gmascar.bridges.InitializeListenerBridge$1.<init>() (line:21) :: Could not find class "com.google.android.gms.ads.initialization.InitializationStatus" com.google.android.gms.ads.initialization.InitializationStatus
+11-26 02:15:30.589  8820  9090 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.classForName() (line:47) :: ERROR: Could not find Class com.google.android.gms.ads.initialization.InitializationStatus com.google.android.gms.ads.initialization.InitializationStatus
+11-26 02:15:30.590  8820  9090 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.buildMethodMap() (line:78) :: ERROR: Could not find com.google.android.gms.ads.initialization.InitializationStatus class with method getAdapterStatusMap and parameters : [Ljava.lang.Class;@562e1d7
+11-26 02:15:30.590  8820  9090 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.classForName() (line:47) :: ERROR: Could not find Class com.google.android.gms.ads.initialization.AdapterStatus com.google.android.gms.ads.initialization.AdapterStatus
+11-26 02:15:30.590  8820  9090 D UnityAds: com.unity3d.services.core.reflection.GenericBridge.buildMethodMap() (line:78) :: ERROR: Could not find com.google.android.gms.ads.initialization.AdapterStatus class with method getInitializationState and parameters : [Ljava.lang.Class;@f33dac4
+11-26 02:15:30.591  8820  9090 D UnityAds: com.unity3d.services.ads.gmascar.bridges.AdapterStatusBridge.<init>() (line:23) :: ERROR: Could not find class com.google.android.gms.ads.initialization.AdapterStatus$State com.google.android.gms.ads.initialization.AdapterStatus$State
+11-26 02:15:30.616  8820  8820 D Appodeal: Network [Info]: Vungle initialization finished in 62 ms.
+11-26 02:15:30.640  8820  9090 I UnityAds: Initializing SDK 4.17.0 41700 with game id 6230040 in test mode, session e95afb6c-fc15-40a7-b03d-8e11d7d5121c
+11-26 02:15:30.665  8820  9090 W UnityAds: com.unity3d.ads.core.data.datasource.AndroidDynamicDeviceInfoDataSource.getNetworkType() (line:170) :: Unity Ads was not able to get current network type due to missing permission
+11-26 02:15:30.752  8820  8951 D PolitAppodeal: js: banner: pausa di 120 s dopo l’ultima sessione
+11-26 02:15:30.911  8820  9103 D Appodeal: SDK [Dump]: RewardedVideo waterfall:
+11-26 02:15:30.911  8820  9103 D Appodeal:     Test ad (Vast), eCPM: 0.00; 
+11-26 02:15:30.934  8820  9103 D Appodeal: SDK [Dump]: Interstitial waterfall:
+11-26 02:15:30.934  8820  9103 D Appodeal:     Test ad (Mraid), eCPM: 0.00; 
+11-26 02:15:31.083  8820  9103 D Appodeal: SDK [Dump]: Banner waterfall:
+11-26 02:15:31.083  8820  9103 D Appodeal:     Test ad (Mraid), eCPM: 0.00; 
+11-26 02:15:31.092  8820  8851 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-private-data.json
+11-26 02:15:31.098  8820  9085 I UnityAds: Initialized successfully
+11-26 02:15:31.099  8820  9085 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-private-data.json
+11-26 02:15:31.312  8820  9086 D UnityAds: com.unity3d.services.core.misc.Utilities.writeFile() (line:130) :: Wrote file: /data/user/0/it.matteobianchi.politicando2026/files/UnityAdsStorage-private-data.json
+11-26 02:15:31.415  8820  8820 D Appodeal: RewardedVideo [Load Start]: Vast - eCPM: 0.00, precache: false, expTime: 0, id: SnpST...
+11-26 02:15:31.431  8820  8820 D Appodeal: Interstitial [Load Start]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: VVhVd...
+11-26 02:15:31.431  8820  8820 D Appodeal: Banner [Load Start]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: cWloQ...
+11-26 02:15:31.505  8820  8820 D Appodeal: Network [Info]: UnityAds initialization finished in 973 ms.
+11-26 02:15:31.535  8820  8820 D Appodeal: Banner [Loaded]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: cWloQ...
+11-26 02:15:31.549  8820  8820 D Appodeal: Interstitial [Loaded]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: VVhVd...
+11-26 02:15:31.802  8820  8820 D Appodeal: RewardedVideo [Loaded]: Vast - eCPM: 0.00, precache: false, expTime: 0, id: SnpST...
+11-26 02:15:31.816  8820  9103 D Appodeal: Interstitial [Request Failed]: No ads in interstitial
+11-26 02:15:31.816  8820  9103 D Appodeal: Interstitial [Load Failed (soft)]: REQUEST ERROR (4)
+11-26 02:15:31.818  8820  8820 D Appodeal: Interstitial [Notify Loaded]: isPrecache: false
+11-26 02:15:31.818  8820  8820 D PolitAppodeal: interstitial loaded
+11-26 02:15:31.819  8820  9103 D Appodeal: Interstitial [Notify Mediation Result]: (winner): Mraid - eCPM: 0.00, id: VVhVd...
+11-26 02:15:31.840  8820  9103 D Appodeal: Banner [Request Failed]: No ads in banner
+11-26 02:15:31.840  8820  9103 D Appodeal: Banner [Load Failed (soft)]: REQUEST ERROR (4)
+11-26 02:15:31.841  8820  9103 D Appodeal: Banner [Notify Mediation Result]: (winner): Mraid - eCPM: 0.00, id: cWloQ...
+11-26 02:15:31.841  8820  8820 D Appodeal: Banner [Notify Loaded]: height: 50dp, isPrecache: false
+11-26 02:15:31.841  8820  8820 D PolitAppodeal: banner LOADED (height 50dp, precache=false, waitingForIt=false)
+11-26 02:15:32.021  8820  9103 D Appodeal: RewardedVideo [Request Failed]: No ads in rewarded video
+11-26 02:15:32.021  8820  9103 D Appodeal: RewardedVideo [Load Failed (soft)]: REQUEST ERROR (4)
+11-26 02:15:32.022  8820  9103 D Appodeal: RewardedVideo [Notify Mediation Result]: (winner): Vast - eCPM: 0.00, id: SnpST...
+11-26 02:15:32.022  8820  8820 D Appodeal: RewardedVideo [Notify Loaded]: isPrecache: false
+11-26 02:15:32.022  8820  8820 D PolitAppodeal: rewarded loaded
+11-26 02:15:38.951  8820  8951 D PolitAppodeal: js: banner: non richiesto: pagina «panoramica», momento da non interrompere (menu mobile)
+11-26 02:15:40.084  8820  8951 D PolitAppodeal: js: banner: non richiesto: pagina «ricompense» fuori dall’elenco, momento da non interrompere (menu mobile)
+11-26 02:15:40.233  8820  8951 D PolitAppodeal: js: banner: non richiesto: pagina «ricompense» fuori dall’elenco
+11-26 02:15:42.730  8820  8820 D Appodeal: RewardedVideo [Show]: isDebug: false, isLoaded: true, isLoading: false, placement: 'default'
+11-26 02:15:42.829  8820  8820 D Appodeal: RewardedVideo [Shown]: Vast - eCPM: 0.00, precache: false, expTime: 0, id: SnpST...
+11-26 02:15:42.915  8820  8820 D Appodeal: RewardedVideo [Notify Shown]
+11-26 02:15:42.915  8820  8820 D PolitAppodeal: rewarded shown
+11-26 02:15:42.916  8820  9086 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:15:49.049  8820  8820 D Appodeal: RewardedVideo [Finished]: Vast - eCPM: 0.00, precache: false, expTime: 0, id: SnpST...
+11-26 02:15:49.050  8820  8820 D Appodeal: RewardedVideo [Closed]: Vast - eCPM: 0.00, precache: false, expTime: 0, id: SnpST...
+11-26 02:15:49.050  8820  8820 D Appodeal: RewardedVideo [Cache]: isDebug: false, isLoaded: false, isLoading: false
+11-26 02:15:49.070  8820  8820 D Appodeal: RewardedVideo [Notify Finished]
+11-26 02:15:49.070  8820  8820 D PolitAppodeal: rewarded finished (official completion)
+11-26 02:15:49.070  8820  8820 D Appodeal: RewardedVideo [Notify Closed]: finished: true
+11-26 02:15:49.070  8820  8820 D PolitAppodeal: rewarded closed, finished=true
+11-26 02:15:49.400  8820  9103 D Appodeal: SDK [Dump]: RewardedVideo waterfall:
+11-26 02:15:49.400  8820  9103 D Appodeal:     Test ad (Vast), eCPM: 0.00; 
+11-26 02:15:49.402  8820  8820 D Appodeal: RewardedVideo [Load Start]: Vast - eCPM: 0.00, precache: false, expTime: 0, id: NlhsT...
+11-26 02:15:49.676  8820  8820 D Appodeal: RewardedVideo [Loaded]: Vast - eCPM: 0.00, precache: false, expTime: 0, id: NlhsT...
+11-26 02:15:49.890  8820  9103 D Appodeal: RewardedVideo [Request Failed]: No ads in rewarded video
+11-26 02:15:49.891  8820  9103 D Appodeal: RewardedVideo [Load Failed (soft)]: REQUEST ERROR (4)
+11-26 02:15:49.891  8820  8820 D Appodeal: RewardedVideo [Notify Loaded]: isPrecache: false
+11-26 02:15:49.892  8820  8820 D PolitAppodeal: rewarded loaded
+11-26 02:15:49.892  8820  9103 D Appodeal: RewardedVideo [Notify Mediation Result]: (winner): Vast - eCPM: 0.00, id: NlhsT...
+11-26 02:15:59.564  8820  8951 D PolitAppodeal: js: banner: pausa di 120 s dopo l’ultima sessione
+11-26 02:16:00.684  8820  8951 D PolitAppodeal: js: banner: non richiesto: pagina «panoramica», momento da non interrompere (rapporto)
+11-26 02:16:01.696  8820  8951 D PolitAppodeal: js: banner: pausa di 120 s dopo l’ultima sessione
+11-26 02:16:01.745  8820  8820 D Appodeal: Interstitial [Show]: isDebug: false, isLoaded: true, isLoading: false, placement: 'default'
+11-26 02:16:01.934  8820  8820 D Appodeal: Interstitial [Shown]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: VVhVd...
+11-26 02:16:01.935  8820  8820 D Appodeal: Interstitial [Notify Shown]
+11-26 02:16:01.935  8820  8820 D PolitAppodeal: interstitial shown
+11-26 02:16:01.936  8820  8851 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:16:06.456  8820  8820 D Appodeal: Interstitial [Closed]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: VVhVd...
+11-26 02:16:06.457  8820  8820 D Appodeal: Interstitial [Cache]: isDebug: false, isLoaded: false, isLoading: false
+11-26 02:16:06.518  8820  8820 D Appodeal: Interstitial [Notify Closed]: finished: false
+11-26 02:16:06.518  8820  8820 D PolitAppodeal: interstitial closed
+11-26 02:16:06.578  8820  8951 D PolitAppodeal: js: banner: richiesto al plugin
+11-26 02:16:06.616  8820  8820 D PolitAppodeal: showBanner: requested (initialized=true autoCache=true loaded=true)
+11-26 02:16:06.617  8820  8820 D Appodeal: Banner [Show]: isDebug: false, isLoaded: true, isLoading: false, placement: 'default'
+11-26 02:16:06.620  8820  8820 D PolitAppodeal: banner show INVOKED: result=true (view attached=true, height=50dp)
+11-26 02:16:06.660  8820  8951 D PolitAppodeal: js: banner: mostrato
+11-26 02:16:06.664  8820  8820 D Appodeal: Banner [Shown]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: cWloQ...
+11-26 02:16:06.664  8820  8820 D Appodeal: Banner [Cache]: isDebug: false, isLoaded: false, isLoading: false
+11-26 02:16:06.785  8820  9239 D UnityAds: com.unity3d.services.core.device.Storage.sendEvent() (line:85) :: Couldn't send storage event to WebApp
+11-26 02:16:06.794  8820  8820 D Appodeal: Banner [Notify Shown]
+11-26 02:16:06.794  8820  8820 D PolitAppodeal: banner SHOWN (the SDK counts the impression)
+11-26 02:16:06.795  8820  8820 D Appodeal: Banner [Finished]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: cWloQ...
+11-26 02:16:06.830  8820  9103 D Appodeal: SDK [Dump]: Interstitial waterfall:
+11-26 02:16:06.830  8820  9103 D Appodeal:     Test ad (Mraid), eCPM: 0.00; 
+11-26 02:16:06.831  8820  8820 D Appodeal: Interstitial [Load Start]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: aFFQO...
+11-26 02:16:06.944  8820  8820 D Appodeal: Interstitial [Loaded]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: aFFQO...
+11-26 02:16:07.113  8820  9103 D Appodeal: SDK [Dump]: Banner waterfall:
+11-26 02:16:07.113  8820  9103 D Appodeal:     Test ad (Mraid), eCPM: 0.00; 
+11-26 02:16:07.115  8820  8820 D Appodeal: Banner [Load Start]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: M3JLT...
+11-26 02:16:07.171  8820  8820 D Appodeal: Banner [Loaded]: Mraid - eCPM: 0.00, precache: false, expTime: 0, id: M3JLT...
+11-26 02:16:07.298  8820  9103 D Appodeal: Interstitial [Request Failed]: No ads in interstitial
+11-26 02:16:07.299  8820  9103 D Appodeal: Interstitial [Load Failed (soft)]: REQUEST ERROR (4)
+11-26 02:16:07.300  8820  8820 D Appodeal: Interstitial [Notify Loaded]: isPrecache: false
+11-26 02:16:07.300  8820  8820 D PolitAppodeal: interstitial loaded
+11-26 02:16:07.300  8820  9103 D Appodeal: Interstitial [Notify Mediation Result]: (winner): Mraid - eCPM: 0.00, id: aFFQO...
+11-26 02:16:07.380  8820  9103 D Appodeal: Banner [Request Failed]: No ads in banner
+11-26 02:16:07.381  8820  9103 D Appodeal: Banner [Load Failed (soft)]: REQUEST ERROR (4)
+11-26 02:16:07.382  8820  8820 D Appodeal: Banner [Notify Loaded]: height: 50dp, isPrecache: false
+11-26 02:16:07.382  8820  9103 D Appodeal: Banner [Notify Mediation Result]: (winner): Mraid - eCPM: 0.00, id: M3JLT...
+11-26 02:16:07.382  8820  8820 D PolitAppodeal: banner LOADED (height 50dp, precache=false, waitingForIt=false)

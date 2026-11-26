@@ -1,6 +1,6 @@
 // The choices of the television debate, per TOPIC (core/scene-engine.js): loaded with the scene page (ui/scene-view.js), never at start — it registers itself in the scene engine, which uses the generic wording
 // where a topic is not here.
-import { setDebateChoices } from '../core/scene-engine.js?v=20261117-3';
+import { setDebateChoices } from '../core/scene-engine.js?v=20261126-3';
 // The choices of the television debate, per TOPIC (core/scene-engine.js): what the player can say depends on what is being talked about — a health debate offers waiting lists, hospitals and funding, an economy
 // debate offers taxes, firms, jobs and debt — instead of the same four approaches every time. The IDs are those of the engine (the style of the answer: dati / empatia / programma / attacco; the question to the
 // rival: conti / coerenza / passato / salta; the reply to an attack: fatti / calma / contrattacco / ignora; the closing: sobrio / appello / sfida), so the effects, the evaluation and the explanation of
@@ -206,6 +206,82 @@ export const DEBATE_CHOICES = Object.freeze({
       sobrio: C(P('Riassumi: istruzione, primo lavoro, un motivo per restare', 'Sum up: education, a first job, a reason to stay'), P('Misura e chiarezza.', 'Measure and clarity.')),
       appello: C(P('Appello ai ragazzi che pensano di partire', 'Appeal to the young who think of leaving'), P('Carisma e visione.', 'Charisma and vision.')),
       sfida: C(P('Sfida: «Venga a parlare con loro, non di loro»', 'Challenge: “Come and talk with them, not about them”'), P('Forte, ma divisivo.', 'Strong, but divisive.'))
+    }
+  },
+  // The subjects that only the facts of the days and the promises bring into a debate (core/topic-of-text.js): rescue and emergencies, immigration, civil rights.
+  soccorsi: {
+    styles: {
+      dati: C(P('Con i tempi di arrivo dei soccorsi', 'With the response times of the rescue services'), P('Minuti di intervento, mezzi, personale: conta la competenza.', 'Response minutes, vehicles, staff: competence counts.')),
+      empatia: C(P('Racconta chi ha aspettato i soccorsi', 'Tell of those who waited for help'), P('Le famiglie rimaste senza aiuto: conta il carisma.', 'The families left without help: charisma counts.')),
+      programma: C(P('Cita il tuo piano per la protezione civile', 'Cite your civil protection plan'), P('Mezzi, volontari, prevenzione: vale quanto sei credibile.', 'Vehicles, volunteers, prevention: it counts as much as you are credible.')),
+      attacco: C(P('Attacca i tagli dell’avversario alla protezione civile', 'Attack the rival’s cuts to civil protection'), P('Colpisci la sua gestione delle emergenze: premia se è impreparato.', 'Hit his handling of emergencies: it pays if he is unprepared.'))
+    },
+    asks: {
+      conti: C(P('Chiedi con quali fondi rinforza i soccorsi', 'Ask with what funds he strengthens the rescue services'), P('Mette alla prova i conti del suo piano per le emergenze.', 'Tests the accounts of his emergency plan.')),
+      coerenza: C(P('Chiedi perché ha votato contro i fondi per le emergenze', 'Ask why he voted against the emergency funds'), P('Colpisce se ha cambiato idea sulla protezione civile.', 'Hits if he has changed his mind on civil protection.')),
+      passato: C(P('Ricordagli i ritardi nella sua ultima emergenza', 'Remind him of the delays in his last emergency'), P('Rischioso: se ricordi male, si ritorce.', 'Risky: if you remember wrongly, it backfires.')),
+      salta: C(P('Rinuncia alla domanda sull’emergenza', 'Give up the question on the emergency'), P('Non fai domande sui soccorsi.', 'You ask nothing on the rescue services.'))
+    },
+    replies: {
+      fatti: C(P('Rispondi con i tempi e i mezzi dei soccorsi', 'Answer with the times and the vehicles of the rescue services'), P('Smonti l’accusa con i dati dell’intervento: serve preparazione.', 'You dismantle the charge with the data of the response: it takes preparation.')),
+      calma: C(P('Resta calmo: spiega dove eri e cosa hai fatto durante l’emergenza', 'Stay calm: explain where you were and what you did during the emergency'), P('Sobrio, ma sembri sulla difensiva.', 'Sober, but you seem defensive.')),
+      contrattacco: C(P('Contrattacca sui mezzi che mancavano quando governava lui', 'Counter-attack on the vehicles that were missing when he governed'), P('Colpo su colpo: il pubblico si accende, con rischi.', 'Blow for blow: the audience warms up, with risks.')),
+      ignora: C(P('Ignora e torna ai piani di prevenzione del rischio', 'Ignore it and go back to the risk prevention plans'), P('Cambi argomento: lascia il segno all’avversario.', 'You change the subject: it leaves the mark on the opponent.'))
+    },
+    closings: {
+      sobrio: C(P('Riassumi: soccorsi più rapidi e prevenzione', 'Sum up: faster rescue and prevention'), P('Ringrazi e riassumi con misura.', 'You thank and sum up with restraint.')),
+      appello: C(P('Appello ai volontari della protezione civile', 'Appeal to the civil protection volunteers'), P('Parli al Paese: carisma e visione.', 'You speak to the country: charisma and vision.')),
+      sfida: C(P('Sfida: «Dica quanti mezzi in più, e dove»', 'Challenge: “Say how many more vehicles, and where”'), P('Forte, ma divisivo.', 'Strong, but divisive.'))
+    }
+  },
+  immigrazione: {
+    styles: {
+      dati: C(P('Con i numeri di arrivi, accoglienza e rimpatri', 'With the figures on arrivals, reception and returns'), P('Sbarchi, posti, tempi delle domande: conta la competenza.', 'Landings, places, times of the applications: competence counts.')),
+      empatia: C(P('Racconta i comuni che accolgono', 'Tell of the towns that take people in'), P('Sindaci, volontari, famiglie: conta il carisma.', 'Mayors, volunteers, families: charisma counts.')),
+      programma: C(P('Cita il tuo piano su accoglienza e integrazione', 'Cite your plan on reception and integration'), P('Vale quanto sei credibile e coerente.', 'It counts as much as you are credible and consistent.')),
+      attacco: C(P('Attacca le promesse mancate dell’avversario sull’immigrazione', 'Attack the rival’s broken promises on immigration'), P('Colpisci le sue contraddizioni: premia se è impreparato.', 'Hit his contradictions: it pays if he is unprepared.'))
+    },
+    asks: {
+      conti: C(P('Chiedi quanto costa il suo piano e chi lo paga', 'Ask how much his plan costs and who pays for it'), P('Mette alla prova i conti delle sue proposte.', 'Tests the accounts of his proposals.')),
+      coerenza: C(P('Chiedi perché ha cambiato linea sull’accoglienza', 'Ask why he changed his line on reception'), P('Colpisce se ha cambiato idea.', 'Hits if he has changed his mind.')),
+      passato: C(P('Ricordagli i centri rimasti vuoti o sovraffollati', 'Remind him of the centres left empty or overcrowded'), P('Rischioso: se ricordi male, si ritorce.', 'Risky: if you remember wrongly, it backfires.')),
+      salta: C(P('Passa: nessuna domanda sull’accoglienza', 'Pass: no question on reception'), P('Non fai domande sull’immigrazione.', 'You ask nothing on immigration.'))
+    },
+    replies: {
+      fatti: C(P('Rispondi con i dati su arrivi e integrazione', 'Answer with the data on arrivals and integration'), P('Smonti l’accusa con i numeri: serve preparazione.', 'You dismantle the charge with numbers: it takes preparation.')),
+      calma: C(P('Resta calmo e spiega le tue scelte sull’accoglienza', 'Stay calm and explain your choices on reception'), P('Sobrio, ma sembri sulla difensiva.', 'Sober, but you seem defensive.')),
+      contrattacco: C(P('Contrattacca sui risultati della sua gestione', 'Counter-attack on the results of his management'), P('Colpo su colpo: il pubblico si accende, con rischi.', 'Blow for blow: the audience warms up, with risks.')),
+      ignora: C(P('Ignora e torna all’integrazione', 'Ignore it and go back to integration'), P('Cambi argomento: lascia il segno all’avversario.', 'You change the subject: it leaves the mark on the opponent.'))
+    },
+    closings: {
+      sobrio: C(P('Riassumi: regole chiare e integrazione', 'Sum up: clear rules and integration'), P('Ringrazi e riassumi con misura.', 'You thank and sum up with restraint.')),
+      appello: C(P('Appello ai sindaci che accolgono', 'Appeal to the mayors who take people in'), P('Parli al Paese: carisma e visione.', 'You speak to the country: charisma and vision.')),
+      sfida: C(P('Sfida: «Dica cosa ha fatto davvero, non cosa ha promesso»', 'Challenge: “Say what you really did, not what you promised”'), P('Forte, ma divisivo.', 'Strong, but divisive.'))
+    }
+  },
+  diritti: {
+    styles: {
+      dati: C(P('Con le leggi e le sentenze sui diritti', 'With the laws and the rulings on rights'), P('Norme, sentenze, confronto europeo: conta la competenza.', 'Laws, rulings, European comparison: competence counts.')),
+      empatia: C(P('Racconta chi aspetta una legge', 'Tell of those who are waiting for a law'), P('Le persone dietro i diritti: conta il carisma.', 'The people behind the rights: charisma counts.')),
+      programma: C(P('Cita le tue proposte sui diritti civili', 'Cite your proposals on civil rights'), P('Vale quanto sei credibile e coerente.', 'It counts as much as you are credible and consistent.')),
+      attacco: C(P('Attacca le contraddizioni dell’avversario sui diritti', 'Attack the rival’s contradictions on rights'), P('Colpisci le sue posizioni: premia se è impreparato.', 'Hit his positions: it pays if he is unprepared.'))
+    },
+    asks: {
+      conti: C(P('Chiedi quando porterà la sua proposta in Aula', 'Ask when he will bring his proposal to the Chamber'), P('Mette alla prova la concretezza delle sue promesse.', 'Tests how concrete his promises are.')),
+      coerenza: C(P('Chiedi perché ha votato diversamente da quanto dice', 'Ask why he voted differently from what he says'), P('Colpisce se ha cambiato idea.', 'Hits if he has changed his mind.')),
+      passato: C(P('Ricordagli le leggi che ha lasciato cadere', 'Remind him of the laws he let lapse'), P('Rischioso: se ricordi male, si ritorce.', 'Risky: if you remember wrongly, it backfires.')),
+      salta: C(P('Lascia cadere la domanda sui diritti', 'Drop the question on rights'), P('Non fai domande sui diritti.', 'You ask nothing on rights.'))
+    },
+    replies: {
+      fatti: C(P('Rispondi con le leggi e i voti in Aula', 'Answer with the laws and the votes in the Chamber'), P('Smonti l’accusa con i fatti: serve preparazione.', 'You dismantle the charge with facts: it takes preparation.')),
+      calma: C(P('Resta calmo e spiega la tua posizione sui diritti', 'Stay calm and explain your position on rights'), P('Sobrio, ma sembri sulla difensiva.', 'Sober, but you seem defensive.')),
+      contrattacco: C(P('Contrattacca sui suoi voti contrari', 'Counter-attack on his votes against'), P('Colpo su colpo: il pubblico si accende, con rischi.', 'Blow for blow: the audience warms up, with risks.')),
+      ignora: C(P('Ignora e torna alla tua proposta', 'Ignore it and go back to your proposal'), P('Cambi argomento: lascia il segno all’avversario.', 'You change the subject: it leaves the mark on the opponent.'))
+    },
+    closings: {
+      sobrio: C(P('Riassumi: diritti uguali per tutti', 'Sum up: equal rights for everyone'), P('Ringrazi e riassumi con misura.', 'You thank and sum up with restraint.')),
+      appello: C(P('Appello a chi aspetta da anni', 'Appeal to those who have been waiting for years'), P('Parli al Paese: carisma e visione.', 'You speak to the country: charisma and vision.')),
+      sfida: C(P('Sfida: «Voti la legge, non solo le parole»', 'Challenge: “Vote for the law, not only the words”'), P('Forte, ma divisivo.', 'Strong, but divisive.'))
     }
   }
 });

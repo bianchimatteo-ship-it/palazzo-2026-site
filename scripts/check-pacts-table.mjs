@@ -23,7 +23,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   const measure = () => evaluate(`(() => {
     const table = document.querySelector('.pl-pacts .sx-table');
     const heads = [...table.querySelectorAll('thead th')].map(th => th.textContent.trim());
-    const buttons = [...table.querySelectorAll('[data-life-pact-break]')].map(b => { const r = b.getBoundingClientRect(); const cs = getComputedStyle(b); return { text: b.textContent.trim(), width: r.width, height: r.height, scroll: b.scrollWidth, client: b.clientWidth, line: parseFloat(cs.lineHeight) || 18, wrap: cs.whiteSpace }; });
+    const buttons = [...table.querySelectorAll('[data-life-pact-break]')].map(b => { const r = b.getBoundingClientRect(); const cs = getComputedStyle(b); return { text: b.textContent.trim(), width: r.width, height: r.height, scroll: b.scrollWidth, client: b.clientWidth, line: parseFloat(cs.lineHeight) || 18, wrap: cs.whiteSpace, lines: (() => { const range = document.createRange(); range.selectNodeContents(b); return new Set([...range.getClientRects()].map(rect => Math.round(rect.top))).size; })() }; });
     const wrap = document.querySelector('.pl-pacts .sx-table-wrap');
     const vw = document.documentElement.clientWidth;
     const bad = [...document.querySelectorAll('.pl-page *')].filter(el => { const r = el.getBoundingClientRect(); return r.width && (r.right > vw + 1 || r.left < -1) && !el.closest('.sx-table-wrap'); }).length;
@@ -41,7 +41,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
     for (const b of m.buttons) {
       assert.equal(b.text.replace(/\s+/g, ' '), 'Denuncia', `${width}px: il testo del pulsante.`);
       assert.ok(b.scroll <= b.client + 1, `${width}px: il testo del pulsante sta nel pulsante (${b.scroll} > ${b.client}).`);
-      assert.ok(b.height < b.line * 2.6, `${width}px: «Denuncia» su una riga (altezza ${b.height}, riga ${b.line}).`);
+      assert.equal(b.lines, 1, `${width}px: «Denuncia» su una riga (righe di testo ${b.lines}, altezza ${b.height}; il pulsante può essere alto quanto un bersaglio di tocco, ma il testo non va a capo).`);
       assert.ok(b.width >= 80, `${width}px: il pulsante non è schiacciato (${b.width}px).`);
     }
     assert.ok(m.pageOverflow <= 1 && m.bad === 0, `${width}px: la pagina non scorre di lato (${m.pageOverflow}px, ${m.bad} elementi fuori).`);

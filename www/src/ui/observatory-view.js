@@ -4,28 +4,27 @@
 // of the campaign (renderCampaignObservatory): what `campaignObservatory()` reads from a valid campaign, and nothing when there is none.
 // Everything here is read from what the game has saved (the world, its observatory, the campaign) and measures the simulation: no number on these
 // pages gives a bonus, and the real parties stay real (their candidates, voters and readings are simulated, source: simulation).
-import { latestPoll, observatoryReport } from '../core/world-engine.js?v=20261117-3';
-import { campaignObservatory } from '../core/campaign-engine.js?v=20261117-3';
-import { coalitionScenario } from '../core/poll-observatory.js?v=20261117-3';
-import { POLL_EXTENSIONS } from '../data/simulation/polling-rules.js?v=20261117-3';
-import { observatorySociety } from '../core/society-engine.js?v=20261117-3';
-import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261117-3';
-import { formatDate } from '../core/time.js?v=20261117-3';
-import { lineChart, SERIES } from './charts.js?v=20261117-3';
-import { emblem, glyph, partyMarkText } from './visuals.js?v=20261117-3';
-import { arrow, bar, card, empty, esc, kpi, num, table } from './sections-kit.js?v=20261117-3';
-import { alliancesList, barometer, chronicle, dataTable, forcesGrid, partyIndex, pct, pollPanel, presencePanel, shortDate, signed, strategyList } from './polls-mode.js?v=20261117-3';
-import { heatmap, italyMap, MACRO_AREAS, partyBars, provenance, regionAbbreviation, regionBars, regionsOfArea, TERRITORY_MEASURES } from './territory-charts.js?v=20261117-3';
-import { forceRegionalVote2022 } from '../core/regional-vote.js?v=20261117-3';
+import { latestPoll, observatoryReport } from '../core/world-engine.js?v=20261126-3';
+import { campaignObservatory } from '../core/campaign-engine.js?v=20261126-3';
+import { coalitionScenario } from '../core/poll-observatory.js?v=20261126-3';
+import { POLL_EXTENSIONS } from '../data/simulation/polling-rules.js?v=20261126-3';
+import { observatorySociety } from '../core/society-engine.js?v=20261126-3';
+import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261126-3';
+import { formatDate } from '../core/time.js?v=20261126-3';
+import { lineChart, SERIES } from './charts.js?v=20261126-3';
+import { emblem, glyph, partyMarkText } from './visuals.js?v=20261126-3';
+import { arrow, bar, card, empty, esc, kpi, num, table } from './sections-kit.js?v=20261126-3';
+import { alliancesList, alliancesOverview, barometer, pollAdOffer, myCoalitionPanel, chronicle, dataTable, forcesGrid, partyIndex, pct, pollPanel, presencePanel, shortDate, signed, strategyList } from './polls-mode.js?v=20261126-3';
+import { heatmap, italyMap, MACRO_AREAS, partyBars, provenance, regionAbbreviation, regionBars, regionsOfArea, TERRITORY_MEASURES } from './territory-charts.js?v=20261126-3';
+import { forceRegionalVote2022 } from '../core/regional-vote.js?v=20261126-3';
+import { STATUS_TEXT as PROGRAM_STATUS } from '../data/party-programs.js?v=20261126-3'; void PROGRAM_STATUS;
+import { provenance as programProvenance } from './program-provenance.js?v=20261126-3'; void programProvenance;   // the texts of the programmes (summaries, documents): loaded with the alliances page, registered for the panels of polls-mode.js
 
-export const OBSERVATORY_VIEWS = Object.freeze([['quadro', 'Quadro'], ['istituti', 'Istituti'], ['segmenti', 'Segmenti e temi'], ['territori', 'Territori'], ['forze', 'Forze e alleanze'], ['candidati', 'Candidati e rivali'], ['flussi', 'Indecisi e flussi'], ['gradimento', 'Gradimento e leggi'], ['scenari', 'Scenari e coalizioni']]);
-// The page has five areas; the nine views of the observatory are gathered in them (an area with several views shows them as a second row of tabs).
+export const OBSERVATORY_VIEWS = Object.freeze([['quadro', 'Quadro'], ['istituti', 'Istituti'], ['segmenti', 'Segmenti e temi'], ['territori', 'Territori'], ['forze', 'Partiti e trattative'], ['candidati', 'Candidati e rivali'], ['flussi', 'Indecisi e flussi'], ['gradimento', 'Gradimento e leggi'], ['scenari', 'Scenari e coalizioni'], ['alleanze', 'Quadro delle alleanze']]);
+// The page has two areas, told apart at the first sight: the surveys of the parties and the alliances and coalitions; their ten views are gathered in them (as a second row of tabs).
 export const OBSERVATORY_AREAS = Object.freeze([
-  ['quadro', 'Quadro elettorale', ['quadro']],
-  ['istituti', 'Istituti e rilevazioni', ['istituti']],
-  ['territori', 'Territori', ['territori']],
-  ['forze', 'Partiti, alleanze e flussi', ['forze', 'scenari', 'flussi', 'segmenti', 'candidati']],
-  ['gradimento', 'Opinione pubblica', ['gradimento']]
+  ['partiti', 'Sondaggi dei partiti', ['quadro', 'istituti', 'territori', 'segmenti', 'candidati', 'flussi', 'gradimento']],
+  ['alleanze', 'Alleanze e coalizioni', ['alleanze', 'forze', 'scenari']]
 ]);
 const VIEW_LABELS = Object.freeze(Object.fromEntries(OBSERVATORY_VIEWS));
 const toneOf = value => value > 0 ? 'good' : value < 0 ? 'bad' : 'neutral';
@@ -177,7 +176,7 @@ function links(state) {
 function quadro(ctx) {
   const { state, world, poll, report, index, logo, options } = ctx;
   const media = options.media ? pollPanel('MEDIA · SIMULATI', 'Come ti raccontano', options.media()) : '';
-  return `${barometer(state, world, poll, { logo })}
+  return `${barometer(state, world, poll, { logo })}${pollAdOffer(options.pollAd, options.pollAdPoints)}
     ${pollPanel('INTENZIONI DI VOTO · SIMULAZIONE', 'La media degli istituti e le loro rilevazioni', instituteBars(ctx), `<span class="hq-count">${report.latestAverage?.institutes ? `${report.latestAverage.institutes} istituti` : 'dato reale'}</span>`)}
     ${coalitionBlock(ctx)}
     ${pollPanel('TREND', 'Come cambiano i consensi', `${periodChips(ctx)}${averageTrend(ctx)}`)}
@@ -412,13 +411,23 @@ function territories(ctx) {
 }
 
 // ---------- the forces and the alliances ----------
+// The alliances and coalitions: the pact of the player first (accordions: composition, cohesion, programme, talks, activities, registration, breaks), then all the alliances of the world, from their own readings.
+function alliances(ctx) {
+  const { state, world, poll, options, index } = ctx;
+  const win = options.window?.() ?? { open: true };
+  const notice = win.open === false ? card({ kicker: 'ALLEANZE · SIMULAZIONE', title: 'Intese ferme fino al voto', tone: 'warn', body: `<p class="sx-note">${esc(win.reason)}</p>` }) : '';
+  const player = world.parties.find(item => item.isPlayer);
+  const mine = player ? myCoalitionPanel(state, world, index, poll, { secretary: Boolean(options.secretary), windowClosed: win.open === false, allyKinds: options.allyKinds, allyActivities: options.allyActivities, allyOdds: options.allyOdds, funds: options.funds, capital: options.capital, inviteOdds: options.inviteOdds, programAnalysis: options.programAnalysis, allianceTalkOptions: options.allianceTalkOptions, allianceRequests: options.allianceRequests, coalitionElections: options.coalitionElections, refusedUntil: options.refusedUntil, inviteBlock: options.inviteBlock, inviteImpact: options.inviteImpact }) : '';
+  return `${notice}${mine}${pollPanel('ALLEANZE E COALIZIONI · SIMULAZIONE', 'Tutte le alleanze', alliancesOverview(state, world, index, poll, options))}`;
+}
+
 function forces(ctx) {
   const { state, world, poll, options, index, logo } = ctx;
   const win = options.window?.() ?? { open: true };
   const notice = win.open === false
     ? card({ kicker: 'ALLEANZE · SIMULAZIONE', title: 'Intese ferme fino al voto', tone: 'warn', body: `<p class="sx-note">${esc(win.reason)}</p>` })
     : '';
-  const grid = forcesGrid(state, world, poll, index, logo, options.realLeader, options.secretary, { allianceOdds: options.allianceOdds, inviteOdds: options.inviteOdds, programAnalysis: options.programAnalysis, allianceTalkOptions: options.allianceTalkOptions, allianceRequests: options.allianceRequests, coalitionElections: options.coalitionElections, refusedUntil: options.refusedUntil, inviteBlock: options.inviteBlock, allianceBlock: options.allianceBlock, kindOf: options.kindOf, windowClosed: win.open === false });
+  const grid = forcesGrid(state, world, poll, index, logo, options.realLeader, options.secretary, { allianceOdds: options.allianceOdds, inviteOdds: options.inviteOdds, programAnalysis: options.programAnalysis, allianceTalkOptions: options.allianceTalkOptions, allianceRequests: options.allianceRequests, coalitionElections: options.coalitionElections, refusedUntil: options.refusedUntil, inviteBlock: options.inviteBlock, inviteImpact: options.inviteImpact, allianceBlock: options.allianceBlock, allyKinds: options.allyKinds, allyActivities: options.allyActivities, allyOdds: options.allyOdds, funds: options.funds, capital: options.capital, kindOf: options.kindOf, windowClosed: win.open === false, withoutCoalition: true });
   return `${notice}${pollPanel('PARTITI, MOVIMENTI E COALIZIONI · COMPORTAMENTI SIMULATI', 'Le forze in campo', grid)}
     ${pollPanel('PRESENZA NEI SONDAGGI · SIMULAZIONE', 'Chi entra e chi esce', presencePanel(world))}
     <div class="poll-grid">${pollPanel('ALLEANZE · SIMULATE', 'Intese, coalizioni e rotture', alliancesList(world, index))}${pollPanel('STRATEGIE · SIMULATE', 'Chi sta dove', strategyList(world))}</div>
@@ -566,7 +575,7 @@ function scenari(ctx) {
 
 // The race of a campaign is followed in Elezioni → Sondaggi e avversari (campaignObservatory); here the same readings are the general picture of the candidates and the rivals.
 const candidatesView = ctx => `${card({ kicker: 'COMPETIZIONE ATTIVA', title: 'La corsa della campagna è in Elezioni', body: '<p class="sx-note">Candidati, rivali, territori strategici, attese e conseguenze della campagna in corso si guidano in <button type="button" class="text-link" data-section-tab="elezioni" data-section-tab-value="avversari">Elezioni → Sondaggi e avversari</button>. Qui sotto la stessa lettura, come quadro generale.</p>' })}${candidates(ctx)}`;
-const VIEW_RENDERERS = { quadro, istituti: institutes, segmenti: segmentsView, territori: territories, forze: forces, candidati: candidatesView, flussi, gradimento, scenari };
+const VIEW_RENDERERS = { quadro, istituti: institutes, segmenti: segmentsView, territori: territories, forze: forces, candidati: candidatesView, flussi, gradimento, scenari, alleanze: alliances };
 // Five areas as tabs; the views of the area in which the player is, as a second row. The value of an area tab is the view being read when the player is already there.
 const areaOf = view => OBSERVATORY_AREAS.find(([, , views]) => views.includes(view)) ?? OBSERVATORY_AREAS[0];
 const viewTabs = active => {

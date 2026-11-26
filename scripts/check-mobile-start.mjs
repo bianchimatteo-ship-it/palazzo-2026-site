@@ -246,7 +246,7 @@ try {
   ok(cache.urls.some(url => url.startsWith('GET /src/')), 'Il service worker conserva i file del gioco (GET).');
   ok(!cache.urls.some(url => url.includes('/api/')), 'Service worker: nessuna richiesta API (POST, PUT, DELETE o GET) in cache.');
   ok(cache.urls.every(url => url.startsWith('GET ')), 'Service worker: in cache solo richieste GET.');
-  ok(cache.names.every(name => name === 'politicando-offline-v2'), 'Le cache della versione precedente sono eliminate.');
+  ok(cache.names.every(name => name === 'politicando-offline-v3'), 'Le cache della versione precedente sono eliminate.');
 } catch (error) {
   exitCode = 1;
   console.error(`Primo avvio su telefono: ${error.message}\nVerificati prima dell’errore:\n- ${checks.join('\n- ')}`);

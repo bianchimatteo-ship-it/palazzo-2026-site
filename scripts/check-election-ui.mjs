@@ -38,12 +38,28 @@ await withBrowser(async browser => {
     assert.ok(await evaluate(`document.querySelectorAll('.campaign-strategy').length >= 4 && document.querySelectorAll('.campaign-strategy[data-strategy]').length >= 4`), `${name}: le strategie ci sono, ognuna col suo colore.`);
     await click('[data-section-tab="elezioni"][data-section-tab-value="panoramica"]');
   }
-  // pressing «Candidati» from the top leads to the set-up of that vote
-  await viewport(1280, 800, false); await pause(300); await dismiss();
-  await click('.sx-hero [data-campaign-goto]');
-  await wait(() => has('[data-campaign-cta]'), 8000);
-  assert.ok(await has('[data-campaign-setup="electionType"]'), 'Premendo «Candidati» si arriva all’impostazione della campagna.');
-  assert.equal(await evaluate(`document.querySelector('[data-campaign-setup="electionType"]').value`), 'comunale', 'Con il tipo di elezione già scelto.');
+  // an election already concluded: the vote of the first career is settled by the weeks that go by, then a new candidacy opens
+  const concluded = await evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${browser.version}'); const first = (store.getState().game.elections ?? []).find(item => item.type === 'comunale'); if (!first) return 'nessun voto'; const wasOpen = Boolean(store.getState().campaign); store.advanceToDate(first.electionDate.slice(0, 10), { delegate: true }); for (const type of ['comunale', 'regionale', 'politiche']) { try { if (store.fastForwardToElection(type)) return 'concluso e riaperto: ' + type; } catch { /* next */ } } return 'concluso, nessuna candidatura riaperta'; })()`);
+  assert.ok(/concluso e riaperto/.test(concluded), `Prima del clic un’elezione è già conclusa e una nuova candidatura è aperta (${concluded}).`);
+  await evaluate(`location.reload(), true`); await pause(2500);
+  await openCareer(browser); await dismiss();
+  await click('[data-nav="elezioni"]'); await wait(() => has('.sx-hero'), 15000);
+  await pause(800);
+  // pressing «Candidati» from the top leads to the main button of the campaign, already in view (no manual scroll), after an election already concluded, on desktop and phone
+  for (const [name, w, h, mobile] of [['desktop', 1280, 800, false], ['smartphone', 390, 780, true]]) {
+    await viewport(w, h, mobile); await pause(400); await dismiss();
+    await click('[data-section-tab="elezioni"][data-section-tab-value="panoramica"]');
+    await evaluate(`scrollTo(0, 0); true`);
+    await click('.sx-hero [data-campaign-goto]');
+    await wait(() => has('.campaign-cta [data-action="campaign-start"]'), 8000);
+    await pause(900);
+    const seen = await evaluate(`(() => { const b = document.querySelector('.campaign-cta [data-action="campaign-start"]'); const r = b.getBoundingClientRect(); return { top: Math.round(r.top), bottom: Math.round(r.bottom), vh: innerHeight, text: b.textContent, disabled: b.disabled, started: Boolean(document.querySelector('[data-campaign-running]')) }; })()`);
+    assert.ok(/Candidati e inizia la campagna/.test(seen.text), `${name}: è il pulsante principale della campagna.`);
+    assert.ok(seen.top >= 0 && seen.bottom <= seen.vh, `${name}: visibile subito dopo il clic, senza scorrere (${seen.top}–${seen.bottom} su ${seen.vh}).`);
+    assert.equal(seen.started, false, `${name}: la campagna non è partita da sola.`);
+    assert.ok(await has('[data-campaign-setup="electionType"]'), `${name}: l’impostazione resta quella.`);
+    assert.equal(await evaluate(`document.querySelector('[data-campaign-setup="electionType"]').value`), concluded.split(': ')[1], `${name}: con il tipo di elezione già scelto.`);
+  }
   assert.deepEqual(errors, [], 'Nessun errore JavaScript.');
 });
 console.log('Candidatura e campagna: azione per candidarsi in alto, date e giorni rimasti, elenco delle candidature aperte e passaggio all’impostazione, su desktop e smartphone.');

@@ -1,17 +1,22 @@
 // Main menu, how-to-play, settings, save slots and the end-of-week report.
-import { renderTutorialInvite } from './tutorial.js?v=20261117-3';
-import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261117-3';
-import { GUIDE_FUNCTIONS, GUIDE_SCENARIOS } from '../data/guide-manual.js?v=20261117-3';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261117-3';
-import { formatDate } from '../core/time.js?v=20261117-3';
-import { illustration } from './illustrations.js?v=20261117-3';
-import { glyph } from './visuals.js?v=20261117-3';
-import { identityMark, identityVars } from './party-identity.js?v=20261117-3';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261117-3';
-import { hallView } from './hall-view.js?v=20261117-3';
-import { renderLogoCatalog } from './logo-catalog.js?v=20261117-3';
-import { esc, signed } from './charts.js?v=20261117-3';
-import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261117-3';
+// the three notices of the assistant (the same texts as core/ask-game.js, which is loaded only when a question is asked)
+const NOT_KNOWN = 'Non lo so: nel gioco non trovo una funzione che risponda a questa domanda. Prova con altre parole (candidatura, alleanza, promessa, staff, sondaggi, leggi, referendum…) oppure apri il manuale qui sotto.';
+const NOT_KNOWN_EN = 'I do not know: I cannot find a feature in the game that answers this. Try other words (candidacy, alliance, promise, staff, polls, laws, referendum…) or open the manual below.';
+const CLARIFY = 'Non ho capito bene: intendevi una di queste funzioni?', CLARIFY_EN = 'I did not quite get that: did you mean one of these?';
+const AMBIGUOUS = 'La domanda può riguardare due funzioni: ecco entrambe.', AMBIGUOUS_EN = 'The question can be about two features: here are both.';
+import { renderTutorialInvite } from './tutorial.js?v=20261126-3';
+import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261126-3';
+import { guideManual, LOADING_HTML } from './lazy-views.js?v=20261126-3';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261126-3';
+import { formatDate } from '../core/time.js?v=20261126-3';
+import { illustration } from './illustrations.js?v=20261126-3';
+import { glyph } from './visuals.js?v=20261126-3';
+import { identityMark, identityVars } from './party-identity.js?v=20261126-3';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261126-3';
+import { hallView } from './hall-view.js?v=20261126-3';
+import { renderLogoCatalog } from './logo-catalog.js?v=20261126-3';
+import { esc, signed } from './charts.js?v=20261126-3';
+import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261126-3';
 
 const when = iso => { try { return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); } catch { return ''; } };
 // The actions of the opening screen, in order of importance: starting a career and resuming one are the two main ones (drawn apart, below); then what concerns the
@@ -30,6 +35,14 @@ const MENU_GROUPS = [
 ];
 
 // How to play: short sections, each with a concrete example.
+// Practical paths: where to start for each goal, step by step, each one a real page. They only open pages (no day, money or capital is spent).
+const GUIDE_PATHS = [
+  ['Primi passi', 'flag', 'Guarda la Home, apri l’Agenda e scegli l’attività della settimana: poi chiudi la settimana.', [['panoramica', 'Home'], ['calendario', 'Agenda']]],
+  ['Gestire il partito', 'users', 'Vedi correnti e dirigenti nella vita interna, poi affida un incarico allo staff e approvalo tu.', [['partito', 'Partito']]],
+  ['Preparare una campagna', 'megaphone', 'Controlla i sondaggi, scegli le alleanze e, dopo il voto, guarda i risultati per territorio.', [['sondaggi', 'Sondaggi'], ['elezioni', 'Centrale elettorale']]],
+  ['Elezioni e risultati', 'ballot', 'Candidati, fai campagna e segui la notte elettorale; poi scendi da Regione a Comune.', [['elezioni', 'Elezioni'], ['risultati', 'Risultati per territorio']]],
+  ['Istituzioni e referendum', 'dome', 'Segui le leggi in Parlamento, promuovi un’iniziativa o un referendum, e controlla i costi in Finanze.', [['referendum', 'Referendum'], ['finanze', 'Finanze']]]
+];
 const HOW_TO = [
   ['L’obiettivo', 'route', 'Costruisci una carriera nella politica italiana, dal consiglio comunale fino alla guida di un partito o del governo. Non c’è un finale unico: conta dove arrivi, quanto resisti e cosa lasci al Paese. Quando vuoi puoi lasciare la politica o andare in pensione: la carriera entra nella Hall of Fame con la sua eredità politica, che una nuova carriera può raccogliere.', 'Parti consigliere a Siena, diventi segretario regionale, poi candidato alle politiche.'],
   ['Iniziare una partita', 'flag', 'Dal menu: Nuova partita. Scegli dove iniziare (Regione e Comune dall’elenco ISTAT), il percorso (comunale, provinciale, regionale, deputato, senatore o eurodeputato), il partito (indipendente, un partito reale o uno fondato da te), la difficoltà, il sondaggio iniziale (Realistico: la Supermedia reale; Casuale: un quadro dei partiti inventato da un seme, sempre lo stesso con lo stesso seme; Personalizzato: le percentuali le scrivi tu e quel che resta è «Altri») e come cominci (un inizio ordinario, da outsider, con debiti politici, in un partito già diviso, con una carriera già consolidata o con uno scenario tutto tuo, ed eventualmente con l’eredità di una carriera conclusa); per ultimo crei il tuo politico. Le condizioni di partenza non sono etichette: cambiano rapporti, risorse e promozioni e producono decisioni per tutta la partita.', 'Comune di Bari, percorso comunale, iscritto a un partito reale, difficoltà Normale, partenza da outsider.'],
@@ -212,23 +225,48 @@ function accountView(account = {}) {
 
 // The manual: one card per function (how it works, how to use it, requirements, costs, consequences, example, and a link to the page) and the guided scenarios (steps with links). Every card takes part
 // in the search of the guide (data-guide-card) and in the index (data-guide-index).
-const GUIDE_PARTS = [['how', 'Come funziona'], ['use', 'Come si usa'], ['needs', 'Requisiti'], ['costs', 'Costi'], ['effects', 'Conseguenze'], ['example', 'Esempio']];
+const GUIDE_PARTS = [['where', 'Dove si trova'], ['how', 'Come funziona'], ['use', 'Come si usa'], ['needs', 'Requisiti'], ['costs', 'Costi'], ['effects', 'Conseguenze'], ['risks', 'Vantaggi e rischi'], ['mistakes', 'Errori comuni'], ['example', 'Esempio']];
+// A card of the guide that opens on demand (less scrolling on a phone): the summary is the title and the first sentence; the details are inside. The cards stay `data-guide-card` for the search and the index.
+const teaserOf = text => String(text ?? '');   // the summary shows the whole sentence, cut to two lines by the style (so the translation of the text stays whole); the open card shows it in full below
+const guideFold = (icon, title, teaser, body) => `<details class="guide-fold" data-guide-fold><summary>${glyph(icon, 20)}<span class="guide-sum"><strong>${esc(title)}</strong>${teaser ? `<small>${esc(teaser)}</small>` : ''}</span></summary><div class="guide-body">${body}</div></details>`;
 const guideTarget = page => `data-nav="${esc(page)}" data-guide-close`;
-function manualCards(offset) {
+function manualCards(offset, { GUIDE_FUNCTIONS, GUIDE_SCENARIOS }) {
   const functions = GUIDE_FUNCTIONS.map((item, i) => {
     const index = offset + i;
-    return `<article class="guide-card guide-manual" id="guida-${index}" data-guide-card="${index}" data-guide-kind="funzione" data-guide-topic="${esc(item.id)}" data-guide-keywords="${esc(item.keywords ?? '')}">${glyph(item.icon, 20)}<div><strong>${esc(item.title)}</strong><dl class="guide-parts">${GUIDE_PARTS.map(([key, label]) => `<div><dt>${esc(label)}</dt><dd>${esc(item[key])}</dd></div>`).join('')}</dl><p><button type="button" class="go-button" ${guideTarget(item.page)}><span>Apri la pagina</span><i class="go-arrow" aria-hidden="true"></i></button></p></div></article>`;
+    return `<article class="guide-card guide-manual" id="guida-${index}" data-guide-card="${index}" data-guide-kind="funzione" data-guide-topic="${esc(item.id)}" data-guide-keywords="${esc(item.keywords ?? '')}">${guideFold(item.icon, item.title, teaserOf(item.how), `<dl class="guide-parts">${GUIDE_PARTS.filter(([key]) => item[key]).map(([key, label]) => `<div><dt>${esc(label)}</dt><dd>${esc(item[key])}</dd></div>`).join('')}</dl><p><button type="button" class="go-button" ${guideTarget(item.page)}><span>Apri la pagina</span><i class="go-arrow" aria-hidden="true"></i></button></p>`)}</article>`;
   });
   const scenarios = GUIDE_SCENARIOS.map((item, i) => {
     const index = offset + GUIDE_FUNCTIONS.length + i;
-    return `<article class="guide-card guide-scenario" id="guida-${index}" data-guide-card="${index}" data-guide-kind="scenario" data-guide-topic="${esc(item.id)}">${glyph(item.icon, 20)}<div><strong>${esc(item.title)}</strong><p>${esc(item.goal)}</p><ol class="guide-steps">${item.steps.map(([text, page]) => `<li><span>${esc(text)}</span> <button type="button" class="go-button" ${guideTarget(page)} aria-label="Vai: ${esc(text)}"><span>Vai</span><i class="go-arrow" aria-hidden="true"></i></button></li>`).join('')}</ol></div></article>`;
+    return `<article class="guide-card guide-scenario" id="guida-${index}" data-guide-card="${index}" data-guide-kind="scenario" data-guide-topic="${esc(item.id)}">${guideFold(item.icon, item.title, item.goal, `<p>${esc(item.goal)}</p><ol class="guide-steps">${item.steps.map(([text, page]) => `<li><span>${esc(text)}</span> <button type="button" class="go-button" ${guideTarget(page)} aria-label="Vai: ${esc(text)}"><span>Vai</span><i class="go-arrow" aria-hidden="true"></i></button></li>`).join('')}</ol>`)}</article>`;
   });
   return { functions, scenarios };
 }
-function guideView() {
-  const manual = manualCards(HOW_TO.length);
+// «Chiedi al gioco»: a question in plain words, answered by the local assistant (core/ask-game.js) with steps, requirements, cost and a button that opens the right page. Nothing is sent anywhere.
+const ASK_EXAMPLES = ['Come mi candido?', 'Come aumento i fondi?', 'Come funzionano 4 settimane?', 'Come lascio il partito?'];
+function askBox(ask) {
+  const result = ask?.result;
+  const en = result?.lang === 'en';
+  const label = (it, en_) => (en ? en_ : it);
+  const answerCard = topic => `<article class="ask-answer" data-ask-answer="${esc(topic.id)}"><h4>${esc(topic.title)}</h4><ol class="ask-steps">${topic.steps.map(step => `<li>${esc(step)}</li>`).join('')}</ol><div class="ask-facts"><div><small>${label('Che cosa serve', 'What you need')}</small><span>${esc(topic.needs)}</span></div><div><small>${label('Costo', 'Cost')}</small><span>${esc(topic.cost)}</span></div></div>${topic.nav ? `<button type="button" class="primary-button ask-open" data-ask-open="${esc(topic.nav)}"${topic.tab ? ` data-ask-tab="${esc(topic.tab)}"` : ''}>${label('Apri la schermata', 'Open the screen')}</button>` : ''}</article>`;
+  let answer = '';
+  if (result) {
+    if (result.known) answer = `${result.ambiguous ? `<p class="parliament-note" data-ask-ambiguous>${esc(en ? AMBIGUOUS_EN : AMBIGUOUS)}</p>` : ''}${result.answers.map(answerCard).join('')}`;
+    else if (result.clarify?.length) answer = `<p class="parliament-note" data-ask-clarify>${esc(en ? CLARIFY_EN : CLARIFY)}</p><div class="ask-suggest">${result.clarify.map(topic => `<button type="button" class="secondary-button" data-ask-pick="${esc(topic.id)}">${esc(topic.title)}</button>`).join('')}</div>`;
+    else answer = `<p class="parliament-note" data-ask-unknown>${esc(en ? NOT_KNOWN_EN : NOT_KNOWN)}</p>`;
+  }
+  const note = ask?.note ? `<p class="parliament-note" role="status" data-ask-note>${esc(ask.note)}</p>` : '';
+  const chips = result ? '' : `<div class="ask-chips" data-ask-chips>${ASK_EXAMPLES.map(text => `<button type="button" class="ask-chip" data-ask-example="${esc(text)}">${esc(text)}</button>`).join('')}</div>`;
+  return `<section class="ask-game" data-ask-game><header class="ask-head"><span class="ask-mark" aria-hidden="true">${glyph('book', 20)}</span><div><h3 class="guide-section-title">Chiedi al gioco <span class="beta-tag" title="Funzione in prova: le risposte possono non coprire ogni caso" aria-label="Versione beta">BETA</span></h3><p class="quiet-copy">Risponde con le regole del gioco, senza collegarsi a nulla: non modifica la tua partita.</p></div></header><form class="ask-form" data-ask-form><label class="visually-hidden" for="ask-input">La tua domanda</label><input id="ask-input" name="question" type="search" autocomplete="off" maxlength="160" placeholder="Per esempio: come mi candido? come invito un partito?" value="${esc(result?.question ?? '')}" /><button type="submit" class="primary-button">Chiedi</button></form>${chips}${note}${answer}</section>`;
+}
+function guideView(menu = {}) {
+  // the manual is loaded when the guide is first opened (lazy-views.js): until it arrives, the loading block
+  // (the essential rules and the paths are drawn at once; only the cards of the manual wait for their module)
+  const book = guideManual() ?? { GUIDE_FUNCTIONS: [], GUIDE_SCENARIOS: [], loading: true };
+  const { GUIDE_FUNCTIONS, GUIDE_SCENARIOS } = book;
+  const manual = manualCards(HOW_TO.length, book);
+  if (book.loading) { manual.functions = [LOADING_HTML]; manual.scenarios = []; }
   const titles = [...HOW_TO.map(([title]) => title), ...GUIDE_FUNCTIONS.map(item => item.title), ...GUIDE_SCENARIOS.map(item => item.title)];
-  return `<h2>Come giocare</h2><p class="section-subtitle">Le regole essenziali, il manuale di ogni funzione e gli scenari guidati, con un esempio per ciascuna.</p>${renderTutorialInvite()}<label class="guide-search"><span class="visually-hidden">Cerca nella guida</span><input type="search" data-guide-search placeholder="Cerca un argomento (es. sondaggi, fondi, ballottaggio, dimissioni)…" autocomplete="off" /></label><p class="sheet-empty" data-guide-empty hidden>Nessun argomento corrisponde.</p><nav class="guide-index" aria-label="Sezioni della guida">${titles.map((title, index) => `<a href="#guida-${index}" data-guide-jump="guida-${index}" data-guide-index="${index}">${esc(title)}</a>`).join('')}</nav><h3 class="guide-section-title">Le regole essenziali</h3><div class="guide-grid">${HOW_TO.map(([title, icon, text, example], index) => `<article class="guide-card" id="guida-${index}" data-guide-card="${index}">${glyph(icon, 20)}<div><strong>${esc(title)}</strong><p>${esc(text)}</p>${example ? `<p class="guide-example"><b>Esempio</b> ${esc(example)}</p>` : ''}</div></article>`).join('')}</div><h3 class="guide-section-title">Il manuale delle funzioni</h3><div class="guide-grid">${manual.functions.join('')}</div><h3 class="guide-section-title">Scenari guidati</h3><div class="guide-grid">${manual.scenarios.join('')}</div>`;
+  return `<h2>Come giocare</h2><p class="section-subtitle">Le regole essenziali, il manuale di ogni funzione e gli scenari guidati, con un esempio per ciascuna.</p>${renderTutorialInvite()}${askBox(menu.ask)}<h3 class="guide-section-title">Percorsi</h3><div class="guide-paths" data-guide-paths>${GUIDE_PATHS.map(([title, glyph, text, pages]) => `<article class="guide-path" data-guide-path><b>${esc(title)}</b><p>${esc(text)}</p><p>${pages.map(([page, label]) => `<button type="button" class="go-button" ${guideTarget(page)}><span>${esc(label)}</span><i class="go-arrow" aria-hidden="true"></i></button>`).join(' ')}</p></article>`).join('')}</div><label class="guide-search"><span class="visually-hidden">Cerca nella guida</span><input type="search" data-guide-search placeholder="Cerca un argomento (es. sondaggi, fondi, ballottaggio, dimissioni)…" autocomplete="off" /></label><p class="sheet-empty" data-guide-empty hidden>Nessun argomento corrisponde.</p><nav class="guide-index" aria-label="Sezioni della guida">${titles.map((title, index) => `<a href="#guida-${index}" data-guide-jump="guida-${index}" data-guide-index="${index}">${esc(title)}</a>`).join('')}</nav><h3 class="guide-section-title">Le regole essenziali</h3><div class="guide-grid">${HOW_TO.map(([title, icon, text, example], index) => `<article class="guide-card" id="guida-${index}" data-guide-card="${index}">${guideFold(icon, title, teaserOf(text), `<p>${esc(text)}</p>${example ? `<p class="guide-example"><b>Esempio</b> ${esc(example)}</p>` : ''}`)}</article>`).join('')}</div><h3 class="guide-section-title">Il manuale delle funzioni</h3><div class="guide-grid">${manual.functions.join('')}</div><h3 class="guide-section-title">Scenari guidati</h3><div class="guide-grid">${manual.scenarios.join('')}</div>`;
 }
 // First opening without an account: the account first, then the first career.
 function welcomeView(account = {}, menu = {}) {
@@ -262,11 +300,12 @@ export function renderConfirmDialog(pending) {
   </section></div>`;
 }
 
-export function settingsView(settings, { error = '', account = null } = {}) {
-  const groups = [['Audio', ['sound', 'volume'], 'megaphone'], ['Interfaccia', ['language', 'interfaceMotion', 'density', 'textSize', 'contrast'], 'globe'], ['Animazioni delle scene', ['sceneMotion'], 'play'], ['Notifiche', ['toasts', 'toastLength', 'weeklyReport', 'newsPopup'], 'alert'], ['Partita', ['autosave', 'weeksPerTurn', 'staffVotes'], 'clock']];
+export function settingsView(settings, { error = '', account = null, adsPrivacy = false } = {}) {
+  const groups = [['Audio', ['sound', 'volume'], 'megaphone'], ['Interfaccia', ['language', 'interfaceMotion', 'density', 'textSize', 'contrast'], 'globe'], ['Animazioni delle scene', ['sceneMotion'], 'play'], ['Notifiche', ['toasts', 'toastLength', 'weeklyReport', 'newsPopup'], 'alert'], ['Partita', ['autosave', 'weeksPerTurn', 'advanceMode', 'staffVotes'], 'clock']];
   return `<h2>Impostazioni</h2><p class="section-subtitle">Valgono per tutte le partite in questo browser e si applicano subito; il popup delle notizie settimanali segue l’account con cui hai effettuato l’accesso.</p>
     ${groups.map(([title, keys, icon]) => `<section class="settings-group" data-settings-group="${esc(title)}"><h3>${glyph(icon, 16)} ${esc(title)}</h3>${keys.map(key => { const spec = SETTINGS_SCHEMA[key]; const hint = spec.hint ? `<small class="setting-hint" role="status" data-setting-state="${key}"><b>${esc(spec.options.find(([v]) => v === settings[key])?.[1] ?? '')}.</b> ${esc(spec.hint[settings[key]] ?? '')}${spec.scoped ? ` ${account?.user ? `Vale per l’account «${esc(account.user.username)}».` : 'Vale per questo browser.'}` : ''}</small>` : ''; return `<div class="setting-row ${spec.hint ? 'has-hint' : ''}" data-setting-row="${key}"><span>${esc(spec.label)}</span><div class="segmented" role="group" aria-label="${esc(spec.label)}">${spec.options.map(([value, label]) => `<button data-setting-key="${key}" data-setting-value="${esc(value)}" class="${settings[key] === value ? 'active' : ''}" aria-pressed="${settings[key] === value}"${key === 'language' ? ` lang="${esc(value)}" data-no-translate` : ''}>${esc(label)}</button>`).join('')}</div>${hint}</div>`; }).join('')}</section>`).join('')}
     <section class="settings-group" data-settings-group="Dati"><h3>${glyph('book', 16)} Dati di gioco</h3><div class="setting-actions"><button class="secondary-button" data-menu-action="export">Esporta la partita in corso</button><button class="secondary-button" data-menu-action="diag-copy">Copia il registro diagnostico</button><button class="secondary-button" data-menu-action="diag-clear">Svuota il registro diagnostico</button><label class="secondary-button menu-import-inline"><input type="file" accept="application/json,.json" data-menu-import />Importa una partita</label><button class="secondary-button" data-menu-action="reset-settings">Ripristina le impostazioni</button></div><p class="parliament-note">L’archivio dell’amministratore e i loghi personali restano separati e non vengono toccati.</p></section>
+    ${adsPrivacy ? `<section class="settings-group" data-settings-group="Pubblicità"><h3>${glyph('shield', 16)} Pubblicità e privacy</h3><p class="parliament-note">Puoi rivedere o cambiare la scelta sui consensi per gli annunci in qualsiasi momento. Non inviamo posizione, data di nascita, genere né dati delle tue partite.</p><div class="setting-actions"><button class="secondary-button" data-menu-action="ads-privacy">Opzioni privacy della pubblicità</button></div></section>` : ''}
     <section class="settings-group" data-settings-group="Supporto"><h3>${glyph('users', 16)} Supporto</h3>${supportContact()}</section>
     <section class="settings-group settings-danger" data-settings-group="Pericolo"><h3>${glyph('alert', 16)} Zona pericolosa</h3><p class="parliament-note">Queste azioni sono definitive e chiedono una conferma.</p><div class="setting-actions"><button class="secondary-button danger" data-menu-action="clear-saves">Elimina tutti i salvataggi</button></div></section>
     ${error ? `<p class="menu-error" role="alert">${esc(error)}</p>` : ''}`;
@@ -307,7 +346,7 @@ export function renderMainMenu(menu, context) {
   const home = `<span class="section-kicker">POLITICANDO 2026</span><h2>La politica italiana, settimana dopo settimana</h2><p class="section-subtitle">Un gestionale di carriera in un mondo politico vivo: partiti, parlamentari, governo e leggi reali; tutto ciò che accade in partita è simulazione dichiarata.</p>
     ${facts.length ? `<div class="menu-facts">${facts.map(([value, label]) => `<div><strong>${esc(value)}</strong><span>${esc(label)}</span></div>`).join('')}</div>` : ''}
     <ul class="menu-points"><li>${glyph('clock', 18)}<span><strong>Una settimana alla volta</strong> sei giorni da spendere, poi il mondo va avanti.</span></li><li>${glyph('route', 18)}<span><strong>Sei percorsi</strong> ${esc(Object.values(CAREER_LEVELS).map(level => level.shortLabel).join(', '))}.</span></li><li>${glyph('flag', 18)}<span><strong>Il tuo partito</strong> uno reale, uno fondato da te o nessuno: il gioco ne prende logo e colori.</span></li><li>${glyph('shield', 18)}<span><strong>Reale e simulato, sempre distinti</strong> i dati istituzionali sono verificati, il resto è dichiarato simulazione.</span></li></ul>`;
-  const side = menu.view === 'benvenuto' ? welcomeView(context.account, menu) : menu.view === 'tour' ? tourView(menu.tourStep) : menu.view === 'carica' ? loadView(context) : menu.view === 'account' ? accountView(context.account) : menu.view === 'guida' ? guideView() : menu.view === 'hall' ? hallView(context.hall, { identityOf: context.hallIdentity }) : menu.view === 'loghi' ? renderLogoCatalog(context.logos ?? {}) : menu.view === 'impostazioni' ? settingsView(settings, context) : home;
+  const side = menu.view === 'benvenuto' ? welcomeView(context.account, menu) : menu.view === 'tour' ? tourView(menu.tourStep) : menu.view === 'carica' ? loadView(context) : menu.view === 'account' ? accountView(context.account) : menu.view === 'guida' ? guideView(menu) : menu.view === 'hall' ? hallView(context.hall, { identityOf: context.hallIdentity }) : menu.view === 'loghi' ? renderLogoCatalog(context.logos ?? {}) : menu.view === 'impostazioni' ? settingsView(settings, context) : home;
   const popup = menu.view !== 'home' ? menuPopup(menu.view, side) : '';
   const group = ([title, items]) => `<nav class="menu-group" aria-label="${esc(title)}"><h2 class="menu-group-title">${esc(title)}</h2><div class="menu-list">${items.map(([id, icon, label, detail]) => `<button class="menu-item ${menu.view === id ? 'active' : ''}" data-menu="${id}">${glyph(icon, 18)}<span><strong>${esc(label)}</strong><small>${esc(detail)}</small></span></button>`).join('')}</div></nav>`;
   return `<div class="main-menu ${hasCareer ? 'has-career' : ''}">

@@ -29,11 +29,10 @@ await withBrowser(async ({ evaluate, send, goto, waitFor: wait, pause, errors, v
   assert.ok(await has('[data-nav="ricompense"]'), 'La sezione Carriera ha la pagina Ricompense.');
   await click('[data-nav="ricompense"]'); await must(() => has('[data-rewards-page]'), 'la pagina Ricompense');
   const page = await text('[data-rewards-page]');
-  for (const part of ['Ricompensa giornaliera', '+500 €', 'Tempo di gioco', 'Ricompense pubblicitarie', 'Che cosa hai ricevuto', 'Guarda il video', 'Prossimo capitale politico', 'Prossima preparazione elettorale']) assert.ok(page.includes(part), `La pagina mostra «${part}».`);
-  assert.equal(await evaluate(`document.querySelector('[data-reward-video]').disabled`), true, 'Il pulsante del video è disabilitato finché AdMob non è disponibile.');
-  assert.match(await text('[data-reward-video-note]'), /AdMob/, 'E dice perché.');
+  for (const part of ['Ricompensa giornaliera', '+500 €', 'Tempo di gioco', 'Che cosa hai ricevuto', 'Prossimo capitale politico', 'Prossima preparazione elettorale']) assert.ok(page.includes(part), `La pagina mostra «${part}».`);
+  assert.equal(await evaluate(`Boolean(document.querySelector('[data-reward-video]'))`), false, 'Senza un provider pubblicitario (web, iOS) non c’è nessun pulsante «Guarda il video».');
+  assert.ok(!page.includes('Ricompense pubblicitarie') && !page.includes('Guarda il video'), 'Né la scheda dei video premiati.');
   assert.ok(!/donator|scadenza|scade|durata|settimane/i.test(page.replace(/Il giorno cambia[^\n]*/, '')), 'Nessuna indicazione di durata o donatori.');
-  await click('[data-reward-video]'); await pause(200);
   assert.equal(await inPage(`return (store.getState().world?.adTransfers ?? []).length;`), 0, 'Un clic sul pulsante spento non dà nulla.');
 
   // ---------- the clock counts in the foreground, not otherwise ----------
@@ -136,7 +135,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, version }) => {
   assert.match(zero, /Political capital already at maximum/); assert.match(zero, /no points added, the limit is 100/); assert.ok(!/\+\d/.test(zero.split('\n').slice(0, 3).join(' ')), 'A zero credit announces no gain.');
   await click('[data-reward-notice-dismiss]'); await pause(200);
   const page = await text('[data-rewards-page]');
-  for (const part of ['Daily reward', 'Play time', 'Next political capital', 'Next electoral preparation', 'Rewarded', 'What you have received', 'Instagram community', 'Follow on Instagram', 'I followed, claim', 'To claim', 'Watch the video', 'Rewards earned']) assert.ok(new RegExp(part, 'i').test(page), `In English the page says «${part}».`);
+  for (const part of ['Daily reward', 'Play time', 'Next political capital', 'Next electoral preparation', 'What you have received', 'Instagram community', 'Follow on Instagram', 'I followed, claim', 'To claim', 'Rewards earned']) assert.ok(new RegExp(part, 'i').test(page), `In English the page says «${part}».`);
   const italian = page.match(/Ricompens|Tempo di gioco|Prossim|Storico|riscuot|Guarda|Segui|Ho seguito|Da riscuotere|Premi ottenuti|Giocare|Che cosa|Fondi personali|Capitale politico|Hai /gi);
   assert.equal(italian, null, `Nothing of the page is left in Italian (${italian}).`);
 }, { language: 'en' });

@@ -47,3 +47,14 @@ La **data di nascita** che compare nella creazione del personaggio è un dato in
 - Chi è il titolare dell'account sviluppatore Google Play rispetto a chi gestisce il servizio (`account-sviluppatore-play`).
 
 Nessun test automatico dichiara risolta una di queste questioni: `npm run check:legal -- --release` continua a fallire finché i requisiti indispensabili sono «mancanti».
+
+## 4. Pubblicità su Android (Appodeal) e pubblico 14+
+
+Fatti del codice (25/11/2026): l'app Android mostra pubblicità tramite Appodeal (banner, interstitial, video premiati facoltativi); iOS e sito no. Il gioco non passa all'SDK nessun dato del giocatore (niente id utente, età, genere, posizione). Il consenso è raccolto dal modulo di Appodeal dove la normativa lo richiede, e nessun annuncio è richiesto prima.
+
+Da decidere dal titolare, **non deciso né inventato qui**:
+
+- **Pubblico di destinazione e pubblicità.** Con un pubblico 14+ la pubblicità resta ammessa, ma va considerata la protezione dei minori tra 14 e 18 anni (personalizzazione degli annunci, normativa locale). Se si dichiarasse un pubblico che include i minori di 13 anni, valgono le Norme per le famiglie di Google Play: andrebbe verificato nell'elenco di Google se Appodeal e le sue reti sono ammessi. **Questa verifica non è stata fatta in questa sessione** e va fatta prima di scegliere qualunque fascia che includa bambini.
+- **Contenuto degli annunci.** Appodeal e le reti decidono quali annunci mostrare: il titolare non controlla ogni creatività. Va verificato nella dashboard Appodeal se è possibile filtrare le categorie sensibili (per esempio politica, gioco d'azzardo, età).
+- **Tema politico.** Gli annunci non sono legati ai contenuti del gioco: l'app non passa scelte politiche simulate all'SDK.
+

@@ -241,7 +241,7 @@ if (chromeAvailable) {
       await evaluate(`localStorage.clear(), sessionStorage.clear(), localStorage.setItem('politicando.onboarding.v1', JSON.stringify({ account: true, tour: 'done', localStart: true })), true`);
       await goto();
       await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu=nuova]:not([disabled])"))'));
-      await click('[data-menu="nuova"]:not([disabled])'); await evaluate(`document.querySelector('[data-wizard-mode="realistica"]')?.click(); true`); await new Promise(resolve => setTimeout(resolve, 500));
+      await click('[data-menu="nuova"]:not([disabled])'); await waitFor(() => evaluate('Boolean(document.querySelector(".career-wizard"))')); await evaluate(`document.querySelector('[data-wizard-mode="realistica"]')?.click(); true`); await new Promise(resolve => setTimeout(resolve, 500));
       await waitFor(() => evaluate('Boolean(document.querySelector(".career-wizard"))'));
       // the first steps, as a player would fill them in: identity, Toscana · Siena, an independent
       await waitFor(() => evaluate(`Boolean(document.querySelector('.career-wizard [name="firstName"]'))`));
@@ -291,6 +291,7 @@ if (chromeAvailable) {
       assert.match(await text('.poll-scenario-total'), /Totale 100,0%/, `${width}px: con un valore scritto Altri si ricalcola e il totale resta 100,0%.`);
       assert.ok(!(await evaluate(`Boolean(document.querySelector('.poll-problems'))`)), `${width}px: e non c’è nessun rifiuto.`);
       for (let i = 1; i < 6; i++) { const name = await evaluate(`document.querySelectorAll('.poll-scenario input[name^="poll_"]')[${i}].name`); await setValue(`[name="${name}"]`, '25'); await pause(120); }
+      await pause(500); // the wizard redraws 220 ms after the last keystroke (typing is never interrupted)
       assert.ok(await evaluate(`Boolean(document.querySelector('.poll-problems'))`), `${width}px: oltre 100 il blocco dice perché.`);
       assert.match(await text('.poll-problems'), /sommano|Altri/, `${width}px: con il motivo.`);
       await click('.wizard-footer [data-wizard-action="next"]'); await pause(500);

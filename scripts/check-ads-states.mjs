@@ -18,57 +18,57 @@ const { createRewardedAds, REWARDED_ADS_OFF } = await module('src/data/repositor
 const { ADS_CONFIG } = await module('src/data/ads-config.js');
 const { createStorageLease } = await module('src/core/play-clock.js');
 const memoryStorage = () => { const map = new Map(); return { getItem: key => map.get(key) ?? null, setItem: (key, value) => { map.set(key, String(value)); }, removeItem: key => { map.delete(key); } }; };
-const TEST_CONFIG = Object.freeze({ enabled: true, appId: 'ca-app-pub-0000000000000000~0000000000', rewardedUnitId: 'ca-app-pub-0000000000000000/0000000000' });   // placeholders of this test
+const TEST_CONFIG = Object.freeze({ rewarded: Object.freeze({ enabled: true, placementId: '10000884972' }) });   // the shape of data/ads-config.js
 const service = ads => createRewardsService({ store, journal: createRewardsJournal(memoryStorage()), username: () => null, ads, env: { now: () => 0, wall: () => 1, visible: () => true, playing: () => true, lease: createStorageLease(memoryStorage(), { tabId: 't', wall: () => 1 }), storage: memoryStorage() } });
 const card = async ads => { const rewards = service(ads); await rewards.refreshAds(); const html = renderRewardsPage(store.getState(), { ...rewards.snapshot(), playing: true }); return { rewards, html, button: /<button[^>]*data-reward-video[^>]*>/.exec(html)?.[0] ?? '', note: /<p class="quiet-copy" data-reward-video-note[^>]*>([^<]*)<\/p>/.exec(html)?.[1] ?? null }; };
 
 // ---- what the game ships: nothing ----
-assert.deepEqual({ ...ADS_CONFIG }, { enabled: false, appId: null, rewardedUnitId: null }, 'La configurazione degli annunci è spenta e senza identificativi.');
+assert.equal(ADS_CONFIG.enabled, false, 'La configurazione degli annunci di base è spenta.');
 const read = path => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const { ADS_MODE } = await module('src/data/ads-config.js');
-assert.equal(ADS_MODE, 'off', 'Gli annunci sono spenti nel repository (modalità off).');
-// the SDK is in the Android project now (plugin + App ID in the manifest, see check-admob.mjs), never on iOS; the ids live in ONE file of the game and nowhere else
+assert.equal(ADS_MODE, 'off', 'La modalità predefinita è «off» (più prudente di «test»): nessuna richiesta e nessun annuncio reale, e ogni formato spento finché la configurazione remota non lo accende.');
+// the SDK is in the Android project now (plugin + App ID in the manifest, see check-inmobi.mjs), never on iOS; the ids live in ONE file of the game and nowhere else
 const iosShipped = ['ios/App/App/Info.plist', 'ios/App/CapApp-SPM/Package.swift', 'ios/App/App.xcodeproj/project.pbxproj'].map(read).join('\n');
-assert.ok(!/admob|google-mobile-ads|ca-app-pub|GADApplicationIdentifier/i.test(iosShipped), 'Nel progetto iOS non ci sono SDK o plugin AdMob né identificativi pubblicitari.');
-assert.ok(!/ca-app-pub-/.test(fs.readdirSync(new URL('../src/', import.meta.url), { recursive: true }).filter(name => /\.(js|json|html)$/.test(name) && !/^data\/real\//.test(name) && name !== 'data/ads-config.js').map(name => read(`src/${name}`)).join('\n')), 'Gli identificativi AdMob stanno solo in data/ads-config.js.');
+assert.ok(!/admob|google-mobile-ads|ca-app-pub|GADApplicationIdentifier/i.test(iosShipped), 'Nel progetto iOS non ci sono SDK, plugin o identificativi AdMob (l’unico provider è InMobi).');
+assert.ok(!/ca-app-pub-/.test(fs.readdirSync(new URL('../src/', import.meta.url), { recursive: true }).filter(name => /\.(js|json|html)$/.test(name) && !/^data\/real\//.test(name) && name !== 'data/ads-config.js2').map(name => read(`src/${name}`)).join('\n')), 'Nessun identificativo AdMob (ca-app-pub) in tutto il codice del gioco.');
 
 // ---- 1. not integrated / not configured ----
 let state = await card({});
-assert.match(state.button, /disabled/, '1. Il pulsante è spento.'); assert.match(state.button, /data-ads-state="not-configured"/);
-assert.equal(state.note, REWARDED_ADS_OFF, '1. La nota dice che cosa manca (AdMob non configurato).'); assert.match(state.note, /AdMob/);
+// where no ad provider is configured (iOS, the web, Android without the plugin) the card of the rewarded video is NOT drawn at all: no button promises a reward that cannot be given
+assert.equal(state.button, '', '1. Nessun pulsante «Guarda il video» dove non c’è un provider.'); assert.ok(!state.note, '1. Né una nota: la scheda dei video non compare.');
 state = await card({ config: TEST_CONFIG });
-assert.match(state.button, /data-ads-state="not-configured"/, '1. Configurato ma senza il provider nativo: resta «non integrato».');
-state = await card({ provider: { kind: 'admob', isReady: () => true, show: async () => ({}) } });
-assert.match(state.button, /data-ads-state="not-configured"/, '1. Il provider senza identificativi non basta.');
-state = await card({ config: { enabled: true, appId: null, rewardedUnitId: null }, provider: { kind: 'admob', isReady: () => true, show: async () => ({}) } });
-assert.match(state.button, /data-ads-state="not-configured"/, '1. Configurazione incompleta: non configurato.');
+assert.equal(state.button, '', '1. Configurato ma senza il provider nativo: resta «non integrato».');
+state = await card({ provider: { kind: 'inmobi', isReady: () => true, show: async () => ({}) } });
+assert.equal(state.button, '', '1. Il provider senza identificativi non basta.');
+state = await card({ config: { rewarded: { enabled: false } }, provider: { kind: 'inmobi', isReady: () => true, show: async () => ({}) } });
+assert.equal(state.button, '', '1. Configurazione incompleta: non configurato.');
 state = await card({ config: TEST_CONFIG, provider: { kind: 'demo', isReady: () => true, show: async () => ({}) } });
-assert.match(state.button, /data-ads-state="not-configured"/, '1. Un provider di prova è rifiutato in produzione.');
+assert.equal(state.button, '', '1. Un provider di prova è rifiutato in produzione.');
 
 // ---- 2. integrated, configured, a video is available ----
 let ready = true, shown = 0;
-const provider = { kind: 'admob', isReady: () => ready, show: async () => { shown++; return { completed: true, verified: true, completionId: `transazione-${shown}-0001` }; } };
+const provider = { kind: 'inmobi', isReady: () => ready, show: async () => { shown++; return { completed: true, verified: true, completionId: `transazione-${shown}-0001` }; } };
 state = await card({ config: TEST_CONFIG, provider });
 assert.doesNotMatch(state.button, /disabled/, '2. Il pulsante è attivo.'); assert.match(state.button, /data-ads-state="ready"/);
-assert.equal(state.note, null, '2. La nota sulla configurazione è sparita.'); assert.doesNotMatch(state.html, /integrazione di AdMob|Nessun video disponibile/);
+assert.equal(state.note, null, '2. La nota sulla configurazione è sparita.'); assert.doesNotMatch(state.html, /non sono attivi|Nessun video disponibile/);
 // the video really rewards, once for each completion
 const before = JSON.stringify(store.getState().game?.rewards?.ads ?? []);
 const first = await createRewardedAds({ config: TEST_CONFIG, provider, grant: id => store.claimAdReward(id) }).watch();
 assert.equal(first.status, 'completed'); assert.notEqual(JSON.stringify(store.getState().game?.rewards?.ads ?? []), before, 'Il premio è registrato.');
 const repeated = await createRewardedAds({ config: TEST_CONFIG, provider, grant: id => store.claimAdReward(id) }).complete({ completed: true, verified: true, completionId: first.completionId });
 assert.equal(repeated.status, 'duplicate', 'La stessa conferma non paga due volte.');
-assert.equal((await createRewardedAds({ config: TEST_CONFIG, provider: { kind: 'admob', isReady: () => true, show: async () => ({ completed: true, verified: false, completionId: 'transazione-falsa-1' }) }, grant: id => store.claimAdReward(id) }).watch()).status, 'failed', 'Una conferma che non viene dalla rete pubblicitaria non vale.');
+assert.equal((await createRewardedAds({ config: TEST_CONFIG, provider: { kind: 'inmobi', isReady: () => true, show: async () => ({ completed: true, verified: false, completionId: 'transazione-falsa-1' }) }, grant: id => store.claimAdReward(id) }).watch()).status, 'failed', 'Una conferma che non viene dalla rete pubblicitaria non vale.');
 
 // ---- 3. integrated, no video available now ----
 ready = false;
 state = await card({ config: TEST_CONFIG, provider });
 assert.match(state.button, /disabled/, '3. Il pulsante è spento.'); assert.match(state.button, /data-ads-state="no-ad"/);
 assert.equal(state.note, 'Nessun video disponibile in questo momento.', '3. Messaggio temporaneo.');
-assert.notEqual(state.note, REWARDED_ADS_OFF, '3. Diverso da «non configurato».'); assert.doesNotMatch(state.html, /integrazione di AdMob/);
+assert.notEqual(state.note, REWARDED_ADS_OFF, '3. Diverso da «non configurato».'); assert.doesNotMatch(state.html, /non sono attivi/);
 const rewards = service({ config: TEST_CONFIG, provider }); await rewards.refreshAds();
 ready = true; await rewards.refreshAds();
 assert.equal(rewards.snapshot().ads.available, true, '3. Quando un video torna disponibile il pulsante si riattiva da solo.');
 provider.isReady = () => { throw new Error('sdk'); };
 state = await card({ config: TEST_CONFIG, provider });
 assert.match(state.button, /data-ads-state="no-ad"/, '3. Un errore dell’SDK è «nessun video», non «non configurato».');
-console.log('Annunci premiati verificati: non configurato (pulsante spento, nota su AdMob), integrato e disponibile (pulsante attivo, nota sparita, premio una volta per conferma verificata), integrato senza video (pulsante spento, messaggio temporaneo diverso); il gioco non contiene SDK, plugin né identificativi AdMob.');
+console.log('Annunci premiati verificati: non configurato (pulsante spento, nota «non attivi»), integrato e disponibile (pulsante attivo, nota sparita, premio una volta per conferma verificata), integrato senza video (pulsante spento, messaggio temporaneo diverso); il gioco non contiene SDK, plugin né identificativi AdMob.');

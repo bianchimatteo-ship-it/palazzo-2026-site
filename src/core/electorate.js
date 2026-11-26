@@ -7,7 +7,7 @@
 // The votes of the lists are the valid ballots shared among the lists, in whole numbers that add up to them exactly (largest remainder). Without demographic data (the file is not
 // loaded, or the territory is not in it) the count falls back to a declared scale of 100,000 ballots: percentages only, never presented as voters. A second-level vote (the province:
 // the mayors and the councillors vote, with weights) is also a scale, never the population.
-import { residentsOfItaly, residentsOfMunicipality, residentsOfRegion, populationReferenceDate } from './municipal-rules.js?v=20261117-3';
+import { residentsOfItaly, residentsOfMunicipality, residentsOfRegion, populationReferenceDate } from './municipal-rules.js?v=20261126-3';
 
 export const ELIGIBLE_SHARE = 0.82;
 export const SCALE = 100000;
@@ -66,12 +66,18 @@ export function distributeVotes(weights, total) {
   return votes;
 }
 
+// «Altri»: one canonical row (id `altri`, `others: true`), never a party; isOthersRow also reads the old `altre-liste`
+export const OTHERS_ID = 'altri';
+export const isOthersRow = row => Boolean(row) && (row.others === true || row.id === OTHERS_ID || row.id === 'altre-liste');
 // Gives the rows their votes: the valid ballots shared by percentage. Rows that do not reach 100% (the lists that are not shown) get a row of their own, «Altre liste».
 export function withVotes(rows, valid, { others = true, label = 'Altre liste' } = {}) {
   const shown = rows.reduce((acc, row) => acc + (Number(row.percent) || 0), 0);
   const rest = Math.round((100 - shown) * 100) / 100;
-  const list = others && rest >= 0.05 ? [...rows, { id: 'altre-liste', candidateId: null, partyIds: [], memberCandidateIds: [], label, percent: rest, seats: 0, source: 'simulation', others: true }] : rows;
-  const votes = distributeVotes(list.map(row => row.percent), valid);
+  const list = others && rest >= 0.05 ? [...rows, { id: OTHERS_ID, candidateId: null, partyIds: [], memberCandidateIds: [], label, percent: rest, seats: 0, source: 'simulation', others: true }] : rows;
+  // `others: false` (the lists of a national vote): the shown percentages are already on ALL the valid votes, so the rows are NOT stretched to 100%: the unshown rest keeps its own share of the ballots
+  // (a hidden weight in the largest-remainder split) and the rows get exactly percent × valid. A race whose rows reach 100% is split as before. The votes of the rest are `valid − Σ rows` (see countProblems, nightSnapshot).
+  const hidden = !others && rest >= 0.05 && rows.length ? [rest] : [];
+  const votes = distributeVotes([...list.map(row => row.percent), ...hidden], valid);
   list.forEach((row, index) => { row.votes = votes[index]; });
   return list;
 }
@@ -82,13 +88,25 @@ export function countProblems(count, rows = [], { label = 'elezione' } = {}) {
   if (!count) return [`${label}: conteggio assente`];
   const whole = value => Number.isInteger(value) && value >= 0;
   if (count.normalized) {
-    if (rows.length && rows.some(row => row.votes !== undefined) && rows.reduce((acc, row) => acc + (row.votes ?? 0), 0) !== count.ballots) problems.push(`${label}: la somma dei voti di lista non coincide con i voti sulla scala`);
+    if (rows.length && rows.some(row => row.votes !== undefined)) {
+      // the same rule as for a counted vote: a race that does not show every list leaves the share of the unshown ones («Altri») out of the rows, so the rows add up to the votes on the scale minus that share (±1 for the rounding)
+      const total = rows.reduce((acc, row) => acc + (row.votes ?? 0), 0);
+      const rest = Math.round((100 - rows.reduce((acc, row) => acc + (Number(row.percent) || 0), 0)) * 100) / 100;
+      const expectedOthers = rest >= 0.05 ? Math.round(count.ballots * rest / 100) : 0;
+      if (Math.abs((count.ballots - total) - expectedOthers) > 1) problems.push(`${label}: la somma dei voti di lista non coincide con i voti sulla scala`);
+    }
     return problems;
   }
   for (const key of ['electors', 'voters', 'ballots']) if (!whole(count[key])) problems.push(`${label}: ${key} non è un intero non negativo (${count[key]})`);
   if (count.residents !== null && count.residents !== undefined && count.voters > count.residents) problems.push(`${label}: votanti ${count.voters} > popolazione residente ${count.residents}`);
   if (count.voters > count.electors) problems.push(`${label}: votanti ${count.voters} > elettorato ${count.electors}`);
   if (count.ballots > count.voters) problems.push(`${label}: voti validi ${count.ballots} > votanti ${count.voters}`);
-  if (rows.length) { const total = rows.reduce((acc, row) => acc + (row.votes ?? 0), 0); if (total !== count.ballots) problems.push(`${label}: la somma dei voti di lista ${total} non coincide con i voti validi ${count.ballots}`); }
+  if (rows.length) {
+    const total = rows.reduce((acc, row) => acc + (row.votes ?? 0), 0);
+    // the lists of a national vote leave a share of the valid votes to the lists nobody names («Altri»): then the rows add up to the valid votes minus that share (±1 for the rounding), never to all of them
+    const rest = Math.round((100 - rows.reduce((acc, row) => acc + (Number(row.percent) || 0), 0)) * 100) / 100;
+    const expectedOthers = rest >= 0.05 ? Math.round(count.ballots * rest / 100) : 0;
+    if (Math.abs((count.ballots - total) - expectedOthers) > 1) problems.push(`${label}: la somma dei voti di lista ${total} non coincide con i voti validi ${count.ballots}${expectedOthers ? ` meno gli «Altri» (${expectedOthers})` : ''}`);
+  }
   return problems;
 }

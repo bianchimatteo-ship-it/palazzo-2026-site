@@ -1,13 +1,13 @@
 // The newsroom as the player reads it: full articles (with the facts behind them), the stories that last (timeline, reactions, heat) and the
 // outlets with their identity. Everything shown here was written by the engine from a fact of the game; nothing is attributed to real people.
-import { ARTICLE_CATEGORIES, LP24, NEWSROOM_OUTLETS, RADIO_PROGRAMMES, STORY_KINDS } from '../data/simulation/news-rules.js?v=20261117-3';
-import { formatDate } from '../core/time.js?v=20261117-3';
-import { coverIllustration, illustration, lp24Logo, pickByHash } from './illustrations.js?v=20261117-3';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261117-3';
-import { normalizeMedia } from '../core/news-engine.js?v=20261117-3';
-import { esc, meter } from './charts.js?v=20261117-3';
-import { glyph } from './visuals.js?v=20261117-3';
-import { bulletinScript, voiceAvailable, voiceError, voiceLine, voiceStatus, voiceTarget } from './radio-voice.js?v=20261117-3';
+import { ARTICLE_CATEGORIES, LP24, NEWSROOM_OUTLETS, RADIO_PROGRAMMES, STORY_KINDS } from '../data/simulation/news-rules.js?v=20261126-3';
+import { formatDate } from '../core/time.js?v=20261126-3';
+import { coverIllustration, illustration, lp24Logo, pickByHash } from './illustrations.js?v=20261126-3';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261126-3';
+import { normalizeMedia } from '../core/news-engine.js?v=20261126-3';
+import { esc, meter } from './charts.js?v=20261126-3';
+import { glyph } from './visuals.js?v=20261126-3';
+import { bulletinScript, voiceAvailable, voiceError, voiceLine, voiceStatus, voiceTarget } from './radio-voice.js?v=20261126-3';
 // What went wrong with the reading aloud (blocked, no usable voice, silent): said on the page, where the text stays readable.
 const voiceProblem = () => voiceStatus() === 'error' && voiceError() ? `<p class="voice-note" role="alert" data-voice-error="${esc(voiceError().code)}">${esc(voiceError().message)}</p>` : '';
 
@@ -35,7 +35,20 @@ export const newsCoverScene = article => {
 };
 const categoryOf = id => ARTICLE_CATEGORIES.find(item => item.id === id);
 const shortDate = date => { try { return formatDate(date, { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return String(date ?? ''); } };
-const summaryOf = article => String(article.deck || article.body?.[0] || '').slice(0, 220);
+// The preview of an article: its deck, else the start of the first paragraph, clipped at the end of a sentence (or of a clause) and never in the middle of a phrase: a cut at a fixed number of characters left
+// half-clauses («… il margine nella Camera più stretta è di +») that no sentence of the phrase-book can translate, so the English page showed Italian. A clipped text ends with an ellipsis.
+export function clipAtBoundary(text, limit = 220) {
+  const value = String(text ?? '').trim();
+  if (value.length <= limit) return value;
+  const head = value.slice(0, limit);
+  const sentence = Math.max(head.lastIndexOf('. '), head.lastIndexOf('! '), head.lastIndexOf('? '));
+  if (sentence >= limit * 0.35) return head.slice(0, sentence + 1);
+  const clause = Math.max(head.lastIndexOf('; '), head.lastIndexOf(': '), head.lastIndexOf(' · '));
+  if (clause >= limit * 0.35) return `${head.slice(0, clause).replace(/[\s,;:·]+$/, '')}…`;
+  const space = head.lastIndexOf(' ');
+  return `${head.slice(0, space > 0 ? space : limit).replace(/[\s,;:·]+$/, '')}…`;
+}
+const summaryOf = article => clipAtBoundary(article.deck || article.body?.[0] || '', 220);
 
 // A card of the paper: the scene of its category, category, date, outlet, headline, summary and the way to the whole story. BREAKING NEWS only for the articles that carry the flag.
 export function articleHtml(article, media, { lead = false } = {}) {
@@ -130,8 +143,13 @@ export function renderNewsroomTabs(state, { filter, category = 'tutte', outlet =
 // `optOut`: the weekly pop-ups are switched off in the settings (the checkbox below is the same preference, never a second one).
 export function newsPopupHtml(popup, { optOut = false } = {}) {
   if (!popup?.items?.length) return '';
-  const items = popup.items.slice(0, 3).map(item => `<li class="${item.breaking ? 'is-breaking' : ''}">${item.breaking ? '<span class="breaking-badge">BREAKING NEWS</span> ' : ''}<b>${esc(item.headline)}</b><small>${esc(item.outlet)} · ${esc(categoryOf(item.category)?.label ?? item.category)}</small><button type="button" class="text-link" data-news-popup-open="${esc(item.id)}">Leggi la storia</button></li>`).join('');
-  return `<aside class="news-popup" role="dialog" aria-modal="false" aria-labelledby="news-popup-title" data-news-popup><header><div><span class="section-kicker">LA POLITICA 24 · SIMULATA</span><h2 id="news-popup-title">Le notizie della settimana</h2></div><button type="button" class="icon-button" data-news-popup-close aria-label="Chiudi le notizie della settimana"><span aria-hidden="true">×</span></button></header><ul class="news-popup-list">${items}</ul><footer><div class="news-popup-optout"><label><input type="checkbox" data-news-popup-optout ${optOut ? 'checked' : ''} /><span>Non mostrare più i popup delle notizie settimanali</span></label><small>Potrai riattivarli in qualsiasi momento dal menu Impostazioni.</small></div><button type="button" class="secondary-button" data-news-popup-close>Chiudi</button><button type="button" class="primary-button" data-nav="notizie" data-news-popup-close>Apri Informazione</button></footer></aside>`;
+  // the lead story first (the breaking one when there is one), then the others: the source (who writes) and the category (what it is about) are two different labels
+  const list = popup.items.slice(0, 3);
+  const lead = list.find(item => item.breaking) ?? list[0];
+  const rest = list.filter(item => item !== lead);
+  const tags = item => `<span class="np-tags"><span class="np-source">${esc(item.outlet)}</span><span class="np-category" data-news-category="${esc(item.category)}">${esc(categoryOf(item.category)?.label ?? item.category)}</span></span>`;
+  const row = (item, main) => `<li class="${main ? 'np-lead' : 'np-item'}${item.breaking ? ' is-breaking' : ''}">${item.breaking ? '<span class="breaking-badge">BREAKING NEWS</span>' : ''}${tags(item)}<b class="np-headline">${esc(item.headline)}</b><button type="button" class="text-link np-read" data-news-popup-open="${esc(item.id)}">Leggi la storia <span aria-hidden="true">›</span></button></li>`;
+  return `<aside class="news-popup" role="dialog" aria-modal="false" aria-labelledby="news-popup-title" data-news-popup><header><div><span class="section-kicker">LA POLITICA 24 · SIMULATA</span><h2 id="news-popup-title">Le notizie della settimana</h2></div><button type="button" class="icon-button" data-news-popup-close aria-label="Chiudi le notizie della settimana"><span aria-hidden="true">×</span></button></header><ul class="news-popup-list">${row(lead, true)}${rest.map(item => row(item, false)).join('')}</ul><footer><div class="np-actions"><button type="button" class="primary-button" data-nav="notizie" data-news-popup-close>Apri Informazione</button><button type="button" class="secondary-button" data-news-popup-close>Chiudi</button></div><div class="news-popup-optout"><label><input type="checkbox" data-news-popup-optout ${optOut ? 'checked' : ''} /><span>Non mostrare più i popup delle notizie settimanali</span></label><small>Potrai riattivarli in qualsiasi momento dal menu Impostazioni.</small></div></footer></aside>`;
 }
 // What the pop-up keeps of an article (the pop-up is not saved: the archive keeps the article).
 export const popupItem = article => ({ id: article.id, headline: article.headline, outlet: article.outlet, category: article.category, breaking: Boolean(article.breaking) });

@@ -21,8 +21,14 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .date-chip, .icon-button { border-color: var(--line-strong); color: var(--ink-2); background: var(--panel); }
 .icon-button:hover { border-color: var(--accent); color: var(--accent); }
 .advance-button, .primary-button { background: var(--accent); color: var(--accent-ink); font-weight: 750; border: 0; }
-.advance-button:hover, .primary-button:hover { background: var(--gold-soft); color: var(--accent-ink); }
-.advance-button:disabled, .primary-button:disabled { background: var(--line); color: #8c907b; transform: none; cursor: not-allowed; }
+.advance-button:hover:not(:disabled), .primary-button:hover:not(:disabled) { background: var(--gold-soft); color: var(--accent-ink); }   /* more specific than the generic button hover (white text): dark ink on gold-soft keeps WCAG AA */
+/* Disabled gold stays gold (dimmed, with dark text), never grey: the palette of the game is the gold of the main actions and the dark of the secondary ones. */
+.advance-button:disabled, .primary-button:disabled { background: #8a7648; color: #1a1507; transform: none; cursor: not-allowed; }   /* dimmed gold, dark ink: about 4.4:1 (it was a translucent gold that vanished into the dark panel: 1.29:1) */
+/* Every button of the game has one of the two looks. A button that no rule of its own styles (a bare «button», a local class) gets the dark one, never the browser's grey: the selector has no weight, so every
+   specific rule of the game wins over it. */
+:where(button, input[type="button"], input[type="submit"], input[type="reset"]) { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line-strong); border-radius: var(--radius, 6px); font-family: var(--font-ui, inherit); font-weight: 700; }
+:where(button, input[type="button"], input[type="submit"], input[type="reset"]):hover:not(:disabled) { border-color: var(--accent); color: #fff; }
+:where(button, input[type="button"], input[type="submit"], input[type="reset"]):disabled { opacity: .5; cursor: not-allowed; }
 .secondary-button { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line-strong); }
 .secondary-button:hover:not(:disabled) { border-color: var(--accent); color: #fff; }
 .secondary-button:disabled { opacity: .5; cursor: not-allowed; }
@@ -85,10 +91,21 @@ h1, h2, h3, h4 { color: var(--ink); }
 
 /* ---------- phone navigation: Home, Elezioni, Sondaggi, Istituzioni and “Altro” (everything else in a sheet) ---------- */
 .mobile-tabbar, .mobile-sheet { display: none; }
-@media (max-width: 600px) {
+/* phones: the bottom bar and the sheet menu (also on a phone held sideways, 667–932 px wide but only 320–430 px tall: the side menu would show three items) */
+@media (max-width: 600px), (orientation: landscape) and (max-height: 500px) and (max-width: 1000px) {
   .app-shell > .sidebar { display: none; }
-  .main-area { margin: 0; padding-bottom: calc(82px + env(safe-area-inset-bottom)); }
-  .mobile-tabbar { position: fixed; inset: auto 0 0; z-index: 30; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); height: calc(64px + env(safe-area-inset-bottom)); padding: 0 4px env(safe-area-inset-bottom); background: rgba(10, 20, 16, .97); border-top: 1px solid var(--line-strong); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  /* The Appodeal banner, when there is one (Android only, --appodeal-banner-height is 0px otherwise), sits below the tab bar and above
+     the system nav/gesture area: the tab bar is pushed up by exactly its height (that one value already IS the banner's whole footprint,
+     its own margin above the system bar included — see AppodealAdsPlugin.kt, notifyBannerHeight), and the page reserves at least that
+     much on top of its own padding too: `max()`, not `+`, so the safe-area inset is never counted twice under the banner. */
+  .main-area { margin: 0; padding-bottom: calc(82px + max(env(safe-area-inset-bottom), var(--appodeal-banner-height, 0px))); }
+  .mobile-tabbar { position: fixed; inset: auto 0 0; bottom: var(--appodeal-banner-height, 0px); z-index: 30; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); height: calc(64px + env(safe-area-inset-bottom)); padding: 0 max(4px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom) max(4px, env(safe-area-inset-left, 0px)); background: rgba(10, 20, 16, .97); border-top: 1px solid var(--line-strong); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); transition: bottom .18s ease; }
+  /* With a banner under it, the tab bar has no safe-area strip of its own: the banner (and the margin of the system bar the plugin already folds into --appodeal-banner-height) IS what sits between the buttons and the
+     system bar. Without it, the tab bar keeps its own strip above the gesture area. The five buttons keep their 64px and stay above the banner, never under it. */
+  .has-ad-banner .mobile-tabbar { height: 64px; padding-bottom: 0; }
+  /* The strip under the tab bar belongs to the native banner (and the margin above the system bar): the page must not show through it (the banner is only 320dp wide, and where there is no ad yet it is empty): an opaque
+     backdrop, as tall as the reserved place, behind the native view. */
+  .has-ad-banner .mobile-tabbar::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: var(--appodeal-banner-height, 0px); background: #0a1410; pointer-events: none; }
   .mobile-tabbar::before { content: ""; position: absolute; inset: -1px 0 auto 0; height: 2px; background: linear-gradient(90deg, var(--tri-green) 0 33.34%, var(--tri-white) 33.34% 66.67%, var(--tri-red) 66.67% 100%); opacity: .75; }
   .mobile-tab { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-width: 0; min-height: 58px; border: 0; border-radius: var(--radius); background: none; color: var(--muted); font: 600 12px var(--font-ui); touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   .mobile-tabbar .mobile-tab span { max-width: none; white-space: nowrap; overflow-wrap: normal; word-break: keep-all; font-size: 11.5px; letter-spacing: -.02em; }
@@ -322,7 +339,7 @@ h1, h2, h3, h4 { color: var(--ink); }
 .report-backdrop { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 20px; }
 .report-modal { width: min(720px, 100%); max-height: calc(100vh - 40px); overflow: auto; padding: 24px 26px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line-strong); box-shadow: 0 30px 90px rgba(0,0,0,.65); animation: rise .28s ease-out; }
 .report-modal h2 { margin: 4px 0 14px; font: 800 24px/1.2 Manrope, sans-serif; }
-.report-metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.report-metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(190px, 100%), 1fr)); gap: 8px; }
 .report-metric { padding: 12px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); border-left: 3px solid var(--line-strong); }
 .report-metric.up { border-left-color: var(--good); }
 .report-metric.down { border-left-color: var(--critical); }
@@ -375,7 +392,7 @@ b.down { color: var(--critical-ink); }
 .secretary-block > small { color: var(--ink-2); font-size: 12px; line-height: 1.5; }
 .secretary-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .secretary-row select { flex: 1 1 160px; min-height: 40px; border-radius: 8px; padding: 0 10px; border: 1px solid var(--line-strong); }
-.line-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
+.line-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: 8px; }
 .line-option { text-align: left; padding: 12px; border-radius: 9px; border: 1px solid var(--line-strong); background: var(--panel); color: var(--ink); display: grid; gap: 4px; }
 .line-option strong { font: 700 14px/1.2 Manrope, sans-serif; }
 .line-option small { color: var(--muted); font-size: 12px; line-height: 1.4; }
@@ -502,7 +519,7 @@ html[data-density="compact"] .hq-grid, html[data-density="compact"] .dash-grid {
 .policy-fields { display: grid; gap: 10px; }
 .policy-fields label { display: grid; gap: 5px; font-size: 12px; color: var(--ink-2); }
 .policy-fields select, .policy-form input[name="title"], .reshuffle-form select { min-height: 40px; border-radius: 8px; padding: 0 10px; border: 1px solid var(--line-strong); }
-.policy-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.policy-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr)); gap: 10px; }
 .policy-instruments, .policy-lines { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 8px; border: 0; padding: 0; margin: 0; }
 .policy-instruments legend { font-size: 12px; color: var(--ink-2); margin-bottom: 6px; }
 .policy-choice { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 9px; border: 1px solid var(--line-strong); background: var(--panel); cursor: pointer; }
@@ -650,7 +667,9 @@ html[data-density="compact"] .hq-grid, html[data-density="compact"] .dash-grid {
 
 @media (max-width: 600px) {
 
-  .main-area { margin: 0; padding-bottom: calc(78px + env(safe-area-inset-bottom)); }
+  /* Same rule as the one above (this block wins the cascade on a portrait phone: same selector, later in the file) — kept
+     in sync by hand since the two media queries only partly overlap (this one skips the landscape-phone case above). */
+  .main-area { margin: 0; padding-bottom: calc(78px + max(env(safe-area-inset-bottom), var(--appodeal-banner-height, 0px))); }
 
 
 
@@ -692,6 +711,8 @@ html body select:not([multiple]):focus-visible { outline: 3px solid var(--accent
 html body select:disabled { opacity: .55; cursor: not-allowed; }
 select option, select optgroup { background: var(--panel); color: var(--ink); font-size: 14px; }
 .real-law-tools select, .law-form-grid select, .law-negotiation select, .policy-fields select, .catalog-filter select { width: 100%; }
+/* iPhone / iPad (also in landscape, wider than 600 px): a field below 16 px makes Safari zoom the page on focus */
+html.platform-ios body select:not([multiple]), html.platform-ios body input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), html.platform-ios body textarea { font-size: 16px; }
 @media (max-width: 600px) { html body select:not([multiple]), html body input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), html body textarea { font-size: 16px; } }
 
 /* ---------- no horizontal overflow: long names wrap, grids shrink ---------- */
@@ -801,7 +822,7 @@ select option, select optgroup { background: var(--panel); color: var(--ink); fo
 .badge-bad { background: rgba(227, 73, 72, .16); color: #e2beb1; }
 
 /* Admin: party, group/component and election list side by side */
-.admin-affiliation { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:8px; margin:0 0 12px; }
+.admin-affiliation { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(170px, 100%),1fr)); gap:8px; margin:0 0 12px; }
 .admin-affiliation span { display:grid; gap:3px; padding:9px 11px; border:1px solid var(--line); border-radius:6px; background:var(--panel); }
 .admin-affiliation small { color:var(--ink-3); font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
 .admin-affiliation strong { color:var(--ink); font-size:13px; line-height:1.35; }
@@ -946,7 +967,7 @@ select option, select optgroup { background: var(--panel); color: var(--ink); fo
 .badge-warn { background: color-mix(in srgb, var(--serious) 18%, transparent); color: var(--serious); }
 
 /* Observatory: approval and laws, regional trend, coalition scenarios. */
-.obs-three { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.obs-three { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr)); gap: 10px; }
 .obs-three > div { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; }
 .obs-three small { color: var(--accent); letter-spacing: .06em; font-size: 12px; }
 .obs-three p { margin: 4px 0 0; font-size: 13px; color: var(--ink-2); }
@@ -1070,8 +1091,8 @@ select option, select optgroup { background: var(--panel); color: var(--ink); fo
 .setting-row.has-hint .segmented button { min-height: 44px; min-width: 96px; }
 
 /* Lingua / Language: a small switch next to the logo of the opening screen */
-.menu-lang { display: flex; gap: 6px; width: 100%; margin: 0 0 14px; padding: 5px; border: 1px solid var(--line-strong); border-radius: 14px; background: var(--panel); }
-.menu-lang button { flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 12px; border: 1px solid transparent; border-radius: 10px; background: none; color: var(--ink-2); font: 700 14px/1 Manrope, sans-serif; cursor: pointer; transition: background .15s ease, color .15s ease; }
+.menu-lang { display: flex; gap: 8px; width: 100%; margin: 0 0 14px; padding: 5px; border: 1px solid var(--line-strong); border-radius: 14px; background: var(--panel); }
+.menu-lang button { flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: var(--touch-min, 44px); padding: 0 12px; border: 1px solid transparent; border-radius: 10px; background: none; color: var(--ink-2); font: 700 14px/1 Manrope, sans-serif; cursor: pointer; transition: background .15s ease, color .15s ease; }
 .menu-lang button:hover { color: var(--ink-hi); background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .menu-lang button.active { background: var(--accent); color: var(--accent-ink); border-color: color-mix(in srgb, var(--accent-ink) 25%, transparent); box-shadow: 0 1px 0 rgba(0, 0, 0, .25); }
 .menu-lang button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
@@ -1138,13 +1159,13 @@ select option, select optgroup { background: var(--panel); color: var(--ink); fo
 .hqc-resources .hqc-resource .hq-dots i.on { background: var(--ind); }
 
 /* ---------- New career, redesigned: one accent per step, clearer labels and fields, labelled progress on phones ---------- */
-.career-wizard { --wz: #e7c98f; }
-.career-wizard[data-step="1"] { --wz: #6ea8ff; }
-.career-wizard[data-step="2"] { --wz: #5fd39a; }
-.career-wizard[data-step="3"] { --wz: #f0a56e; }
-.career-wizard[data-step="4"] { --wz: #e7c98f; }
-.career-wizard[data-step="5"] { --wz: #c79bff; }
-.career-wizard[data-step="6"] { --wz: #5fd0d6; }
+.career-wizard { --wz: var(--gold); }   /* one classic gold for every step (they were blue, green, orange, violet, cyan) */
+.career-wizard[data-step="1"] { --wz: var(--gold); }
+.career-wizard[data-step="2"] { --wz: var(--gold); }
+.career-wizard[data-step="3"] { --wz: var(--gold); }
+.career-wizard[data-step="4"] { --wz: var(--gold); }
+.career-wizard[data-step="5"] { --wz: var(--gold); }
+.career-wizard[data-step="6"] { --wz: var(--gold); }
 .career-wizard .wizard-header { border-bottom: 2px solid color-mix(in srgb, var(--wz) 55%, var(--line)); }
 .career-wizard .wizard-kicker { color: var(--wz); }
 .career-wizard .wizard-header h1 { font-size: 30px; }
@@ -1160,7 +1181,7 @@ select option, select optgroup { background: var(--panel); color: var(--ink); fo
 .career-wizard input:not([type="radio"]):not([type="checkbox"]):not([type="range"]):not([type="file"]), .career-wizard select, .career-wizard textarea { min-height: 46px; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--panel-2); color: var(--ink-hi); font: 500 15px/1.3 Manrope, sans-serif; letter-spacing: 0; }
 .career-wizard input:focus-visible, .career-wizard select:focus-visible, .career-wizard textarea:focus-visible { outline: 3px solid color-mix(in srgb, var(--wz) 70%, transparent); outline-offset: 1px; border-color: var(--wz); }
 .career-wizard .wizard-hint { display: block; margin-top: 10px; color: var(--muted); }
-.career-wizard .wizard-footer .primary-button { background: var(--wz); color: #0c1210; }
+.career-wizard .wizard-footer .primary-button { background: var(--accent); color: var(--accent-ink); }
 .career-wizard .wizard-footer .primary-button:hover { filter: brightness(1.08); }
 .career-wizard .wizard-footer .primary-button:focus-visible, .career-wizard .wizard-back:focus-visible, .career-wizard .wizard-cancel:focus-visible { outline: 3px solid var(--wz); outline-offset: 2px; }
 .career-wizard .difficulty-card.selected, .career-wizard .party-card.selected { border-color: var(--wz); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--wz) 60%, transparent); }
@@ -1204,7 +1225,7 @@ select option, select optgroup { background: var(--panel); color: var(--ink); fo
 .news-tags { margin: 2px 0 6px; color: var(--ink-3, #aab3a3); font-size: 13px; font-weight: 700; letter-spacing: .02em; }
 
 /* ---------- the first screen of a first installation: the language (both languages shown, dark and gold) ---------- */
-.language-gate { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom)); overflow-y: auto;
+.language-gate { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: max(20px, var(--safe-top)) 16px max(20px, var(--safe-bottom)); overflow-y: auto;
   background: radial-gradient(90% 70% at 50% 0%, rgba(240,207,133,.16), rgba(240,207,133,0) 60%), radial-gradient(120% 80% at 50% 100%, rgba(26,90,64,.32), rgba(26,90,64,0) 62%), linear-gradient(180deg, #0b1511 0%, #070d0a 100%); color: #f8f5ec; }
 .language-gate-card { width: min(520px, 100%); display: grid; justify-items: center; gap: 18px; padding: 34px 26px 28px; text-align: center; border: 1.5px solid rgba(240,207,133,.5); border-radius: 22px;
   background: linear-gradient(160deg, rgba(26,90,64,.38), rgba(10,34,25,.78) 60%) #0a2219; box-shadow: 0 24px 60px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.07); }
@@ -1245,7 +1266,7 @@ html[data-ui-motion="off"] .language-gate-button { transition: none; }
 .hero-avatar.has-avatar { background: none; border: 0; padding: 0; overflow: visible; font-size: 0; } .hero-avatar.has-avatar .avatar-svg { width: 100%; height: 100%; display: block; }
 .player-avatar.has-avatar { background: none; border: 0; padding: 0; } .player-avatar.has-avatar .avatar-svg { width: 100%; height: 100%; display: block; }
 @media (max-width: 760px) {
-  .avatar-editor { padding: 10px; } .avatar-editor-body { grid-template-columns: minmax(0, 1fr) 84px; gap: 8px; } .avatar-controls { grid-column: 1; grid-row: 1; } .avatar-preview { grid-column: 2; grid-row: 1; position: sticky; top: 6px; z-index: 6; align-self: start; justify-self: end; width: 84px; padding: 4px; border-radius: 14px; background: rgba(10,16,26,.92); } .avatar-preview .avatar-svg { width: 74px; }
+  .avatar-editor { padding: 10px; } .avatar-editor-body { grid-template-columns: minmax(0, 1fr) 116px; gap: 8px; } .avatar-controls { grid-column: 1; grid-row: 1; } .avatar-preview { grid-column: 2; grid-row: 1; position: sticky; top: 6px; z-index: 6; align-self: start; justify-self: end; width: 116px; padding: 5px; border-radius: 16px; background: rgba(10,16,26,.92); } .avatar-preview .avatar-svg { width: 104px; }
   .avatar-choice { min-height: 44px; } .avatar-choice.is-swatch { width: 44px; }
 }
 @media (prefers-reduced-motion: reduce) { .avatar-choice { transition: none; } .avatar-choice:hover { transform: none; } }
@@ -1297,6 +1318,13 @@ html[data-ui-motion="off"] .language-gate-button { transition: none; }
 .reward-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:stretch}
 .reward-card{--tone:#d6a54c;position:relative;display:grid;align-content:start;gap:14px;padding:18px 18px 18px 22px;border-radius:var(--radius);border:1px solid var(--line);background:var(--panel);overflow:hidden}
 .reward-card::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:var(--tone)}
+/* the video of 1.000 € of personal funds (ui/funds-ad.js): the same offer on the rewards page, in the funds of the activities and in the notices of financial trouble */
+.funds-ad{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px 14px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel)}
+.funds-ad-copy{display:grid;gap:2px;min-width:0}.funds-ad-copy small{color:var(--muted)}
+.funds-ad .primary-button{grid-column:1/-1;justify-self:start}.funds-ad-last{grid-column:1/-1;color:var(--muted)}
+.reward-card .funds-ad{border:0;padding:0;background:none}
+.funds-ad-alert{margin-left:8px}
+@media (max-width:600px){.funds-ad{grid-template-columns:1fr}.funds-ad .primary-button{justify-self:stretch}.funds-ad-alert{margin:8px 0 0}}
 .reward-card.is-blue{--tone:#5aa0e6}.reward-card.is-violet{--tone:#a07be0}.reward-card.is-rose{--tone:#e0709a}.reward-card.is-neutral{--tone:var(--line-strong)}
 .reward-card-head h2{margin:2px 0 0;font-size:1.2rem}
 .reward-card-head .section-kicker{color:var(--tone)}
@@ -1396,7 +1424,7 @@ html[data-ui-motion="off"] .language-gate-button { transition: none; }
 .weekly-foot .primary-button { min-height: 44px; min-width: 140px; }
 @media (max-width: 640px) {
   .weekly-report { max-height: 100dvh; height: 100dvh; }
-  .weekly-head { padding: calc(12px + env(safe-area-inset-top)) 16px 8px; }
+  .weekly-head { padding: calc(12px + var(--safe-top)) 16px 8px; }
   .weekly-head h2 { font-size: 19px; }
   .weekly-body { padding: 12px 14px 8px; gap: 12px; }
   .report-backdrop:has(.weekly-report) { padding: 0; }
@@ -1406,10 +1434,22 @@ html[data-ui-motion="off"] .language-gate-button { transition: none; }
 }
 @media (max-height: 520px) and (orientation: landscape) { .weekly-head { padding-top: 8px; } .weekly-foot { padding-top: 8px; padding-bottom: calc(8px + env(safe-area-inset-bottom)); display: flex; } .weekly-foot .primary-button { width: auto; } }
 
-/* iOS (iPhone, iPad): viewport-fit=cover puts the page under the status bar / Dynamic Island, so the top safe area is added here; the bottom one is already handled by the rules above. No effect elsewhere. */
-html.platform-ios body { padding-top: env(safe-area-inset-top, 0px); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
-html.platform-ios .sx-tabs, html.platform-ios .gov-nav { top: env(safe-area-inset-top, 0px); }
-html.platform-ios .mobile-sheet-panel, html.platform-ios .wizard-backdrop, html.platform-ios .report-backdrop { padding-top: max(20px, env(safe-area-inset-top, 0px)); }
+/* ---------- safe areas (notch, Dynamic Island, status bar, home indicator), ONE place for every platform ----------
+   index.html has viewport-fit=cover: the page is drawn under the status bar on iOS (WKWebView, Safari) AND on Android 15+ (targetSdk 36 is edge-to-edge; Capacitor 8 passes the insets to the WebView as env(safe-area-inset-*)
+   from WebView 140; an older WebView is shifted by Capacitor natively and reports 0 here, so nothing is added twice). The top inset is added INSIDE the topbar (its background runs under the status bar: one continuous
+   surface) and never to the body, and it is divided by the interface scale: .app-shell has zoom: var(--ui-scale), which would multiply an inset that is already in real CSS pixels. */
+:root { --safe-top: env(safe-area-inset-top, 0px); --safe-bottom: env(safe-area-inset-bottom, 0px); --safe-left: env(safe-area-inset-left, 0px); --safe-right: env(safe-area-inset-right, 0px); --touch-min: 44px;
+  /* The real height of the native Appodeal banner (Android), set by src/ui/app.js from the bridge's own "bannerHeight" event: 0 the moment there is none loaded or shown, so nothing is ever reserved for a banner that is not there. */
+  --appodeal-banner-height: 0px; }
+html.platform-android { --touch-min: 48px; }
+.app-shell { --safe-top: calc(env(safe-area-inset-top, 0px) / var(--ui-scale, 1)); --safe-bottom: calc(env(safe-area-inset-bottom, 0px) / var(--ui-scale, 1)); }
+body { padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+.sx-tabs, .gov-nav { top: var(--safe-top); }
+.wizard-backdrop { padding-top: max(22px, var(--safe-top)); }
+.report-backdrop { padding-top: max(20px, var(--safe-top)); }
+@media (max-width: 700px) { .menu-popup-backdrop { padding-top: 0; } .menu-popup { padding-top: var(--safe-top); } }
+@media (max-width: 600px) { .wizard-backdrop { padding-top: var(--safe-top); } }
+.menu-shell { padding-top: calc(32px + var(--safe-top)); }
 .weekly-advance-note { flex: none; margin: 0; padding: 10px 22px; border-top: 1px solid var(--line-strong, var(--line)); background: rgba(240, 207, 133, .08); font-size: .92rem; line-height: 1.4; }
 @media (max-width: 600px) { .weekly-advance-note { padding: 10px 16px; } }
 
@@ -1493,3 +1533,312 @@ button:not(:disabled):active, a.primary-button:active, a.secondary-button:active
 .guide-steps .go-button { margin-left: 8px; min-height: 36px; vertical-align: middle; }
 .tutorial-actions .go-button { min-height: 44px; }
 @media (prefers-reduced-motion: reduce) { .go-button { transition: none; } .go-button:active { transform: none; } }
+
+/* The path of a citizens' request: received → taken in charge → started → outcome (green satisfied, red failed or ignored, neutral rejected). */
+.req-path { display: flex; flex-wrap: wrap; gap: 4px; list-style: none; margin: 8px 0; padding: 0; counter-reset: req; }
+.req-path li { counter-increment: req; padding: 4px 10px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--panel-2); color: var(--ink-3); font-size: 12px; font-weight: 650; }
+.req-path li.is-done { border-color: rgba(95,181,138,.55); color: #8fd1ae; }
+.req-path li.is-now { border-color: var(--accent); background: var(--accent-soft); color: var(--gold-light); }
+.req-path li.is-now.is-realizzata { border-color: rgba(95,181,138,.7); background: rgba(95,181,138,.16); color: #9fe0bd; }
+.req-path li.is-now.is-fallita, .req-path li.is-now.is-ignorata { border-color: rgba(214,106,94,.7); background: rgba(214,106,94,.14); color: #f0a79d; }
+
+/* Semantic colours of the institutional sections (alliances, coalitions, initiatives, signatures, referendums, statutes): green = success/agreements, red = conflicts/crises, blue = institutions, violet = diplomacy, orange = activities and campaigns, gold = the main action. Only the new sections use them. */
+:root { --sem-good: #4cae7a; --sem-bad: #d9625b; --sem-institution: #5a8fd8; --sem-diplomacy: #9a7ad6; --sem-campaign: #e0944a; --sem-main: #d9b24c; }
+.ref-page .ref-card { display: block; }
+.ref-tone-abrogativo { border-left: 4px solid var(--sem-campaign); }
+.ref-tone-costituzionale { border-left: 4px solid var(--sem-institution); }
+.ref-compare { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); }
+.ref-col { padding: 12px; border-radius: 12px; border: 1px solid rgba(127, 140, 134, .3); }
+.ref-col h4 { margin: 0 0 6px; }
+.ref-col ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.ref-question { font-weight: 700; margin: 8px 0; overflow-wrap: anywhere; }
+.ref-path { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; margin: 4px 0 10px; }
+.ref-path li { padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(127, 140, 134, .4); font-size: .85rem; opacity: .75; }
+.ref-path li.is-done { border-color: var(--sem-good); opacity: 1; }
+.ref-path li.is-now { border-color: var(--sem-main); background: rgba(217, 178, 76, .16); opacity: 1; font-weight: 700; }
+.ref-bars { display: grid; grid-template-columns: auto 1fr auto; gap: 6px 10px; align-items: center; margin: 8px 0; }
+.ref-bars .ini-bar { margin: 0; }
+.ref-bar.is-yes i { background: var(--sem-good); }
+.ref-bar.is-no i { background: var(--sem-bad); }
+.ref-sides, .ref-actions, .ref-routes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; }
+.ref-actions button small { display: block; opacity: .8; font-weight: 400; }
+.ref-events { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px; }
+.ref-events li.good { color: var(--sem-good); } .ref-events li.bad { color: var(--sem-bad); }
+.ref-figures { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px; }
+.ref-councils fieldset, .ref-scope { border: 1px solid rgba(127, 140, 134, .3); border-radius: 12px; padding: 10px; display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.ref-scope { grid-template-columns: 1fr; }
+.ref-region.is-used { opacity: .6; }
+.ref-outcome { font-weight: 600; margin: 8px 0; }
+.statute-board .statute-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 8px; }
+.statute-row { display: grid; gap: 6px; padding: 10px; border: 1px solid rgba(127, 140, 134, .3); border-left: 4px solid var(--sem-institution); border-radius: 12px; }
+.statute-row.is-abrogata { border-left-color: var(--sem-bad); opacity: .85; }
+.statute-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 520px) { .ref-bars { grid-template-columns: auto 1fr; } .ref-bars b { grid-column: 2; } .ref-actions button, .ref-routes button { width: 100%; } }
+.ally-activities { margin: 10px 0; border: 1px solid rgba(127, 140, 134, .3); border-left: 4px solid var(--sem-campaign); border-radius: 12px; padding: 8px 12px; }
+.ally-activities > summary { cursor: pointer; font-weight: 700; }
+.ally-activity-list, .ally-run-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 8px; }
+.ally-activity { display: flex; flex-wrap: wrap; gap: 8px 12px; justify-content: space-between; align-items: center; padding: 10px; border: 1px solid rgba(127, 140, 134, .25); border-radius: 10px; }
+.ally-activity small { display: block; opacity: .85; }
+.ally-activity-do { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ally-run.tone-good { border-left: 3px solid var(--sem-good); padding-left: 8px; } .ally-run.tone-bad { border-left: 3px solid var(--sem-bad); padding-left: 8px; }
+@media (max-width: 520px) { .ally-activity { flex-direction: column; align-items: stretch; } .ally-activity-do select, .ally-activity-do button { width: 100%; } }
+.territory-page { display: grid; gap: 14px; }
+.tp-controls { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr)); align-items: end; }
+.tp-controls label { display: grid; gap: 4px; }
+.tp-controls .tp-search { grid-column: 1 / -1; }
+.tp-controls input, .tp-controls select { width: 100%; box-sizing: border-box; min-height: 44px; }
+.tp-hits ul { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 6px; }
+.tp-hits li small { opacity: .8; display: block; }
+.tp-status { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.tp-leads { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 6px; }
+.tp-leads li { display: grid; grid-template-columns: minmax(110px, 1.2fr) 2fr auto; gap: 8px; align-items: center; }
+.tp-bar { display: block; height: 10px; border-radius: 999px; background: rgba(127, 140, 134, .25); overflow: hidden; }
+.tp-bar i { display: block; height: 100%; border-radius: inherit; }
+.tp-pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 10px 0; }
+.tp-compare { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 10px; }
+.tp-compare label { display: grid; gap: 4px; }
+.tp-table td.num, .tp-table th.num { white-space: nowrap; }
+@media (max-width: 520px) { .tp-leads li { grid-template-columns: 1fr auto; } .tp-leads li > b { grid-column: 2; grid-row: 1; } .tp-leads .tp-bar { grid-column: 1 / -1; grid-row: 2; } .tp-pager { justify-content: center; } }
+/* The identity block of the wizard: the date of birth takes the whole row (three fields side by side, never squeezed in half a column), the gender and the profession follow, aligned and of the same height. */
+.wizard-profile .wizard-form-grid { align-items: start; }
+.wizard-profile .birth-field { grid-column: 1 / -1; }
+.birth-field { border: 1px solid var(--line, rgba(127, 140, 134, .35)); border-radius: 12px; padding: 10px 12px 12px; margin: 0; min-width: 0; display: grid; gap: 8px; }
+.birth-field legend { padding: 0 6px; font: 700 12.5px/1.2 Manrope, sans-serif; letter-spacing: .04em; color: var(--ink-2); }
+.birth-row { display: grid; grid-template-columns: minmax(52px, .8fr) minmax(100px, 2fr) minmax(64px, 1fr); gap: 10px; }
+.birth-row label { display: grid; gap: 4px; min-width: 0; }
+.career-wizard .birth-row input, .career-wizard .birth-row select, .career-wizard .wizard-profile select[name="gender"], .career-wizard .wizard-profile select[name="previousProfession"] { width: 100%; box-sizing: border-box; min-height: 48px; font-size: 1rem; }
+.birth-row input { text-align: center; }
+.career-wizard .birth-row select { text-overflow: ellipsis; }
+.birth-hint { margin: 0; font-size: .86rem; line-height: 1.35; opacity: .9; } .birth-hint.is-error { color: var(--sem-bad, #d9625b); font-weight: 600; opacity: 1; }
+@media (max-width: 360px) { .birth-row { gap: 6px; } .birth-field { padding-inline: 8px; } }
+@media (max-width: 560px) { .wizard-profile .wizard-form-grid > label:has(select[name="gender"]) { grid-column: 1 / -1; } }
+.guide-card:has(.guide-fold):not([hidden]) { display: block; padding: 0; }
+.guide-fold { display: block; }
+.guide-fold > summary { list-style: none; display: flex; gap: 12px; align-items: flex-start; padding: 14px; cursor: pointer; min-height: 44px; }
+.guide-fold > summary::-webkit-details-marker { display: none; }
+.guide-fold > summary::after { content: ''; margin-left: auto; align-self: center; width: 8px; height: 8px; border-right: 2px solid var(--accent); border-bottom: 2px solid var(--accent); transform: rotate(45deg); transition: transform .15s; flex: none; }
+.guide-fold[open] > summary::after { transform: rotate(-135deg); }
+.guide-sum { display: grid; gap: 2px; min-width: 0; }
+.guide-sum small { color: var(--ink-2); font-size: 12.5px; line-height: 1.4; }
+.guide-body { padding: 0 14px 14px 46px; }
+@media (max-width: 520px) { .guide-body { padding-left: 14px; } }
+
+.guide-sum small { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.guide-fold[open] > summary .guide-sum small { display: none; }
+/* the semantic colour of the new sections, in one place: alliances and coalitions violet (diplomacy), initiatives and signature drives orange (campaigns), referendums blue (institutions), agreements green, crises red */
+.my-coalition { border-left: 4px solid var(--sem-diplomacy); padding-left: 12px; }
+.my-coalition [data-coalition-state], .coalition-terms li.is-kept { color: var(--sem-good); }
+.my-coalition [data-coalition-crisis] { border-left: 3px solid var(--sem-bad); }
+.ini-page .ini-head + .ini-progress .ini-bar i { background: var(--sem-campaign); }
+.ini-bar.is-full i { background: var(--sem-good); }
+.ini-ready { color: var(--sem-good); } .ini-warning { color: var(--sem-bad); }
+.statute-row { border-left-color: var(--sem-institution); }
+.ref-card .sx-card { border-left-width: 4px; }
+/* results by territory on a phone: the list names are long («Partito democratico»), so the label takes what it needs and the value stays on its right instead of running over it */
+@container (max-width: 520px) { .sx-table.tp-table td { grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; } .sx-table.tp-table td::before { overflow-wrap: anywhere; text-align: left; } .sx-table.tp-table td.num { text-align: right; } }
+
+/* The main call to action of a concluded campaign sits at the very top of the results page. */
+.campaign-result-cta{display:flex;margin:0 0 14px}.campaign-result-cta .primary-button{flex:1;min-height:52px;font-size:16px;font-weight:700}
+.law-changes{margin:10px 0;border:1px solid var(--line);border-radius:12px;padding:8px 12px;background:rgba(255,255,255,.02)}.law-changes>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}.law-changes .law-outcomes p{margin:6px 0;line-height:1.5}
+
+/* Leggi in vigore: una scheda chiusa per legge (titolo, stato, data, proponente), dettagli e azioni dentro */
+.statute-row { padding: 0; }
+.statute-fold > summary { list-style: none; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 10px 12px; min-height: 52px; cursor: pointer; }
+.statute-fold > summary::-webkit-details-marker { display: none; }
+.statute-title { display: grid; gap: 2px; min-width: 0; } .statute-title strong { overflow-wrap: anywhere; } .statute-title small { opacity: .8; overflow-wrap: anywhere; }
+.statute-fold .fold-chevron { width: 10px; height: 10px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); transition: transform .15s; margin-right: 4px; }
+.statute-fold[open] > summary .fold-chevron { transform: rotate(-135deg); }
+.statute-fold > summary:focus-visible { outline: 2px solid var(--gold, #d9b45a); outline-offset: 2px; border-radius: 10px; }
+.statute-body { display: grid; gap: 10px; padding: 0 12px 12px; } .statute-body p { margin: 0; }
+.statute-facts { display: grid; gap: 6px; margin: 0; } .statute-facts > div { display: grid; grid-template-columns: minmax(96px, 30%) minmax(0, 1fr); gap: 8px; } .statute-facts dt { opacity: .75; font-size: .85rem; } .statute-facts dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 520px) { .statute-facts > div { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
+.statute-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; }
+.statute-actions .secondary-button { width: 100%; min-height: 44px; height: auto; padding: 8px 14px; font: inherit; font-weight: 600; white-space: normal; text-align: center; }
+
+.ini-kind-link { text-align: left; font: inherit; color: inherit; cursor: pointer; width: 100%; }
+
+/* ===================================================================================================================================================
+   DESIGN LAYER (aggiornamento generale): una sola gerarchia di controlli per tutto il gioco, caricata per ultima.
+   · primaria  = oro classico (l’azione che porta avanti)  · secondaria = scura e sobria (pannello, bordo, oro al passaggio)
+   · terziaria = testo/«ghost» oro, senza riquadro           · positiva  = verde (conferma)        · distruttiva = rosso (bordo/riempimento)
+   Stessa famiglia tipografica, stessa altezza minima e stesso raggio per tutti: cambiano il colore e il peso visivo, non il linguaggio.
+   =================================================================================================================================================== */
+:root {
+  --petrol: #123b3a; --petrol-2: #1a4e4a; --petrol-line: rgba(110,182,168,.55); --petrol-ink: #e8f4f0;
+  --good-fill: #1f5a3a; --good-line: rgba(92,190,134,.65);
+  --ctl-h: 42px; --ctl-radius: 10px; --ctl-font: 13.5px;
+}
+:where(button, input[type="button"], input[type="submit"], input[type="reset"]) { font-family: inherit; }
+.primary-button, .secondary-button, .ghost-button { font-family: inherit; font-size: var(--ctl-font); line-height: 1.2; min-height: var(--ctl-h); border-radius: var(--ctl-radius); padding: 8px 16px; letter-spacing: .005em; }
+.primary-button { font-weight: 750; }
+.secondary-button { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line-strong); font-weight: 650; }
+.secondary-button:hover:not(:disabled) { background: #2b2e27; border-color: var(--gold); color: var(--ink-hi); }
+.secondary-button.good, .primary-button.good { background: var(--good-fill); border-color: var(--good-line); color: #eafaf1; }
+.secondary-button.danger, .danger-card .secondary-button { background: rgba(122,34,34,.22); border: 1px solid rgba(220,86,80,.7); color: #ffb3ad; }
+.secondary-button.danger:hover:not(:disabled) { background: rgba(160,40,40,.34); border-color: #e8706a; color: #fff; }
+.ghost-button { background: transparent; color: var(--gold-soft); border: 1px solid transparent; font-weight: 650; text-decoration: none; }
+.ghost-button:hover:not(:disabled) { background: var(--accent-soft); border-color: var(--gold-deep); color: var(--gold-light); }
+.compact.secondary-button, .secondary-button.compact, .primary-button.compact { min-height: 38px; padding: 6px 12px; font-size: 13px; }
+/* the buttons of the agenda choices and the news filters had no rule of their own (16px, regular): same voice as the others */
+.hq-choice { font-family: inherit; font-size: var(--ctl-font); border-radius: var(--ctl-radius); border: 1px solid var(--line-strong); background: var(--panel-2); color: var(--ink); }
+.hq-choice:hover:not(:disabled) { background: #2b2e27; border-color: var(--gold); color: var(--ink-hi); }
+button[data-news-filter], button[data-newsFilter], [data-news-filter] { font-family: inherit; font-size: 13px; font-weight: 650; }
+.plan-add { font-family: inherit; font-weight: 650; }
+html[data-contrast="high"] .secondary-button { border-width: 2px; border-color: var(--gold-light); }
+@media (max-width: 720px) { .primary-button, .secondary-button, .ghost-button, .hq-choice { min-height: 44px; } }
+
+@media (max-width: 359px) { .avatar-editor-body { grid-template-columns: minmax(0, 1fr) 92px; } .avatar-preview { width: 92px; } .avatar-preview .avatar-svg { width: 82px; } }
+@media (min-width: 761px) { .avatar-preview .avatar-svg { width: min(240px, 100%); } }
+
+
+/* ===================================================================================================================================================
+   RIPRISTINO DELLO STILE POLITICANDO (aggiornamento ufficiale): niente azzurro/ciano come colore dei pulsanti, un solo oro (il classico), il colore del
+   partito solo per l’identità, il rosso solo per le azioni distruttive, il verde per le conferme. Le CTA principali più importanti riprendono il disegno di
+   «Nuova partita» (.cta-hero): verde profondo, bordo oro, linea tricolore, testo chiaro, dettagli oro.
+   =================================================================================================================================================== */
+/* the wizard's main button had the colour of each step (blue, green, yellow): one classic gold */
+.career-wizard .wizard-footer .primary-button { background: var(--accent); color: var(--accent-ink); }
+.career-wizard .wizard-footer .primary-button:hover:not(:disabled) { background: var(--gold-soft); color: var(--accent-ink); }
+/* focus: gold, not cyan */
+button:focus-visible, a:focus-visible { outline-color: var(--gold); }
+.cta-hero { position: relative; isolation: isolate; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 12px 20px 10px;
+  border: 1.5px solid rgba(240,207,133,.62); border-radius: 12px; color: #f8f5ec; font: 750 14.5px/1.2 Manrope, sans-serif; letter-spacing: .01em; cursor: pointer; text-decoration: none;
+  background: radial-gradient(110% 150% at 0% 0%, rgba(240,207,133,.15), rgba(240,207,133,0) 58%), linear-gradient(135deg, #1a5a40 0%, #10372a 52%, #0a2219 100%) #10372a;
+  box-shadow: 0 10px 24px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.12); transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease; }
+.cta-hero::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; background: linear-gradient(90deg, #2f9462 0 33.34%, #f3efe4 33.34% 66.67%, #cf4a3a 66.67% 100%); }
+.cta-hero svg, .cta-hero .cta-hero-icon { color: #f0cf85; }
+.cta-hero:hover:not(:disabled) { transform: translateY(-1px); border-color: #f0cf85; color: #fff; box-shadow: 0 14px 30px rgba(0,0,0,.48), 0 0 0 1px rgba(240,207,133,.22), inset 0 1px 0 rgba(255,255,255,.16); }
+.cta-hero:active:not(:disabled) { transform: translateY(0); }
+.cta-hero:focus-visible { outline: 3px solid #f0cf85; outline-offset: 3px; }
+.cta-hero:disabled { opacity: .55; cursor: not-allowed; filter: saturate(.5); transform: none; }
+/* Governo: one accent for sections, links and indicators (the old blue, green, violet, orange, teal and red tones competed); the critical state keeps its red where the page says so */
+.gov-room .tone-panorama, .gov-room .tone-maggioranza, .gov-room .tone-ministri, .gov-room .tone-indirizzo, .gov-room .tone-provvedimenti, .gov-room .tone-bilancio, .gov-room .tone-avanzamento,
+.gov-room .gov-nav-link, .gov-room .gov-sec { --tone: #b39457; }
+.gov-room .gov-nav-link { background: var(--panel-2); color: var(--ink); }
+.gov-room .gov-nav-link:hover, .gov-room .gov-nav-link:focus-visible { background: #2b2e27; }
+.gov-room .gov-sec-icon { background: rgba(196,166,106,.12); color: var(--gold); }
+/* the choice of the mode: tag, difficulty, advantages and a clear state (ui/career-wizard.js renderModeGate) */
+.wizard-mode-card { gap: 8px; transition: border-color .15s ease, background-color .15s ease, transform .15s ease; }
+.wizard-mode-card:hover { border-color: var(--gold-deep); transform: translateY(-1px); }
+.wizard-mode-card.selected { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); background: rgba(196,166,106,.07); }
+.wizard-mode-card .mode-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.wizard-mode-card .mode-tag { padding: 2px 9px; border: 1px solid var(--gold-deep); border-radius: 999px; color: var(--gold-light); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.wizard-mode-card .mode-level { display: inline-flex; align-items: center; gap: 4px; color: var(--ink-3); font-size: 12px; }
+.wizard-mode-card .mode-level i { width: 8px; height: 8px; border-radius: 50%; background: var(--line-strong); }
+.wizard-mode-card .mode-level i.on { background: var(--gold); }
+.wizard-mode-card .mode-level em { margin-left: 4px; font-style: normal; }
+.wizard-mode-card .mode-text { color: var(--ink); font-size: 14px; line-height: 1.5; }
+.wizard-mode-card .mode-perks { margin: 0; padding: 0 0 0 18px; display: grid; gap: 3px; color: var(--ink-2); font-size: 13px; line-height: 1.4; }
+.wizard-mode-card .mode-perks li::marker { color: var(--gold); }
+.wizard-mode-card .mode-pick { align-self: flex-start; margin-top: 4px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line-strong); color: var(--ink); font-size: 13px; font-weight: 700; }
+.wizard-mode-card.selected .mode-pick { background: var(--gold); border-color: var(--gold); color: var(--accent-ink); }
+@media (max-width: 720px) { .wizard-mode-cards { grid-template-columns: minmax(0, 1fr); } }
+/* the window of the thank-you reward (ui/app.js showWelcomeReward): the design of «Nuova partita», classic gold, the amount in evidence */
+.welcome-reward { position: fixed; inset: 0; z-index: 130; display: grid; place-items: center; padding: 16px; background: rgba(6, 10, 8, .7); backdrop-filter: blur(3px); }
+.wr-panel { position: relative; isolation: isolate; overflow: hidden; width: min(460px, 100%); padding: 30px 24px 22px; border: 1.5px solid rgba(240,207,133,.62); border-radius: 20px; color: #f8f5ec; text-align: center;
+  background: radial-gradient(110% 150% at 0% 0%, rgba(240,207,133,.18), rgba(240,207,133,0) 58%), linear-gradient(135deg, #1a5a40 0%, #10372a 52%, #0a2219 100%) #10372a; box-shadow: 0 24px 60px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.12); }
+.wr-panel::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 4px; background: linear-gradient(90deg, #2f9462 0 33.34%, #f3efe4 33.34% 66.67%, #cf4a3a 66.67% 100%); }
+.wr-badge { display: inline-grid; place-items: center; min-width: 120px; padding: 10px 18px; border-radius: 999px; background: var(--gold); color: var(--accent-ink); font: 800 26px/1 Manrope, sans-serif; letter-spacing: .01em; box-shadow: 0 8px 22px rgba(196,166,106,.3); }
+.wr-panel h2 { margin: 18px 0 10px; color: #f0cf85; font: 800 20px/1.25 Manrope, sans-serif; letter-spacing: .04em; }
+.wr-panel p { margin: 0 0 12px; color: #e6eadf; font-size: 15px; line-height: 1.55; }
+.wr-amount { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid rgba(240,207,133,.35); border-radius: 12px; background: rgba(0,0,0,.18); }
+.wr-amount span { color: #d3dbcb; font-size: 13px; }
+.wr-amount strong { color: #f0cf85; font: 800 18px Manrope, sans-serif; }
+.wr-panel .cta-hero { width: 100%; margin-top: 6px; }
+/* the avatar made from a photograph (ui/photo-avatar.js): the portrait in the same round frame as the illustrated one, and its editor */
+.avatar-photo { display: block; width: 100%; height: 100%; max-width: 100%; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 2px var(--gold-deep); }
+.profile-photo-actions { margin-top: 8px; }
+.photo-avatar { position: fixed; inset: 0; z-index: 125; display: grid; place-items: center; padding: 16px; background: rgba(8, 10, 8, .66); backdrop-filter: blur(3px); }
+.pa-panel { position: relative; width: min(820px, 100%); max-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); overflow: auto; padding: 18px; border: 1px solid var(--gold-deep); border-radius: 16px; background: var(--panel); color: var(--ink); box-shadow: 0 24px 60px rgba(0,0,0,.45); }
+.pa-head { display: grid; gap: 2px; padding-right: 40px; } .pa-head small { color: var(--gold); letter-spacing: .14em; font-size: 11px; font-weight: 700; } .pa-head h2 { margin: 0; font-size: 20px; }
+.pa-close { position: absolute; top: 12px; right: 12px; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line-strong); background: transparent; color: var(--ink-2); font-size: 20px; cursor: pointer; }
+.pa-privacy { margin: 10px 0; font-size: 12.5px; line-height: 1.45; color: var(--ink-3); }
+.pa-sources { display: flex; gap: 8px; flex-wrap: wrap; } .pa-pick { position: relative; display: inline-flex; align-items: center; min-height: 44px; cursor: pointer; }
+.pa-grid { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 18px; align-items: start; margin-top: 12px; }
+.pa-stage { display: grid; gap: 10px; }
+.pa-frame { position: relative; width: 100%; max-width: 300px; aspect-ratio: 1; border-radius: 14px; overflow: hidden; background: var(--panel-2); box-shadow: 0 0 0 1px var(--gold-deep); }
+.pa-view { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+.pa-guide { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.pa-frame .pa-empty { position: absolute; inset: auto 12px 12px; margin: 0; text-align: center; font-size: 13px; color: var(--ink-2); }
+.pa-frame-tools { display: grid; gap: 6px; } .pa-frame-tools > small { color: var(--ink-3); font-size: 12px; } .pa-row { display: flex; gap: 8px; flex-wrap: wrap; } .pa-row button { min-height: 40px; }
+.pa-slider { display: grid; grid-template-columns: minmax(100px, 36%) minmax(0, 1fr); gap: 10px; align-items: center; font-size: 13px; color: var(--ink-2); } .pa-slider input { width: 100%; accent-color: var(--gold); min-height: 32px; }
+.pa-result { display: grid; gap: 8px; align-content: start; }
+.pa-avatar { justify-self: center; width: 168px; height: 168px; border-radius: 50%; background: radial-gradient(circle at 50% 35%, #233a2f, #0f1a15); box-shadow: 0 0 0 3px var(--gold-deep); overflow: hidden; }
+.pa-avatar svg { width: 100%; height: 100%; display: block; }
+.pa-reading-summary { margin: 0; font-size: 13px; line-height: 1.45; color: var(--ink-2); } .pa-gender { margin: 0; font-size: 12px; color: var(--ink-3); }
+.pa-traits { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; }
+.pa-trait { display: grid; gap: 3px; font-size: 12.5px; color: var(--ink-2); } .pa-trait select { width: 100%; min-height: 40px; }
+.pa-trait i { font-style: normal; font-size: 11.5px; color: var(--ink-3); } .pa-trait i.is-alta { color: var(--gold); } .pa-trait i.is-media { color: #d8c48f; } .pa-trait i.is-manual { color: #9fd4b4; }
+.pa-trait.is-read select { box-shadow: 0 0 0 1px color-mix(in srgb, var(--gold) 55%, transparent); }
+.pa-error { margin: 6px 0; padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(220,86,80,.6); color: #ffb3ad; font-size: 13px; }
+.photo-avatar.is-busy .pa-panel { cursor: progress; } .photo-avatar.is-busy .pa-frame::after { content: 'Lettura della foto…'; position: absolute; inset: 0; display: grid; place-items: center; background: rgba(8,12,10,.55); color: var(--ink); font-size: 13px; }
+.pa-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin-top: 14px; } .pa-actions button { min-height: 44px; }
+.avatar-from-photo { display: block; margin-top: 6px; text-align: center; font-size: 11.5px; color: #f0cf85; }
+@media (max-width: 680px) { .pa-grid { grid-template-columns: minmax(0, 1fr) 96px; gap: 10px; } .pa-stage { grid-column: 1; grid-row: 1; } .pa-frame { max-width: none; } .pa-result { display: contents; } .pa-avatar { grid-column: 2; grid-row: 1; width: 96px; height: 96px; } .pa-reading-summary, .pa-gender, .pa-traits { grid-column: 1 / -1; } .pa-row button { flex: 1 1 auto; } }
+@media (max-width: 420px) { .pa-panel { padding: 14px; } .pa-slider { grid-template-columns: minmax(0, 1fr); gap: 2px; } .pa-actions button { flex: 1 1 auto; } .pa-traits { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; } }
+/* the reward window: one gold accent (the blue, violet and pink tones competed with the rest; the kind of reward is said by its words and its icon) */
+.reward-popup.is-blue, .reward-popup.is-violet, .reward-popup.is-rose { --tone: #c4a66a; }
+
+/* Buttons never underline their words (real text links keep their own underline where it is intended: support contacts, sources). */
+button, .primary-button, .secondary-button, .ghost-button, .text-link, .cta-hero, [role="button"] { text-decoration: none; }
+button:hover, .text-link:hover, [role="button"]:hover { text-decoration: none; }
+/* «Semplice iscritto»: the territory of reference, apart from the elected starts (it is not an office) */
+.wizard-member-scope { display: grid; gap: 6px; margin: 12px 0 0; padding: 12px 14px; border: 1px solid var(--line-strong); border-left: 3px solid var(--gold); border-radius: var(--radius); background: var(--panel-2); }
+.wizard-member-scope small { color: var(--ink-3); }
+/* «Fonda un nuovo partito»: a panel closed at first, with its state shown; the fields stay as typed when it is closed and opened again */
+.pl-found-fold { padding: 0; }
+.pl-found-fold > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 12px 16px; cursor: pointer; list-style: none; font: 750 16px/1.2 var(--font-head); color: var(--ink-hi); }
+.pl-found-fold > summary::-webkit-details-marker { display: none; }
+.pl-found-title { display: inline-flex; align-items: center; gap: 10px; color: var(--gold-light); }
+.pl-found-toggle { width: 10px; height: 10px; border-right: 2px solid var(--gold); border-bottom: 2px solid var(--gold); transform: rotate(45deg); transition: transform .2s ease; margin-right: 4px; }
+.pl-found-fold[open] > summary .pl-found-toggle { transform: rotate(-135deg); }
+.pl-found-fold[open] > summary { border-bottom: 1px solid var(--line); }
+.pl-found-body { padding: 14px 16px 16px; display: grid; gap: 12px; }
+html[data-ui-motion="off"] .pl-found-toggle { transition: none; }
+/* an action under way: the button says so at once and does not take a second click */
+.is-busy, [aria-busy="true"] { cursor: progress; opacity: .78; pointer-events: none; }
+.advance-button.is-busy::after { content: "…"; }
+/* ---- the start of a new game: territory and career (24/11/2026) ---- */
+.wizard-place-trail { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 12px; font-size: 13px; color: var(--ink-3); }
+.wizard-place-trail span { display: inline-flex; align-items: center; min-height: 28px; padding: 3px 10px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--panel-2); }
+.wizard-place-trail span + span::before { content: "›"; margin: 0 6px 0 -2px; color: var(--gold-deep); }
+.wizard-place-trail .is-current { border-color: var(--gold); color: var(--gold-light); font-weight: 700; }
+.wizard-place-trail .is-pending { border-style: dashed; color: var(--ink-3); }
+.wizard-where-grid select { width: 100%; }
+.wizard-place-selected { border-color: var(--gold-deep); border-left: 3px solid var(--gold); background: linear-gradient(90deg, var(--accent-soft), transparent 70%), var(--panel-2); }
+.municipality-option.selected { border-color: var(--gold) !important; box-shadow: inset 3px 0 0 var(--gold); background: var(--accent-soft); }
+.level-group { display: grid; gap: 10px; margin: 0 0 16px; }
+.level-group-head { display: grid; gap: 2px; padding: 0 0 6px; border-bottom: 1px solid var(--line); }
+.level-group-head strong { font: 750 13px/1.3 var(--font-head); letter-spacing: .08em; text-transform: uppercase; color: var(--gold-light); }
+.level-group-head small { color: var(--ink-3); font-size: 12.5px; }
+.level-group[data-level-group="percorsi"] .level-card { border-style: dashed; }
+.level-group[data-level-group="percorsi"] .level-card.selected { border-style: solid; }
+.level-card .radio-ring { border-color: var(--line-strong); }
+.level-card.selected .radio-ring { border-color: var(--gold); background: radial-gradient(circle, var(--gold) 0 40%, transparent 45%); box-shadow: none; }
+.level-card strong { color: var(--ink-hi); letter-spacing: .04em; }
+.level-card.selected strong { color: var(--gold-light); }
+@media (max-width: 600px) {
+  .level-group .level-cards { gap: 8px; }
+  .level-group .level-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; padding: 10px 12px; min-height: 0; }
+  .level-group .level-card .level-card-top { grid-column: 2; grid-row: 1; margin: 0; }
+  .level-group .level-card .level-index { display: none; }
+  .level-group .level-card > strong { grid-column: 1; grid-row: 1; align-self: center; font-size: 14px; }
+  .level-group .level-card > p { grid-column: 1 / -1; margin: 4px 0 0; font-size: 12.5px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .level-group .level-card.selected > p { -webkit-line-clamp: unset; display: block; }
+  .level-group .level-card > :not(.level-card-top):not(strong):not(p) { grid-column: 1 / -1; }
+}
+.level-scope-choice.selected, .level-scope-choice[aria-pressed="true"] { border-color: var(--gold) !important; background: var(--accent-soft) !important; color: var(--gold-light) !important; box-shadow: inset 3px 0 0 var(--gold); font-weight: 700; }
+@media (max-width: 600px) { .wizard-where-grid { grid-template-columns: 1fr; } .wizard-where-grid label, .wizard-where-grid select { width: 100%; } }
+/* the hero style on long labels: never clip the words on a narrow phone */
+.cta-hero { max-width: 100%; }
+.cta-hero { height: auto; }   /* the hero style grows with its label (the general primary button has a fixed 40px height) */
+@media (max-width: 480px) { .cta-hero { white-space: normal; text-align: center; min-width: 0; line-height: 1.25; } }
+/* the rewarded video of the poll bonus on the page of the polls (polls-mode.js pollAdOffer) */
+.poll-ad-offer{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px 14px;margin:12px 0;padding:12px 14px;border:1px solid color-mix(in srgb,var(--gold) 45%,var(--line));border-radius:var(--radius);background:color-mix(in srgb,var(--gold) 7%,var(--panel))}
+.poll-ad-copy{display:grid;gap:2px;min-width:0}.poll-ad-copy small,.poll-ad-offer>.quiet-copy{color:var(--muted)}.poll-ad-offer>.quiet-copy{grid-column:1/-1}
+@media (max-width:600px){.poll-ad-offer{grid-template-columns:1fr}.poll-ad-offer .primary-button{justify-self:stretch}}
+.pa-reading-summary { display: grid; gap: 4px; } .pa-found { display: flex; flex-wrap: wrap; gap: 4px 6px; margin: 0; padding: 0; list-style: none; } .pa-found li { padding: 3px 8px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--gold) 45%, transparent); font-size: 12px; } .pa-found li b { font-weight: 600; color: var(--gold); } .pa-found li.is-missing { opacity: .7; border-style: dashed; }
+
+/* BETA label of the avatar-from-photo function: small, discreet, only beside its button and inside its editor (never on the avatar, the profile or the scenes) */
+.beta-tag { display: inline-block; margin-left: 6px; padding: 1px 6px; border: 1px solid var(--gold-deep); border-radius: 999px; font-style: normal; font-size: 9.5px; font-weight: 800; letter-spacing: .12em; line-height: 1.5; color: var(--gold); background: transparent; vertical-align: middle; text-transform: uppercase; }
+.pa-head small .beta-tag { margin-left: 8px; }

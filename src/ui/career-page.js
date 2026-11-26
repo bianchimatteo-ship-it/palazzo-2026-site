@@ -1,18 +1,18 @@
 // CARRIERA — the path and the progression: four tracks (institutions, party, Parliament, Government), the odds of
 // every next step with the factors that decide them, offices and powers, the timeline and the goals.
-import { careerOverview } from '../core/career-overview.js?v=20261117-3';
-import { ADVANCEMENT_OUTCOMES } from '../core/progression-engine.js?v=20261117-3';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261117-3';
-import { careerLevelLabel } from '../data/regions.js?v=20261117-3';
-import { formatDate } from '../core/time.js?v=20261117-3';
-import { startOverview } from '../core/start-engine.js?v=20261117-3';
-import { renderGoals } from './goals-view.js?v=20261117-3';
-import { renderChallenges } from './challenge-view.js?v=20261117-3';
-import { renderRetirement, resignationsPanel } from './hall-view.js?v=20261117-3';
-import { glyph, officeIcon } from './visuals.js?v=20261117-3';
-import { REPUTATIONS, REPUTATION_IDS } from '../data/simulation/standing-rules.js?v=20261117-3';
-import { renderCareerTimeline, renderMemoryPanel, renderRolesPanel, renderWhyPanel } from './game-mode.js?v=20261117-3';
-import { arrow, badge, bar, card, empty, esc, num, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20261117-3';
+import { careerOverview } from '../core/career-overview.js?v=20261126-3';
+import { ADVANCEMENT_OUTCOMES } from '../core/progression-engine.js?v=20261126-3';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261126-3';
+import { careerLevelLabel } from '../data/regions.js?v=20261126-3';
+import { formatDate } from '../core/time.js?v=20261126-3';
+import { startOverview } from '../core/start-engine.js?v=20261126-3';
+import { renderGoals } from './goals-view.js?v=20261126-3';
+import { renderChallenges } from './challenge-view.js?v=20261126-3';
+import { renderRetirement, resignationsPanel } from './hall-view.js?v=20261126-3';
+import { glyph, officeIcon } from './visuals.js?v=20261126-3';
+import { REPUTATIONS, REPUTATION_IDS } from '../data/simulation/standing-rules.js?v=20261126-3';
+import { renderCareerTimeline, renderMemoryPanel, renderRolesPanel, renderWhyPanel } from './game-mode.js?v=20261126-3';
+import { arrow, badge, bar, card, empty, esc, num, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20261126-3';
 
 export const CAREER_TABS = Object.freeze([['percorso', 'Percorso'], ['progressione', 'Progressione'], ['incarichi', 'Incarichi e poteri'], ['cronologia', 'Cronologia'], ['obiettivi', 'Obiettivi']]);
 const STAT_ORDER = ['popularity', 'reputation', 'influence', 'experience', 'notoriety'];
@@ -62,7 +62,7 @@ function origin(state, player) {
   const start = (state.game.timeline ?? [])[0];
   const directPresidency = state.career.startingOffice === 'presidenteRepubblica';
   const rows = [
-    [directPresidency ? 'Percorso iniziale' : 'Livello iniziale', esc(directPresidency ? 'Presidente della Repubblica' : careerLevelLabel(state.career.initialLevel) ?? 'Da definire')],
+    [directPresidency || state.career.startingOffice === 'iscritto' ? 'Percorso iniziale' : 'Livello iniziale', esc(directPresidency ? 'Presidente della Repubblica' : state.career.startingOffice === 'iscritto' ? 'Semplice iscritto · nessun incarico' : careerLevelLabel(state.career.initialLevel) ?? 'Da definire')],
     ['Territorio', esc(territory)],
     ['Professione precedente', esc(player?.previousProfession ?? '—')],
     ['Inizio della carriera', start?.date ? esc(formatDate(start.date)) : '—'],
@@ -159,7 +159,7 @@ function hero(state, player, overview) {
   const focusTrack = overview.focus ? overview.tracks.find(track => track.id === overview.focus.track) : null;
   const focusAction = focusTrack ? actionButton(focusTrack.action, ['party-contest', 'parliament-contest'].includes(focusTrack.action?.type) ? focusTrack.blocker : null) : `<button class="primary-button" data-section-tab="carriera" data-section-tab-value="progressione">Valuta i prossimi passi ${arrow}</button>`;
   return sectionHero({
-    kicker: `IL TUO PERCORSO · ${(careerLevelLabel(state.career.currentLevel ?? state.career.initialLevel) ?? 'CARRIERA').toUpperCase()} · SIMULAZIONE`, icon: 'route',
+    kicker: `IL TUO PERCORSO · ${(!state.career.currentLevel && state.career.startingOffice === 'iscritto' ? 'SEMPLICE ISCRITTO' : (careerLevelLabel(state.career.currentLevel ?? state.career.initialLevel) ?? 'CARRIERA').toUpperCase())} · SIMULAZIONE`, icon: 'route',
     title: player?.displayName ?? 'Il tuo politico',
     lead: `${office ? office.title : 'Nessun incarico'} · ${territory}${game.party ? ` · ${game.party.rankTitle}` : ' · indipendente'}. ${overview.focus ? overview.focus.text : 'Nessun passo è automatico: ogni promozione dipende da numeri, rapporti e momento politico.'}`,
     actions: `${focusAction}<button class="secondary-button" data-action="new-career">Nuova carriera</button>`,

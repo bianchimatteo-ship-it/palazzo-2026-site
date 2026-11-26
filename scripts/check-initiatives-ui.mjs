@@ -15,9 +15,9 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, send, screensho
   let text = await evaluate(`document.querySelector('[data-ini-page]')?.innerText ?? ''`);
   assert.match(text, /Tre strade diverse/); assert.match(text, /50\.000 firme/); assert.match(text, /500\.000 firme/); assert.match(text, /Proposta parlamentare/, 'Le tre cose sono distinte nella pagina.');
   // the form: an empty text is refused with the reason, a good one opens the collection
-  await evaluate(`(() => { const f = document.querySelector('[data-ini-form]'); f.title.value = 'Salario minimo legale'; f.area.value = 'lavoro'; f.articles.value = ''; f.requestSubmit(); return true; })()`); await pause(800);
+  await evaluate(`(() => { const f = document.querySelector('[data-ini-form]'); f.title.value = 'Salario minimo legale'; f.area.value = 'lavoro'; f.articles.value = ''; f.requestSubmit(); return true; })()`); await pause(600); await evaluate(`document.querySelector('[data-confirm="ok"]')?.click(); true`); await pause(800);
   assert.match(await evaluate(`document.querySelector('.toast')?.innerText ?? ''`), /scritta in articoli/, 'Senza articoli la proposta popolare è rifiutata con il motivo.');
-  await evaluate(`(() => { const f = document.querySelector('[data-ini-form]'); f.title.value = 'Salario minimo legale'; f.area.value = 'lavoro'; f.articles.value = 'Art. 1 — Il salario minimo orario è fissato per legge.\\nArt. 2 — Il Ministero del lavoro vigila.'; f.requestSubmit(); return true; })()`); await pause(1200);
+  await evaluate(`(() => { const f = document.querySelector('[data-ini-form]'); f.title.value = 'Salario minimo legale'; f.area.value = 'lavoro'; f.articles.value = 'Art. 1 — Il salario minimo orario è fissato per legge.\\nArt. 2 — Il Ministero del lavoro vigila.'; f.requestSubmit(); return true; })()`); await pause(600); await evaluate(`document.querySelector('[data-confirm="ok"]')?.click(); true`); await pause(1200);
   assert.equal(await S(`return store.initiatives().length;`), 1, 'La raccolta è aperta.');
   text = await evaluate(`document.querySelector('[data-initiative]')?.innerText ?? ''`);
   assert.match(text, /Raccolta aperta/); assert.match(text, /su 50\.000 firme/); assert.match(text, /Organizza la raccolta/); assert.match(text, /Testo in 2 articoli/);

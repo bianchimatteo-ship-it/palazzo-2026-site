@@ -27,11 +27,12 @@ const makeCaches = () => ({
   async delete(name) { return stored.delete(name); }
 });
 let online = true;
+let denied = false; // a protected site (the private test) whose session is over answers 401
 const network = [];
 const listeners = {};
 const context = {
   self: { location: new URL(SCOPE), registration: { scope: SCOPE }, addEventListener: (type, fn) => { listeners[type] = fn; }, skipWaiting() {}, clients: { claim: async () => {} } },
-  fetch: async request => { network.push(`${request.method} ${new URL(request.url).pathname}`); if (!online) throw new TypeError('offline'); if (new URL(request.url).pathname.endsWith('/missing-optional.json')) return new Response('non trovato', { status: 404 }); return new Response(`contenuto di ${request.url}`, { status: 200, headers: { 'content-type': 'text/plain' } }); },
+  fetch: async request => { network.push(`${request.method} ${new URL(request.url).pathname}`); if (!online) throw new TypeError('offline'); if (denied) return new Response('Accesso riservato.', { status: 401 }); if (new URL(request.url).pathname.endsWith('/missing-optional.json')) return new Response('non trovato', { status: 404 }); return new Response(`contenuto di ${request.url}`, { status: 200, headers: { 'content-type': 'text/plain' } }); },
   URL, Request, Response
 };
 caches = makeCaches();
@@ -117,11 +118,20 @@ online = false;
 result = await run('src/main.js?v=2');
 assert.ok(result.handled && (await result.response.text()).includes('src/main.js'), 'Offline il file in cache viene servito (anche con un altro numero di build).');
 
+// A protected site whose session is over answers 401: the offline copy is emptied, so the old version cannot be opened again without logging in.
+assert.ok((await caches.keys()).length > 0 && (await cachedUrls()).length > 0, 'Prima del 401 c’è una copia offline.');
+online = true; denied = true;
+result = await run('index.html?v=zz');
+assert.equal(result.response.status, 401, 'Il rifiuto arriva alla pagina così com’è.');
+await Promise.all(result.waits ?? []); await new Promise(resolve => setTimeout(resolve, 20));
+assert.deepEqual(await cachedUrls(), [], 'Dopo un 401 la copia offline del gioco è stata cancellata.');
+denied = false;
+result = await run('src/main.js?v=3'); await Promise.all(result.waits ?? []); await new Promise(resolve => setTimeout(resolve, 20)); // back to normal: the cache is built again
 // A new version of the worker removes the older caches.
 stored.set('politicando-offline-v1', new Map([['x', { request: new Request(new URL('api/saves', SCOPE)), response: new Response('vecchio') }]]));
 const activation = [];
 listeners.activate({ waitUntil: promise => activation.push(promise) });
 await Promise.all(activation);
-assert.deepEqual(await caches.keys(), ['politicando-offline-v2'], 'Le cache delle versioni precedenti (con eventuali risposte API) vengono eliminate.');
+assert.deepEqual(await caches.keys(), ['politicando-offline-v3'], 'Le cache delle versioni precedenti (con eventuali risposte API) vengono eliminate.');
 
 console.log('Service worker verificato: in cache solo le GET dei file del gioco; POST, PUT, DELETE, PATCH e HEAD, l’API account/salvataggi/archivio, le richieste con credenziali e gli altri siti vanno sempre alla rete senza copie; preriscaldamento filtrato, file serviti offline, cache precedenti eliminate.');

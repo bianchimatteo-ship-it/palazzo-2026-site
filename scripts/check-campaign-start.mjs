@@ -50,6 +50,10 @@ async function open(type, party, profile, seed) {
   const share = id => campaign.territories.reduce((sum, area) => sum + (area.supportByCandidate[id] ?? 0) * area.weight, 0) / weight * (1 - (campaign.othersShare ?? 0) / 100);
   const me = share(campaign.playerCandidateId);
   const rivals = campaign.candidates.filter(item => !item.isPlayer).map(item => share(item.id));
+  // the REAL strength of the field drawn (25/11/2026, option B): the weight in the polls of each rival's party (an independent or civic candidacy has none: its strength is not known in advance;
+  // a real party the polls do not measure counts at the same small weight the engine draws it with, 0,3)
+  const pollOf = Object.fromEntries((store.getState().world?.polls?.at(-1)?.results ?? []).map(item => [item.partyId, item.share]));
+  const field = campaign.candidates.filter(item => !item.isPlayer).map(item => ({ share: share(item.id), partyId: item.partyId ?? null, weight: item.partyId ? (pollOf[item.partyId] ?? 0.3) : null, label: item.partyLabel ?? item.partyId ?? 'indipendente' }));
   const summary = campaignSummary(campaign);
   // what the opening screen shows is the real data of the campaign, and it stays still when nothing is done
   assert.ok(Math.abs(summary.consensus - me) < 0.02 && Math.abs((campaign.expectation?.share ?? me) - me) < 0.02 && Math.abs((campaign.consensusHistory[0]?.value ?? me) - me) < 0.02, `${type}/${party}/${profile}/${seed}: la schermata iniziale (${summary.consensus}), la previsione (${campaign.expectation?.share}) e lo storico (${campaign.consensusHistory[0]?.value}) sono la quota reale (${me.toFixed(2)}).`);
@@ -59,7 +63,7 @@ async function open(type, party, profile, seed) {
   const afterShare = after?.status === 'active' ? after.territories.reduce((sum, area) => sum + (area.supportByCandidate[after.playerCandidateId] ?? 0) * area.weight, 0) / weight * (1 - (after.othersShare ?? 0) / 100) : before;
   assert.ok(Math.abs(afterShare - before) <= 1.6, `${type}/${party}/${profile}/${seed}: dopo un giorno senza azioni la quota passa da ${before.toFixed(1)} a ${afterShare.toFixed(1)}: nessun salto ingiustificato.`);
   const prep = campaign.preparation ?? {};
-  return { type, party, profile, seed, me, rivalMean: rivals.reduce((a, b) => a + b, 0) / rivals.length, rivalMax: Math.max(...rivals), pollShare: prep.pollShare ?? null, pollBonus: prep.pollBonus, parts: prep.pollParts ?? null, field: campaign.candidates.length };
+  return { type, party, profile, seed, me, rivalField: field, rivalMean: rivals.reduce((a, b) => a + b, 0) / rivals.length, rivalMax: Math.max(...rivals), pollShare: prep.pollShare ?? null, pollBonus: prep.pollBonus, parts: prep.pollParts ?? null, field: campaign.candidates.length };
 }
 const rows = [];
 const TYPES = ['comunale', 'provinciale', 'regionale', 'politiche', 'europee'];
@@ -78,11 +82,39 @@ for (const type of TYPES) {
   const strong = mean(cell(type, 'forte').map(row => row.me)), middle = mean(cell(type, 'medio').map(row => row.me)), weak = mean(cell(type, 'debole').map(row => row.me));
   assert.ok(strong > middle && middle > weak, `${type}: la quota di partenza segue la forza del partito (forte ${strong.toFixed(1)} · media ${middle.toFixed(1)} · debole ${weak.toFixed(1)}).`);
 }
-// a weak party (under 1% in the polls): the start is low where the vote is about parties, and never above the weight of the party plus what the candidate brings
+// a weak party (under 1% in the polls): the start is low where the vote is about parties, and never above the weight of the party plus what the candidate brings.
+// In a LOCAL vote the rivals are drawn (campaign-engine buildOpponents: weighted by the polls, small real parties at a small weight, civic candidacies): the field is not always made of strong forces.
+// So the check is made against the field REALLY drawn (option B, 25/11/2026, docs/qa/ciclo-conclusivo-2026-11-25.md §7):
+//   · rivals of a party really stronger in the polls (at least 2 points and three times the player's weight): the player starts below them, with the same margins as before (0,9 of their mean in a
+//     comune, 0,55 in a province, 0,4 in a region; 0,8 of the strongest);
+//   · a field with no stronger party (other small forces and civic lists only): the start is balanced, a known name may lead but not run away (at most 1,25 × the equal share in a comune, 1,1 in
+//     a province, 1,0 in a region).
+const FACTOR = { comunale: 0.9, provinciale: 0.55, regionale: 0.4 }, BALANCE = { comunale: 1.25, provinciale: 1.1, regionale: 1.0 };
+const stronger = row => row.rivalField.filter(item => item.weight != null && item.weight >= Math.max(2, 3 * (row.pollShare ?? 0.3)));
+const localWeak = rows.filter(item => item.party === 'debole' && !['politiche', 'europee'].includes(item.type));
+const kinds = { strong: 0, even: 0 };
 for (const row of rows.filter(item => item.party === 'debole')) {
-  if (['politiche', 'europee'].includes(row.type)) assert.ok(row.me <= (row.pollShare ?? 0.5) + 1.5, `${row.type}/${row.profile}/${row.seed}: una forza dello ${row.pollShare}% parte a ${row.me.toFixed(1)}%, non molto sopra il suo peso.`);
-  else assert.ok(row.me <= Math.min(row.rivalMean * ({ comunale: 0.9, provinciale: 0.55, regionale: 0.4 }[row.type]), row.rivalMax * 0.8), `${row.type}/${row.profile}/${row.seed}: una forza dello ${row.pollShare}% parte a ${row.me.toFixed(1)}% contro una media dei rivali di ${row.rivalMean.toFixed(1)}%.`);
+  if (['politiche', 'europee'].includes(row.type)) { assert.ok(row.me <= (row.pollShare ?? 0.5) + 1.5, `${row.type}/${row.profile}/${row.seed}: una forza dello ${row.pollShare}% parte a ${row.me.toFixed(1)}%, non molto sopra il suo peso.`); continue; }
+  const strong = stronger(row);
+  const fieldText = row.rivalField.map(item => `${item.label} (${item.weight ?? 'civica'}${item.weight != null ? '%' : ''}) ${item.share.toFixed(1)}%`).join(', ');
+  if (strong.length) {
+    kinds.strong++;
+    const mean = strong.reduce((sum, item) => sum + item.share, 0) / strong.length, max = Math.max(...strong.map(item => item.share));
+    assert.ok(row.me <= Math.min(mean * FACTOR[row.type], max * 0.8), `${row.type}/${row.profile}/${row.seed}: una forza dello ${row.pollShare}% parte a ${row.me.toFixed(1)}% contro rivali di partiti più forti a ${mean.toFixed(1)}% di media [${fieldText}].`);
+  } else {
+    kinds.even++;
+    const equal = 100 / (row.rivalField.length + 1);
+    assert.ok(row.me <= equal * BALANCE[row.type], `${row.type}/${row.profile}/${row.seed}: in un campo senza partiti più forti la partenza resta equilibrata (${row.me.toFixed(1)}% contro una quota pari di ${equal.toFixed(1)}%) [${fieldText}].`);
+  }
 }
+// the main check must really be exercised: most local cells of a weak party meet stronger rivals
+assert.ok(kinds.strong >= Math.ceil(localWeak.length / 2), `Campi con rivali più forti: ${kinds.strong} su ${localWeak.length} (il controllo principale resta esercitato).`);
+// the specific case: an UNKNOWN candidate of a weak party against rivals of really stronger parties starts behind each of them (deterministic seeds, the cells of the grid)
+for (const row of localWeak.filter(item => item.profile === 'novizio' && stronger(item).length)) {
+  const weakest = Math.min(...stronger(row).map(item => item.share));
+  assert.ok(row.me < weakest, `${row.type}/novizio/${row.seed}: un esordiente di una forza dello ${row.pollShare}% (${row.me.toFixed(1)}%) parte dietro ogni rivale di un partito più forte (il più debole a ${weakest.toFixed(1)}%).`);
+}
+if (process.env.DEBUG_FIELD) for (const row of localWeak) console.log(row.type, row.profile, row.seed, row.me.toFixed(1), stronger(row).length ? 'forti' : 'pari', row.rivalField.map(item => `${item.label}:${item.weight}:${item.share.toFixed(1)}`).join(' | '));
 // a strong party: the general and European votes start near its weight in the polls (not lifted again by the same weight)
 for (const row of rows.filter(item => item.party === 'forte' && ['politiche', 'europee'].includes(item.type))) {
   assert.ok(row.me <= row.pollShare + 4 && row.me >= row.pollShare - 6, `${row.type}/${row.profile}/${row.seed}: ${row.pollShare}% nei sondaggi, ${row.me.toFixed(1)}% alla partenza.`);
@@ -104,7 +136,7 @@ for (const row of rows) {
   const total = ['allies', 'party', 'mood', 'memory', 'committees', 'start'].reduce((sum, key) => sum + row.parts[key], 0);
   assert.ok(Math.abs(total - row.pollBonus) < 0.06, `${row.type}: il bonus (${row.pollBonus}) è la somma delle sue parti (${total.toFixed(2)}).`);
 }
-lines.push(`${rows.length} campagne su ${TYPES.length} tipi di voto (forti e deboli, esordienti e noti)`);
+lines.push(`${rows.length} campagne su ${TYPES.length} tipi di voto (forti e deboli, esordienti e noti); partito debole nei voti locali: ${kinds.strong} campi con rivali più forti, ${kinds.even} campi senza (partenza equilibrata)`);
 
 // ---------- 3. determinism ----------
 {
