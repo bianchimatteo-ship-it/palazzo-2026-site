@@ -74,6 +74,11 @@ dependencies {
     api("com.appodeal.ads.sdk.adapters:unity_ads:4.17.0.0") {
         exclude group: 'com.google.android.gms', module: 'play-services-ads'
     }
+    // Vungle (Liftoff): ON in the Appodeal dashboard but absent from the app until now, so the SDK never registered it and its units could not take part in any waterfall. 7.7.9.0 depends on the
+    // Appodeal core [4.0.0,5.0.0) and on vungle-ads 7.7.9 (androidx, okhttp, protobuf-lite, the advertising-id library `play-services-ads-identifier`: NOT Google Mobile Ads / AdMob).
+    api("com.appodeal.ads.sdk.adapters:vungle:7.7.9.0") {
+        exclude group: 'com.google.android.gms', module: 'play-services-ads'
+    }
     // Appodeal's own in-house MRAID/VAST renderer (no third-party dependency: its own com.explorestack:iab has none).
     // Without it, AdNetworkRegistry has no "mraid"/"vast" entry, so the server's house-ad waterfall fallback fails
     // with ADAPTER NOT FOUND whenever a format has no real AppLovin/Unity Ads line item configured yet.

@@ -14,7 +14,7 @@ Stato (aggiornato con l'aggiornamento generale): **integrazione completa; Debug 
 Dashboard ID `790468` · App Key Android in `ads-config.js` (identificativo pubblico, non un segreto) · placement **`default`**.
 
 ## Reti: Autoconnection
-Si mantiene l'autoconnessione di Appodeal: l'app dà **solo la App Key**, mai un id di rete. Adapter inclusi: `applovin` 13.6.3.0 e `unity_ads` 4.17.0.0.
+Si mantiene l'autoconnessione di Appodeal: l'app dà **solo la App Key**, mai un id di rete. Adapter inclusi: `applovin` 13.6.3.0, `unity_ads` 4.17.0.0 e `vungle` 7.7.9.0 (aggiunto il 26/11/2026: era ON nella dashboard ma assente dall'app, quindi l'SDK non lo registrava; dipende solo dal core Appodeal [4.0.0,5.0.0) e da `play-services-ads-identifier`, non da Google Mobile Ads; il suo permesso `WRITE_EXTERNAL_STORAGE` e il `READ_EXTERNAL_STORAGE` implicito sono rimossi dal manifest del plugin).
 **Non inclusi**: AdMob, Meta, InMobi (né standalone né adapter), e **BidMachine**, perché il suo adapter dipende da Google Ad Manager (`io.bidmachine:ads.networks.gam`), cioè dall'SDK Google Mobile Ads. Se negli annunci di test o reali servissero altre reti (le «starred» del Mediation Wizard), si aggiungono in `plugins/appodeal-ads/android/build.gradle` dopo aver controllato le loro dipendenze.
 
 ## Modalità (regole in vigore)

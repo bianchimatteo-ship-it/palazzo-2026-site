@@ -1,8 +1,8 @@
 // The provenance of the programme positions in the alliances page (ui/polls-mode.js programPanel): the document, its kind and date, the confidence and what it says, or the label of the game's
 // estimate; and the note with the documents of a party. Loaded with the alliances page (observatory-view.js): it registers itself with the texts of the programmes.
-import { documentOf, programTexts, registerProgramTexts } from '../data/party-program-values.js?v=20261125-11';
-import { STATUS_TEXT } from '../data/party-programs.js?v=20261125-11';
-import { esc } from './charts.js?v=20261125-11';
+import { documentOf, programTexts, registerProgramTexts } from '../data/party-program-values.js?v=20261125-12';
+import { STATUS_TEXT } from '../data/party-programs.js?v=20261125-12';
+import { esc } from './charts.js?v=20261125-12';
 // Where a position of the table comes from: the party's own document (title, kind, date, confidence; the summary in the details), or the estimate of the game, said as such, with what the
 // documents say about the theme when they say something.
 const DOC_TYPE = { 'tesi-congressuali': ['tesi congressuali', 'congress theses'], 'carta-dei-valori': ['carta dei valori', 'charter of values'], 'programma-in-elaborazione': ['programma in elaborazione', 'programme being drafted'], 'proposte-tematiche': ['proposte tematiche', 'thematic proposals'], 'programma-elettorale': ['programma elettorale', 'election programme'], programma: ['programma', 'programme'], manifesto: ['manifesto', 'manifesto'], consultazione: ['consultazione degli iscritti', 'members’ consultation'], 'sintesi-programmatica': ['sintesi programmatica', 'programme summary'], 'programma-coalizione': ['programma di coalizione', 'coalition programme'], 'comunicazione-ufficiale': ['comunicazione ufficiale', 'official communication'], 'percorso-partecipativo': ['percorso partecipativo', 'participatory process'], 'priorita-europee': ['priorità europee', 'European priorities'], 'base-programmatica': ['base programmatica', 'programme basis'], 'tesi-in-elaborazione': ['tesi in elaborazione', 'theses being drafted'], 'documento-tematico': ['documento tematico', 'thematic document'] };

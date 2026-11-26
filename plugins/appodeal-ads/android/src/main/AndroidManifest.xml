@@ -3,4 +3,8 @@
          the optional location permissions that the SDKs may declare are removed (Google Play policy: no location for advertising only). -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" tools:node="remove" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" tools:node="remove" />
+    <!-- The Vungle adapter (added for the network that is ON in the dashboard) declares WRITE_EXTERNAL_STORAGE (and the merger adds READ_EXTERNAL_STORAGE with it): the game stores nothing outside its own
+         folder, the ad caches live in the app's own storage, and a permission nobody uses is one more line in the permission list and in the Play declaration. Removed like the location ones. -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove" />
 </manifest>

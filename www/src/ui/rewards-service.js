@@ -1,10 +1,10 @@
 // What this module does and why: docs/architettura-ricompense.md (§ rewards-service.js).
-import { createPlayClock, createStorageLease } from '../core/play-clock.js?v=20261125-11';
-import { normalizeRewards, playProgress, romeDay, rewardHistory } from '../core/rewards-engine.js?v=20261125-11';
-import { COMMUNITY_REWARD, DAILY_REWARD, PLAY_CLOCK, PLAY_REWARDS } from '../data/simulation/reward-rules.js?v=20261125-11';
-import { rewardsJournal } from '../data/repositories/rewards-journal.js?v=20261125-11';
-import { setAdRewardPoints } from '../data/simulation/reward-rules.js?v=20261125-11';
-import { createRewardedAds } from '../data/repositories/ads-rewarded.js?v=20261125-11';
+import { createPlayClock, createStorageLease } from '../core/play-clock.js?v=20261125-12';
+import { normalizeRewards, playProgress, romeDay, rewardHistory } from '../core/rewards-engine.js?v=20261125-12';
+import { COMMUNITY_REWARD, DAILY_REWARD, PLAY_CLOCK, PLAY_REWARDS } from '../data/simulation/reward-rules.js?v=20261125-12';
+import { rewardsJournal } from '../data/repositories/rewards-journal.js?v=20261125-12';
+import { setAdRewardPoints } from '../data/simulation/reward-rules.js?v=20261125-12';
+import { createRewardedAds } from '../data/repositories/ads-rewarded.js?v=20261125-12';
 
 const RETRY_MS = 30000;
 const BLOCK_KINDS = { capitale: PLAY_REWARDS.capital.everyMinutes, preparazione: PLAY_REWARDS.preparation.everyMinutes };
@@ -47,7 +47,7 @@ export function createRewardsService({ store, journal = rewardsJournal, username
   const rewardedAds = createRewardedAds({ ...ads, grant: grantAd });
   // ui/funds-ad.js: the offer of the personal funds on the same video (Android, where the native Appodeal bridge is there), loaded on demand
   let funds = null;
-  const fundsAds = () => ads.native ? (funds ??= import('./funds-ad.js?v=20261125-11').then(m => m.createFundsAds({ store, rewarded: rewardedAds, onChange: emit }))) : Promise.resolve(null);
+  const fundsAds = () => ads.native ? (funds ??= import('./funds-ad.js?v=20261125-12').then(m => m.createFundsAds({ store, rewarded: rewardedAds, onChange: emit }))) : Promise.resolve(null);
   const scope = () => journal.scope(username());
   const playing = () => Boolean(store.hasCareer?.() && store.getState().game && store.getState().game.status !== 'ended' && (env.playing ? env.playing() : true));
   const emit = () => { for (const fn of listeners) { try { fn(); } catch { /* a listener must not stop the clock */ } } };

@@ -109,6 +109,10 @@ assert.ok(!/admob|gms\.ads|facebook|inmobi/i.test(code), 'Il bridge non usa AdMo
 const gradle = await read('plugins/appodeal-ads/android/build.gradle'); assert.match(gradle, /appodealVersion = '4\.4\.0'/); assert.match(gradle, /artifactory\.appodeal\.com\/appodeal/);
 const deps = [...gradle.matchAll(/^\s*api\(?\s*"([^"]+)"/gm)].map(m => m[1]); assert.ok(deps.some(d => d.startsWith('com.appodeal.ads.sdk:core:')), 'SDK core.');
 for (const d of deps) assert.ok(!/admob|meta|facebook|inmobi|bidmachine|gam|google/i.test(d.replace('com.appodeal.ads.sdk.adapters:', 'adapter:')), `Nessun adapter AdMob/Meta/InMobi/BidMachine (che porta Google Ad Manager): ${d}`);
+// The networks ON in the Appodeal dashboard that the app can really use: each one needs ITS adapter in the app, or the SDK never registers it and it takes no part in any waterfall (Vungle was ON in the dashboard and missing here).
+for (const adapter of ['applovin', 'unity_ads', 'vungle', 'iab']) assert.ok(deps.some(d => d.startsWith(`com.appodeal.ads.sdk.adapters:${adapter}:`)), `Adapter ${adapter} dichiarato.`);
+assert.ok(deps.every(d => !/^com\.appodeal\.ads\.sdk\.adapters:(admob|bidmachine|inmobi|facebook|meta)/.test(d)), 'Nessun adapter che richiede Google Mobile Ads, Meta o InMobi.');
+assert.match(gradle, /vungle:7\.7\.9\.0"\) \{\s*exclude group: 'com\.google\.android\.gms', module: 'play-services-ads'/, 'Vungle esclude play-services-ads (Google Mobile Ads).');
 // Registration of the plugin in Capacitor 8, link by link (a broken link gives a precise message, not just a missing string in a generated file):
 //  1. package.json depends on the local plugin; 2. the plugin declares itself as an Android Capacitor plugin; 3. `npm install` linked it in node_modules (without the link Capacitor finds NO plugin and the generated
 //  Gradle files only contain `:capacitor-android`); 4. capacitor.config.json lets Android include it; 5. Capacitor's own discovery (`cap ls android`) lists it; 6. the generated Gradle files register it (and no standalone InMobi).
